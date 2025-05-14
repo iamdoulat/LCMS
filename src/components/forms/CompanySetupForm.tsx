@@ -5,13 +5,17 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, UploadCloud } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { FileInput } from './FileInput'; // Assuming FileInput is in the same directory or path is adjusted
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml"];
 
 const companySetupSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -21,6 +25,12 @@ const companySetupSchema = z.object({
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
+  companyLogo: z.instanceof(File).optional().nullable()
+    .refine(file => !file || file.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
+    .refine(
+      file => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
+      "Only .jpg, .jpeg, .png, .webp and .svg files are accepted."
+    ),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -38,15 +48,20 @@ export function CompanySetupForm() {
       emailId: 'info@smartsolution-bd.com',
       binNumber: '',
       tinNumber: '',
+      companyLogo: null,
     },
   });
-
-  // In a real application, you would fetch existing company data here in a useEffect
-  // and populate the form, e.g., form.reset(fetchedData);
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
     console.log("Company Setup Form Data:", data);
+    if (data.companyLogo) {
+      console.log("Company Logo details:", {
+        name: data.companyLogo.name,
+        type: data.companyLogo.type,
+        size: data.companyLogo.size,
+      });
+    }
     // Placeholder for actual submission to a backend/Firebase
     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
 
@@ -58,7 +73,6 @@ export function CompanySetupForm() {
       showConfirmButton: true,
     });
     setIsSubmitting(false);
-    // form.reset(data); // Keep form populated after save, or form.reset() to clear
   }
 
   return (
@@ -91,6 +105,27 @@ export function CompanySetupForm() {
             </FormItem>
           )}
         />
+        
+        <FormField
+          control={form.control}
+          name="companyLogo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Company Logo</FormLabel>
+              <FormControl>
+                <FileInput
+                  onFileChange={(file) => field.onChange(file)}
+                  accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                />
+              </FormControl>
+              <FormDescription>
+                Upload your company logo. Recommended size: 512x512px. Max 5MB. (JPG, PNG, WEBP, SVG)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
