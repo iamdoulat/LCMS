@@ -47,9 +47,8 @@ export interface LCEntry {
   documentsRequired?: string; // 46A - main text
   shippingMarks?: string;
   certificateOfOrigin?: string;
-  // New Notify Party Fields
-  notifyPartyName?: string;
-  notifyPartyAddress?: string;
+  // Updated Notify Party Fields
+  notifyPartyNameAndAddress?: string; // Combined field
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | ''; // New field
 }

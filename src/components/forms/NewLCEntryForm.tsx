@@ -58,8 +58,7 @@ const lcEntrySchema = z.object({
   documentsRequired: z.string().optional(), // 46A - main text
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.string().optional(),
-  notifyPartyName: z.string().optional(),
-  notifyPartyAddress: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(), // Combined field
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -130,8 +129,7 @@ export function NewLCEntryForm() {
       documentsRequired: '',
       shippingMarks: '',
       certificateOfOrigin: '',
-      notifyPartyName: '',
-      notifyPartyAddress: '',
+      notifyPartyNameAndAddress: '', // Combined field
       notifyPartyContactDetails: '',
       numberOfAmendments: '',
     },
@@ -544,25 +542,12 @@ export function NewLCEntryForm() {
         </h3>
         <FormField
             control={form.control}
-            name="notifyPartyName"
+            name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party name</FormLabel>
+                <FormLabel>Notify Party name and Address</FormLabel>
                 <FormControl>
-                <Input placeholder="Enter notify party's name" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-        <FormField
-            control={form.control}
-            name="notifyPartyAddress"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notify Party Address</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter notify party's name and full address" {...field} rows={3}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
