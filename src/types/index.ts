@@ -22,7 +22,7 @@ export interface LCEntry {
   currency: Currency;
   amount: number | ''; // Allow empty string for initial form state, parse to number on submit
   termsOfPay: TermsOfPay;
-  documentaryCreditNumber: string; 
+  documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date;
   totalMachineQty: number | ''; // Allow empty string, parse to number
@@ -41,6 +41,12 @@ export interface LCEntry {
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
+  partialShipments?: string; // 43P
+  portOfLoading?: string; // 44E
+  portOfDischarge?: string; // 44F
+  documentsRequired?: string; // 46A - main text
+  shippingMarks?: string;
+  certificateOfOrigin?: string;
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)

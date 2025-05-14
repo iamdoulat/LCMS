@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, DollarSign } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -52,6 +52,12 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
+  partialShipments: z.string().optional(), // 43P
+  portOfLoading: z.string().optional(), // 44E
+  portOfDischarge: z.string().optional(), // 44F
+  documentsRequired: z.string().optional(), // 46A - main text
+  shippingMarks: z.string().optional(),
+  certificateOfOrigin: z.string().optional(),
 });
 
 // Helper function to convert File to Data URI
@@ -97,6 +103,12 @@ export function NewLCEntryForm() {
       bankTin: '',
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      documentsRequired: '',
+      shippingMarks: '',
+      certificateOfOrigin: '',
     },
   });
 
@@ -376,6 +388,47 @@ export function NewLCEntryForm() {
             </FormItem>
             )}
         />
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="partialShipments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>43P: Partial Shipments</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="portOfLoading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44E: Port of Loading/Airport of Departure</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port/airport name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="portOfDischarge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44F: Port of Discharge/Airport of Destination</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port/airport name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
           <Landmark className="mr-2 h-5 w-5 text-primary" />
@@ -555,6 +608,53 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
+        
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <Layers className="mr-2 h-5 w-5 text-primary" />
+            46A: Documents Required
+        </h3>
+        <FormField
+            control={form.control}
+            name="documentsRequired"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Full Set of Documents</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Specify all required documents as per L/C terms (e.g., Commercial Invoice, Packing List, Bill of Lading/Air Waybill, etc.)" {...field} rows={5} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="shippingMarks"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipping Marks</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter shipping marks" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="certificateOfOrigin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Certificate of Origin</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., Required / Not Required / Specify details" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Document Uploads</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
