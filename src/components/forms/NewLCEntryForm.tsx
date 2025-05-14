@@ -9,9 +9,9 @@ import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument 
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
-import { isValid, parseISO } from 'date-fns';
-import { firestore } from '@/lib/firebase/config'; // Import Firestore instance
-import { collection, addDoc } from 'firebase/firestore'; // Import Firestore functions
+import { isValid, parseISO, format } from 'date-fns';
+import { firestore } from '@/lib/firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,7 @@ const lcEntrySchema = z.object({
   applicantName: z.string().min(1, "Applicant name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
@@ -37,7 +37,7 @@ const lcEntrySchema = z.object({
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional(),
   totalMachineQty: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
@@ -56,7 +56,7 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(), 
+  vesselImoNumber: z.string().optional(),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
@@ -66,7 +66,7 @@ const lcEntrySchema = z.object({
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
 });
@@ -82,16 +82,17 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
+// Placeholder data for dropdowns - in a real app, this would come from Firestore
 const placeholderBeneficiaryOptionsFromSuppliers = [
-  { value: "Supplier One Corp", label: "Supplier One Corp" },
-  { value: "Advanced Tech Components", label: "Advanced Tech Components" },
-  { value: "Global Manufacturing Co.", label: "Global Manufacturing Co." },
+  { value: "Dynamic Tech Solutions Ltd.", label: "Dynamic Tech Solutions Ltd." },
+  { value: "Global Exports Co.", label: "Global Exports Co." },
+  { value: "Innovate Supplies Inc.", label: "Innovate Supplies Inc." },
 ];
 
 const placeholderApplicantOptions = [
-  { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
-  { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
-  { value: "Global Imports Corp", label: "Global Imports Corp" },
+  { value: "Smart Importers Group", label: "Smart Importers Group" },
+  { value: "Local Traders United", label: "Local Traders United" },
+  { value: "National Distribution Corp", label: "National Distribution Corp" },
 ];
 
 
@@ -128,7 +129,7 @@ export function NewLCEntryForm() {
       bankTin: '',
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
-      vesselImoNumber: '', 
+      vesselImoNumber: '',
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -138,6 +139,7 @@ export function NewLCEntryForm() {
       notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
       numberOfAmendments: '',
+      status: 'Draft', // Default status
     },
   });
 
@@ -155,71 +157,52 @@ export function NewLCEntryForm() {
 
   async function onSubmit(data: LCEntry) {
     setIsSubmitting(true);
-    
-    const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
-    const year = lcIssueDate.getFullYear();
 
-    // Prepare data for Firestore, excluding File objects and converting dates
+    const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
+    const extractedYear = lcIssueDate.getFullYear();
+
+    const { finalPIFile, shippingDocumentsFile, shippingDocumentForAI, ...restOfData } = data;
+
     const dataToSave: Omit<LCEntryDocument, 'id' | 'finalPIUrl' | 'shippingDocumentsUrl'> = {
-      year,
-      beneficiaryName: data.beneficiaryName,
-      applicantName: data.applicantName,
-      currency: data.currency,
-      amount: Number(data.amount), // Ensure it's a number
-      termsOfPay: data.termsOfPay,
-      documentaryCreditNumber: data.documentaryCreditNumber,
-      proformaInvoiceNumber: data.proformaInvoiceNumber,
-      invoiceDate: data.invoiceDate ? new Date(data.invoiceDate).toISOString() : undefined,
-      totalMachineQty: Number(data.totalMachineQty), // Ensure it's a number
-      lcIssueDate: data.lcIssueDate ? new Date(data.lcIssueDate).toISOString() : undefined,
-      expireDate: data.expireDate ? new Date(data.expireDate).toISOString() : undefined,
-      latestShipmentDate: data.latestShipmentDate ? new Date(data.latestShipmentDate).toISOString() : undefined,
-      trackingCourier: data.trackingCourier,
-      trackingNumber: data.trackingNumber,
-      etd: data.etd ? new Date(data.etd).toISOString() : undefined,
-      eta: data.eta ? new Date(data.eta).toISOString() : undefined,
-      itemDescriptions: data.itemDescriptions,
-      consigneeBankNameAddress: data.consigneeBankNameAddress,
-      bankBin: data.bankBin,
-      bankTin: data.bankTin,
-      shipmentMode: data.shipmentMode,
-      vesselOrFlightName: data.vesselOrFlightName,
-      vesselImoNumber: data.vesselImoNumber,
-      partialShipments: data.partialShipments,
-      portOfLoading: data.portOfLoading,
-      portOfDischarge: data.portOfDischarge,
-      documentsRequired: data.documentsRequired,
-      shippingMarks: data.shippingMarks,
-      certificateOfOrigin: data.certificateOfOrigin,
-      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
-      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      ...restOfData,
+      year: extractedYear,
+      amount: Number(data.amount),
+      totalMachineQty: Number(data.totalMachineQty),
+      lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
-      status: data.status || 'Draft', // Default status if not provided
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: serverTimestamp() as any, // Firestore will convert this
+      updatedAt: serverTimestamp() as any, // Firestore will convert this
+      status: data.status || 'Draft',
     };
 
-    // Filter out undefined optional fields before saving
-    Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-            delete dataToSave[key as keyof typeof dataToSave];
+    // Remove undefined fields from dataToSave to avoid Firestore errors
+    (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
+        if (dataToSave[key] === undefined) {
+            delete dataToSave[key];
         }
     });
-
+    
+    // TODO: Implement file uploads to Firebase Storage for finalPIFile, shippingDocumentsFile
+    // and store their download URLs in dataToSave as finalPIUrl, shippingDocumentsUrl
 
     try {
+      // The 'lc_entries' collection will be created if it doesn't exist
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
-      console.log("Document written with ID: ", docRef.id);
       Swal.fire({
         title: "L/C Entry Saved!",
-        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}`,
+        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}. File uploads are pending implementation.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
       });
-      form.reset(); 
+      form.reset();
     } catch (error) {
-      console.error("Error adding document: ", error);
+      console.error("Error adding L/C document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       Swal.fire({
         title: "Save Failed",
@@ -251,10 +234,10 @@ export function NewLCEntryForm() {
       const parsedEtd = result.etd ? parseISO(result.etd) : undefined;
       const parsedEta = result.eta ? parseISO(result.eta) : undefined;
 
-      if (result.etd && isValid(parsedEtd)) {
+      if (parsedEtd && isValid(parsedEtd)) {
         form.setValue("etd", parsedEtd, { shouldValidate: true });
       }
-      if (result.eta && isValid(parsedEta)) {
+      if (parsedEta && isValid(parsedEta)) {
         form.setValue("eta", parsedEta, { shouldValidate: true });
       }
       form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
@@ -390,7 +373,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select applicant (customer)" />
@@ -404,7 +387,7 @@ export function NewLCEntryForm() {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription>Select from your list of customers.</FormDescription>
+                <FormDescription>Select from your list of customers/applicants.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -415,7 +398,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select beneficiary (supplier)" />
@@ -429,7 +412,7 @@ export function NewLCEntryForm() {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription>Select from your list of suppliers.</FormDescription>
+                <FormDescription>Select from your list of suppliers/beneficiaries.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -440,7 +423,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -477,7 +460,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -744,7 +727,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -803,16 +786,16 @@ export function NewLCEntryForm() {
                     variant="outline"
                     onClick={handleTrackVessel}
                     disabled={!form.watch("vesselImoNumber") || isSubmitting}
-                    className="md:col-span-1" 
+                    className="md:col-span-1"
                     title="Track Vessel via IMO Number"
                 >
-                    <Search className="mr-2 h-4 w-4" /> 
+                    <Search className="mr-2 h-4 w-4" />
                     Track Vessel
                 </Button>
             </div>
         )}
 
-         <div className="mt-6"> 
+         <div className="mt-6">
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
@@ -823,7 +806,7 @@ export function NewLCEntryForm() {
                     render={({ field }) => (
                     <FormItem className="md:col-span-1">
                         <FormLabel>Courier</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Select Courier" />
@@ -857,7 +840,7 @@ export function NewLCEntryForm() {
                     variant="outline"
                     onClick={handleTrackDocument}
                     disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
-                    className="md:col-span-1 mt-4 md:mt-0" 
+                    className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >
                     <ExternalLink className="mr-2 h-4 w-4" />
@@ -866,7 +849,7 @@ export function NewLCEntryForm() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"> 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
              <FormField
                 control={form.control}
                 name="etd"

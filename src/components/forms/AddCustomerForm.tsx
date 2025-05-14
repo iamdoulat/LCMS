@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Loader2, UserPlus } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Customer } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ const customerSchema = z.object({
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
-export function AddCustomerForm() { 
+export function AddCustomerForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
@@ -49,21 +49,22 @@ export function AddCustomerForm() {
 
   async function onSubmit(data: CustomerFormValues) {
     setIsSubmitting(true);
-    const now = new Date().toISOString();
-    const dataToSave: Omit<Customer, 'id'> = {
+    
+    const dataToSave: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       ...data,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
-    // Filter out undefined optional fields
-    Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-            delete dataToSave[key as keyof typeof dataToSave];
+    // Filter out undefined or empty optional fields so they are not stored in Firestore
+    (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
+        if (dataToSave[key] === undefined || dataToSave[key] === '') {
+            delete dataToSave[key];
         }
     });
 
     try {
+      // The 'customers' collection will be created if it doesn't exist
       const docRef = await addDoc(collection(firestore, "customers"), dataToSave);
       Swal.fire({
         title: "Applicant Profile Saved!",
@@ -72,7 +73,7 @@ export function AddCustomerForm() {
         timer: 3000,
         showConfirmButton: true,
       });
-      form.reset(); 
+      form.reset();
     } catch (error) {
       console.error("Error adding applicant document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -131,7 +132,7 @@ export function AddCustomerForm() {
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="address"

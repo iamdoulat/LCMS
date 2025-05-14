@@ -5,17 +5,17 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Store } from 'lucide-react'; 
+import { Loader2, Store } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Supplier } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput'; 
+import { FileInput } from './FileInput';
 
 const supplierSchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
@@ -35,7 +35,7 @@ const supplierSchema = z.object({
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
-export function AddSupplierForm() { 
+export function AddSupplierForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -53,31 +53,32 @@ export function AddSupplierForm() {
 
   async function onSubmit(data: SupplierFormValues) {
     setIsSubmitting(true);
-    const now = new Date().toISOString();
-    
-    // Exclude brandLogoFile from dataToSave, handle file upload separately
+
+    // Exclude brandLogoFile from dataToSave, handle file upload separately (TODO)
     const { brandLogoFile, ...restOfData } = data;
 
-    const dataToSave: Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl'> = {
+    const dataToSave: Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       ...restOfData,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
-    
-    // Filter out undefined optional fields
-    Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-            delete dataToSave[key as keyof typeof dataToSave];
+
+    // Filter out undefined or empty optional fields
+    (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
+        if (dataToSave[key] === undefined || dataToSave[key] === '') {
+            delete dataToSave[key];
         }
     });
 
     if (brandLogoFile) {
       console.log("Brand Logo File selected:", brandLogoFile.name, brandLogoFile.size, brandLogoFile.type);
       // TODO: Implement Firebase Storage upload for brandLogoFile here
-      // After upload, get the downloadURL and add it to dataToSave as brandLogoUrl
+      // After upload, get the downloadURL and add it to a new version of dataToSave as brandLogoUrl
+      // For now, brandLogoUrl will not be saved.
     }
 
     try {
+      // The 'suppliers' collection will be created if it doesn't exist
       const docRef = await addDoc(collection(firestore, "suppliers"), dataToSave);
       Swal.fire({
         title: "Beneficiary Profile Saved!",
@@ -86,7 +87,7 @@ export function AddSupplierForm() {
         timer: 3000,
         showConfirmButton: true,
       });
-      form.reset(); 
+      form.reset();
     } catch (error) {
       console.error("Error adding beneficiary document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -203,7 +204,7 @@ export function AddSupplierForm() {
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="brandLogoFile"
@@ -232,7 +233,7 @@ export function AddSupplierForm() {
             </>
           ) : (
             <>
-              <Store className="mr-2 h-4 w-4" /> 
+              <Store className="mr-2 h-4 w-4" />
               Save Beneficiary Profile
             </>
           )}

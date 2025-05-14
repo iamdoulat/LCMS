@@ -24,72 +24,73 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; 
-  applicantName: string; 
+  beneficiaryName: string;
+  applicantName: string;
   currency: Currency;
-  amount: number | ''; 
+  amount: number | '';
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date;
-  totalMachineQty: number | ''; 
+  totalMachineQty: number | '';
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
-  finalPIFile?: File | null; 
-  shippingDocumentsFile?: File | null; 
+  finalPIFile?: File | null;
+  shippingDocumentsFile?: File | null;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: Date; 
-  eta?: Date; 
-  itemDescriptions?: string; 
-  shippingDocumentForAI?: File | null; 
+  etd?: Date;
+  eta?: Date;
+  itemDescriptions?: string;
+  shippingDocumentForAI?: File | null;
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
-  vesselImoNumber?: string; 
-  partialShipments?: string; 
-  portOfLoading?: string; 
-  portOfDischarge?: string; 
-  documentsRequired?: string; 
-  shippingMarks?: string; 
+  vesselImoNumber?: string;
+  partialShipments?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  documentsRequired?: string;
+  shippingMarks?: string;
   certificateOfOrigin?: string;
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | '';
-  status?: LCStatus; 
+  status?: LCStatus;
 }
 
-export interface LCEntryDocument extends Omit<LCEntry, 
-  'finalPIFile' | 
-  'shippingDocumentsFile' | 
-  'shippingDocumentForAI' | 
-  'etd' | 
-  'eta' | 
-  'lcIssueDate' | 
-  'expireDate' | 
-  'latestShipmentDate' | 
+// This interface represents the data structure as it would be stored in Firestore
+export interface LCEntryDocument extends Omit<LCEntry,
+  'finalPIFile' |
+  'shippingDocumentsFile' |
+  'shippingDocumentForAI' |
+  'etd' |
+  'eta' |
+  'lcIssueDate' |
+  'expireDate' |
+  'latestShipmentDate' |
   'invoiceDate' |
-  'amount' | 
-  'totalMachineQty' | 
-  'numberOfAmendments' 
+  'amount' |
+  'totalMachineQty' |
+  'numberOfAmendments'
 > {
-  year: number; 
-  amount: number;
-  totalMachineQty: number;
-  numberOfAmendments?: number;
-  finalPIUrl?: string;
-  shippingDocumentsUrl?: string;
-  etd?: string; 
-  eta?: string; 
-  lcIssueDate?: string;
-  expireDate?: string;
-  latestShipmentDate?: string;
-  invoiceDate?: string;
-  createdAt: string; 
-  updatedAt: string; 
+  year: number;
+  amount: number; // Stored as number
+  totalMachineQty: number; // Stored as number
+  numberOfAmendments?: number; // Stored as number
+  finalPIUrl?: string; // URL after upload to Firebase Storage
+  shippingDocumentsUrl?: string; // URL after upload
+  etd?: string; // Stored as ISO string
+  eta?: string; // Stored as ISO string
+  lcIssueDate?: string; // Stored as ISO string
+  expireDate?: string; // Stored as ISO string
+  latestShipmentDate?: string; // Stored as ISO string
+  invoiceDate?: string; // Stored as ISO string
+  createdAt: any; // Firestore serverTimestamp for creation
+  updatedAt: any; // Firestore serverTimestamp for updates
   status?: LCStatus;
   id?: string; // Firestore document ID
 }
@@ -97,7 +98,7 @@ export interface LCEntryDocument extends Omit<LCEntry,
 // For Applicant/Customer
 export interface Customer {
   id?: string; // Firestore document ID
-  applicantName: string; 
+  applicantName: string;
   email: string;
   phone?: string;
   address: string;
@@ -106,10 +107,10 @@ export interface Customer {
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
-  createdAt?: string; // ISO string
-  updatedAt?: string; // ISO string
+  createdAt?: any; // Firestore serverTimestamp
+  updatedAt?: any; // Firestore serverTimestamp
 }
-export type CustomerDocument = Customer & { id: string }; // Ensure id is present when fetched
+export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string }; // Ensure id and string timestamps when fetched
 
 // For Beneficiary/Supplier
 export interface Supplier {
@@ -123,7 +124,7 @@ export interface Supplier {
   brandName: string;
   brandLogoFile?: File | null; // For file object before upload
   brandLogoUrl?: string; // For URL after upload
-  createdAt?: string; // ISO string
-  updatedAt?: string; // ISO string
+  createdAt?: any; // Firestore serverTimestamp
+  updatedAt?: any; // Firestore serverTimestamp
 }
-export type SupplierDocument = Supplier & { id: string }; // Ensure id is present when fetched
+export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string }; // Ensure id and string timestamps when fetched
