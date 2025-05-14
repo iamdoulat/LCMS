@@ -18,7 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Truck } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -54,6 +54,7 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(), // Added Vessel IMO Number
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
@@ -126,6 +127,7 @@ export function NewLCEntryForm() {
       bankTin: '',
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
+      vesselImoNumber: '', // Added default value
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -240,6 +242,20 @@ export function NewLCEntryForm() {
         icon: "warning",
       });
     }
+  };
+
+  const handleTrackVessel = () => {
+    const imoNumber = form.getValues("vesselImoNumber");
+    if (!imoNumber || imoNumber.trim() === "") {
+       Swal.fire({
+        title: "IMO Number Missing",
+        text: "Please enter a Vessel IMO number to track.",
+        icon: "info",
+      });
+      return;
+    }
+    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(imoNumber.trim())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
 
@@ -654,7 +670,7 @@ export function NewLCEntryForm() {
             <Workflow className="mr-2 h-5 w-5 text-primary" />
             Shipping Information
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
             <FormField
                 control={form.control}
                 name="shipmentMode"
@@ -700,6 +716,35 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
+        {watchedShipmentMode === 'Sea' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                    control={form.control}
+                    name="vesselImoNumber"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                            <FormLabel>Vessel IMO Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter Vessel IMO Number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTrackVessel}
+                    disabled={!form.watch("vesselImoNumber")}
+                    className="md:col-span-1" 
+                    title="Track Vessel via IMO Number"
+                >
+                    <Search className="mr-2 h-4 w-4" /> 
+                    Track Vessel
+                </Button>
+            </div>
+        )}
+
          <div className="mt-6"> {/* Grouping tracking fields */}
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -745,7 +790,7 @@ export function NewLCEntryForm() {
                     variant="outline"
                     onClick={handleTrackDocument}
                     disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier")}
-                    className="md:col-span-1 mt-4 md:mt-0" // Added margin top for mobile, reset for md
+                    className="md:col-span-1 mt-4 md:mt-0" 
                     title="Track Original Document"
                 >
                     <ExternalLink className="mr-2 h-4 w-4" />

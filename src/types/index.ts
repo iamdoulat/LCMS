@@ -46,11 +46,12 @@ export interface LCEntry {
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
+  vesselImoNumber?: string; // New field for Vessel IMO Number
   partialShipments?: string; // 43P
   portOfLoading?: string; // 44E
   portOfDischarge?: string; // 44F
   documentsRequired?: string; // 46A - main text
-  shippingMarks?: string;
+  shippingMarks?: string; // Now under 47A
   certificateOfOrigin?: string;
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
@@ -58,12 +59,15 @@ export interface LCEntry {
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
-export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta' | 'trackingCourier'> {
+export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta' | 'lcIssueDate' | 'expireDate' | 'latestShipmentDate' | 'invoiceDate'> {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  etd?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
-  eta?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
-  trackingCourier?: TrackingCourier;
+  etd?: string; // Store as ISO string
+  eta?: string; // Store as ISO string
+  lcIssueDate?: string;
+  expireDate?: string;
+  latestShipmentDate?: string;
+  invoiceDate?: string;
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
   numberOfAmendments?: number;
