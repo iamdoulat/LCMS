@@ -189,10 +189,10 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Fetch company name from settings and display here */}
+        {/* TODO: Fetch company logo and name from settings and display here */}
         <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap">
-          <Briefcase className="h-6 w-6" />
-          <span className="group-data-[collapsible=icon]:hidden">Here will show Company Name* from Company setup page data</span>
+          <Briefcase className="h-6 w-6" /> {/* Placeholder for logo */}
+          <span className="group-data-[collapsible=icon]:hidden">Company Logo & Name</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
