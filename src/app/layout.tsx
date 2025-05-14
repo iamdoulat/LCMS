@@ -7,7 +7,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from "@/components/ui/toaster" // Toaster should be here for global access
 
 export const metadata: Metadata = {
-  title: 'LC Vision - Letter of Credit Management',
+  title: 'LC Management System - Letter of Credit Management',
   description: 'Modern Letter of Credit Management Software',
 };
 
@@ -27,3 +27,4 @@ export default function RootLayout({
     </html>
   );
 }
+

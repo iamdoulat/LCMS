@@ -107,7 +107,7 @@ export default function RegisterPage() {
             <Briefcase className="h-8 w-8" />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">Create Account</CardTitle>
-          <CardDescription>Join LC Vision to manage your Letters of Credit</CardDescription>
+          <CardDescription>Join LC Management System to manage your Letters of Credit</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -210,3 +210,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

@@ -60,9 +60,9 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary">
+        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap">
           <Briefcase className="h-6 w-6" />
-          <span className="group-data-[collapsible=icon]:hidden">LC Vision</span>
+          <span className="group-data-[collapsible=icon]:hidden">LC Management System</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
@@ -159,3 +159,4 @@ export function AppSidebarNav() {
     </>
   );
 }
+

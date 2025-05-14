@@ -102,7 +102,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Briefcase className="h-8 w-8" />
           </div>
-          <CardTitle className="text-3xl font-bold text-primary">LC Vision Login</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">LC Management System Login</CardTitle>
           <CardDescription>Access your Letter of Credit Management Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
