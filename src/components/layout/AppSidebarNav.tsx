@@ -24,8 +24,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
-  ListChecks, 
-  FilePlus2,  
+  ListChecks,
+  FilePlus2,
   Truck,
   CalendarClock,
   Users as UsersIcon,
@@ -33,9 +33,8 @@ import {
   LogOut,
   Briefcase,
   Loader2,
-  Store,      
+  Store,
   UserPlus
-  // ChevronDown is no longer needed here as AccordionTrigger provides its own
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -79,25 +78,31 @@ export function AppSidebarNav() {
   const { logout, loading: authLoading } = useAuth();
 
   const isActive = (href: string) => {
-    // Exact match for top-level items or items that aren't parent paths
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname === href) return true;
-    // For group parent paths, check if the current path starts with the group's base href
-    // e.g., if href is '/dashboard/suppliers', it's active if pathname is '/dashboard/suppliers' or '/dashboard/suppliers/add'
     if ( (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers')) ||
          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ) {
         return true;
     }
-    // General case for non-group items that might have sub-routes but are not groups themselves
-    // (though current structure doesn't use this much for direct links)
-    return href !== '/dashboard' && pathname.startsWith(href) && !pathname.substring(href.length).startsWith('/');
+    // Check if current path starts with the href, but not if it's a parent path of a more specific match
+    // This handles cases like /dashboard/settings being active for /dashboard/settings/users
+    if (href !== '/dashboard' && pathname.startsWith(href)) {
+        // Ensure it's not a less specific match for a group that is already active
+        const isPartOfActiveGroup = managementNavItems.some(group => 
+            group.isGroup && 
+            group.subLinks?.some(sub => pathname.startsWith(sub.href)) && 
+            href.startsWith(group.subLinks?.[0].href.substring(0, group.subLinks[0].href.lastIndexOf('/')) || '')
+        );
+        if (isPartOfActiveGroup) return false; // Let the more specific group link handle active state
+        return true;
+    }
+    return false;
   };
   
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => pathname.startsWith(sub.href));
   };
 
-  // Determine which accordions should be open by default based on current path
   const defaultOpenAccordions = managementNavItems
     .filter(item => item.isGroup && item.subLinks && isGroupActive(item.subLinks))
     .map(item => item.groupLabel || '');
@@ -149,8 +154,7 @@ export function AppSidebarNav() {
                             className={cn(
                               "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                               "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                              // Hide the default chevron when in icon mode
-                              "group-data-[collapsible=icon]:[&>svg]:hidden", 
+                              "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", // Hide default chevron in icon mode
                               isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             )}
                           >
@@ -158,7 +162,6 @@ export function AppSidebarNav() {
                               <item.icon className="h-5 w-5" />
                               <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                             </div>
-                            {/* The AccordionTrigger component from ShadCN UI already includes its own ChevronDown icon, so we remove the manual one here. */}
                           </AccordionTrigger>
                       </TooltipTrigger>
                        <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -173,10 +176,10 @@ export function AppSidebarNav() {
                           <Link href={subLink.href} passHref legacyBehavior>
                             <SidebarMenuButton
                               asChild
-                              isActive={pathname === subLink.href} 
+                              isActive={pathname === subLink.href}
                               className={cn(
                                 pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                                "h-8 text-xs" 
+                                "h-8 text-xs"
                               )}
                               tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                             >
@@ -191,29 +194,32 @@ export function AppSidebarNav() {
                     </SidebarMenu>
                   </AccordionContent>
                 </AccordionItem>
-              ) : ( 
-                <SidebarMenuItem key={item.href || `item-${index}`}>
-                  <Link href={item.href!} passHref legacyBehavior>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive(item.href!)}
-                      className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                      tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                    >
-                      <a>
-                        <item.icon className="h-5 w-5" />
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
+              ) : (
+                // Wrap standalone items in a SidebarMenu to ensure correct li > ul structure
+                <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
+                  <SidebarMenuItem>
+                    <Link href={item.href!} passHref legacyBehavior>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.href!)}
+                        className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                        tooltip={{children: item.label!, side: "right", className: "ml-2"}}
+                      >
+                        <a>
+                          <item.icon className="h-5 w-5" />
+                          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                </SidebarMenu>
               )
             ))}
           </Accordion>
         </SidebarGroup>
-        
+
         <SidebarSeparator />
-        
+
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Settings
@@ -222,8 +228,8 @@ export function AppSidebarNav() {
             {settingsNavItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
-                  <SidebarMenuButton 
-                    asChild 
+                  <SidebarMenuButton
+                    asChild
                     isActive={isActive(item.href)}
                     className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
                     tooltip={{children: item.label, side: "right", className: "ml-2"}}
@@ -240,8 +246,8 @@ export function AppSidebarNav() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           onClick={logout}
           disabled={authLoading}
@@ -266,7 +272,7 @@ type NavItem = {
   icon: React.ElementType;
   isGroup?: boolean;
   groupLabel?: string;
-  defaultOpen?: boolean; 
+  defaultOpen?: boolean;
   subLinks?: Array<{
     href: string;
     label: string;
