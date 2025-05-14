@@ -1,19 +1,27 @@
 
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, ListFilter, TrendingUp } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, ListFilter, TrendingUp, CalendarIcon } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 
+const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
+
 export default function DashboardPage() {
-  // Placeholder data - replace with actual data fetching
+  const [selectedYear, setSelectedYear] = useState<string>("2025");
+
+  // Placeholder data - in a real app, this would be fetched based on selectedYear
   const stats = {
     totalLCs: 125,
     totalLCValue: 5750000,
     activeSuppliers: 15,
-    thisMonthLCQty: 22, // New stat
+    thisMonthLCQty: 22,
   };
 
   const supplierDistributionData = [
@@ -23,23 +31,36 @@ export default function DashboardPage() {
     { name: 'Others', value: 10, fill: 'hsl(var(--chart-4))' },
   ];
 
-  // Placeholder for upcoming shipments
   const upcomingShipments = [
     { lcNumber: 'LC-00123', supplier: 'Supplier Beta', latestShipmentDate: '2024-08-15' },
     { lcNumber: 'LC-00124', supplier: 'Supplier Alpha', latestShipmentDate: '2024-08-22' },
     { lcNumber: 'LC-00125', supplier: 'Supplier Gamma', latestShipmentDate: '2024-09-01' },
   ];
 
+  useEffect(() => {
+    // This is where you would typically re-fetch data based on the selectedYear
+    console.log(`Selected year changed to: ${selectedYear}. Implement data fetching logic here.`);
+    // Example: fetchDataForYear(selectedYear);
+  }, [selectedYear]);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">Dashboard Overview</h1>
         <div className="flex items-center gap-2">
-          {/* Placeholder for potential date range filter or other actions */}
-          {/* <Button variant="outline" className="text-sm">
-            <ListFilter className="mr-2 h-4 w-4" />
-            Filters
-          </Button> */}
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[180px] bg-card shadow-sm">
+              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Select Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year} value={year}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
@@ -48,25 +69,25 @@ export default function DashboardPage() {
           title="Total L/Cs"
           value={stats.totalLCs.toLocaleString()}
           icon={<Package className="h-7 w-7 text-primary" />}
-          description="Total number of active Letters of Credit"
+          description={`For year ${selectedYear}`}
         />
         <StatCard
           title="Total L/C Value"
           value={`$${stats.totalLCValue.toLocaleString()}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
-          description="Combined value of all active L/Cs"
+          description={`For year ${selectedYear}`}
         />
         <StatCard
           title="Active Suppliers"
           value={stats.activeSuppliers.toLocaleString()}
           icon={<UsersRound className="h-7 w-7 text-primary" />}
-          description="Number of unique suppliers involved"
+          description={`For year ${selectedYear}`}
         />
         <StatCard
           title="This Month's L/C Qty"
           value={stats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
-          description="L/Cs processed this current month"
+          description={`In ${selectedYear}`}
         />
       </div>
 
@@ -78,7 +99,7 @@ export default function DashboardPage() {
               Supplier L/C Distribution
             </CardTitle>
             <CardDescription>
-              Visual breakdown of L/C value distribution among suppliers.
+              Visual breakdown of L/C value distribution among suppliers for {selectedYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] w-full">
@@ -125,7 +146,7 @@ export default function DashboardPage() {
                 Upcoming Shipments
               </CardTitle>
               <CardDescription>
-                Key upcoming latest shipment dates.
+                Key upcoming latest shipment dates for {selectedYear}.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -148,7 +169,7 @@ export default function DashboardPage() {
             </CardContent>
              <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                    Displaying top 3 upcoming shipments.
+                    Displaying top 3 upcoming shipments for {selectedYear}.
                 </p>
             </CardFooter>
           </Card>
@@ -157,4 +178,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
