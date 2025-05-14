@@ -32,8 +32,8 @@ export interface LCEntry {
   finalPIFile?: File | null; // For file object before upload
   shippingDocumentsFile?: File | null; // For file object before upload
   dhlNumber?: string;
-  etd?: string; // Estimated Time of Departure
-  eta?: string; // Estimated Time of Arrival
+  etd?: Date; // Estimated Time of Departure - Changed to Date
+  eta?: Date; // Estimated Time of Arrival - Changed to Date
   itemDescriptions?: string; // Extracted by AI
   shippingDocumentForAI?: File | null; // Document to be analyzed by AI
   consigneeBankNameAddress?: string;
@@ -47,17 +47,18 @@ export interface LCEntry {
   documentsRequired?: string; // 46A - main text
   shippingMarks?: string;
   certificateOfOrigin?: string;
-  // Updated Notify Party Fields
-  notifyPartyNameAndAddress?: string; // Combined field
+  notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
-  numberOfAmendments?: number | ''; // New field
+  numberOfAmendments?: number | '';
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
-export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI'> {
+export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta'> {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
+  etd?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
+  eta?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
-  numberOfAmendments?: number; // New field
+  numberOfAmendments?: number;
 }

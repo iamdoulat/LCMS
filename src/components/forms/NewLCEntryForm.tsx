@@ -9,6 +9,7 @@ import type { LCEntry, ShipmentMode, Currency } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
+import { isValid, parseISO } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +44,8 @@ const lcEntrySchema = z.object({
   finalPIFile: z.instanceof(File).optional().nullable(),
   shippingDocumentsFile: z.instanceof(File).optional().nullable(),
   dhlNumber: z.string().optional(),
-  etd: z.string().optional(),
-  eta: z.string().optional(),
+  etd: z.date().optional(), // Changed to date
+  eta: z.date().optional(), // Changed to date
   itemDescriptions: z.string().optional(),
   shippingDocumentForAI: z.instanceof(File).optional().nullable(),
   consigneeBankNameAddress: z.string().optional(),
@@ -52,10 +53,10 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
-  partialShipments: z.string().optional(), // 43P
-  portOfLoading: z.string().optional(), // 44E
-  portOfDischarge: z.string().optional(), // 44F
-  documentsRequired: z.string().optional(), // 46A - main text
+  partialShipments: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
+  documentsRequired: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.string().optional(),
   notifyPartyNameAndAddress: z.string().optional(),
@@ -114,8 +115,8 @@ export function NewLCEntryForm() {
       finalPIFile: null,
       shippingDocumentsFile: null,
       dhlNumber: '',
-      etd: '',
-      eta: '',
+      etd: undefined, // Default to undefined for date
+      eta: undefined, // Default to undefined for date
       itemDescriptions: '',
       shippingDocumentForAI: null,
       consigneeBankNameAddress: '',
@@ -176,8 +177,16 @@ export function NewLCEntryForm() {
       const dataUri = await fileToDataUri(file);
       const result: ExtractShippingDataOutput = await extractShippingData({ documentDataUri: dataUri });
 
-      form.setValue("etd", result.etd, { shouldValidate: true });
-      form.setValue("eta", result.eta, { shouldValidate: true });
+      // Attempt to parse string dates from AI to Date objects
+      const parsedEtd = result.etd ? parseISO(result.etd) : undefined;
+      const parsedEta = result.eta ? parseISO(result.eta) : undefined;
+
+      if (result.etd) {
+        form.setValue("etd", isValid(parsedEtd) ? parsedEtd : undefined, { shouldValidate: true });
+      }
+      if (result.eta) {
+        form.setValue("eta", isValid(parsedEta) ? parsedEta : undefined, { shouldValidate: true });
+      }
       form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
 
       Swal.fire({
@@ -697,34 +706,30 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
                 control={form.control}
                 name="etd"
                 render={({ field }) => (
-                <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Auto-filled by AI" {...field} />
-                    </FormControl>
-                    <FormDescription>Extracted from shipping document.</FormDescription>
+                     <DatePickerField field={field} placeholder="Select ETD" />
+                    <FormDescription>Can be auto-filled by AI.</FormDescription>
                     <FormMessage />
-                </FormItem>
+                  </FormItem>
                 )}
-            />
-            <FormField
+              />
+              <FormField
                 control={form.control}
                 name="eta"
                 render={({ field }) => (
-                <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Auto-filled by AI" {...field} />
-                    </FormControl>
-                    <FormDescription>Extracted from shipping document.</FormDescription>
+                    <DatePickerField field={field} placeholder="Select ETA" />
+                    <FormDescription>Can be auto-filled by AI.</FormDescription>
                     <FormMessage />
-                </FormItem>
+                  </FormItem>
                 )}
-            />
+              />
         </div>
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
