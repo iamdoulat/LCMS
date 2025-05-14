@@ -5,14 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Eye, Trash2 } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Eye, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus } from '@/types'; 
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO } from 'date-fns'; 
+import { format, parseISO, isValid } from 'date-fns'; 
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
 import { firestore } from '@/lib/firebase/config'; 
 
@@ -47,14 +47,12 @@ export default function TotalLCPage() {
           return {
              id: doc.id,
              ...data,
-             // Ensure dates are handled correctly if they need to be Date objects for certain operations
-             // For display, string ISO dates are fine with parseISO for formatting
           } as LCEntryDocument;
         });
         setLcEntries(fetchedLCs);
       } catch (error) {
         console.error("Error fetching L/C entries: ", error);
-        Swal.fire("Error", "Could not fetch L/C data from Firestore.", "error");
+        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -65,6 +63,10 @@ export default function TotalLCPage() {
 
 
   const handleEditLC = (lcId: string) => {
+    if (!lcId) {
+        Swal.fire("Error", "L/C ID is missing, cannot edit.", "error");
+        return;
+    }
     Swal.fire({
       title: "Redirecting...",
       text: `Navigating to edit page for L/C ${lcId}.`,
@@ -76,6 +78,10 @@ export default function TotalLCPage() {
   };
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
+     if (!lcId) {
+        Swal.fire("Error", "L/C ID is missing, cannot delete.", "error");
+        return;
+    }
     Swal.fire({
       title: 'Are you absolutely sure?',
       text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}" from Firestore.`,
@@ -102,6 +108,18 @@ export default function TotalLCPage() {
       }
     });
   };
+
+  const formatDisplayDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+  };
+
+  const formatCurrencyValue = (currency?: string, amount?: number) => {
+    if (typeof amount !== 'number') return `${currency || ''} N/A`;
+    return `${currency || ''} ${amount.toLocaleString()}`;
+  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -143,17 +161,19 @@ export default function TotalLCPage() {
                  {isLoading ? (
                    <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      Loading L/C entries from Firestore...
+                       <div className="flex justify-center items-center">
+                         <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading L/C entries...
+                       </div>
                     </TableCell>
                   </TableRow>
                 ) : lcEntries.length > 0 ? (
                   lcEntries.map((lc) => (
                     <TableRow key={lc.id}>
-                      <TableCell className="font-medium">{lc.documentaryCreditNumber}</TableCell>
-                      <TableCell>{lc.applicantName}</TableCell>
-                      <TableCell>{lc.beneficiaryName}</TableCell>
-                      <TableCell>{lc.currency} {typeof lc.amount === 'number' ? lc.amount.toLocaleString() : lc.amount}</TableCell>
-                      <TableCell>{lc.lcIssueDate ? format(parseISO(lc.lcIssueDate), 'PPP') : 'N/A'}</TableCell>
+                      <TableCell className="font-medium">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
+                      <TableCell>{lc.applicantName || 'N/A'}</TableCell>
+                      <TableCell>{lc.beneficiaryName || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
+                      <TableCell>{formatDisplayDate(lc.lcIssueDate)}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={getStatusBadgeVariant(lc.status)} 

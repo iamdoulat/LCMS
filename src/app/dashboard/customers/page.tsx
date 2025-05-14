@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2 } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,7 +28,7 @@ export default function ApplicantsListPage() {
         setApplicants(fetchedApplicants);
       } catch (error) {
         console.error("Error fetching applicants: ", error);
-        Swal.fire("Error", "Could not fetch applicant data from Firestore.", "error");
+        Swal.fire("Error", `Could not fetch applicant data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -114,14 +114,16 @@ export default function ApplicantsListPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      Loading applicants from Firestore...
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading applicants...
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : applicants.length > 0 ? (
                   applicants.map((applicant) => (
                     <TableRow key={applicant.id}>
-                      <TableCell className="font-medium">{applicant.applicantName}</TableCell>
-                      <TableCell>{applicant.email}</TableCell>
+                      <TableCell className="font-medium">{applicant.applicantName || 'N/A'}</TableCell>
+                      <TableCell>{applicant.email || 'N/A'}</TableCell>
                       <TableCell>{applicant.phone || 'N/A'}</TableCell>
                       <TableCell>{applicant.contactPerson || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-1">

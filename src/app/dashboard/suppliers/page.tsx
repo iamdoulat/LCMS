@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2 } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -29,7 +29,7 @@ export default function BeneficiariesListPage() {
         setBeneficiaries(fetchedBeneficiaries);
       } catch (error) {
         console.error("Error fetching beneficiaries: ", error);
-        Swal.fire("Error", "Could not fetch beneficiary data from Firestore.", "error");
+         Swal.fire("Error", `Could not fetch beneficiary data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -115,16 +115,18 @@ export default function BeneficiariesListPage() {
                 {isLoading ? (
                    <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      Loading beneficiaries from Firestore...
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading beneficiaries...
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : beneficiaries.length > 0 ? (
                   beneficiaries.map((beneficiary) => (
                     <TableRow key={beneficiary.id}>
-                      <TableCell className="font-medium">{beneficiary.beneficiaryName}</TableCell>
-                      <TableCell>{beneficiary.emailId}</TableCell>
-                      <TableCell>{beneficiary.cellNumber}</TableCell>
-                      <TableCell>{beneficiary.contactPersonName}</TableCell>
+                      <TableCell className="font-medium">{beneficiary.beneficiaryName || 'N/A'}</TableCell>
+                      <TableCell>{beneficiary.emailId || 'N/A'}</TableCell>
+                      <TableCell>{beneficiary.cellNumber || 'N/A'}</TableCell>
+                      <TableCell>{beneficiary.contactPersonName || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
                           <Tooltip>
