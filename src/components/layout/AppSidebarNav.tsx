@@ -36,7 +36,6 @@ import {
   Store,
   UserPlus,
   Building,
-  ChevronDown // This is likely unused now with ShadCN AccordionTrigger providing its own
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -83,7 +82,7 @@ const managementNavItems: NavItemGroup[] = [
 ];
 
 
-const settingsNavItems: NavItem[] = [ 
+const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
@@ -105,43 +104,35 @@ export function AppSidebarNav() {
       (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ||
       (href === '/dashboard/settings/company-setup' && pathname.startsWith('/dashboard/settings/company-setup')) ||
       (href === '/dashboard/settings/users' && pathname.startsWith('/dashboard/settings/users')) ||
-      (href === '/dashboard/settings/smtp' && pathname.startsWith('/dashboard/settings/smtp')) 
+      (href === '/dashboard/settings/smtp' && pathname.startsWith('/dashboard/settings/smtp'))
     ) {
-      // For exact matches of group parent links, we need to be careful
-      // This specific logic might need refinement based on desired active state behavior for parent links
-      // For now, if it's a parent link, it's active if the current path is exactly that link
       return pathname === href;
     }
-    // Broader check for sub-pages making the parent active, but only if it's not the exact group link
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        // Check if this 'href' is a group path that has an active sub-link
-        // This avoids marking a group parent active if a sub-link within another group but starting with same base path is active
-        const isPartOfActiveGroup = managementNavItems.some(group => 
-            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href) 
-        ) || lcManagementNavItems.some(group => 
+        const isPartOfActiveGroup = managementNavItems.some(group =>
+            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
+        ) || lcManagementNavItems.some(group =>
             group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
         );
 
-        if (isPartOfActiveGroup) return false; // Don't mark active if a sub-link in a different group is the actual active one
+        if (isPartOfActiveGroup) return false;
         return true;
     }
     return false;
   };
-  
+
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => pathname.startsWith(sub.href));
   };
 
   const combinedNavGroups = [...lcManagementNavItems, ...managementNavItems];
 
-  // Determine default open accordions based on current path
   const defaultOpenAccordions = combinedNavGroups
     .filter(item => item.subLinks && isGroupActive(item.subLinks))
-    .map(item => item.groupLabel || ''); // Fallback for items without groupLabel (though unlikely with current structure)
+    .map(item => item.groupLabel || '');
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => (
-    // This function is primarily for accordion groups
     item.subLinks ? (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -151,7 +142,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", // Hide default chevron in icon mode
+                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden",
                     isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -159,7 +150,6 @@ export function AppSidebarNav() {
                     <item.icon className="h-5 w-5" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </div>
-                  {/* Chevron is now part of AccordionTrigger by default in Shadcn */}
                 </AccordionTrigger>
             </TooltipTrigger>
               <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -177,7 +167,7 @@ export function AppSidebarNav() {
                     isActive={pathname === subLink.href}
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                      "h-8 text-xs" // Smaller height for sub-menu items
+                      "h-8 text-xs"
                     )}
                     tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                   >
@@ -192,28 +182,29 @@ export function AppSidebarNav() {
           </SidebarMenu>
         </AccordionContent>
       </AccordionItem>
-    ) : null // Should not happen if item is meant to be a group
+    ) : null
   );
 
 
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Fetch company logo and name from settings (e.g., Firestore) and display here */}
-        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap p-2">
-          <Image 
-            src={companyLogoUrlFromSettings} 
-            alt="Company Logo Placeholder" 
-            width={32} 
-            height={32} 
+        {/* TODO: This should eventually display the actual company name and logo from the Company Setup page data. */}
+        <Link href="/dashboard" className="flex items-center gap-2 p-2">
+          <Image
+            src={companyLogoUrlFromSettings}
+            alt="Company Logo Placeholder"
+            width={32}
+            height={32}
             className="rounded-sm"
-            data-ai-hint="logo company" 
+            data-ai-hint="logo company"
           />
-          <span className="group-data-[collapsible=icon]:hidden">{companyNameFromSettings}</span>
+          <span className="group-data-[collapsible=icon]:hidden text-lg font-semibold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+            {companyNameFromSettings}
+          </span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
-        {/* Dashboard Link */}
         <SidebarMenu className="gap-0 px-2 py-2">
             <SidebarMenuItem key={mainDashboardLink.href!}>
               <Link href={mainDashboardLink.href!} passHref legacyBehavior>
@@ -233,8 +224,7 @@ export function AppSidebarNav() {
         </SidebarMenu>
 
         <SidebarSeparator />
-        
-        {/* L/C Management Section */}
+
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             L/C Tools
@@ -246,7 +236,6 @@ export function AppSidebarNav() {
 
         <SidebarSeparator />
 
-        {/* Management Section */}
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Management
@@ -258,14 +247,13 @@ export function AppSidebarNav() {
 
         <SidebarSeparator />
 
-        {/* Settings Section */}
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Settings
           </SidebarGroupLabel>
-          <SidebarMenu className="gap-0 px-2 py-1"> {/* Wrap settings items in a SidebarMenu */}
+          <SidebarMenu className="gap-0 px-2 py-1">
             {settingsNavItems.map((item) => (
-              item.href && // Ensure item has a href
+              item.href &&
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
@@ -305,22 +293,18 @@ export function AppSidebarNav() {
   );
 }
 
-// Helper type for nav items
 type NavItem = {
   href?: string;
   label?: string;
   icon: React.ElementType;
 };
 
-// Helper type for nav groups
 type NavItemGroup = {
   groupLabel?: string;
-  icon: React.ElementType; // Icon for the group itself
+  icon: React.ElementType;
   subLinks?: Array<{
     href: string;
     label: string;
-    icon?: React.ElementType; // Icon for individual sub-links
+    icon?: React.ElementType;
   }>;
 };
-
-    

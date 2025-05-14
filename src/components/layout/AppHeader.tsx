@@ -38,14 +38,14 @@ export function AppHeader() {
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="text-xl font-semibold whitespace-nowrap bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
         >
           LC Management System
         </Link>
       </div>
-      
+
       <div className="ml-auto flex items-center gap-2"> {/* Reduced gap from gap-4 */}
         {/* Placeholder Search Button */}
         <Button variant="ghost" size="icon" className="h-9 w-9">
