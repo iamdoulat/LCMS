@@ -15,6 +15,10 @@ export type ShipmentMode = typeof shipmentModeOptions[number] | "";
 export const currencyOptions = ["USD", "EURO"] as const;
 export type Currency = typeof currencyOptions[number] | "";
 
+export const trackingCourierOptions = ["DHL", "FedEx"] as const;
+export type TrackingCourier = typeof trackingCourierOptions[number] | "";
+
+
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
   beneficiaryName: string; // Data will come from Supplier list
@@ -31,9 +35,10 @@ export interface LCEntry {
   latestShipmentDate?: Date;
   finalPIFile?: File | null; // For file object before upload
   shippingDocumentsFile?: File | null; // For file object before upload
-  dhlNumber?: string;
-  etd?: Date; // Estimated Time of Departure - Changed to Date
-  eta?: Date; // Estimated Time of Arrival - Changed to Date
+  trackingCourier?: TrackingCourier | "";
+  trackingNumber?: string;
+  etd?: Date; // Estimated Time of Departure
+  eta?: Date; // Estimated Time of Arrival
   itemDescriptions?: string; // Extracted by AI
   shippingDocumentForAI?: File | null; // Document to be analyzed by AI
   consigneeBankNameAddress?: string;
@@ -53,11 +58,12 @@ export interface LCEntry {
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
-export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta'> {
+export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta' | 'trackingCourier'> {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   etd?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
   eta?: string | Date; // Store as ISO string or Firestore Timestamp, but allow Date for consistency
+  trackingCourier?: TrackingCourier;
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
   numberOfAmendments?: number;

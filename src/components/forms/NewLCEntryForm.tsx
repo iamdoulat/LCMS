@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO } from 'date-fns';
@@ -18,7 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Truck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -43,9 +43,10 @@ const lcEntrySchema = z.object({
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   finalPIFile: z.instanceof(File).optional().nullable(),
   shippingDocumentsFile: z.instanceof(File).optional().nullable(),
-  dhlNumber: z.string().optional(),
-  etd: z.date().optional(), // Changed to date
-  eta: z.date().optional(), // Changed to date
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional(),
+  eta: z.date().optional(),
   itemDescriptions: z.string().optional(),
   shippingDocumentForAI: z.instanceof(File).optional().nullable(),
   consigneeBankNameAddress: z.string().optional(),
@@ -114,9 +115,10 @@ export function NewLCEntryForm() {
       latestShipmentDate: undefined,
       finalPIFile: null,
       shippingDocumentsFile: null,
-      dhlNumber: '',
-      etd: undefined, // Default to undefined for date
-      eta: undefined, // Default to undefined for date
+      trackingCourier: '',
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
       itemDescriptions: '',
       shippingDocumentForAI: null,
       consigneeBankNameAddress: '',
@@ -177,15 +179,14 @@ export function NewLCEntryForm() {
       const dataUri = await fileToDataUri(file);
       const result: ExtractShippingDataOutput = await extractShippingData({ documentDataUri: dataUri });
 
-      // Attempt to parse string dates from AI to Date objects
       const parsedEtd = result.etd ? parseISO(result.etd) : undefined;
       const parsedEta = result.eta ? parseISO(result.eta) : undefined;
 
-      if (result.etd) {
-        form.setValue("etd", isValid(parsedEtd) ? parsedEtd : undefined, { shouldValidate: true });
+      if (result.etd && isValid(parsedEtd)) {
+        form.setValue("etd", parsedEtd, { shouldValidate: true });
       }
-      if (result.eta) {
-        form.setValue("eta", isValid(parsedEta) ? parsedEta : undefined, { shouldValidate: true });
+      if (result.eta && isValid(parsedEta)) {
+        form.setValue("eta", parsedEta, { shouldValidate: true });
       }
       form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
 
@@ -210,19 +211,37 @@ export function NewLCEntryForm() {
     }
   };
 
-  const handleTrackDhl = () => {
-    const dhlNumber = form.getValues("dhlNumber");
-    if (dhlNumber && dhlNumber.trim() !== "") {
-      const url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(dhlNumber.trim())}&submit=1`;
+  const handleTrackDocument = () => {
+    const courier = form.getValues("trackingCourier");
+    const number = form.getValues("trackingNumber");
+
+    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
+      Swal.fire({
+        title: "Information Missing",
+        text: "Please select a courier and enter a tracking number.",
+        icon: "info",
+      });
+      return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(number.trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number.trim())}&trkqual=2460395000~${encodeURIComponent(number.trim())}~FX`;
+    }
+
+    if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       Swal.fire({
-        title: "DHL Number Missing",
-        text: "Please enter a DHL number to track.",
-        icon: "info",
+        title: "Courier Not Supported",
+        text: "Tracking for the selected courier is not implemented.",
+        icon: "warning",
       });
     }
   };
+
 
   return (
     <Form {...form}>
@@ -680,32 +699,62 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-             <FormField
-              control={form.control}
-              name="dhlNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>DHL Number</FormLabel>
-                  <div className="flex items-center gap-2">
-                    <FormControl className="flex-1">
-                      <Input placeholder="Enter DHL tracking number" {...field} />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleTrackDhl}
-                      aria-label="Track DHL Shipment"
-                      title="Track DHL Shipment"
-                      disabled={!form.watch("dhlNumber")}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        </div>
+         <div className="mt-6"> {/* Grouping tracking fields */}
+            <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+            </FormLabel>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+                <FormField
+                    control={form.control}
+                    name="trackingCourier"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Courier</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select Courier" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {trackingCourierOptions.map(courier => (
+                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="trackingNumber"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Tracking Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter tracking number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTrackDocument}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier")}
+                    className="md:col-span-1 mt-4 md:mt-0" // Added margin top for mobile, reset for md
+                    title="Track Original Document"
+                >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Track
+                </Button>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"> {/* ETD/ETA moved here to group with tracking */}
              <FormField
                 control={form.control}
                 name="etd"
@@ -731,6 +780,7 @@ export function NewLCEntryForm() {
                 )}
               />
         </div>
+
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
@@ -839,4 +889,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
