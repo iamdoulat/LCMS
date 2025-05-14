@@ -1,10 +1,33 @@
 
+"use client";
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ListChecks, PlusCircle, Info, Users as UsersIcon } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { PlusCircle, Users as UsersIcon, FileEdit, Info } from 'lucide-react';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+
+
+// Placeholder data - replace with actual data fetching
+const placeholderCustomers = [
+  { id: 'cust1', customerName: 'Global Imports Corp', email: 'contact@globalimports.com', phone: '+1-202-555-0173', contactPerson: 'John Doe', address: '123 Import Lane, New York, NY' },
+  { id: 'cust2', customerName: 'Tech Solutions Ltd.', email: 'info@techsolutions.io', phone: '+44 20 7946 0958', contactPerson: 'Jane Smith', address: '456 Tech Park, London, UK' },
+  { id: 'cust3', customerName: 'Orient Exports Co.', email: 'sales@orientexports.asia', phone: '+65 6734 8888', contactPerson: 'Lee Wang', address: '789 Export Plaza, Singapore' },
+];
 
 export default function CustomersListPage() {
+
+  const handleEditCustomer = (customerId: string) => {
+    // Placeholder function - In a real app, this would navigate to an edit page or open a modal
+    console.log("Attempting to edit customer:", customerId);
+    // For now, you can use toast to show it's a placeholder
+    // import { useToast } from "@/hooks/use-toast";
+    // const { toast } = useToast();
+    // toast({ title: "Edit Action", description: `Edit for customer ${customerId} is a UI placeholder.`, variant: "default" });
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
@@ -28,12 +51,67 @@ export default function CustomersListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20">
-            <Info className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-xl font-semibold text-muted-foreground">Customer List Under Development</p>
-            <p className="text-sm text-muted-foreground">
-              A table displaying all registered customers will be implemented here.
-            </p>
+          <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data</AlertTitle>
+            <AlertDescription className="text-blue-600 dark:text-blue-400">
+              The customer list below uses placeholder data. Actual data integration and full edit functionality require backend setup.
+            </AlertDescription>
+          </Alert>
+
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Customer Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Contact Person</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {placeholderCustomers.length > 0 ? (
+                  placeholderCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{customer.customerName}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.contactPerson}</TableCell>
+                      <TableCell className="text-right">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleEditCustomer(customer.id)}
+                                className="hover:bg-accent/50 hover:text-accent-foreground"
+                              >
+                                <FileEdit className="h-4 w-4" />
+                                <span className="sr-only">Edit Customer</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit Customer (UI Placeholder)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No customers found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+              <TableCaption className="py-4">
+                A list of your customers. (Currently displaying placeholder data)
+              </TableCaption>
+            </Table>
           </div>
         </CardContent>
       </Card>
