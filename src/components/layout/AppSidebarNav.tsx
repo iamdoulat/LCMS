@@ -53,7 +53,7 @@ const lcManagementNavItems: NavItemGroup[] = [
   },
 ];
 
-const generalManagementNavItems: NavItemGroup[] = [
+const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
     icon: Store,
@@ -109,7 +109,7 @@ export function AppSidebarNav() {
     // For other specific links, check if the pathname starts with the href,
     // but not if it's a group that has active sub-links (handled by isGroupActive).
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        const isPartOfActiveGroup = generalManagementNavItems.some(group => 
+        const isPartOfActiveGroup = managementNavItems.some(group => 
             group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href) 
         ) || lcManagementNavItems.some(group => 
             group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
@@ -125,7 +125,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => pathname.startsWith(sub.href));
   };
 
-  const combinedNavGroups = [...lcManagementNavItems, ...generalManagementNavItems];
+  const combinedNavGroups = [...lcManagementNavItems, ...managementNavItems];
 
   const defaultOpenAccordions = combinedNavGroups
     .filter(item => item.subLinks && isGroupActive(item.subLinks))
@@ -189,9 +189,10 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Fetch company name from settings and display here */}
         <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap">
           <Briefcase className="h-6 w-6" />
-          <span className="group-data-[collapsible=icon]:hidden">Here set Company name</span>
+          <span className="group-data-[collapsible=icon]:hidden">Here will show Company Name* from Company setup page data</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
@@ -231,7 +232,7 @@ export function AppSidebarNav() {
             Management
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-            {generalManagementNavItems.map(renderNavGroup)}
+            {managementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
 
@@ -300,4 +301,3 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
-
