@@ -18,6 +18,9 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
+export const lcStatusOptions = ["Draft", "Transmitted", "Shipping going on", "Done"] as const;
+export type LCStatus = typeof lcStatusOptions[number];
+
 
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
@@ -56,6 +59,7 @@ export interface LCEntry {
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | '';
+  status?: LCStatus; // New status field
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
@@ -71,4 +75,6 @@ export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shipping
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
   numberOfAmendments?: number;
+  status?: LCStatus;
 }
+
