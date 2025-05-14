@@ -21,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added TooltipProvider
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   ListChecks, 
@@ -34,8 +34,8 @@ import {
   Briefcase,
   Loader2,
   Store,      
-  UserPlus, 
-  ChevronDown 
+  UserPlus
+  // ChevronDown is no longer needed here as AccordionTrigger provides its own
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -149,6 +149,8 @@ export function AppSidebarNav() {
                             className={cn(
                               "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                               "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                              // Hide the default chevron when in icon mode
+                              "group-data-[collapsible=icon]:[&>svg]:hidden", 
                               isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             )}
                           >
@@ -156,7 +158,7 @@ export function AppSidebarNav() {
                               <item.icon className="h-5 w-5" />
                               <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                             </div>
-                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[collapsible=icon]:hidden group-data-[state=open]:rotate-180" />
+                            {/* The AccordionTrigger component from ShadCN UI already includes its own ChevronDown icon, so we remove the manual one here. */}
                           </AccordionTrigger>
                       </TooltipTrigger>
                        <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -171,7 +173,7 @@ export function AppSidebarNav() {
                           <Link href={subLink.href} passHref legacyBehavior>
                             <SidebarMenuButton
                               asChild
-                              isActive={pathname === subLink.href} // More precise active state for sublinks
+                              isActive={pathname === subLink.href} 
                               className={cn(
                                 pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                                 "h-8 text-xs" 
@@ -189,7 +191,7 @@ export function AppSidebarNav() {
                     </SidebarMenu>
                   </AccordionContent>
                 </AccordionItem>
-              ) : ( // Non-group items directly in management
+              ) : ( 
                 <SidebarMenuItem key={item.href || `item-${index}`}>
                   <Link href={item.href!} passHref legacyBehavior>
                     <SidebarMenuButton 
@@ -264,7 +266,7 @@ type NavItem = {
   icon: React.ElementType;
   isGroup?: boolean;
   groupLabel?: string;
-  defaultOpen?: boolean; // This can be used by Accordion's defaultValue
+  defaultOpen?: boolean; 
   subLinks?: Array<{
     href: string;
     label: string;
