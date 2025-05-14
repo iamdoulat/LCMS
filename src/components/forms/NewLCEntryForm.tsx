@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3 } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -58,6 +58,9 @@ const lcEntrySchema = z.object({
   documentsRequired: z.string().optional(), // 46A - main text
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.string().optional(),
+  notifyPartyName: z.string().optional(),
+  notifyPartyAddress: z.string().optional(),
+  notifyPartyContactDetails: z.string().optional(),
 });
 
 // Helper function to convert File to Data URI
@@ -109,6 +112,9 @@ export function NewLCEntryForm() {
       documentsRequired: '',
       shippingMarks: '',
       certificateOfOrigin: '',
+      notifyPartyName: '',
+      notifyPartyAddress: '',
+      notifyPartyContactDetails: '',
     },
   });
 
@@ -475,6 +481,50 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
+        
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <BellRing className="mr-2 h-5 w-5 text-primary" />
+            Notify Details
+        </h3>
+        <FormField
+            control={form.control}
+            name="notifyPartyName"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Name</FormLabel>
+                <FormControl>
+                <Input placeholder="Enter notify party's name" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="notifyPartyAddress"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Address</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="notifyPartyContactDetails"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Contact Details</FormLabel>
+                <FormControl>
+                <Input placeholder="e.g., Phone or Email" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
@@ -610,7 +660,7 @@ export function NewLCEntryForm() {
         </div>
         
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
-            <FileSignature className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon */}
+            <FileSignature className="mr-2 h-5 w-5 text-primary" /> 
             46A: Documents Required
         </h3>
         <FormField
@@ -643,10 +693,10 @@ export function NewLCEntryForm() {
         </div>
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
-            <Edit3 className="mr-2 h-5 w-5 text-primary" /> {/* Using Edit3 as a placeholder for conditions */}
+            <Edit3 className="mr-2 h-5 w-5 text-primary" /> 
             47A: Additional Conditions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> {/* Keeping grid for potential future fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> 
             <FormField
                 control={form.control}
                 name="shippingMarks"
@@ -716,6 +766,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-
-    

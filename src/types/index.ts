@@ -47,6 +47,10 @@ export interface LCEntry {
   documentsRequired?: string; // 46A - main text
   shippingMarks?: string;
   certificateOfOrigin?: string;
+  // New Notify Party Fields
+  notifyPartyName?: string;
+  notifyPartyAddress?: string;
+  notifyPartyContactDetails?: string;
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
