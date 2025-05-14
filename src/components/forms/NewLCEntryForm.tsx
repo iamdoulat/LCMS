@@ -17,13 +17,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), 
-  applicantName: z.string().min(1, "Applicant name is required"), 
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
+  applicantName: z.string().min(1, "Applicant name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -58,7 +58,7 @@ const lcEntrySchema = z.object({
   documentsRequired: z.string().optional(), // 46A - main text
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.string().optional(),
-  notifyPartyNameAndAddress: z.string().optional(), // Combined field
+  notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -79,13 +79,13 @@ const fileToDataUri = (file: File): Promise<string> => {
 };
 
 // Placeholder data for dropdowns - replace with actual data fetching
-const placeholderBeneficiaryOptionsFromSuppliers = [ 
+const placeholderBeneficiaryOptionsFromSuppliers = [
   { value: "Supplier One Corp", label: "Supplier One Corp" },
   { value: "Advanced Tech Components", label: "Advanced Tech Components" },
   { value: "Global Manufacturing Co.", label: "Global Manufacturing Co." },
 ];
 
-const placeholderApplicantOptions = [ 
+const placeholderApplicantOptions = [
   { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
   { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
   { value: "Global Imports Corp", label: "Global Imports Corp" },
@@ -99,9 +99,9 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', 
-      applicantName: '', 
-      currency: 'USD' as Currency, 
+      beneficiaryName: '',
+      applicantName: '',
+      currency: 'USD' as Currency,
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
@@ -129,7 +129,7 @@ export function NewLCEntryForm() {
       documentsRequired: '',
       shippingMarks: '',
       certificateOfOrigin: '',
-      notifyPartyNameAndAddress: '', // Combined field
+      notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
       numberOfAmendments: '',
     },
@@ -156,7 +156,7 @@ export function NewLCEntryForm() {
       timer: 3000,
       showConfirmButton: true,
     });
-    // form.reset(); 
+    // form.reset();
   }
 
   const handleAnalyzeDocument = async () => {
@@ -175,7 +175,7 @@ export function NewLCEntryForm() {
     try {
       const dataUri = await fileToDataUri(file);
       const result: ExtractShippingDataOutput = await extractShippingData({ documentDataUri: dataUri });
-      
+
       form.setValue("etd", result.etd, { shouldValidate: true });
       form.setValue("eta", result.eta, { shouldValidate: true });
       form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
@@ -190,7 +190,7 @@ export function NewLCEntryForm() {
     } catch (error) {
       console.error("AI Analysis Error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during analysis.";
-      setAiError(errorMessage); 
+      setAiError(errorMessage);
       Swal.fire({
         title: "Analysis Failed",
         text: errorMessage,
@@ -198,6 +198,20 @@ export function NewLCEntryForm() {
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleTrackDhl = () => {
+    const dhlNumber = form.getValues("dhlNumber");
+    if (dhlNumber && dhlNumber.trim() !== "") {
+      const url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(dhlNumber.trim())}&submit=1`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire({
+        title: "DHL Number Missing",
+        text: "Please enter a DHL number to track.",
+        icon: "info",
+      });
     }
   };
 
@@ -222,8 +236,8 @@ export function NewLCEntryForm() {
                 <FormItem>
                   <FormLabel>Shipping Document for Analysis</FormLabel>
                   <FormControl>
-                     <FileInput 
-                        onFileChange={(file) => field.onChange(file)} 
+                     <FileInput
+                        onFileChange={(file) => field.onChange(file)}
                         accept=".pdf,.jpg,.jpeg,.png"
                       />
                   </FormControl>
@@ -253,7 +267,7 @@ export function NewLCEntryForm() {
             )}
           </CardContent>
         </Card>
-        
+
         <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
@@ -535,7 +549,7 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
-        
+
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
@@ -607,7 +621,7 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
-        
+
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <Workflow className="mr-2 h-5 w-5 text-primary" />
             Shipping Information
@@ -646,9 +660,9 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
-                    <Input 
-                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"} 
-                        {...field} 
+                    <Input
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        {...field}
                         disabled={!watchedShipmentMode}
                     />
                     </FormControl>
@@ -663,9 +677,22 @@ export function NewLCEntryForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>DHL Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter DHL tracking number" {...field} />
-                  </FormControl>
+                  <div className="flex items-center gap-2">
+                    <FormControl className="flex-1">
+                      <Input placeholder="Enter DHL tracking number" {...field} />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleTrackDhl}
+                      aria-label="Track DHL Shipment"
+                      title="Track DHL Shipment"
+                      disabled={!form.watch("dhlNumber")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -699,9 +726,9 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
-        
+
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
-            <FileSignature className="mr-2 h-5 w-5 text-primary" /> 
+            <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
         <FormField
@@ -734,10 +761,10 @@ export function NewLCEntryForm() {
         </div>
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
-            <Edit3 className="mr-2 h-5 w-5 text-primary" /> 
+            <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
                 name="shippingMarks"
@@ -759,12 +786,12 @@ export function NewLCEntryForm() {
           <FormField
             control={form.control}
             name="finalPIFile"
-            render={({ field }) => ( 
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Final PI (PDF/JPG)</FormLabel>
                 <FormControl>
-                  <FileInput 
-                    onFileChange={(file) => field.onChange(file)} 
+                  <FileInput
+                    onFileChange={(file) => field.onChange(file)}
                     accept=".pdf,.jpg,.jpeg"
                   />
                 </FormControl>
@@ -779,7 +806,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Shipping Documents (PDF/JPG)</FormLabel>
                 <FormControl>
-                  <FileInput 
+                  <FileInput
                     onFileChange={(file) => field.onChange(file)}
                     accept=".pdf,.jpg,.jpeg"
                   />
@@ -807,3 +834,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
