@@ -18,7 +18,7 @@ export type Currency = typeof currencyOptions[number] | "";
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
   beneficiaryName: string; // Data will come from Supplier list
-  applicantName: string; // Data will come from Customer list (previously supplierName)
+  applicantName: string; // Data will come from Customer list
   currency: Currency;
   amount: number | ''; // Allow empty string for initial form state, parse to number on submit
   termsOfPay: TermsOfPay;
@@ -51,6 +51,7 @@ export interface LCEntry {
   notifyPartyName?: string;
   notifyPartyAddress?: string;
   notifyPartyContactDetails?: string;
+  numberOfAmendments?: number | ''; // New field
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
@@ -59,4 +60,5 @@ export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shipping
   shippingDocumentsUrl?: string;
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
+  numberOfAmendments?: number; // New field
 }

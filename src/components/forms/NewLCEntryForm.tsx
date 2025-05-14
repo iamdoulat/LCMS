@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -61,6 +61,10 @@ const lcEntrySchema = z.object({
   notifyPartyName: z.string().optional(),
   notifyPartyAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
+  numberOfAmendments: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
+  ),
 });
 
 // Helper function to convert File to Data URI
@@ -129,6 +133,7 @@ export function NewLCEntryForm() {
       notifyPartyName: '',
       notifyPartyAddress: '',
       notifyPartyContactDetails: '',
+      numberOfAmendments: '',
     },
   });
 
@@ -412,6 +417,19 @@ export function NewLCEntryForm() {
                 <FormLabel>Total Machine Qty*</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="e.g., 5" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="numberOfAmendments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -804,4 +822,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
