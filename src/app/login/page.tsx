@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import Swal from 'sweetalert2';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 
@@ -29,11 +29,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Keep local error for inline display
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -55,18 +54,21 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
+      Swal.fire({
         title: "Login Successful",
-        description: "Welcome back!",
-        variant: "default",
+        text: "Welcome back!",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
       });
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || "Failed to login. Please check your credentials.");
-      toast({
+      const errorMessage = err.message || "Failed to login. Please check your credentials.";
+      setError(errorMessage); // For inline error display
+      Swal.fire({
         title: "Login Failed",
-        description: err.message || "An unexpected error occurred.",
-        variant: "destructive",
+        text: errorMessage,
+        icon: "error",
       });
     } finally {
       setIsEmailLoading(false);
@@ -78,9 +80,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithGoogle();
-      // Navigation is handled within signInWithGoogle on success
+      // Navigation and success toast are handled within signInWithGoogle context method
     } catch (err: any) {
-       // Error toast is handled within signInWithGoogle context method
+      // Error toast is handled within signInWithGoogle context method, but set local error too
       setError(err.message || "Google Sign-In failed.");
     } finally {
       setIsGoogleLoading(false);
@@ -175,8 +177,6 @@ export default function LoginPage() {
                 Signing in...
               </>
             ) : (
-              // Using a generic icon as direct Google icon might not be in lucide
-              // You can replace this with an SVG or a specific Google icon component
               <>
                  <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.5 512 0 398.8 0 256S110.5 0 244 0c69.8 0 129.8 28.2 174.2 73.4l-60.4 58.6C332.2 106.5 292.3 89 244 89c-60.2 0-109.1 46.3-122.2 106.4H90.7V224h14.4c12.5-56.2 63.5-99.9 120.5-99.9 31.9 0 60.4 12.2 82.4 32.5l64.7-62.1C391.1 37.3 327.9 0 256.6 0 120.1 0 12.5 93.4 1.6 214.9h.2c-11.7 41.9-11.7 87.4 0 129.3H1.6C12.5 418.6 120.1 512 256.6 512c132.3 0 236.6-100.9 236.6-233.5 0-14.7-.9-29.1-2.6-43.2H256.6v85.8h132.2c-6.7 49.4-41.6 86.9-87.3 86.9-53.4 0-96.8-46.1-96.8-102.1s43.4-102.1 96.8-102.1c25.2 0 46.6 9.8 63.3 25.6l60.4-58.6C433.6 50.7 377.1 8 307.6 8c-67.3 0-125.2 48.9-145.3 114.7L14.7 256l45.3 82.8c20.1 65.8 78.1 114.7 145.3 114.7 70.5 0 127-42.7 148.3-102.1H307.6V261.8H488z"></path></svg>
                 Sign in with Google
@@ -195,4 +195,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

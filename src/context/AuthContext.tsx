@@ -8,7 +8,7 @@ import type { PropsWithChildren} from 'react';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase/config';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import Swal from 'sweetalert2';
 
 interface AuthContextType {
   user: User | null;
@@ -25,7 +25,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -40,18 +39,20 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       await firebaseSignOut(auth);
       setUser(null);
-      toast({
+      Swal.fire({
         title: "Logged Out",
-        description: "You have been successfully logged out.",
-        variant: "default",
+        text: "You have been successfully logged out.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
       });
       router.push('/login');
     } catch (error: any) {
       console.error("Error signing out: ", error);
-      toast({
+      Swal.fire({
         title: "Logout Error",
-        description: error.message || "Failed to log out. Please try again.",
-        variant: "destructive",
+        text: error.message || "Failed to log out. Please try again.",
+        icon: "error",
       });
     } finally {
       setLoading(false);
@@ -63,16 +64,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
-      toast({
+      Swal.fire({
         title: "Login Successful",
-        description: `Welcome, ${result.user.displayName || result.user.email}!`,
-        variant: "default",
+        text: `Welcome, ${result.user.displayName || result.user.email}!`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
       });
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Error signing in with Google: ", error);
-      // Firebase often provides specific error codes for Google Sign-In issues
-      // For example, 'auth/popup-closed-by-user' or 'auth/cancelled-popup-request'
       let errorMessage = "Failed to sign in with Google. Please try again.";
       if (error.code === 'auth/account-exists-with-different-credential') {
         errorMessage = "An account already exists with the same email address but different sign-in credentials. Try signing in with the original method.";
@@ -80,19 +81,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = "Google Sign-In was cancelled.";
       }
       
-      toast({
+      Swal.fire({
         title: "Google Sign-In Failed",
-        description: errorMessage,
-        variant: "destructive",
+        text: errorMessage,
+        icon: "error",
       });
-      // Don't redirect if Google Sign-In fails, let user try again or use other methods
     } finally {
-      setLoading(false); // Ensure loading is set to false in all cases for Google Sign-In
+      setLoading(false);
     }
   };
 
 
-  if (loading && !user) { // Adjusted loading condition to prevent full page loader if user is already set
+  if (loading && !user) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -114,4 +114,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

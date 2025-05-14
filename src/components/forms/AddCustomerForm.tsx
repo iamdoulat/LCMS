@@ -6,12 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, UserPlus } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
 
 const customerSchema = z.object({
   customerName: z.string().min(1, "Customer name is required"),
@@ -28,7 +28,6 @@ const customerSchema = z.object({
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 export function AddCustomerForm() {
-  const { toast } = useToast();
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -47,10 +46,12 @@ export function AddCustomerForm() {
   async function onSubmit(data: CustomerFormValues) {
     console.log("Customer Form Data:", data);
     // Placeholder for actual submission (e.g., to Firebase Firestore)
-    toast({
+    Swal.fire({
       title: "Customer Profile Submitted (Simulated)",
-      description: "Customer data logged to console. Implement backend submission.",
-      variant: "default",
+      text: "Customer data logged to console. Implement backend submission.",
+      icon: "success",
+      timer: 3000,
+      showConfirmButton: true,
     });
     // form.reset(); // Optionally reset form
   }

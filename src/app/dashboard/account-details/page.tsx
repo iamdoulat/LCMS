@@ -7,13 +7,13 @@ import { Loader2, UserCircle, Save, ShieldAlert } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import Swal from 'sweetalert2';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
@@ -27,9 +27,8 @@ type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 
 export default function AccountDetailsPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Keep local error for inline display
 
   const form = useForm<AccountDetailsFormValues>({
     resolver: zodResolver(accountDetailsSchema),
@@ -50,8 +49,9 @@ export default function AccountDetailsPage() {
 
   const onSubmit = async (data: AccountDetailsFormValues) => {
     if (!auth.currentUser) {
-      setError("No user logged in. Please re-authenticate.");
-      toast({ title: "Error", description: "No user logged in.", variant: "destructive" });
+      const msg = "No user logged in. Please re-authenticate.";
+      setError(msg);
+      Swal.fire({ title: "Error", text: msg, icon: "error" });
       return;
     }
 
@@ -62,21 +62,20 @@ export default function AccountDetailsPage() {
       await updateProfile(auth.currentUser, {
         displayName: data.displayName,
       });
-      toast({
+      Swal.fire({
         title: "Profile Updated",
-        description: "Your display name has been successfully updated.",
-        variant: "default",
+        text: "Your display name has been successfully updated.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
       });
-      // Optionally, you might want to update the user object in AuthContext
-      // or rely on onAuthStateChanged to propagate changes.
-      // For simplicity, we're letting Firebase handle the currentUser object update.
     } catch (err: any) {
       const errorMessage = err.message || "Failed to update profile. Please try again.";
       setError(errorMessage);
-      toast({
+      Swal.fire({
         title: "Update Failed",
-        description: errorMessage,
-        variant: "destructive",
+        text: errorMessage,
+        icon: "error",
       });
     } finally {
       setIsSubmitting(false);
@@ -165,23 +164,6 @@ export default function AccountDetailsPage() {
                 )}
               />
               
-              {/* Placeholder for Photo URL update - more complex */}
-              {/* 
-              <FormField
-                control={form.control}
-                name="photoURL"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com/your-photo.jpg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              /> 
-              */}
-
               <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>

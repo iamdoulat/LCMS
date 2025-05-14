@@ -1,11 +1,13 @@
+
 "use client";
 
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntry } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
+import Swal from 'sweetalert2';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
-import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileScan, Loader2, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -58,7 +59,6 @@ const fileToDataUri = (file: File): Promise<string> => {
 };
 
 export function NewLCEntryForm() {
-  const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
 
@@ -87,24 +87,23 @@ export function NewLCEntryForm() {
 
   async function onSubmit(data: LCEntry) {
     console.log("Form Data:", data);
-    // Placeholder for Firebase submission
-    // Convert File objects to URLs after uploading to Firebase Storage
-    // e.g., const finalPIUrl = await uploadFile(data.finalPIFile);
-    toast({
+    Swal.fire({
       title: "L/C Entry Submitted (Simulated)",
-      description: "Data logged to console. Implement Firebase submission.",
-      variant: "default",
+      text: "Data logged to console. Implement Firebase submission.",
+      icon: "success",
+      timer: 3000,
+      showConfirmButton: true,
     });
-    // form.reset(); // Optionally reset form after submission
+    // form.reset(); 
   }
 
   const handleAnalyzeDocument = async () => {
     const file = form.getValues("shippingDocumentForAI");
     if (!file) {
-      toast({
+      Swal.fire({
         title: "No Document Selected",
-        description: "Please select a shipping document to analyze.",
-        variant: "destructive",
+        text: "Please select a shipping document to analyze.",
+        icon: "warning",
       });
       return;
     }
@@ -119,19 +118,21 @@ export function NewLCEntryForm() {
       form.setValue("eta", result.eta, { shouldValidate: true });
       form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
 
-      toast({
+      Swal.fire({
         title: "Analysis Complete",
-        description: "ETD, ETA, and Item Descriptions have been populated.",
-        variant: "default",
+        text: "ETD, ETA, and Item Descriptions have been populated.",
+        icon: "success",
+        timer: 2500,
+        showConfirmButton: false,
       });
     } catch (error) {
       console.error("AI Analysis Error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during analysis.";
-      setAiError(errorMessage);
-      toast({
+      setAiError(errorMessage); // For inline error display
+      Swal.fire({
         title: "Analysis Failed",
-        description: errorMessage,
-        variant: "destructive",
+        text: errorMessage,
+        icon: "error",
       });
     } finally {
       setIsAnalyzing(false);
@@ -386,7 +387,7 @@ export function NewLCEntryForm() {
           <FormField
             control={form.control}
             name="finalPIFile"
-            render={({ field }) => ( // field already includes onChange, value, etc.
+            render={({ field }) => ( 
               <FormItem>
                 <FormLabel>Final PI (PDF/JPG)</FormLabel>
                 <FormControl>

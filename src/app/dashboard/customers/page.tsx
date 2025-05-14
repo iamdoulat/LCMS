@@ -10,18 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  // AlertDialogTrigger, // No longer using AlertDialogTrigger directly in the table for this
-} from "@/components/ui/alert-dialog";
+import Swal from 'sweetalert2';
 
 // Placeholder data - replace with actual data fetching
 const initialCustomers = [
@@ -32,41 +21,44 @@ const initialCustomers = [
 
 export default function CustomersListPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [customers, setCustomers] = useState(initialCustomers);
-  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleEditCustomer = (customerId: string) => {
-    toast({
+    Swal.fire({
       title: "Redirecting...",
-      description: `Navigating to edit page for customer ${customerId}.`,
-      variant: "default"
+      text: `Navigating to edit page for customer ${customerId}.`,
+      icon: "info",
+      timer: 1500,
+      showConfirmButton: false,
     });
     router.push(`/dashboard/customers/${customerId}/edit`);
   };
 
-  const openDeleteDialog = (customerId: string) => {
-    setCustomerToDelete(customerId);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (customerToDelete) {
-      // Simulate API call for deletion
-      console.log(`Deleting customer ${customerToDelete}`);
-      
-      // Update local state
-      setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerToDelete));
-      
-      toast({
-        title: "Customer Deleted (Simulated)",
-        description: `Customer ${customerToDelete} has been removed from the list.`,
-        variant: "default"
-      });
-      setCustomerToDelete(null); 
-      setIsDeleteDialogOpen(false);
-    }
+  const handleDeleteCustomer = (customerId: string, customerName: string) => {
+    Swal.fire({
+      title: 'Are you absolutely sure?',
+      text: `This action cannot be undone. This will permanently delete the customer profile for "${customerName || customerId}" and remove their data from our servers (simulated).`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'hsl(var(--destructive))', // Use theme color
+      cancelButtonColor: 'hsl(var(--secondary))', // Example for cancel button
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Simulate API call for deletion
+        console.log(`Deleting customer ${customerId}`);
+        
+        // Update local state
+        setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerId));
+        
+        Swal.fire(
+          'Deleted!',
+          `Customer ${customerName || customerId} has been removed from the list. (Simulated)`,
+          'success'
+        );
+      }
+    });
   };
 
   return (
@@ -144,7 +136,7 @@ export default function CustomersListPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => openDeleteDialog(customer.id)}
+                                  onClick={() => handleDeleteCustomer(customer.id, customer.customerName)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -174,35 +166,6 @@ export default function CustomersListPage() {
           </div>
         </CardContent>
       </Card>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        setIsDeleteDialogOpen(open);
-        if (!open) {
-          setCustomerToDelete(null); // Reset if closed by overlay click or Esc
-        }
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the customer
-              profile{customerToDelete ? ` for "${customers.find(c => c.id === customerToDelete)?.customerName || customerToDelete}"` : ""} and remove their data from our servers (simulated).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setIsDeleteDialogOpen(false);
-              setCustomerToDelete(null);
-            }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

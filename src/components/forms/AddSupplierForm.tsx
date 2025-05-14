@@ -6,13 +6,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, UploadCloud } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput'; // Assuming FileInput is in the same directory
-import { useToast } from '@/hooks/use-toast';
+import { FileInput } from './FileInput'; 
 
 const supplierSchema = z.object({
   supplierName: z.string().min(1, "Supplier name is required"),
@@ -33,7 +33,6 @@ const supplierSchema = z.object({
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
 export function AddSupplierForm() {
-  const { toast } = useToast();
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
@@ -50,14 +49,13 @@ export function AddSupplierForm() {
 
   async function onSubmit(data: SupplierFormValues) {
     console.log("Supplier Form Data:", data);
-    // Placeholder for actual submission (e.g., to Firebase Firestore and Storage)
-    // Example: const logoUrl = data.brandLogo ? await uploadFileToFirebaseStorage(data.brandLogo) : null;
-    // await saveSupplierToFirestore({ ...data, brandLogoUrl: logoUrl });
-
-    toast({
+    // Placeholder for actual submission
+    Swal.fire({
       title: "Supplier Profile Submitted (Simulated)",
-      description: "Supplier data logged to console. Implement backend submission.",
-      variant: "default",
+      text: "Supplier data logged to console. Implement backend submission.",
+      icon: "success",
+      timer: 3000,
+      showConfirmButton: true,
     });
     // form.reset(); // Optionally reset form
   }

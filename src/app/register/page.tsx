@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import Swal from 'sweetalert2';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 
@@ -33,11 +33,10 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Keep local error for inline display
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -59,18 +58,21 @@ export default function RegisterPage() {
     setError(null);
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
-      toast({
+      Swal.fire({
         title: "Registration Successful",
-        description: "Your account has been created. Redirecting to dashboard...",
-        variant: "default",
+        text: "Your account has been created. Redirecting to dashboard...",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
       });
       router.push('/dashboard'); 
     } catch (err: any) {
-      setError(err.message || "Failed to register. Please try again.");
-      toast({
+      const errorMessage = err.message || "Failed to register. Please try again.";
+      setError(errorMessage); // For inline error display
+      Swal.fire({
         title: "Registration Failed",
-        description: err.message || "An unexpected error occurred.",
-        variant: "destructive",
+        text: errorMessage,
+        icon: "error",
       });
     } finally {
       setIsEmailLoading(false);
@@ -82,7 +84,7 @@ export default function RegisterPage() {
     setError(null);
     try {
       await signInWithGoogle();
-      // Navigation is handled within signInWithGoogle on success
+      // Navigation and success toast are handled within signInWithGoogle context method
     } catch (err: any) {
       // Error toast is handled within signInWithGoogle context method
       setError(err.message || "Google Sign-Up failed.");
@@ -210,4 +212,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
