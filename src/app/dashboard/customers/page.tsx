@@ -5,37 +5,33 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, Users as UsersIcon, FileEdit, Info, Trash2 } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Swal from 'sweetalert2';
-import type { CustomerDocument } from '@/types'; // Use CustomerDocument for Firestore data
-// import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; // Firestore imports
-// import { firestore } from '@/lib/firebase/config'; // Firestore instance
+import type { CustomerDocument } from '@/types'; 
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
+import { firestore } from '@/lib/firebase/config'; 
 
 export default function ApplicantsListPage() {
   const router = useRouter();
   const [applicants, setApplicants] = useState<CustomerDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // For loading state
+  const [isLoading, setIsLoading] = useState(true); 
 
   useEffect(() => {
-    // TODO: Implement actual data fetching from Firestore
     const fetchApplicants = async () => {
       setIsLoading(true);
-      console.log("Fetching applicants from Firestore...");
-      // Example Firestore fetch:
-      // try {
-      //   const querySnapshot = await getDocs(collection(firestore, "customers"));
-      //   const fetchedApplicants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument));
-      //   setApplicants(fetchedApplicants);
-      // } catch (error) {
-      //   console.error("Error fetching applicants: ", error);
-      //   Swal.fire("Error", "Could not fetch applicant data.", "error");
-      // }
-      setApplicants([]); // For now, set to empty after "fetching"
-      setIsLoading(false);
+      try {
+        const querySnapshot = await getDocs(collection(firestore, "customers"));
+        const fetchedApplicants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument));
+        setApplicants(fetchedApplicants);
+      } catch (error) {
+        console.error("Error fetching applicants: ", error);
+        Swal.fire("Error", "Could not fetch applicant data from Firestore.", "error");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchApplicants();
@@ -55,7 +51,7 @@ export default function ApplicantsListPage() {
   const handleDeleteApplicant = (applicantId: string, applicantName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the applicant profile for "${applicantName || applicantId}".`,
+      text: `This action cannot be undone. This will permanently delete the applicant profile for "${applicantName || applicantId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))', 
@@ -64,27 +60,18 @@ export default function ApplicantsListPage() {
       reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
-        console.log(`Simulating delete for applicant ID: ${applicantId} from Firestore.`);
-        // TODO: Implement actual Firestore document deletion
-        // try {
-        //   await deleteDoc(doc(firestore, "customers", applicantId));
-        //   setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
-        //   Swal.fire(
-        //     'Deleted!',
-        //     `Applicant ${applicantName || applicantId} has been removed.`,
-        //     'success'
-        //   );
-        // } catch (error) {
-        //   console.error("Error deleting applicant: ", error);
-        //   Swal.fire("Error", `Could not delete applicant: ${error.message}`, "error");
-        // }
-        Swal.fire( // Placeholder success
-          'Simulated Delete!',
-          `Applicant ${applicantName || applicantId} would be removed from Firestore.`,
-          'success'
-        );
-        // For local state update if not re-fetching:
-        setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
+        try {
+          await deleteDoc(doc(firestore, "customers", applicantId));
+          setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
+          Swal.fire(
+            'Deleted!',
+            `Applicant ${applicantName || applicantId} has been removed.`,
+            'success'
+          );
+        } catch (error: any) {
+          console.error("Error deleting applicant: ", error);
+          Swal.fire("Error", `Could not delete applicant: ${error.message}`, "error");
+        }
       }
     });
   };
@@ -112,14 +99,6 @@ export default function ApplicantsListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
-            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Database Integration Note</AlertTitle>
-            <AlertDescription className="text-blue-600 dark:text-blue-400">
-              This page is intended to display applicants from Firestore. Implement data fetching and real delete operations.
-            </AlertDescription>
-          </Alert>
-
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -135,7 +114,7 @@ export default function ApplicantsListPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      Loading applicants...
+                      Loading applicants from Firestore...
                     </TableCell>
                   </TableRow>
                 ) : applicants.length > 0 ? (
@@ -194,7 +173,7 @@ export default function ApplicantsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants. (Data to be fetched from Firestore)
+                A list of your applicants from Firestore.
               </TableCaption>
             </Table>
           </div>

@@ -5,17 +5,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Info, Trash2, Eye } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus } from '@/types'; 
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns'; 
-// import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; // Firestore imports
-// import { firestore } from '@/lib/firebase/config'; // Firestore instance
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
+import { firestore } from '@/lib/firebase/config'; 
 
 const getStatusBadgeVariant = (status?: LCStatus) => {
   switch (status) {
@@ -39,30 +38,26 @@ export default function TotalLCPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Implement actual data fetching from Firestore
     const fetchLCEntries = async () => {
       setIsLoading(true);
-      console.log("Fetching L/C entries from Firestore...");
-      // Example Firestore fetch:
-      // try {
-      //   const querySnapshot = await getDocs(collection(firestore, "lc_entries"));
-      //   const fetchedLCs = querySnapshot.docs.map(doc => {
-      //     const data = doc.data();
-      //     return {
-      //        id: doc.id,
-      //        ...data,
-      //        // Convert ISO string dates from Firestore back to Date objects if needed for display/formatting
-      //        lcIssueDate: data.lcIssueDate ? parseISO(data.lcIssueDate) : undefined, 
-      //        // Add other date conversions as needed
-      //     } as LCEntryDocument;
-      //   });
-      //   setLcEntries(fetchedLCs);
-      // } catch (error) {
-      //   console.error("Error fetching L/C entries: ", error);
-      //   Swal.fire("Error", "Could not fetch L/C data.", "error");
-      // }
-      setLcEntries([]); // For now, set to empty after "fetching"
-      setIsLoading(false);
+      try {
+        const querySnapshot = await getDocs(collection(firestore, "lc_entries"));
+        const fetchedLCs = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+             id: doc.id,
+             ...data,
+             // Ensure dates are handled correctly if they need to be Date objects for certain operations
+             // For display, string ISO dates are fine with parseISO for formatting
+          } as LCEntryDocument;
+        });
+        setLcEntries(fetchedLCs);
+      } catch (error) {
+        console.error("Error fetching L/C entries: ", error);
+        Swal.fire("Error", "Could not fetch L/C data from Firestore.", "error");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchLCEntries();
@@ -83,7 +78,7 @@ export default function TotalLCPage() {
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}".`,
+      text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))', 
@@ -92,27 +87,18 @@ export default function TotalLCPage() {
       reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
-        console.log(`Simulating delete for L/C ID: ${lcId} from Firestore.`);
-         // TODO: Implement actual Firestore document deletion
-        // try {
-        //   await deleteDoc(doc(firestore, "lc_entries", lcId));
-        //   setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
-        //   Swal.fire(
-        //     'Deleted!',
-        //     `L/C "${lcNumber || lcId}" has been removed.`,
-        //     'success'
-        //   );
-        // } catch (error) {
-        //   console.error("Error deleting L/C: ", error);
-        //   Swal.fire("Error", `Could not delete L/C: ${error.message}`, "error");
-        // }
-        Swal.fire( // Placeholder success
-          'Simulated Delete!',
-          `L/C "${lcNumber || lcId}" would be removed from Firestore.`,
-          'success'
-        );
-        // For local state update if not re-fetching:
-        setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
+        try {
+          await deleteDoc(doc(firestore, "lc_entries", lcId));
+          setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
+          Swal.fire(
+            'Deleted!',
+            `L/C "${lcNumber || lcId}" has been removed.`,
+            'success'
+          );
+        } catch (error: any) {
+          console.error("Error deleting L/C: ", error);
+          Swal.fire("Error", `Could not delete L/C: ${error.message}`, "error");
+        }
       }
     });
   };
@@ -140,14 +126,6 @@ export default function TotalLCPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
-            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Database Integration Note</AlertTitle>
-            <AlertDescription className="text-blue-600 dark:text-blue-400">
-              This page is intended to display L/C entries from Firestore. Implement data fetching and real delete operations.
-            </AlertDescription>
-          </Alert>
-
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -165,7 +143,7 @@ export default function TotalLCPage() {
                  {isLoading ? (
                    <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      Loading L/C entries...
+                      Loading L/C entries from Firestore...
                     </TableCell>
                   </TableRow>
                 ) : lcEntries.length > 0 ? (
@@ -191,7 +169,6 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                // onClick={() => router.push(`/dashboard/total-lc/${lc.id}`)} // Placeholder for view details page
                                 onClick={() => Swal.fire("Info", "View L/C Details page is not yet implemented.", "info")}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
@@ -250,7 +227,7 @@ export default function TotalLCPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Letters of Credit. (Data to be fetched from Firestore)
+                A list of your Letters of Credit from Firestore.
               </TableCaption>
             </Table>
           </div>
