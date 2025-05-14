@@ -30,8 +30,7 @@ const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
-  ttNumber: z.string().optional(),
-  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"), // Renamed from lcNumber
+  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional(),
   totalMachineQty: z.preprocess(
@@ -79,7 +78,6 @@ export function NewLCEntryForm() {
       currency: 'USD' as Currency, // Default to USD
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
-      ttNumber: '',
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
@@ -309,19 +307,6 @@ export function NewLCEntryForm() {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="ttNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>TT Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter TT number if applicable" {...field} />
-                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -624,4 +609,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-

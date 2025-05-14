@@ -22,8 +22,7 @@ export interface LCEntry {
   currency: Currency;
   amount: number | ''; // Allow empty string for initial form state, parse to number on submit
   termsOfPay: TermsOfPay;
-  ttNumber?: string;
-  documentaryCreditNumber: string; // Renamed from lcNumber
+  documentaryCreditNumber: string; 
   proformaInvoiceNumber?: string;
   invoiceDate?: Date;
   totalMachineQty: number | ''; // Allow empty string, parse to number
