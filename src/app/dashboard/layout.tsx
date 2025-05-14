@@ -15,12 +15,23 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
         <Sidebar>
           <AppSidebarNav />
         </Sidebar>
-        <SidebarInset className="flex flex-col">
+        <SidebarInset className="flex flex-col min-h-screen"> {/* Ensure SidebarInset takes full height */}
           <AppHeader />
           <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
             {children}
           </main>
-          {/* Toaster removed from here, it's now in RootLayout */}
+          <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card">
+            © 2025, Design and develop by{' '}
+            <a
+              href="https://gb.me/mddoulat2" // Ensured no space in URL
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium hover:text-primary hover:underline"
+            >
+              Doulat
+            </a>{' '}
+            v1.0
+          </footer>
         </SidebarInset>
       </SidebarProvider>
     </AuthGuard>

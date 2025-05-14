@@ -36,17 +36,18 @@ import {
   Store,
   UserPlus,
   Building,
+  FileText // Added for L/C Management icon consistency if needed
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import Image from 'next/image'; // Import next/image
+import Image from 'next/image'; 
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
 const lcManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'L/C Management',
-    icon: Briefcase,
+    icon: Briefcase, // Main icon for L/C Management
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
@@ -55,7 +56,7 @@ const lcManagementNavItems: NavItemGroup[] = [
 ];
 
 const managementNavItems: NavItemGroup[] = [
-  {
+ {
     groupLabel: 'Suppliers / Beneficiary',
     icon: Store,
     subLinks: [
@@ -71,7 +72,7 @@ const managementNavItems: NavItemGroup[] = [
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
     ],
   },
-   {
+  {
     groupLabel: 'Shipments',
     icon: Truck,
     subLinks: [
@@ -97,30 +98,26 @@ export function AppSidebarNav() {
   const companyLogoUrlFromSettings = "https://placehold.co/32x32.png"; // Placeholder logo
 
   const isActive = (href: string) => {
+    // Exact match for dashboard
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href !== '/dashboard' && pathname === href) return true;
-     if (
-      (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers')) ||
-      (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ||
-      (href === '/dashboard/settings/company-setup' && pathname.startsWith('/dashboard/settings/company-setup')) ||
-      (href === '/dashboard/settings/users' && pathname.startsWith('/dashboard/settings/users')) ||
-      (href === '/dashboard/settings/smtp' && pathname.startsWith('/dashboard/settings/smtp'))
-    ) {
-      return pathname === href;
-    }
+    
+    // For non-dashboard links, check if the current path starts with the href
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        const isPartOfActiveGroup = managementNavItems.some(group =>
-            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
-        ) || lcManagementNavItems.some(group =>
-            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
-        );
-
-        if (isPartOfActiveGroup) return false;
-        return true;
+        // Specific handling for grouped items like suppliers/customers/settings to avoid highlighting parent when child is active
+        if (
+          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/')) ||
+          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/')) ||
+          (href === '/dashboard/settings/company-setup' && pathname !== '/dashboard/settings/company-setup') ||
+          (href === '/dashboard/settings/users' && pathname !== '/dashboard/settings/users') ||
+          (href === '/dashboard/settings/smtp' && pathname !== '/dashboard/settings/smtp')
+        ) {
+          return pathname === href; // Only active if it's an exact match for the base group link
+        }
+        return true; // Active if path starts with href for other cases
     }
     return false;
   };
-
+  
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => pathname.startsWith(sub.href));
   };
@@ -142,7 +139,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden",
+                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", // Hide default chevron in icon mode
                     isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -167,7 +164,7 @@ export function AppSidebarNav() {
                     isActive={pathname === subLink.href}
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                      "h-8 text-xs"
+                      "h-8 text-xs" // Smaller height for sub-items
                     )}
                     tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                   >
@@ -192,14 +189,14 @@ export function AppSidebarNav() {
         {/* TODO: This should eventually display the actual company name and logo from the Company Setup page data. */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrlFromSettings}
+            src={companyLogoUrlFromSettings} // Replace with actual logo URL from settings when available
             alt="Company Logo Placeholder"
             width={32}
             height={32}
             className="rounded-sm"
             data-ai-hint="logo company"
           />
-          <span className="group-data-[collapsible=icon]:hidden text-lg font-semibold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+          <span className="group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
             {companyNameFromSettings}
           </span>
         </Link>
@@ -301,10 +298,10 @@ type NavItem = {
 
 type NavItemGroup = {
   groupLabel?: string;
-  icon: React.ElementType;
+  icon: React.ElementType; // Icon for the group itself
   subLinks?: Array<{
     href: string;
     label: string;
-    icon?: React.ElementType;
+    icon?: React.ElementType; // Icon for individual sub-links
   }>;
 };

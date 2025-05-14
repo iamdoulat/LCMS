@@ -40,7 +40,7 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         <Link
           href="/dashboard"
-          className="text-xl font-semibold whitespace-nowrap bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+          className="text-xl font-bold whitespace-nowrap bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
         >
           LC Management System
         </Link>
