@@ -64,8 +64,15 @@ const managementNavItems: NavItem[] = [
       { href: '/dashboard/customers/add', label: 'Add New Customer', icon: UserPlus },
     ],
   },
-  { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
-  { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
+  {
+    isGroup: true,
+    groupLabel: 'Shipments',
+    icon: Truck, // Main icon for the Shipments group
+    subLinks: [
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
+      { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
+    ],
+  },
 ];
 
 const settingsNavItems = [
@@ -81,19 +88,19 @@ export function AppSidebarNav() {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname === href) return true;
     if ( (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers')) ||
-         (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ) {
+         (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ||
+         (href === '/dashboard/recent-shipments' && pathname.startsWith('/dashboard/recent-shipments')) || // to ensure parent group is active
+         (href === '/dashboard/upcoming-shipments' && pathname.startsWith('/dashboard/upcoming-shipments')) // to ensure parent group is active
+        ) {
         return true;
     }
-    // Check if current path starts with the href, but not if it's a parent path of a more specific match
-    // This handles cases like /dashboard/settings being active for /dashboard/settings/users
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        // Ensure it's not a less specific match for a group that is already active
         const isPartOfActiveGroup = managementNavItems.some(group => 
             group.isGroup && 
             group.subLinks?.some(sub => pathname.startsWith(sub.href)) && 
             href.startsWith(group.subLinks?.[0].href.substring(0, group.subLinks[0].href.lastIndexOf('/')) || '')
         );
-        if (isPartOfActiveGroup) return false; // Let the more specific group link handle active state
+        if (isPartOfActiveGroup) return false; 
         return true;
     }
     return false;
@@ -154,7 +161,7 @@ export function AppSidebarNav() {
                             className={cn(
                               "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                               "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                              "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", // Hide default chevron in icon mode
+                              "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", 
                               isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             )}
                           >
@@ -195,24 +202,28 @@ export function AppSidebarNav() {
                   </AccordionContent>
                 </AccordionItem>
               ) : (
-                // Wrap standalone items in a SidebarMenu to ensure correct li > ul structure
-                <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
-                  <SidebarMenuItem>
-                    <Link href={item.href!} passHref legacyBehavior>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.href!)}
-                        className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                        tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                      >
-                        <a>
-                          <item.icon className="h-5 w-5" />
-                          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </SidebarMenu>
+                // This handles standalone items that are not part of an accordion group
+                // but are at the same level as accordion groups in managementNavItems
+                // (Currently there are none like this after this change, but keeping for robustness)
+                 item.href && (
+                    <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
+                    <SidebarMenuItem>
+                        <Link href={item.href!} passHref legacyBehavior>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.href!)}
+                            className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                            tooltip={{children: item.label!, side: "right", className: "ml-2"}}
+                        >
+                            <a>
+                            <item.icon className="h-5 w-5" />
+                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                            </a>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                    </SidebarMenu>
+                 )
               )
             ))}
           </Accordion>
