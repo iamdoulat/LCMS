@@ -5,11 +5,13 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO } from 'date-fns';
+import { firestore } from '@/lib/firebase/config'; // Import Firestore instance
+import { collection, addDoc } from 'firebase/firestore'; // Import Firestore functions
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,7 +56,7 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(), // Added Vessel IMO Number
+  vesselImoNumber: z.string().optional(), 
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
@@ -69,7 +71,6 @@ const lcEntrySchema = z.object({
   ),
 });
 
-// Helper function to convert File to Data URI
 const fileToDataUri = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -81,7 +82,6 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
-// Placeholder data for dropdowns - replace with actual data fetching
 const placeholderBeneficiaryOptionsFromSuppliers = [
   { value: "Supplier One Corp", label: "Supplier One Corp" },
   { value: "Advanced Tech Components", label: "Advanced Tech Components" },
@@ -98,6 +98,7 @@ const placeholderApplicantOptions = [
 export function NewLCEntryForm() {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
@@ -127,7 +128,7 @@ export function NewLCEntryForm() {
       bankTin: '',
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
-      vesselImoNumber: '', // Added default value
+      vesselImoNumber: '', 
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -153,15 +154,81 @@ export function NewLCEntryForm() {
 
 
   async function onSubmit(data: LCEntry) {
-    console.log("Form Data:", data);
-    Swal.fire({
-      title: "L/C Entry Submitted (Simulated)",
-      text: "Data logged to console. Implement Firebase submission.",
-      icon: "success",
-      timer: 3000,
-      showConfirmButton: true,
+    setIsSubmitting(true);
+    
+    const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
+    const year = lcIssueDate.getFullYear();
+
+    // Prepare data for Firestore, excluding File objects and converting dates
+    const dataToSave: Omit<LCEntryDocument, 'id' | 'finalPIUrl' | 'shippingDocumentsUrl'> = {
+      year,
+      beneficiaryName: data.beneficiaryName,
+      applicantName: data.applicantName,
+      currency: data.currency,
+      amount: Number(data.amount), // Ensure it's a number
+      termsOfPay: data.termsOfPay,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? new Date(data.invoiceDate).toISOString() : undefined,
+      totalMachineQty: Number(data.totalMachineQty), // Ensure it's a number
+      lcIssueDate: data.lcIssueDate ? new Date(data.lcIssueDate).toISOString() : undefined,
+      expireDate: data.expireDate ? new Date(data.expireDate).toISOString() : undefined,
+      latestShipmentDate: data.latestShipmentDate ? new Date(data.latestShipmentDate).toISOString() : undefined,
+      trackingCourier: data.trackingCourier,
+      trackingNumber: data.trackingNumber,
+      etd: data.etd ? new Date(data.etd).toISOString() : undefined,
+      eta: data.eta ? new Date(data.eta).toISOString() : undefined,
+      itemDescriptions: data.itemDescriptions,
+      consigneeBankNameAddress: data.consigneeBankNameAddress,
+      bankBin: data.bankBin,
+      bankTin: data.bankTin,
+      shipmentMode: data.shipmentMode,
+      vesselOrFlightName: data.vesselOrFlightName,
+      vesselImoNumber: data.vesselImoNumber,
+      partialShipments: data.partialShipments,
+      portOfLoading: data.portOfLoading,
+      portOfDischarge: data.portOfDischarge,
+      documentsRequired: data.documentsRequired,
+      shippingMarks: data.shippingMarks,
+      certificateOfOrigin: data.certificateOfOrigin,
+      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
+      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
+      status: data.status || 'Draft', // Default status if not provided
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Filter out undefined optional fields before saving
+    Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+            delete dataToSave[key as keyof typeof dataToSave];
+        }
     });
-    // form.reset();
+
+
+    try {
+      const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
+      console.log("Document written with ID: ", docRef.id);
+      Swal.fire({
+        title: "L/C Entry Saved!",
+        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}`,
+        icon: "success",
+        timer: 3000,
+        showConfirmButton: true,
+      });
+      form.reset(); 
+    } catch (error) {
+      console.error("Error adding document: ", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save L/C entry: ${errorMessage}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const handleAnalyzeDocument = async () => {
@@ -289,7 +356,7 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-            <Button type="button" onClick={handleAnalyzeDocument} disabled={isAnalyzing} className="bg-primary hover:bg-primary/90">
+            <Button type="button" onClick={handleAnalyzeDocument} disabled={isAnalyzing || isSubmitting} className="bg-primary hover:bg-primary/90">
               {isAnalyzing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -735,7 +802,7 @@ export function NewLCEntryForm() {
                     type="button"
                     variant="outline"
                     onClick={handleTrackVessel}
-                    disabled={!form.watch("vesselImoNumber")}
+                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
                     className="md:col-span-1" 
                     title="Track Vessel via IMO Number"
                 >
@@ -745,7 +812,7 @@ export function NewLCEntryForm() {
             </div>
         )}
 
-         <div className="mt-6"> {/* Grouping tracking fields */}
+         <div className="mt-6"> 
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
@@ -789,7 +856,7 @@ export function NewLCEntryForm() {
                     type="button"
                     variant="outline"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier")}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0" 
                     title="Track Original Document"
                 >
@@ -799,7 +866,7 @@ export function NewLCEntryForm() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"> {/* ETD/ETA moved here to group with tracking */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"> 
              <FormField
                 control={form.control}
                 name="etd"
@@ -917,8 +984,8 @@ export function NewLCEntryForm() {
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? (
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Submitting...

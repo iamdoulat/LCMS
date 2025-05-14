@@ -49,7 +49,7 @@ export interface LCEntry {
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
-  vesselImoNumber?: string; // New field for Vessel IMO Number
+  vesselImoNumber?: string;
   partialShipments?: string; // 43P
   portOfLoading?: string; // 44E
   portOfDischarge?: string; // 44F
@@ -63,7 +63,24 @@ export interface LCEntry {
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
-export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shippingDocumentsFile' | 'shippingDocumentForAI' | 'etd' | 'eta' | 'lcIssueDate' | 'expireDate' | 'latestShipmentDate' | 'invoiceDate'> {
+export interface LCEntryDocument extends Omit<LCEntry, 
+  'finalPIFile' | 
+  'shippingDocumentsFile' | 
+  'shippingDocumentForAI' | 
+  'etd' | 
+  'eta' | 
+  'lcIssueDate' | 
+  'expireDate' | 
+  'latestShipmentDate' | 
+  'invoiceDate' |
+  'amount' | // amount will be number
+  'totalMachineQty' | // will be number
+  'numberOfAmendments' // will be number
+> {
+  year: number; // For yearly data querying
+  amount: number;
+  totalMachineQty: number;
+  numberOfAmendments?: number;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   etd?: string; // Store as ISO string
@@ -72,9 +89,7 @@ export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shipping
   expireDate?: string;
   latestShipmentDate?: string;
   invoiceDate?: string;
-  createdAt: Date; // Or Firebase Timestamp
-  updatedAt: Date; // Or Firebase Timestamp
-  numberOfAmendments?: number;
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
   status?: LCStatus;
 }
-
