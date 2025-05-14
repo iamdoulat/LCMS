@@ -1,4 +1,5 @@
 
+
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -24,8 +25,8 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string;
-  applicantName: string;
+  beneficiaryName: string; // Will store ID of supplier
+  applicantName: string; // Will store ID of customer
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -75,9 +76,15 @@ export interface LCEntryDocument extends Omit<LCEntry,
   'invoiceDate' |
   'amount' |
   'totalMachineQty' |
-  'numberOfAmendments'
+  'numberOfAmendments' |
+  'applicantName' | // Store actual name
+  'beneficiaryName' // Store actual name
 > {
   year: number;
+  applicantName: string; // Actual name of the applicant for display
+  beneficiaryName: string; // Actual name of the beneficiary for display
+  applicantId?: string; // ID from customers collection
+  beneficiaryId?: string; // ID from suppliers collection
   amount: number; // Stored as number
   totalMachineQty: number; // Stored as number
   numberOfAmendments?: number; // Stored as number
@@ -128,3 +135,6 @@ export interface Supplier {
   updatedAt?: any; // Firestore serverTimestamp
 }
 export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string }; // Ensure id and string timestamps when fetched
+
+
+    

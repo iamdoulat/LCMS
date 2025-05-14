@@ -5,13 +5,13 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,8 +25,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
-  applicantName: z.string().min(1, "Applicant name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // This will be the ID from suppliers collection
+  applicantName: z.string().min(1, "Applicant name is required"), // This will be the ID from customers collection
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -69,6 +69,7 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
+  status: z.enum(["Draft", "Transmitted", "Shipping going on", "Done"]).default("Draft")
 });
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -82,30 +83,68 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
-// Placeholder data for dropdowns - in a real app, this would come from Firestore
-const placeholderBeneficiaryOptionsFromSuppliers = [
-  { value: "Dynamic Tech Solutions Ltd.", label: "Dynamic Tech Solutions Ltd." },
-  { value: "Global Exports Co.", label: "Global Exports Co." },
-  { value: "Innovate Supplies Inc.", label: "Innovate Supplies Inc." },
-];
-
-const placeholderApplicantOptions = [
-  { value: "Smart Importers Group", label: "Smart Importers Group" },
-  { value: "Local Traders United", label: "Local Traders United" },
-  { value: "National Distribution Corp", label: "National Distribution Corp" },
-];
-
+interface DropdownOption {
+  value: string;
+  label: string;
+}
 
 export function NewLCEntryForm() {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
+
+  React.useEffect(() => {
+    const fetchApplicants = async () => {
+      setIsLoadingApplicants(true);
+      try {
+        const querySnapshot = await getDocs(collection(firestore, "customers"));
+        const fetchedApplicants = querySnapshot.docs.map(doc => {
+          const data = doc.data() as CustomerDocument;
+          return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+        });
+        setApplicantOptions(fetchedApplicants);
+      } catch (error) {
+        console.error("Error fetching applicants: ", error);
+        Swal.fire("Error", "Could not fetch applicant data. See console for details.", "error");
+      } finally {
+        setIsLoadingApplicants(false);
+      }
+    };
+    fetchApplicants();
+  }, []);
+
+  React.useEffect(() => {
+    const fetchBeneficiaries = async () => {
+      setIsLoadingBeneficiaries(true);
+      try {
+        const querySnapshot = await getDocs(collection(firestore, "suppliers"));
+        const fetchedBeneficiaries = querySnapshot.docs.map(doc => {
+          const data = doc.data() as SupplierDocument;
+          return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
+        });
+        setBeneficiaryOptions(fetchedBeneficiaries);
+      } catch (error) {
+        console.error("Error fetching beneficiaries: ", error);
+        Swal.fire("Error", "Could not fetch beneficiary data. See console for details.", "error");
+      } finally {
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+    fetchBeneficiaries();
+  }, []);
+
+
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '',
-      applicantName: '',
+      beneficiaryName: '', // Will store ID
+      applicantName: '', // Will store ID
       currency: 'USD' as Currency,
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -139,7 +178,7 @@ export function NewLCEntryForm() {
       notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
       numberOfAmendments: '',
-      status: 'Draft', // Default status
+      status: 'Draft',
     },
   });
 
@@ -163,8 +202,16 @@ export function NewLCEntryForm() {
 
     const { finalPIFile, shippingDocumentsFile, shippingDocumentForAI, ...restOfData } = data;
 
+    // Get display names for applicant and beneficiary based on selected IDs
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+
     const dataToSave: Omit<LCEntryDocument, 'id' | 'finalPIUrl' | 'shippingDocumentsUrl'> = {
       ...restOfData,
+      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, // Save label
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, // Save label
+      applicantId: data.applicantName, // Save ID as applicantId
+      beneficiaryId: data.beneficiaryName, // Save ID as beneficiaryId
       year: extractedYear,
       amount: Number(data.amount),
       totalMachineQty: Number(data.totalMachineQty),
@@ -175,23 +222,18 @@ export function NewLCEntryForm() {
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
-      createdAt: serverTimestamp() as any, // Firestore will convert this
-      updatedAt: serverTimestamp() as any, // Firestore will convert this
+      createdAt: serverTimestamp() as any,
+      updatedAt: serverTimestamp() as any,
       status: data.status || 'Draft',
     };
 
-    // Remove undefined fields from dataToSave to avoid Firestore errors
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
         if (dataToSave[key] === undefined) {
             delete dataToSave[key];
         }
     });
     
-    // TODO: Implement file uploads to Firebase Storage for finalPIFile, shippingDocumentsFile
-    // and store their download URLs in dataToSave as finalPIUrl, shippingDocumentsUrl
-
     try {
-      // The 'lc_entries' collection will be created if it doesn't exist
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
         title: "L/C Entry Saved!",
@@ -373,14 +415,17 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select applicant (customer)" />
+                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {placeholderApplicantOptions.map((option) => (
+                    {!isLoadingApplicants && applicantOptions.length === 0 && (
+                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
+                    )}
+                    {applicantOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -398,14 +443,17 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select beneficiary (supplier)" />
+                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {placeholderBeneficiaryOptionsFromSuppliers.map((option) => (
+                     {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
+                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
+                    )}
+                    {beneficiaryOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -966,8 +1014,34 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+        
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>L/C Status*</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || "Draft"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select L/C status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(["Draft", "Transmitted", "Shipping going on", "Done"] as const).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -984,3 +1058,6 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+
+    
