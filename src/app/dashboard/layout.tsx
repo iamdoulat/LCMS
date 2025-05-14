@@ -1,22 +1,28 @@
+
+"use client"; // Make this a client component to use AuthGuard
+
 import type { PropsWithChildren } from 'react';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
-import { Toaster } from "@/components/ui/toaster"
+import AuthGuard from '@/components/auth/AuthGuard';
+// Toaster removed from here as it's now in RootLayout
 
 export default function DashboardLayout({ children }: PropsWithChildren) {
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar>
-        <AppSidebarNav />
-      </Sidebar>
-      <SidebarInset className="flex flex-col">
-        <AppHeader />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-        <Toaster />
-      </SidebarInset>
-    </SidebarProvider>
+    <AuthGuard>
+      <SidebarProvider defaultOpen>
+        <Sidebar>
+          <AppSidebarNav />
+        </Sidebar>
+        <SidebarInset className="flex flex-col">
+          <AppHeader />
+          <main className="flex-1 overflow-y-auto p-6 bg-background"> {/* Ensure main has a background */}
+            {children}
+          </main>
+          {/* Toaster removed from here, it's now in RootLayout */}
+        </SidebarInset>
+      </SidebarProvider>
+    </AuthGuard>
   );
 }

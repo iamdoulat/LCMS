@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -12,26 +13,29 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export function AppHeader() {
-  // Placeholder user data
-  const user = {
-    name: 'Admin User',
-    email: 'admin@lcvision.com',
-    avatar: 'https://placehold.co/40x40.png', // Replace with actual user avatar
-  };
+  const { user, logout, loading } = useAuth();
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (nameOrEmail: string) => {
+    if (!nameOrEmail) return 'U';
+    // Check if it's an email to extract from before '@'
+    const namePart = nameOrEmail.includes('@') ? nameOrEmail.split('@')[0] : nameOrEmail;
+    return namePart
       .split(' ')
       .map((n) => n[0])
       .join('')
-      .toUpperCase();
+      .toUpperCase()
+      .substring(0, 2);
   };
 
+  const displayName = user?.displayName || user?.email || 'User';
+  const displayEmail = user?.email || 'No email available';
+
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 shadow-sm">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
         <Link href="/dashboard" className="text-xl font-semibold text-primary">
@@ -40,42 +44,50 @@ export function AppHeader() {
       </div>
       
       <div className="ml-auto flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="profile avatar" />
-                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <Link href="/dashboard/account-details" passHref>
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Account Details</span>
+        {loading ? (
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        ) : user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png?text=${getInitials(displayName)}`} alt={displayName} data-ai-hint="profile avatar" />
+                  <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {displayEmail}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <Link href="/dashboard/account-details" passHref>
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Account Details</span>
+                </DropdownMenuItem>
+              </Link>
+              {/* <DropdownMenuItem> // Future settings link
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem> */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
               </DropdownMenuItem>
-            </Link>
-            {/* <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </DropdownMenuItem> */}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => alert('Logout action triggered. Implement actual logout.')}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+           <Link href="/login" passHref>
+             <Button variant="outline">Login</Button>
+           </Link>
+        )}
       </div>
     </header>
   );

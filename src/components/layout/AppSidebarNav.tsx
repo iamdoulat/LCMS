@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -24,8 +25,10 @@ import {
   Settings,
   LogOut,
   Briefcase,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -42,6 +45,7 @@ const settingsNavItems = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
+  const { logout, loading: authLoading } = useAuth();
 
   const isActive = (href: string) => {
     return pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
@@ -104,8 +108,17 @@ export function AppSidebarNav() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2">
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
-          <LogOut className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          onClick={logout}
+          disabled={authLoading}
+        >
+          {authLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <LogOut className="h-5 w-5" />
+          )}
           <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
       </SidebarFooter>

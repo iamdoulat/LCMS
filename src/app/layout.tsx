@@ -1,10 +1,10 @@
+
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google'; // Default font, can be replaced or augmented
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
-
-// const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+import { AuthProvider } from '@/context/AuthContext';
+import { Toaster } from "@/components/ui/toaster" // Toaster should be here for global access
 
 export const metadata: Metadata = {
   title: 'LC Vision - Letter of Credit Management',
@@ -19,7 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
-        {children}
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
