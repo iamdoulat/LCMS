@@ -20,7 +20,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger, // No longer using AlertDialogTrigger directly in the table for this
 } from "@/components/ui/alert-dialog";
 
 // Placeholder data - replace with actual data fetching
@@ -35,6 +35,7 @@ export default function CustomersListPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = useState(initialCustomers);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleEditCustomer = (customerId: string) => {
     toast({
@@ -45,8 +46,9 @@ export default function CustomersListPage() {
     router.push(`/dashboard/customers/${customerId}/edit`);
   };
 
-  const handleDeleteCustomer = (customerId: string) => {
+  const openDeleteDialog = (customerId: string) => {
     setCustomerToDelete(customerId);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
@@ -60,9 +62,10 @@ export default function CustomersListPage() {
       toast({
         title: "Customer Deleted (Simulated)",
         description: `Customer ${customerToDelete} has been removed from the list.`,
-        variant: "default" // Or "destructive" depending on desired styling for delete toasts
+        variant: "default"
       });
-      setCustomerToDelete(null); // Close dialog
+      setCustomerToDelete(null); 
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -138,17 +141,15 @@ export default function CustomersListPage() {
                         <TooltipProvider>
                            <Tooltip>
                             <TooltipTrigger asChild>
-                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDeleteCustomer(customer.id)}
+                                  onClick={() => openDeleteDialog(customer.id)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                   <span className="sr-only">Delete Customer</span>
                                 </Button>
-                              </AlertDialogTrigger>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Delete Customer</p>
@@ -174,29 +175,34 @@ export default function CustomersListPage() {
         </CardContent>
       </Card>
 
-      {customerToDelete && (
-        <AlertDialog open={!!customerToDelete} onOpenChange={() => setCustomerToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the customer
-                profile and remove their data from our servers (simulated).
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmDelete}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) {
+          setCustomerToDelete(null); // Reset if closed by overlay click or Esc
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the customer
+              profile{customerToDelete ? ` for "${customers.find(c => c.id === customerToDelete)?.customerName || customerToDelete}"` : ""} and remove their data from our servers (simulated).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsDeleteDialogOpen(false);
+              setCustomerToDelete(null);
+            }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
