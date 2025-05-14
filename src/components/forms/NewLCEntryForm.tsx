@@ -22,8 +22,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Will be from supplier data
-  applicantName: z.string().min(1, "Applicant name is required"), // Was supplierName, now from customer data
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), 
+  applicantName: z.string().min(1, "Applicant name is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -76,13 +76,13 @@ const fileToDataUri = (file: File): Promise<string> => {
 };
 
 // Placeholder data for dropdowns - replace with actual data fetching
-const placeholderBeneficiaryOptionsFromSuppliers = [ // Beneficiary is typically the supplier
+const placeholderBeneficiaryOptionsFromSuppliers = [ 
   { value: "Supplier One Corp", label: "Supplier One Corp" },
   { value: "Advanced Tech Components", label: "Advanced Tech Components" },
   { value: "Global Manufacturing Co.", label: "Global Manufacturing Co." },
 ];
 
-const placeholderApplicantOptions = [ // Applicant is typically the customer
+const placeholderApplicantOptions = [ 
   { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
   { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
   { value: "Global Imports Corp", label: "Global Imports Corp" },
@@ -96,8 +96,8 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Will be selected from dropdown (supplier data)
-      applicantName: '', // Will be selected from dropdown (customer data)
+      beneficiaryName: '', 
+      applicantName: '', 
       currency: 'USD' as Currency, 
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -451,9 +451,9 @@ export function NewLCEntryForm() {
             name="portOfLoading"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>44E: Port of Loading/Airport of Departure</FormLabel>
+                <FormLabel>44E: Port of Loading</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port/airport name" {...field} />
+                  <Input placeholder="Enter port name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -464,9 +464,9 @@ export function NewLCEntryForm() {
             name="portOfDischarge"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>44F: Port of Discharge/Airport of Destination</FormLabel>
+                <FormLabel>44F: Port of Discharge</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port/airport name" {...field} />
+                  <Input placeholder="Enter port name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
