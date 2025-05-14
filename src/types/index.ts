@@ -1,5 +1,4 @@
 
-
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -13,17 +12,20 @@ export type TermsOfPay = typeof termsOfPayOptions[number] | "";
 export const shipmentModeOptions = ["Sea", "Air"] as const;
 export type ShipmentMode = typeof shipmentModeOptions[number] | "";
 
+export const currencyOptions = ["USD", "EURO"] as const;
+export type Currency = typeof currencyOptions[number] | "";
 
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
-  beneficiaryName: string; 
+  beneficiaryName: string;
   supplierName: string;
-  value: number | ''; // Allow empty string for initial form state, parse to number on submit
+  currency: Currency;
+  amount: number | ''; // Allow empty string for initial form state, parse to number on submit
   termsOfPay: TermsOfPay;
   ttNumber?: string;
-  lcNumber: string;
-  proformaInvoiceNumber?: string; 
-  invoiceDate?: Date; 
+  documentaryCreditNumber: string; // Renamed from lcNumber
+  proformaInvoiceNumber?: string;
+  invoiceDate?: Date;
   totalMachineQty: number | ''; // Allow empty string, parse to number
   lcIssueDate?: Date;
   expireDate?: Date;

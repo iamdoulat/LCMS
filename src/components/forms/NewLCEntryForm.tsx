@@ -1,11 +1,12 @@
+
 "use client";
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode } from '@/types'; // Import ShipmentMode
-import { termsOfPayOptions, shipmentModeOptions } from '@/types'; // Import options
+import type { LCEntry, ShipmentMode, Currency } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 
@@ -16,20 +17,21 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow } from 'lucide-react'; // Added Ship, Plane, Workflow
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, DollarSign } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
   supplierName: z.string().min(1, "Supplier name is required"),
-  value: z.preprocess(
+  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
+  amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
-    z.number({ invalid_type_error: "Value must be a number" }).positive("Value must be positive")
+    z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   ttNumber: z.string().optional(),
-  lcNumber: z.string().min(1, "L/C number is required"),
+  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"), // Renamed from lcNumber
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional(),
   totalMachineQty: z.preprocess(
@@ -74,10 +76,11 @@ export function NewLCEntryForm() {
     defaultValues: {
       beneficiaryName: '',
       supplierName: '',
-      value: '',
+      currency: 'USD' as Currency, // Default to USD
+      amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
       ttNumber: '',
-      lcNumber: '',
+      documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
       totalMachineQty: '',
@@ -106,6 +109,9 @@ export function NewLCEntryForm() {
   } else if (watchedShipmentMode === "Air") {
     viaLabel = "Flight Name";
   }
+
+  const watchedCurrency = form.watch("currency");
+  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
 
 
   async function onSubmit(data: LCEntry) {
@@ -248,10 +254,34 @@ export function NewLCEntryForm() {
           />
           <FormField
             control={form.control}
-            name="value"
+            name="currency"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Value (USD)*</FormLabel>
+                <FormLabel>Currency*</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {currencyOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{amountLabel}</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="e.g., 50000" {...field} />
                 </FormControl>
@@ -298,12 +328,12 @@ export function NewLCEntryForm() {
           />
           <FormField
             control={form.control}
-            name="lcNumber"
+            name="documentaryCreditNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>L/C Number*</FormLabel>
+                <FormLabel>Documentary Credit Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter L/C number" {...field} />
+                  <Input placeholder="Enter Documentary Credit Number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -354,9 +384,9 @@ export function NewLCEntryForm() {
             <FormItem>
                 <FormLabel>Item Descriptions</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Auto-filled by AI. Describe the items being shipped." {...field} rows={4} />
+                <Textarea placeholder="Auto-filled by AI or manually enter. Describe the items being shipped." {...field} rows={4} />
                 </FormControl>
-                <FormDescription>Extracted from shipping document.</FormDescription>
+                <FormDescription>Can be extracted by AI from a shipping document.</FormDescription>
                 <FormMessage />
             </FormItem>
             )}
@@ -485,7 +515,7 @@ export function NewLCEntryForm() {
                 name="vesselOrFlightName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{viaLabel}*</FormLabel>
+                    <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
                     <Input 
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"} 
