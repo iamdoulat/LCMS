@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -348,6 +347,20 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+        <FormField
+            control={form.control}
+            name="itemDescriptions"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Item Descriptions</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Auto-filled by AI. Describe the items being shipped." {...field} rows={4} />
+                </FormControl>
+                <FormDescription>Extracted from shipping document.</FormDescription>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
           <Landmark className="mr-2 h-5 w-5 text-primary" />
@@ -527,20 +540,6 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
-        <FormField
-            control={form.control}
-            name="itemDescriptions"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Item Descriptions</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Auto-filled by AI. Describe the items being shipped." {...field} rows={4} />
-                </FormControl>
-                <FormDescription>Extracted from shipping document.</FormDescription>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Document Uploads</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
