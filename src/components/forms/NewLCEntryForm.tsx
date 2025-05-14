@@ -16,7 +16,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -30,7 +30,7 @@ const termsOfPayOptions = [
 ] as const;
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Renamed from customerName
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
   supplierName: z.string().min(1, "Supplier name is required"),
   value: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -39,6 +39,8 @@ const lcEntrySchema = z.object({
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   ttNumber: z.string().optional(),
   lcNumber: z.string().min(1, "L/C number is required"),
+  proformaInvoiceNumber: z.string().optional(), // New field
+  invoiceDate: z.date().optional(), // New field
   totalMachineQty: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
@@ -53,9 +55,9 @@ const lcEntrySchema = z.object({
   eta: z.string().optional(),
   itemDescriptions: z.string().optional(),
   shippingDocumentForAI: z.instanceof(File).optional().nullable(),
-  consigneeBankNameAddress: z.string().optional(), // New field
-  bankBin: z.string().optional(), // New field
-  bankTin: z.string().optional(), // New field (assuming TION was TIN)
+  consigneeBankNameAddress: z.string().optional(),
+  bankBin: z.string().optional(),
+  bankTin: z.string().optional(),
 });
 
 // Helper function to convert File to Data URI
@@ -77,12 +79,14 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Renamed
+      beneficiaryName: '',
       supplierName: '',
       value: '',
-      termsOfPay: "", // Default to empty or first option
+      termsOfPay: "", 
       ttNumber: '',
       lcNumber: '',
+      proformaInvoiceNumber: '', // New field
+      invoiceDate: undefined, // New field
       totalMachineQty: '',
       lcIssueDate: undefined,
       expireDate: undefined,
@@ -94,9 +98,9 @@ export function NewLCEntryForm() {
       eta: '',
       itemDescriptions: '',
       shippingDocumentForAI: null,
-      consigneeBankNameAddress: '', // New field
-      bankBin: '', // New field
-      bankTin: '', // New field
+      consigneeBankNameAddress: '',
+      bankBin: '',
+      bankTin: '',
     },
   });
 
@@ -143,7 +147,7 @@ export function NewLCEntryForm() {
     } catch (error) {
       console.error("AI Analysis Error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during analysis.";
-      setAiError(errorMessage); // For inline error display
+      setAiError(errorMessage); 
       Swal.fire({
         title: "Analysis Failed",
         text: errorMessage,
@@ -206,11 +210,15 @@ export function NewLCEntryForm() {
             )}
           </CardContent>
         </Card>
-
+        
+        <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
+          <FileText className="mr-2 h-5 w-5 text-primary" />
+          L/C & Invoice Details
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="beneficiaryName" // Renamed
+            name="beneficiaryName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Beneficiary Name*</FormLabel> 
@@ -299,12 +307,12 @@ export function NewLCEntryForm() {
           />
           <FormField
             control={form.control}
-            name="totalMachineQty"
+            name="proformaInvoiceNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Machine Qty*</FormLabel>
+                <FormLabel>Proforma Invoice Number</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 5" {...field} />
+                  <Input placeholder="Enter PI number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -312,12 +320,23 @@ export function NewLCEntryForm() {
           />
            <FormField
             control={form.control}
-            name="dhlNumber"
+            name="invoiceDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Invoice Date</FormLabel>
+                <DatePickerField field={field} placeholder="Select invoice date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalMachineQty"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>DHL Number</FormLabel>
+                <FormLabel>Total Machine Qty*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter DHL tracking number" {...field} />
+                  <Input type="number" placeholder="e.g., 5" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -372,7 +391,10 @@ export function NewLCEntryForm() {
         </div>
 
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Dates</h3>
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+            Important Dates
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
                 control={form.control}
@@ -409,7 +431,7 @@ export function NewLCEntryForm() {
             />
         </div>
         
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Shipping Information (Auto-populated by AI)</h3>
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Shipping Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
@@ -438,6 +460,19 @@ export function NewLCEntryForm() {
                     <FormMessage />
                 </FormItem>
                 )}
+            />
+             <FormField
+              control={form.control}
+              name="dhlNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DHL Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter DHL tracking number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
         </div>
         <FormField
@@ -508,3 +543,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+

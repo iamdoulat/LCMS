@@ -1,3 +1,4 @@
+
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
   beneficiaryName: string; // Renamed from customerName
@@ -6,6 +7,8 @@ export interface LCEntry {
   termsOfPay: "TT in Advance" | "LC at sight" | "UPAS" | "Deffered 120days" | "Deffered 180days" | "Deffered 360days" | ""; // Updated to specific options
   ttNumber?: string;
   lcNumber: string;
+  proformaInvoiceNumber?: string; // New field
+  invoiceDate?: Date; // New field
   totalMachineQty: number | ''; // Allow empty string, parse to number
   lcIssueDate?: Date;
   expireDate?: Date;
@@ -17,9 +20,9 @@ export interface LCEntry {
   eta?: string; // Estimated Time of Arrival
   itemDescriptions?: string; // Extracted by AI
   shippingDocumentForAI?: File | null; // Document to be analyzed by AI
-  consigneeBankNameAddress?: string; // New field
-  bankBin?: string; // New field - Bank Identification Number
-  bankTin?: string; // New field - Taxpayer Identification Number (assumed from TION)
+  consigneeBankNameAddress?: string;
+  bankBin?: string;
+  bankTin?: string;
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
@@ -29,3 +32,4 @@ export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shipping
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
 }
+
