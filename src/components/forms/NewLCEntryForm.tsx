@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -75,6 +75,20 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
+// Placeholder data for dropdowns - replace with actual data fetching
+const placeholderBeneficiaryOptions = [
+  { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
+  { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
+  { value: "Gamma Trading Co.", label: "Gamma Trading Co." },
+];
+
+const placeholderSupplierOptions = [
+  { value: "Supplier One Corp", label: "Supplier One Corp" },
+  { value: "Supplier Two Global", label: "Supplier Two Global" },
+  { value: "Supplier Three Parts", label: "Supplier Three Parts" },
+];
+
+
 export function NewLCEntryForm() {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
@@ -82,9 +96,9 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '',
-      supplierName: '',
-      currency: 'USD' as Currency, // Default to USD
+      beneficiaryName: '', // Will be selected from dropdown
+      supplierName: '', // Will be selected from dropdown
+      currency: 'USD' as Currency, 
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
@@ -247,10 +261,22 @@ export function NewLCEntryForm() {
             name="beneficiaryName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Beneficiary Name*</FormLabel> 
-                <FormControl>
-                  <Input placeholder="Enter beneficiary name" {...field} />
-                </FormControl>
+                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select beneficiary (customer)" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {placeholderBeneficiaryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>Select from your list of customers.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -260,10 +286,22 @@ export function NewLCEntryForm() {
             name="supplierName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Supplier Name*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter supplier name" {...field} />
-                </FormControl>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name*</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {placeholderSupplierOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>Select from your list of suppliers.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -766,3 +804,5 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+    
