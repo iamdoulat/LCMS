@@ -1,14 +1,29 @@
 
+
+export const termsOfPayOptions = [
+  "TT in Advance",
+  "LC at sight",
+  "UPAS",
+  "Deffered 120days",
+  "Deffered 180days",
+  "Deffered 360days",
+] as const;
+export type TermsOfPay = typeof termsOfPayOptions[number] | "";
+
+export const shipmentModeOptions = ["Sea", "Air"] as const;
+export type ShipmentMode = typeof shipmentModeOptions[number] | "";
+
+
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
-  beneficiaryName: string; // Renamed from customerName
+  beneficiaryName: string; 
   supplierName: string;
   value: number | ''; // Allow empty string for initial form state, parse to number on submit
-  termsOfPay: "TT in Advance" | "LC at sight" | "UPAS" | "Deffered 120days" | "Deffered 180days" | "Deffered 360days" | ""; // Updated to specific options
+  termsOfPay: TermsOfPay;
   ttNumber?: string;
   lcNumber: string;
-  proformaInvoiceNumber?: string; // New field
-  invoiceDate?: Date; // New field
+  proformaInvoiceNumber?: string; 
+  invoiceDate?: Date; 
   totalMachineQty: number | ''; // Allow empty string, parse to number
   lcIssueDate?: Date;
   expireDate?: Date;
@@ -23,6 +38,8 @@ export interface LCEntry {
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
+  shipmentMode?: ShipmentMode;
+  vesselOrFlightName?: string;
 }
 
 // If you need a type for data stored in Firebase (e.g., with file URLs)
@@ -32,4 +49,3 @@ export interface LCEntryDocument extends Omit<LCEntry, 'finalPIFile' | 'shipping
   createdAt: Date; // Or Firebase Timestamp
   updatedAt: Date; // Or Firebase Timestamp
 }
-

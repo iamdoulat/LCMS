@@ -5,7 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry } from '@/types';
+import type { LCEntry, ShipmentMode } from '@/types'; // Import ShipmentMode
+import { termsOfPayOptions, shipmentModeOptions } from '@/types'; // Import options
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 
@@ -16,18 +17,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow } from 'lucide-react'; // Added Ship, Plane, Workflow
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const termsOfPayOptions = [
-  "TT in Advance",
-  "LC at sight",
-  "UPAS",
-  "Deffered 120days",
-  "Deffered 180days",
-  "Deffered 360days",
-] as const;
 
 const lcEntrySchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
@@ -39,8 +31,8 @@ const lcEntrySchema = z.object({
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   ttNumber: z.string().optional(),
   lcNumber: z.string().min(1, "L/C number is required"),
-  proformaInvoiceNumber: z.string().optional(), // New field
-  invoiceDate: z.date().optional(), // New field
+  proformaInvoiceNumber: z.string().optional(),
+  invoiceDate: z.date().optional(),
   totalMachineQty: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
@@ -58,6 +50,8 @@ const lcEntrySchema = z.object({
   consigneeBankNameAddress: z.string().optional(),
   bankBin: z.string().optional(),
   bankTin: z.string().optional(),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
+  vesselOrFlightName: z.string().optional(),
 });
 
 // Helper function to convert File to Data URI
@@ -82,11 +76,11 @@ export function NewLCEntryForm() {
       beneficiaryName: '',
       supplierName: '',
       value: '',
-      termsOfPay: "", 
+      termsOfPay: "" as LCEntry['termsOfPay'],
       ttNumber: '',
       lcNumber: '',
-      proformaInvoiceNumber: '', // New field
-      invoiceDate: undefined, // New field
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
       totalMachineQty: '',
       lcIssueDate: undefined,
       expireDate: undefined,
@@ -101,8 +95,19 @@ export function NewLCEntryForm() {
       consigneeBankNameAddress: '',
       bankBin: '',
       bankTin: '',
+      shipmentMode: "" as ShipmentMode,
+      vesselOrFlightName: '',
     },
   });
+
+  const watchedShipmentMode = form.watch("shipmentMode");
+  let viaLabel = "Vessel/Flight Name";
+  if (watchedShipmentMode === "Sea") {
+    viaLabel = "Vessel Name";
+  } else if (watchedShipmentMode === "Air") {
+    viaLabel = "Flight Name";
+  }
+
 
   async function onSubmit(data: LCEntry) {
     console.log("Form Data:", data);
@@ -431,8 +436,68 @@ export function NewLCEntryForm() {
             />
         </div>
         
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Shipping Information</h3>
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <Workflow className="mr-2 h-5 w-5 text-primary" />
+            Shipping Information
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="shipmentMode"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select shipment mode" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {shipmentModeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                            {option}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="vesselOrFlightName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{viaLabel}*</FormLabel>
+                    <FormControl>
+                    <Input 
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"} 
+                        {...field} 
+                        disabled={!watchedShipmentMode}
+                    />
+                    </FormControl>
+                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+             <FormField
+              control={form.control}
+              name="dhlNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DHL Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter DHL tracking number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
                 control={form.control}
                 name="etd"
@@ -460,19 +525,6 @@ export function NewLCEntryForm() {
                     <FormMessage />
                 </FormItem>
                 )}
-            />
-             <FormField
-              control={form.control}
-              name="dhlNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>DHL Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter DHL tracking number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
             />
         </div>
         <FormField
