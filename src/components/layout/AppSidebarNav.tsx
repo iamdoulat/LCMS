@@ -35,10 +35,12 @@ import {
   Loader2,
   Store,
   UserPlus,
-  Building
+  Building,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image'; // Import next/image
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
@@ -91,6 +93,10 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { logout, loading: authLoading } = useAuth();
 
+  // TODO: Fetch company name and logo URL from settings (e.g., Firestore)
+  const companyNameFromSettings = "Your Company Name"; // Placeholder
+  const companyLogoUrlFromSettings = "https://placehold.co/32x32.png"; // Placeholder logo
+
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname === href) return true;
@@ -100,14 +106,9 @@ export function AppSidebarNav() {
       (href === '/dashboard/settings/company-setup' && pathname.startsWith('/dashboard/settings/company-setup')) ||
       (href === '/dashboard/settings/users' && pathname.startsWith('/dashboard/settings/users')) ||
       (href === '/dashboard/settings/smtp' && pathname.startsWith('/dashboard/settings/smtp')) 
-      // Add other parent routes here if needed for precise active state control
     ) {
-      // This ensures that parent group links are not considered active
-      // if a sub-route is active. Only mark active if the pathname *exactly* matches the group's base href.
       return pathname === href;
     }
-    // For other specific links, check if the pathname starts with the href,
-    // but not if it's a group that has active sub-links (handled by isGroupActive).
     if (href !== '/dashboard' && pathname.startsWith(href)) {
         const isPartOfActiveGroup = managementNavItems.some(group => 
             group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href) 
@@ -189,10 +190,17 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Fetch company logo and name from settings and display here */}
-        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap">
-          <Briefcase className="h-6 w-6" /> {/* Placeholder for logo */}
-          <span className="group-data-[collapsible=icon]:hidden">Company Logo & Name</span>
+        {/* TODO: Fetch company logo and name from settings (e.g., Firestore) and display here */}
+        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-primary whitespace-nowrap p-2">
+          <Image 
+            src={companyLogoUrlFromSettings} 
+            alt="Company Logo" 
+            width={32} 
+            height={32} 
+            className="rounded-sm"
+            data-ai-hint="logo company" 
+          />
+          <span className="group-data-[collapsible=icon]:hidden">{companyNameFromSettings}</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
@@ -301,3 +309,5 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
+    
