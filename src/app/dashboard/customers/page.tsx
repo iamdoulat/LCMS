@@ -169,13 +169,13 @@ export default function ApplicantsListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No applicants found in the database.
+                       No applicants found. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants from Firestore.
+                A list of your applicants from Firestore. If empty, check Firestore data and security rules.
               </TableCaption>
             </Table>
           </div>

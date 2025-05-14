@@ -31,6 +31,21 @@ const getStatusBadgeVariant = (status?: LCStatus) => {
   }
 };
 
+const formatDisplayDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+  } catch (e) {
+    return 'Invalid Date Format';
+  }
+};
+
+const formatCurrencyValue = (currency?: string, amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
+  return `${currency || ''} ${amount.toLocaleString()}`;
+};
+
 
 export default function TotalLCPage() {
   const router = useRouter();
@@ -108,18 +123,6 @@ export default function TotalLCPage() {
       }
     });
   };
-
-  const formatDisplayDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
-  };
-
-  const formatCurrencyValue = (currency?: string, amount?: number) => {
-    if (typeof amount !== 'number') return `${currency || ''} N/A`;
-    return `${currency || ''} ${amount.toLocaleString()}`;
-  };
-
 
   return (
     <div className="container mx-auto py-8">
@@ -241,13 +244,13 @@ export default function TotalLCPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      No L/C entries found in the database.
+                      No L/C entries found. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Letters of Credit from Firestore.
+                A list of your Letters of Credit from Firestore. If empty, check Firestore data and security rules.
               </TableCaption>
             </Table>
           </div>

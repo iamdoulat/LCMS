@@ -170,13 +170,13 @@ export default function BeneficiariesListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No beneficiaries found in the database.
+                       No beneficiaries found. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your beneficiaries from Firestore.
+                A list of your beneficiaries from Firestore. If empty, check Firestore data and security rules.
               </TableCaption>
             </Table>
           </div>
