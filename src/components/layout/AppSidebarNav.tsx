@@ -34,7 +34,8 @@ import {
   Briefcase,
   Loader2,
   Store,
-  UserPlus
+  UserPlus,
+  Building // Added for consistency if needed
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -56,8 +57,8 @@ const lcManagementNavItems: NavItem[] = [
 const generalManagementNavItems: NavItem[] = [
   {
     isGroup: true,
-    groupLabel: 'Suppliers',
-    icon: Store,
+    groupLabel: 'Suppliers / Beneficiary', // Updated Label
+    icon: Store, // Or Building
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Suppliers', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Supplier', icon: FilePlus2 },
@@ -65,7 +66,7 @@ const generalManagementNavItems: NavItem[] = [
   },
   {
     isGroup: true,
-    groupLabel: 'Customers',
+    groupLabel: 'Customers / Applicants', // Updated Label
     icon: UsersIcon,
     subLinks: [
       { href: '/dashboard/customers', label: 'View Customers', icon: ListChecks },
@@ -184,24 +185,24 @@ export function AppSidebarNav() {
         </AccordionContent>
       </AccordionItem>
     ) : (
-       item.href && ( // Fallback for non-group items, though not expected in these arrays currently
-          <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
-          <SidebarMenuItem>
-              <Link href={item.href!} passHref legacyBehavior>
-              <SidebarMenuButton
-                  asChild
-                  isActive={isActive(item.href!)}
-                  className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                  tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-              >
-                  <a>
-                  <item.icon className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </a>
-              </SidebarMenuButton>
-              </Link>
-          </SidebarMenuItem>
-          </SidebarMenu>
+       item.href && ( // Fallback for non-group items
+        <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
+            <SidebarMenuItem>
+                <Link href={item.href!} passHref legacyBehavior>
+                <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href!)}
+                    className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                    tooltip={{children: item.label!, side: "right", className: "ml-2"}}
+                >
+                    <a>
+                    <item.icon className="h-5 w-5" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </a>
+                </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+        </SidebarMenu>
        )
     )
   );
