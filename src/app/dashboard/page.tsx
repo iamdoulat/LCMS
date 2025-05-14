@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // This is where you would typically re-fetch data based on the selectedYear
-    console.log(`Selected year changed to: ${selectedYear}. Implement data fetching logic here.`);
+    console.log(`Dashboard data should be re-fetched for year: ${selectedYear}. Implement data fetching logic here.`);
     // Example: fetchDataForYear(selectedYear);
   }, [selectedYear]);
 
@@ -87,7 +87,7 @@ export default function DashboardPage() {
           title="This Month's L/C Qty"
           value={stats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
-          description={`In ${selectedYear}`}
+          description={`In ${new Date().toLocaleString('default', { month: 'long' })}, ${selectedYear}`}
         />
       </div>
 
@@ -107,7 +107,7 @@ export default function DashboardPage() {
               <SupplierPieChart data={supplierDistributionData} />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No supplier data available to display chart.</p>
+                <p className="text-muted-foreground">No supplier data available to display chart for {selectedYear}.</p>
               </div>
             )}
           </CardContent>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                 Search L/C
               </CardTitle>
               <CardDescription>
-                Find a specific L/C by its number.
+                Find a specific L/C by its number (for year {selectedYear}).
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                 Upcoming Shipments
               </CardTitle>
               <CardDescription>
-                Key upcoming latest shipment dates for {selectedYear}.
+                Key upcoming latest shipment dates for L/Cs in {selectedYear}.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -164,12 +164,12 @@ export default function DashboardPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No upcoming shipments scheduled.</p>
+                <p className="text-sm text-muted-foreground">No upcoming shipments scheduled for {selectedYear}.</p>
               )}
             </CardContent>
              <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                    Displaying top 3 upcoming shipments for {selectedYear}.
+                    Displaying top 3 upcoming shipments for {selectedYear} (placeholder data).
                 </p>
             </CardFooter>
           </Card>
