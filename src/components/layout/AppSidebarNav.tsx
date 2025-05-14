@@ -82,6 +82,7 @@ const generalManagementNavItems: NavItemGroup[] = [
 
 
 const settingsNavItems: NavItem[] = [ 
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
 ];
@@ -96,14 +97,13 @@ export function AppSidebarNav() {
      if (
       (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers')) ||
       (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers')) ||
-      (href === '/dashboard/recent-shipments' && pathname.startsWith('/dashboard/recent-shipments')) ||
-      (href === '/dashboard/upcoming-shipments' && pathname.startsWith('/dashboard/upcoming-shipments')) ||
-      (href === '/dashboard/total-lc' && pathname.startsWith('/dashboard/total-lc')) ||
-      (href === '/dashboard/new-lc-entry' && pathname.startsWith('/dashboard/new-lc-entry'))
+      (href === '/dashboard/settings/company-setup' && pathname.startsWith('/dashboard/settings/company-setup')) ||
+      (href === '/dashboard/settings/users' && pathname.startsWith('/dashboard/settings/users')) ||
+      (href === '/dashboard/settings/smtp' && pathname.startsWith('/dashboard/settings/smtp')) 
+      // Add other parent routes here if needed for precise active state control
     ) {
-      // This ensures that parent group links like /dashboard/suppliers are not considered active
-      // if a sub-route like /dashboard/suppliers/add is active.
-      // Only mark active if the pathname *exactly* matches the group's base href.
+      // This ensures that parent group links are not considered active
+      // if a sub-route is active. Only mark active if the pathname *exactly* matches the group's base href.
       return pathname === href;
     }
     // For other specific links, check if the pathname starts with the href,
@@ -300,3 +300,4 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
