@@ -7,6 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, UserPlus } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { firestore } from '@/lib/firebase/config';
+import { collection, addDoc } from 'firebase/firestore';
+import type { Customer } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const customerSchema = z.object({
-  customerName: z.string().min(1, "Applicant name is required"), // Renamed for clarity as this is the applicant
+  applicantName: z.string().min(1, "Applicant name is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required"),
@@ -27,11 +30,12 @@ const customerSchema = z.object({
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
-export function AddCustomerForm() { // This form adds an "Applicant" (who is a customer)
+export function AddCustomerForm() { 
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      customerName: '',
+      applicantName: '',
       email: '',
       phone: '',
       address: '',
@@ -44,15 +48,42 @@ export function AddCustomerForm() { // This form adds an "Applicant" (who is a c
   });
 
   async function onSubmit(data: CustomerFormValues) {
-    console.log("Applicant (Customer) Form Data:", data);
-    Swal.fire({
-      title: "Applicant Profile Submitted (Simulated)",
-      text: "Applicant data logged to console. Implement backend submission.",
-      icon: "success",
-      timer: 3000,
-      showConfirmButton: true,
+    setIsSubmitting(true);
+    const now = new Date().toISOString();
+    const dataToSave: Omit<Customer, 'id'> = {
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Filter out undefined optional fields
+    Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+            delete dataToSave[key as keyof typeof dataToSave];
+        }
     });
-    // form.reset(); 
+
+    try {
+      const docRef = await addDoc(collection(firestore, "customers"), dataToSave);
+      Swal.fire({
+        title: "Applicant Profile Saved!",
+        text: `Applicant data saved successfully to Firestore with ID: ${docRef.id}`,
+        icon: "success",
+        timer: 3000,
+        showConfirmButton: true,
+      });
+      form.reset(); 
+    } catch (error) {
+      console.error("Error adding applicant document: ", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save applicant profile: ${errorMessage}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -60,7 +91,7 @@ export function AddCustomerForm() { // This form adds an "Applicant" (who is a c
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
-          name="customerName"
+          name="applicantName"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Applicant Name*</FormLabel>
@@ -187,8 +218,8 @@ export function AddCustomerForm() { // This form adds an "Applicant" (who is a c
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? (
+        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving Applicant...

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -11,48 +11,80 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Swal from 'sweetalert2';
-
-// Placeholder data - replace with actual data fetching
-const initialCustomers = [
-  { id: 'cust1', applicantName: 'Global Imports Corp', email: 'contact@globalimports.com', phone: '+1-202-555-0173', contactPerson: 'John Doe', address: '123 Import Lane, New York, NY' },
-  { id: 'cust2', applicantName: 'Tech Solutions Ltd.', email: 'info@techsolutions.io', phone: '+44 20 7946 0958', contactPerson: 'Jane Smith', address: '456 Tech Park, London, UK' },
-  { id: 'cust3', applicantName: 'Orient Exports Co.', email: 'sales@orientexports.asia', phone: '+65 6734 8888', contactPerson: 'Lee Wang', address: '789 Export Plaza, Singapore' },
-];
+import type { CustomerDocument } from '@/types'; // Use CustomerDocument for Firestore data
+// import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; // Firestore imports
+// import { firestore } from '@/lib/firebase/config'; // Firestore instance
 
 export default function ApplicantsListPage() {
   const router = useRouter();
-  const [customers, setCustomers] = useState(initialCustomers.map(c => ({...c, customerName: c.applicantName}))); // Ensure compatibility if old name is used internally
+  const [applicants, setApplicants] = useState<CustomerDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // For loading state
 
-  const handleEditApplicant = (customerId: string) => {
+  useEffect(() => {
+    // TODO: Implement actual data fetching from Firestore
+    const fetchApplicants = async () => {
+      setIsLoading(true);
+      console.log("Fetching applicants from Firestore...");
+      // Example Firestore fetch:
+      // try {
+      //   const querySnapshot = await getDocs(collection(firestore, "customers"));
+      //   const fetchedApplicants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument));
+      //   setApplicants(fetchedApplicants);
+      // } catch (error) {
+      //   console.error("Error fetching applicants: ", error);
+      //   Swal.fire("Error", "Could not fetch applicant data.", "error");
+      // }
+      setApplicants([]); // For now, set to empty after "fetching"
+      setIsLoading(false);
+    };
+
+    fetchApplicants();
+  }, []);
+
+  const handleEditApplicant = (applicantId: string) => {
     Swal.fire({
       title: "Redirecting...",
-      text: `Navigating to edit page for applicant ${customerId}.`,
+      text: `Navigating to edit page for applicant ${applicantId}.`,
       icon: "info",
       timer: 1500,
       showConfirmButton: false,
     });
-    router.push(`/dashboard/customers/${customerId}/edit`);
+    router.push(`/dashboard/customers/${applicantId}/edit`);
   };
 
-  const handleDeleteApplicant = (customerId: string, customerName: string) => {
+  const handleDeleteApplicant = (applicantId: string, applicantName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the applicant profile for "${customerName || customerId}" and remove their data from our servers (simulated).`,
+      text: `This action cannot be undone. This will permanently delete the applicant profile for "${applicantName || applicantId}".`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))', 
       cancelButtonColor: 'hsl(var(--secondary))', 
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        console.log(`Deleting applicant ${customerId}`);
-        setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerId));
-        Swal.fire(
-          'Deleted!',
-          `Applicant ${customerName || customerId} has been removed from the list. (Simulated)`,
+        console.log(`Simulating delete for applicant ID: ${applicantId} from Firestore.`);
+        // TODO: Implement actual Firestore document deletion
+        // try {
+        //   await deleteDoc(doc(firestore, "customers", applicantId));
+        //   setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
+        //   Swal.fire(
+        //     'Deleted!',
+        //     `Applicant ${applicantName || applicantId} has been removed.`,
+        //     'success'
+        //   );
+        // } catch (error) {
+        //   console.error("Error deleting applicant: ", error);
+        //   Swal.fire("Error", `Could not delete applicant: ${error.message}`, "error");
+        // }
+        Swal.fire( // Placeholder success
+          'Simulated Delete!',
+          `Applicant ${applicantName || applicantId} would be removed from Firestore.`,
           'success'
         );
+        // For local state update if not re-fetching:
+        setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
       }
     });
   };
@@ -68,7 +100,7 @@ export default function ApplicantsListPage() {
                 Manage Applicants
               </CardTitle>
               <CardDescription>
-                View, search, and manage all applicant profiles.
+                View, search, and manage all applicant profiles from the database.
               </CardDescription>
             </div>
             <Link href="/dashboard/customers/add" passHref>
@@ -82,9 +114,9 @@ export default function ApplicantsListPage() {
         <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
+            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Database Integration Note</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The applicant list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
+              This page is intended to display applicants from Firestore. Implement data fetching and real delete operations.
             </AlertDescription>
           </Alert>
 
@@ -100,13 +132,19 @@ export default function ApplicantsListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customers.length > 0 ? (
-                  customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.applicantName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>{customer.contactPerson}</TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      Loading applicants...
+                    </TableCell>
+                  </TableRow>
+                ) : applicants.length > 0 ? (
+                  applicants.map((applicant) => (
+                    <TableRow key={applicant.id}>
+                      <TableCell className="font-medium">{applicant.applicantName}</TableCell>
+                      <TableCell>{applicant.email}</TableCell>
+                      <TableCell>{applicant.phone || 'N/A'}</TableCell>
+                      <TableCell>{applicant.contactPerson || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
                           <Tooltip>
@@ -114,7 +152,7 @@ export default function ApplicantsListPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditApplicant(customer.id)}
+                                onClick={() => handleEditApplicant(applicant.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
                                 <FileEdit className="h-4 w-4" />
@@ -132,7 +170,7 @@ export default function ApplicantsListPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDeleteApplicant(customer.id, customer.applicantName)}
+                                  onClick={() => handleDeleteApplicant(applicant.id, applicant.applicantName)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -150,13 +188,13 @@ export default function ApplicantsListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No applicants found.
+                      No applicants found in the database.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants. (Currently displaying placeholder data)
+                A list of your applicants. (Data to be fetched from Firestore)
               </TableCaption>
             </Table>
           </div>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -11,54 +11,81 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Swal from 'sweetalert2';
+import type { SupplierDocument } from '@/types'; // Use SupplierDocument for Firestore data
+// import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; // Firestore imports
+// import { firestore } from '@/lib/firebase/config'; // Firestore instance
 
-// Placeholder data - replace with actual data fetching
-const initialSuppliers = [
-  { id: 'supp1', supplierName: 'Advanced Tech Components', email: 'sales@atc.com', phone: '+1-555-0100', contactPerson: 'Sarah Miller', address: '789 Tech Row, Silicon Valley, CA' },
-  { id: 'supp2', supplierName: 'Global Manufacturing Co.', email: 'contact@globalmfg.com', phone: '+86-21-5555-0200', contactPerson: 'Chen Wei', address: '101 Factory Rd, Shanghai, CN' },
-  { id: 'supp3', supplierName: 'Precision Parts Inc.', email: 'info@precisionparts.net', phone: '+49-30-555-0300', contactPerson: 'Klaus Richter', address: '23 Industrial Park, Berlin, DE' },
-];
 
 export default function BeneficiariesListPage() {
   const router = useRouter();
-  const [suppliers, setSuppliers] = useState(initialSuppliers);
+  const [beneficiaries, setBeneficiaries] = useState<SupplierDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // For loading state
 
-  const handleEditBeneficiary = (supplierId: string) => {
+  useEffect(() => {
+    // TODO: Implement actual data fetching from Firestore
+    const fetchBeneficiaries = async () => {
+      setIsLoading(true);
+      console.log("Fetching beneficiaries from Firestore...");
+      // Example Firestore fetch:
+      // try {
+      //   const querySnapshot = await getDocs(collection(firestore, "suppliers"));
+      //   const fetchedBeneficiaries = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierDocument));
+      //   setBeneficiaries(fetchedBeneficiaries);
+      // } catch (error) {
+      //   console.error("Error fetching beneficiaries: ", error);
+      //   Swal.fire("Error", "Could not fetch beneficiary data.", "error");
+      // }
+      setBeneficiaries([]); // For now, set to empty after "fetching"
+      setIsLoading(false);
+    };
+
+    fetchBeneficiaries();
+  }, []);
+
+  const handleEditBeneficiary = (beneficiaryId: string) => {
     Swal.fire({
       title: "Redirecting...",
-      text: `Navigating to edit page for beneficiary ${supplierId}.`,
+      text: `Navigating to edit page for beneficiary ${beneficiaryId}.`,
       icon: "info",
       timer: 1500,
       showConfirmButton: false,
     });
-    router.push(`/dashboard/suppliers/${supplierId}/edit`);
+    router.push(`/dashboard/suppliers/${beneficiaryId}/edit`);
   };
 
-  const handleDeleteBeneficiary = (supplierId: string, supplierName: string) => {
+  const handleDeleteBeneficiary = (beneficiaryId: string, beneficiaryName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the beneficiary profile for "${supplierName || supplierId}" and remove their data from our servers (simulated).`,
+      text: `This action cannot be undone. This will permanently delete the beneficiary profile for "${beneficiaryName || beneficiaryId}".`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
       cancelButtonColor: 'hsl(var(--secondary))',
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        // Simulate API call for deletion
-        // In a real app, you would make a call to your backend here:
-        // e.g., await deleteSupplierFromDb(supplierId);
-        console.log(`Simulating delete for beneficiary ${supplierId}`);
-        
-        // Update local state
-        setSuppliers(prevSuppliers => prevSuppliers.filter(supplier => supplier.id !== supplierId));
-        
-        Swal.fire(
-          'Deleted!',
-          `Beneficiary ${supplierName || supplierId} has been removed from the list. (Simulated)`,
+        console.log(`Simulating delete for beneficiary ID: ${beneficiaryId} from Firestore.`);
+        // TODO: Implement actual Firestore document deletion
+        // try {
+        //   await deleteDoc(doc(firestore, "suppliers", beneficiaryId));
+        //   setBeneficiaries(prevBeneficiaries => prevBeneficiaries.filter(b => b.id !== beneficiaryId));
+        //   Swal.fire(
+        //     'Deleted!',
+        //     `Beneficiary ${beneficiaryName || beneficiaryId} has been removed.`,
+        //     'success'
+        //   );
+        // } catch (error) {
+        //   console.error("Error deleting beneficiary: ", error);
+        //   Swal.fire("Error", `Could not delete beneficiary: ${error.message}`, "error");
+        // }
+         Swal.fire( // Placeholder success
+          'Simulated Delete!',
+          `Beneficiary ${beneficiaryName || beneficiaryId} would be removed from Firestore.`,
           'success'
         );
+        // For local state update if not re-fetching:
+        setBeneficiaries(prevBeneficiaries => prevBeneficiaries.filter(b => b.id !== beneficiaryId));
       }
     });
   };
@@ -74,7 +101,7 @@ export default function BeneficiariesListPage() {
                 Manage Beneficiaries
               </CardTitle>
               <CardDescription>
-                View, search, and manage all beneficiary profiles.
+                View, search, and manage all beneficiary profiles from the database.
               </CardDescription>
             </div>
             <Link href="/dashboard/suppliers/add" passHref>
@@ -88,9 +115,9 @@ export default function BeneficiariesListPage() {
         <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
+            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Database Integration Note</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The beneficiary list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
+              This page is intended to display beneficiaries from Firestore. Implement data fetching and real delete operations.
             </AlertDescription>
           </Alert>
 
@@ -106,13 +133,19 @@ export default function BeneficiariesListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {suppliers.length > 0 ? (
-                  suppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">{supplier.supplierName}</TableCell>
-                      <TableCell>{supplier.email}</TableCell>
-                      <TableCell>{supplier.phone}</TableCell>
-                      <TableCell>{supplier.contactPerson}</TableCell>
+                {isLoading ? (
+                   <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      Loading beneficiaries...
+                    </TableCell>
+                  </TableRow>
+                ) : beneficiaries.length > 0 ? (
+                  beneficiaries.map((beneficiary) => (
+                    <TableRow key={beneficiary.id}>
+                      <TableCell className="font-medium">{beneficiary.beneficiaryName}</TableCell>
+                      <TableCell>{beneficiary.emailId}</TableCell>
+                      <TableCell>{beneficiary.cellNumber}</TableCell>
+                      <TableCell>{beneficiary.contactPersonName}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
                           <Tooltip>
@@ -120,7 +153,7 @@ export default function BeneficiariesListPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditBeneficiary(supplier.id)}
+                                onClick={() => handleEditBeneficiary(beneficiary.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
                                 <FileEdit className="h-4 w-4" />
@@ -138,7 +171,7 @@ export default function BeneficiariesListPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDeleteBeneficiary(supplier.id, supplier.supplierName)}
+                                  onClick={() => handleDeleteBeneficiary(beneficiary.id, beneficiary.beneficiaryName)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -156,13 +189,13 @@ export default function BeneficiariesListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No beneficiaries found.
+                      No beneficiaries found in the database.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your beneficiaries. (Currently displaying placeholder data)
+                A list of your beneficiaries. (Data to be fetched from Firestore)
               </TableCaption>
             </Table>
           </div>

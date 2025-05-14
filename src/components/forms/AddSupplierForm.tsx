@@ -5,8 +5,11 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UploadCloud, Store } from 'lucide-react'; // Added Store icon
+import { Loader2, Store } from 'lucide-react'; 
 import Swal from 'sweetalert2';
+import { firestore } from '@/lib/firebase/config';
+import { collection, addDoc } from 'firebase/firestore';
+import type { Supplier } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,14 +18,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { FileInput } from './FileInput'; 
 
 const supplierSchema = z.object({
-  supplierName: z.string().min(1, "Beneficiary name is required"), // Renamed for clarity as this is the beneficiary
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
   headOfficeAddress: z.string().min(1, "Head office address is required"),
   contactPersonName: z.string().min(1, "Contact person name is required"),
   cellNumber: z.string().min(10, "Cell number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid cell number format"),
   emailId: z.string().email("Invalid email address"),
   website: z.string().url("Invalid URL format").optional().or(z.literal('')),
   brandName: z.string().min(1, "Brand name is required"),
-  brandLogo: z.instanceof(File).optional().nullable()
+  brandLogoFile: z.instanceof(File).optional().nullable()
     .refine(file => !file || file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`)
     .refine(
       file => !file || ["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(file.type),
@@ -32,32 +35,69 @@ const supplierSchema = z.object({
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
-export function AddSupplierForm() { // This form adds a "Beneficiary" (who is a supplier)
+export function AddSupplierForm() { 
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
-      supplierName: '',
+      beneficiaryName: '',
       headOfficeAddress: '',
       contactPersonName: '',
       cellNumber: '',
       emailId: '',
       website: '',
       brandName: '',
-      brandLogo: null,
+      brandLogoFile: null,
     },
   });
 
   async function onSubmit(data: SupplierFormValues) {
-    console.log("Beneficiary (Supplier) Form Data:", data);
-    // Placeholder for actual submission
-    Swal.fire({
-      title: "Beneficiary Profile Submitted (Simulated)",
-      text: "Beneficiary data logged to console. Implement backend submission.",
-      icon: "success",
-      timer: 3000,
-      showConfirmButton: true,
+    setIsSubmitting(true);
+    const now = new Date().toISOString();
+    
+    // Exclude brandLogoFile from dataToSave, handle file upload separately
+    const { brandLogoFile, ...restOfData } = data;
+
+    const dataToSave: Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl'> = {
+      ...restOfData,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    // Filter out undefined optional fields
+    Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+            delete dataToSave[key as keyof typeof dataToSave];
+        }
     });
-    // form.reset(); // Optionally reset form
+
+    if (brandLogoFile) {
+      console.log("Brand Logo File selected:", brandLogoFile.name, brandLogoFile.size, brandLogoFile.type);
+      // TODO: Implement Firebase Storage upload for brandLogoFile here
+      // After upload, get the downloadURL and add it to dataToSave as brandLogoUrl
+    }
+
+    try {
+      const docRef = await addDoc(collection(firestore, "suppliers"), dataToSave);
+      Swal.fire({
+        title: "Beneficiary Profile Saved!",
+        text: `Beneficiary data saved successfully to Firestore with ID: ${docRef.id}. Logo upload needs to be implemented.`,
+        icon: "success",
+        timer: 3000,
+        showConfirmButton: true,
+      });
+      form.reset(); 
+    } catch (error) {
+      console.error("Error adding beneficiary document: ", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save beneficiary profile: ${errorMessage}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -66,7 +106,7 @@ export function AddSupplierForm() { // This form adds a "Beneficiary" (who is a 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="supplierName"
+            name="beneficiaryName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Beneficiary Name*</FormLabel>
@@ -166,7 +206,7 @@ export function AddSupplierForm() { // This form adds a "Beneficiary" (who is a 
         
         <FormField
           control={form.control}
-          name="brandLogo"
+          name="brandLogoFile"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Brand Logo</FormLabel>
@@ -184,15 +224,15 @@ export function AddSupplierForm() { // This form adds a "Beneficiary" (who is a 
           )}
         />
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? (
+        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving Beneficiary...
             </>
           ) : (
             <>
-              <Store className="mr-2 h-4 w-4" /> {/* Using Store icon */}
+              <Store className="mr-2 h-4 w-4" /> 
               Save Beneficiary Profile
             </>
           )}

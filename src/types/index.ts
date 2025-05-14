@@ -23,46 +23,45 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 
 export interface LCEntry {
-  id?: string; // Optional: for existing entries from Firebase
-  beneficiaryName: string; // Data will come from Supplier list
-  applicantName: string; // Data will come from Customer list
+  id?: string;
+  beneficiaryName: string; 
+  applicantName: string; 
   currency: Currency;
-  amount: number | ''; // Allow empty string for initial form state, parse to number on submit
+  amount: number | ''; 
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date;
-  totalMachineQty: number | ''; // Allow empty string, parse to number
+  totalMachineQty: number | ''; 
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
-  finalPIFile?: File | null; // For file object before upload
-  shippingDocumentsFile?: File | null; // For file object before upload
+  finalPIFile?: File | null; 
+  shippingDocumentsFile?: File | null; 
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: Date; // Estimated Time of Departure
-  eta?: Date; // Estimated Time of Arrival
-  itemDescriptions?: string; // Extracted by AI
-  shippingDocumentForAI?: File | null; // Document to be analyzed by AI
+  etd?: Date; 
+  eta?: Date; 
+  itemDescriptions?: string; 
+  shippingDocumentForAI?: File | null; 
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
-  vesselImoNumber?: string;
-  partialShipments?: string; // 43P
-  portOfLoading?: string; // 44E
-  portOfDischarge?: string; // 44F
-  documentsRequired?: string; // 46A - main text
-  shippingMarks?: string; // Now under 47A
+  vesselImoNumber?: string; 
+  partialShipments?: string; 
+  portOfLoading?: string; 
+  portOfDischarge?: string; 
+  documentsRequired?: string; 
+  shippingMarks?: string; 
   certificateOfOrigin?: string;
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | '';
-  status?: LCStatus; // New status field
+  status?: LCStatus; 
 }
 
-// If you need a type for data stored in Firebase (e.g., with file URLs)
 export interface LCEntryDocument extends Omit<LCEntry, 
   'finalPIFile' | 
   'shippingDocumentsFile' | 
@@ -73,23 +72,58 @@ export interface LCEntryDocument extends Omit<LCEntry,
   'expireDate' | 
   'latestShipmentDate' | 
   'invoiceDate' |
-  'amount' | // amount will be number
-  'totalMachineQty' | // will be number
-  'numberOfAmendments' // will be number
+  'amount' | 
+  'totalMachineQty' | 
+  'numberOfAmendments' 
 > {
-  year: number; // For yearly data querying
+  year: number; 
   amount: number;
   totalMachineQty: number;
   numberOfAmendments?: number;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  etd?: string; // Store as ISO string
-  eta?: string; // Store as ISO string
+  etd?: string; 
+  eta?: string; 
   lcIssueDate?: string;
   expireDate?: string;
   latestShipmentDate?: string;
   invoiceDate?: string;
-  createdAt: string; // ISO string
-  updatedAt: string; // ISO string
+  createdAt: string; 
+  updatedAt: string; 
   status?: LCStatus;
+  id?: string; // Firestore document ID
 }
+
+// For Applicant/Customer
+export interface Customer {
+  id?: string; // Firestore document ID
+  applicantName: string; 
+  email: string;
+  phone?: string;
+  address: string;
+  contactPerson?: string;
+  binNo?: string;
+  tinNo?: string;
+  newIrcNo?: string;
+  oldIrcNo?: string;
+  createdAt?: string; // ISO string
+  updatedAt?: string; // ISO string
+}
+export type CustomerDocument = Customer & { id: string }; // Ensure id is present when fetched
+
+// For Beneficiary/Supplier
+export interface Supplier {
+  id?: string; // Firestore document ID
+  beneficiaryName: string;
+  headOfficeAddress: string;
+  contactPersonName: string;
+  cellNumber: string;
+  emailId: string;
+  website?: string;
+  brandName: string;
+  brandLogoFile?: File | null; // For file object before upload
+  brandLogoUrl?: string; // For URL after upload
+  createdAt?: string; // ISO string
+  updatedAt?: string; // ISO string
+}
+export type SupplierDocument = Supplier & { id: string }; // Ensure id is present when fetched

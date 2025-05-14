@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -11,61 +11,11 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Swal from 'sweetalert2';
-import type { LCEntry, LCStatus } from '@/types'; // Import LCEntry and LCStatus
-import { Badge } from '@/components/ui/badge'; // For status display
-import { format } from 'date-fns'; // For date formatting
-
-// Placeholder data - replace with actual data fetching
-const initialLCs: LCEntry[] = [
-  { 
-    id: 'lc001', 
-    documentaryCreditNumber: 'DC-2024-001', 
-    applicantName: 'Global Imports Corp', 
-    beneficiaryName: 'Advanced Tech Components', 
-    currency: 'USD', 
-    amount: 50000, 
-    lcIssueDate: new Date('2024-01-15'), 
-    status: 'Transmitted' as LCStatus,
-    termsOfPay: "LC at sight",
-    totalMachineQty: 10,
-  },
-  { 
-    id: 'lc002', 
-    documentaryCreditNumber: 'DC-2024-002', 
-    applicantName: 'Tech Solutions Ltd.', 
-    beneficiaryName: 'Global Manufacturing Co.', 
-    currency: 'EURO', 
-    amount: 120000, 
-    lcIssueDate: new Date('2024-02-20'), 
-    status: 'Shipping going on' as LCStatus,
-    termsOfPay: "UPAS",
-    totalMachineQty: 5,
-  },
-  { 
-    id: 'lc003', 
-    documentaryCreditNumber: 'DC-2024-003', 
-    applicantName: 'Orient Exports Co.', 
-    beneficiaryName: 'Precision Parts Inc.', 
-    currency: 'USD', 
-    amount: 75000, 
-    lcIssueDate: new Date('2024-03-10'), 
-    status: 'Done' as LCStatus,
-    termsOfPay: "Deffered 180days",
-    totalMachineQty: 25,
-  },
-  { 
-    id: 'lc004', 
-    documentaryCreditNumber: 'DC-2024-004', 
-    applicantName: 'Pharma Global', 
-    beneficiaryName: 'Supplier Alpha', 
-    currency: 'USD', 
-    amount: 25000, 
-    lcIssueDate: new Date('2024-04-05'), 
-    status: 'Draft' as LCStatus,
-    termsOfPay: "TT in Advance",
-    totalMachineQty: 2,
-  },
-];
+import type { LCEntryDocument, LCStatus } from '@/types'; 
+import { Badge } from '@/components/ui/badge';
+import { format, parseISO } from 'date-fns'; 
+// import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; // Firestore imports
+// import { firestore } from '@/lib/firebase/config'; // Firestore instance
 
 const getStatusBadgeVariant = (status?: LCStatus) => {
   switch (status) {
@@ -74,9 +24,9 @@ const getStatusBadgeVariant = (status?: LCStatus) => {
     case 'Transmitted':
       return 'secondary';
     case 'Shipping going on':
-      return 'default'; // Primary color
+      return 'default'; 
     case 'Done':
-      return 'default'; // Could use a different success color if available
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -85,7 +35,39 @@ const getStatusBadgeVariant = (status?: LCStatus) => {
 
 export default function TotalLCPage() {
   const router = useRouter();
-  const [lcEntries, setLcEntries] = useState<LCEntry[]>(initialLCs);
+  const [lcEntries, setLcEntries] = useState<LCEntryDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // TODO: Implement actual data fetching from Firestore
+    const fetchLCEntries = async () => {
+      setIsLoading(true);
+      console.log("Fetching L/C entries from Firestore...");
+      // Example Firestore fetch:
+      // try {
+      //   const querySnapshot = await getDocs(collection(firestore, "lc_entries"));
+      //   const fetchedLCs = querySnapshot.docs.map(doc => {
+      //     const data = doc.data();
+      //     return {
+      //        id: doc.id,
+      //        ...data,
+      //        // Convert ISO string dates from Firestore back to Date objects if needed for display/formatting
+      //        lcIssueDate: data.lcIssueDate ? parseISO(data.lcIssueDate) : undefined, 
+      //        // Add other date conversions as needed
+      //     } as LCEntryDocument;
+      //   });
+      //   setLcEntries(fetchedLCs);
+      // } catch (error) {
+      //   console.error("Error fetching L/C entries: ", error);
+      //   Swal.fire("Error", "Could not fetch L/C data.", "error");
+      // }
+      setLcEntries([]); // For now, set to empty after "fetching"
+      setIsLoading(false);
+    };
+
+    fetchLCEntries();
+  }, []);
+
 
   const handleEditLC = (lcId: string) => {
     Swal.fire({
@@ -101,23 +83,36 @@ export default function TotalLCPage() {
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the L/C "${lcNumber || lcId}" (simulated).`,
+      text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}".`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))', 
       cancelButtonColor: 'hsl(var(--secondary))', 
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        console.log(`Deleting L/C ${lcId}`);
-        // Simulate API call for deletion
-        setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
-        Swal.fire(
-          'Deleted!',
-          `L/C "${lcNumber || lcId}" has been removed from the list. (Simulated)`,
+        console.log(`Simulating delete for L/C ID: ${lcId} from Firestore.`);
+         // TODO: Implement actual Firestore document deletion
+        // try {
+        //   await deleteDoc(doc(firestore, "lc_entries", lcId));
+        //   setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
+        //   Swal.fire(
+        //     'Deleted!',
+        //     `L/C "${lcNumber || lcId}" has been removed.`,
+        //     'success'
+        //   );
+        // } catch (error) {
+        //   console.error("Error deleting L/C: ", error);
+        //   Swal.fire("Error", `Could not delete L/C: ${error.message}`, "error");
+        // }
+        Swal.fire( // Placeholder success
+          'Simulated Delete!',
+          `L/C "${lcNumber || lcId}" would be removed from Firestore.`,
           'success'
         );
+        // For local state update if not re-fetching:
+        setLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
       }
     });
   };
@@ -133,7 +128,7 @@ export default function TotalLCPage() {
                 Total L/C Overview
               </CardTitle>
               <CardDescription>
-                View, search, and manage all Letters of Credit.
+                View, search, and manage all Letters of Credit from the database.
               </CardDescription>
             </div>
             <Link href="/dashboard/new-lc-entry" passHref>
@@ -147,9 +142,9 @@ export default function TotalLCPage() {
         <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
+            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Database Integration Note</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The L/C list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
+              This page is intended to display L/C entries from Firestore. Implement data fetching and real delete operations.
             </AlertDescription>
           </Alert>
 
@@ -167,16 +162,25 @@ export default function TotalLCPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lcEntries.length > 0 ? (
+                 {isLoading ? (
+                   <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      Loading L/C entries...
+                    </TableCell>
+                  </TableRow>
+                ) : lcEntries.length > 0 ? (
                   lcEntries.map((lc) => (
                     <TableRow key={lc.id}>
                       <TableCell className="font-medium">{lc.documentaryCreditNumber}</TableCell>
                       <TableCell>{lc.applicantName}</TableCell>
                       <TableCell>{lc.beneficiaryName}</TableCell>
                       <TableCell>{lc.currency} {typeof lc.amount === 'number' ? lc.amount.toLocaleString() : lc.amount}</TableCell>
-                      <TableCell>{lc.lcIssueDate ? format(lc.lcIssueDate, 'PPP') : 'N/A'}</TableCell>
+                      <TableCell>{lc.lcIssueDate ? format(parseISO(lc.lcIssueDate), 'PPP') : 'N/A'}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(lc.status)} className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : lc.status === 'Done' ? 'bg-green-600 text-white' : ''}>
+                        <Badge 
+                          variant={getStatusBadgeVariant(lc.status)} 
+                          className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : lc.status === 'Done' ? 'bg-green-600 text-white' : ''}
+                        >
                           {lc.status || 'N/A'}
                         </Badge>
                       </TableCell>
@@ -187,7 +191,8 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => router.push(`/dashboard/total-lc/${lc.id}`)} // Placeholder for view details page
+                                // onClick={() => router.push(`/dashboard/total-lc/${lc.id}`)} // Placeholder for view details page
+                                onClick={() => Swal.fire("Info", "View L/C Details page is not yet implemented.", "info")}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
                                 <Eye className="h-4 w-4" />
@@ -239,13 +244,13 @@ export default function TotalLCPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      No L/C entries found.
+                      No L/C entries found in the database.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Letters of Credit. (Currently displaying placeholder data)
+                A list of your Letters of Credit. (Data to be fetched from Firestore)
               </TableCaption>
             </Table>
           </div>
