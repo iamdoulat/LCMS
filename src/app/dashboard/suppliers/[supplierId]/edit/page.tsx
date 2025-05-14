@@ -12,14 +12,14 @@ import { Info } from 'lucide-react';
 // Placeholder: In a real app, you would import your EditSupplierForm component
 // import { EditSupplierForm } from '@/components/forms/EditSupplierForm';
 
-export default function EditSupplierPage() {
+export default function EditBeneficiaryPage() {
   const params = useParams();
-  const supplierId = params.supplierId as string;
+  const supplierId = params.supplierId as string; // supplierId here refers to beneficiaryId in context
 
-  // Placeholder: Fetch supplier data based on supplierId
-  // const [supplierData, setSupplierData] = React.useState(null);
+  // Placeholder: Fetch beneficiary data based on supplierId (beneficiaryId)
+  // const [beneficiaryData, setBeneficiaryData] = React.useState(null);
   // React.useEffect(() => {
-  //  // Fetch supplier data using supplierId
+  //  // Fetch beneficiary data using supplierId
   // }, [supplierId]);
 
   return (
@@ -28,7 +28,7 @@ export default function EditSupplierPage() {
         <Link href="/dashboard/suppliers" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Supplier List
+            Back to Beneficiary List
           </Button>
         </Link>
       </div>
@@ -36,10 +36,10 @@ export default function EditSupplierPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
             <Store className="h-7 w-7" /> {/* Or FileEdit */}
-            Edit Supplier Profile
+            Edit Beneficiary Profile
           </CardTitle>
           <CardDescription>
-            Modify the details for supplier ID: <span className="font-semibold text-foreground">{supplierId}</span>.
+            Modify the details for beneficiary ID: <span className="font-semibold text-foreground">{supplierId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -47,8 +47,8 @@ export default function EditSupplierPage() {
             <Info className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle className="text-yellow-700 dark:text-yellow-300 font-semibold">Under Development</AlertTitle>
             <AlertDescription className="text-yellow-600 dark:text-yellow-400">
-              This page is for editing supplier details. The form and data loading/saving functionality will be implemented here.
-              Currently, it only displays the supplier ID from the URL.
+              This page is for editing beneficiary details. The form and data loading/saving functionality will be implemented here.
+              Currently, it only displays the beneficiary ID from the URL.
             </AlertDescription>
           </Alert>
           
@@ -57,7 +57,7 @@ export default function EditSupplierPage() {
           
           <div className="mt-6 p-4 border border-dashed rounded-md bg-muted/30">
             <p className="text-center text-muted-foreground">
-              Edit Supplier Form for ID <span className="font-bold">{supplierId}</span> will be displayed here.
+              Edit Beneficiary Form for ID <span className="font-bold">{supplierId}</span> will be displayed here.
             </p>
           </div>
         </CardContent>

@@ -35,18 +35,17 @@ import {
   Loader2,
   Store,
   UserPlus,
-  Building // Added for consistency if needed
+  Building
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
-const lcManagementNavItems: NavItem[] = [
+const lcManagementNavItems: NavItemGroup[] = [
   {
-    isGroup: true,
     groupLabel: 'L/C Management',
-    icon: Briefcase, // Icon for the L/C Management group
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
@@ -54,27 +53,24 @@ const lcManagementNavItems: NavItem[] = [
   },
 ];
 
-const generalManagementNavItems: NavItem[] = [
+const generalManagementNavItems: NavItemGroup[] = [
   {
-    isGroup: true,
-    groupLabel: 'Suppliers / Beneficiary', // Updated Label
-    icon: Store, // Or Building
+    groupLabel: 'Suppliers / Beneficiary',
+    icon: Store,
     subLinks: [
-      { href: '/dashboard/suppliers', label: 'View Suppliers', icon: ListChecks },
-      { href: '/dashboard/suppliers/add', label: 'Add New Supplier', icon: FilePlus2 },
+      { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
+      { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
     ],
   },
   {
-    isGroup: true,
-    groupLabel: 'Customers / Applicants', // Updated Label
+    groupLabel: 'Customers / Applicants',
     icon: UsersIcon,
     subLinks: [
-      { href: '/dashboard/customers', label: 'View Customers', icon: ListChecks },
-      { href: '/dashboard/customers/add', label: 'Add New Customer', icon: UserPlus },
+      { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
+      { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
     ],
   },
   {
-    isGroup: true,
     groupLabel: 'Shipments',
     icon: Truck,
     subLinks: [
@@ -84,7 +80,8 @@ const generalManagementNavItems: NavItem[] = [
   },
 ];
 
-const settingsNavItems: NavItem[] = [ // Changed to NavItem[]
+
+const settingsNavItems: NavItem[] = [ 
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
 ];
@@ -104,17 +101,18 @@ export function AppSidebarNav() {
       (href === '/dashboard/total-lc' && pathname.startsWith('/dashboard/total-lc')) ||
       (href === '/dashboard/new-lc-entry' && pathname.startsWith('/dashboard/new-lc-entry'))
     ) {
-      return true;
+      // This ensures that parent group links like /dashboard/suppliers are not considered active
+      // if a sub-route like /dashboard/suppliers/add is active.
+      // Only mark active if the pathname *exactly* matches the group's base href.
+      return pathname === href;
     }
+    // For other specific links, check if the pathname starts with the href,
+    // but not if it's a group that has active sub-links (handled by isGroupActive).
     if (href !== '/dashboard' && pathname.startsWith(href)) {
         const isPartOfActiveGroup = generalManagementNavItems.some(group => 
-            group.isGroup && 
-            group.subLinks?.some(sub => pathname.startsWith(sub.href)) && 
-            href.startsWith(group.subLinks?.[0].href.substring(0, group.subLinks[0].href.lastIndexOf('/')) || '')
+            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href) 
         ) || lcManagementNavItems.some(group => 
-            group.isGroup &&
-            group.subLinks?.some(sub => pathname.startsWith(sub.href)) &&
-            href.startsWith(group.subLinks?.[0].href.substring(0, group.subLinks[0].href.lastIndexOf('/')) || '')
+            group.subLinks?.some(sub => pathname.startsWith(sub.href) && sub.href !== href)
         );
 
         if (isPartOfActiveGroup) return false; 
@@ -130,12 +128,12 @@ export function AppSidebarNav() {
   const combinedNavGroups = [...lcManagementNavItems, ...generalManagementNavItems];
 
   const defaultOpenAccordions = combinedNavGroups
-    .filter(item => item.isGroup && item.subLinks && isGroupActive(item.subLinks))
+    .filter(item => item.subLinks && isGroupActive(item.subLinks))
     .map(item => item.groupLabel || '');
 
 
-  const renderNavGroup = (item: NavItem, index: number) => (
-    item.isGroup && item.subLinks ? (
+  const renderNavGroup = (item: NavItemGroup, index: number) => (
+    item.subLinks ? (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
@@ -184,27 +182,7 @@ export function AppSidebarNav() {
           </SidebarMenu>
         </AccordionContent>
       </AccordionItem>
-    ) : (
-       item.href && ( // Fallback for non-group items
-        <SidebarMenu key={item.href || `item-${index}`} className="px-2 py-1">
-            <SidebarMenuItem>
-                <Link href={item.href!} passHref legacyBehavior>
-                <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href!)}
-                    className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                    tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                >
-                    <a>
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </a>
-                </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
-        </SidebarMenu>
-       )
-    )
+    ) : null
   );
 
 
@@ -265,7 +243,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
             {settingsNavItems.map((item) => (
-              item.href && // Ensure item.href is defined
+              item.href && 
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
@@ -305,14 +283,17 @@ export function AppSidebarNav() {
   );
 }
 
-// Helper type for nav items, accommodating groups
+// Helper type for nav items
 type NavItem = {
   href?: string;
   label?: string;
   icon: React.ElementType;
-  isGroup?: boolean;
+};
+
+// Helper type for nav groups
+type NavItemGroup = {
   groupLabel?: string;
-  defaultOpen?: boolean;
+  icon: React.ElementType;
   subLinks?: Array<{
     href: string;
     label: string;

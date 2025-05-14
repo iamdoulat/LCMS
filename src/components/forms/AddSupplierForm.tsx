@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud, Store } from 'lucide-react'; // Added Store icon
 import Swal from 'sweetalert2';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { FileInput } from './FileInput'; 
 
 const supplierSchema = z.object({
-  supplierName: z.string().min(1, "Supplier name is required"),
+  supplierName: z.string().min(1, "Beneficiary name is required"), // Renamed for clarity as this is the beneficiary
   headOfficeAddress: z.string().min(1, "Head office address is required"),
   contactPersonName: z.string().min(1, "Contact person name is required"),
   cellNumber: z.string().min(10, "Cell number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid cell number format"),
@@ -32,7 +32,7 @@ const supplierSchema = z.object({
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
-export function AddSupplierForm() {
+export function AddSupplierForm() { // This form adds a "Beneficiary" (who is a supplier)
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
@@ -48,11 +48,11 @@ export function AddSupplierForm() {
   });
 
   async function onSubmit(data: SupplierFormValues) {
-    console.log("Supplier Form Data:", data);
+    console.log("Beneficiary (Supplier) Form Data:", data);
     // Placeholder for actual submission
     Swal.fire({
-      title: "Supplier Profile Submitted (Simulated)",
-      text: "Supplier data logged to console. Implement backend submission.",
+      title: "Beneficiary Profile Submitted (Simulated)",
+      text: "Beneficiary data logged to console. Implement backend submission.",
       icon: "success",
       timer: 3000,
       showConfirmButton: true,
@@ -69,9 +69,9 @@ export function AddSupplierForm() {
             name="supplierName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Supplier Name*</FormLabel>
+                <FormLabel>Beneficiary Name*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter supplier's official name" {...field} />
+                  <Input placeholder="Enter beneficiary's official name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -143,7 +143,7 @@ export function AddSupplierForm() {
               <FormItem>
                 <FormLabel>Email ID*</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="contact@supplier.com" {...field} />
+                  <Input type="email" placeholder="contact@beneficiary.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -156,7 +156,7 @@ export function AddSupplierForm() {
               <FormItem>
                 <FormLabel>Website URL</FormLabel>
                 <FormControl>
-                  <Input type="url" placeholder="https://www.supplier.com" {...field} />
+                  <Input type="url" placeholder="https://www.beneficiary.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -188,12 +188,12 @@ export function AddSupplierForm() {
           {form.formState.isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Supplier...
+              Saving Beneficiary...
             </>
           ) : (
             <>
-              <UploadCloud className="mr-2 h-4 w-4" />
-              Save Supplier Profile
+              <Store className="mr-2 h-4 w-4" /> {/* Using Store icon */}
+              Save Beneficiary Profile
             </>
           )}
         </Button>

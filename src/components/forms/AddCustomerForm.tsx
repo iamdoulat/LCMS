@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const customerSchema = z.object({
-  customerName: z.string().min(1, "Customer name is required"),
+  customerName: z.string().min(1, "Applicant name is required"), // Renamed for clarity as this is the applicant
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required"),
@@ -27,7 +27,7 @@ const customerSchema = z.object({
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
-export function AddCustomerForm() {
+export function AddCustomerForm() { // This form adds an "Applicant" (who is a customer)
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -44,16 +44,15 @@ export function AddCustomerForm() {
   });
 
   async function onSubmit(data: CustomerFormValues) {
-    console.log("Customer Form Data:", data);
-    // Placeholder for actual submission (e.g., to Firebase Firestore)
+    console.log("Applicant (Customer) Form Data:", data);
     Swal.fire({
-      title: "Customer Profile Submitted (Simulated)",
-      text: "Customer data logged to console. Implement backend submission.",
+      title: "Applicant Profile Submitted (Simulated)",
+      text: "Applicant data logged to console. Implement backend submission.",
       icon: "success",
       timer: 3000,
       showConfirmButton: true,
     });
-    // form.reset(); // Optionally reset form
+    // form.reset(); 
   }
 
   return (
@@ -64,9 +63,9 @@ export function AddCustomerForm() {
           name="customerName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Customer Name*</FormLabel>
+              <FormLabel>Applicant Name*</FormLabel>
               <FormControl>
-                <Input placeholder="Enter customer's full name or company name" {...field} />
+                <Input placeholder="Enter applicant's full name or company name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -81,7 +80,7 @@ export function AddCustomerForm() {
               <FormItem>
                 <FormLabel>Email Address*</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="customer@example.com" {...field} />
+                  <Input type="email" placeholder="applicant@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -109,7 +108,7 @@ export function AddCustomerForm() {
             <FormItem>
               <FormLabel>Address*</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter customer's full address" {...field} rows={3} />
+                <Textarea placeholder="Enter applicant's full address" {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -192,12 +191,12 @@ export function AddCustomerForm() {
           {form.formState.isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Customer...
+              Saving Applicant...
             </>
           ) : (
             <>
               <UserPlus className="mr-2 h-4 w-4" />
-              Save Customer Profile
+              Save Applicant Profile
             </>
           )}
         </Button>

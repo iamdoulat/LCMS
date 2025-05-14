@@ -19,14 +19,14 @@ const initialSuppliers = [
   { id: 'supp3', supplierName: 'Precision Parts Inc.', email: 'info@precisionparts.net', phone: '+49-30-555-0300', contactPerson: 'Klaus Richter', address: '23 Industrial Park, Berlin, DE' },
 ];
 
-export default function SuppliersListPage() {
+export default function BeneficiariesListPage() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState(initialSuppliers);
 
-  const handleEditSupplier = (supplierId: string) => {
+  const handleEditBeneficiary = (supplierId: string) => {
     Swal.fire({
       title: "Redirecting...",
-      text: `Navigating to edit page for supplier ${supplierId}.`,
+      text: `Navigating to edit page for beneficiary ${supplierId}.`,
       icon: "info",
       timer: 1500,
       showConfirmButton: false,
@@ -34,10 +34,10 @@ export default function SuppliersListPage() {
     router.push(`/dashboard/suppliers/${supplierId}/edit`);
   };
 
-  const handleDeleteSupplier = (supplierId: string, supplierName: string) => {
+  const handleDeleteBeneficiary = (supplierId: string, supplierName: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the supplier profile for "${supplierName || supplierId}" and remove their data from our servers (simulated).`,
+      text: `This action cannot be undone. This will permanently delete the beneficiary profile for "${supplierName || supplierId}" and remove their data from our servers (simulated).`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
@@ -49,14 +49,14 @@ export default function SuppliersListPage() {
         // Simulate API call for deletion
         // In a real app, you would make a call to your backend here:
         // e.g., await deleteSupplierFromDb(supplierId);
-        console.log(`Simulating delete for supplier ${supplierId}`);
+        console.log(`Simulating delete for beneficiary ${supplierId}`);
         
         // Update local state
         setSuppliers(prevSuppliers => prevSuppliers.filter(supplier => supplier.id !== supplierId));
         
         Swal.fire(
           'Deleted!',
-          `Supplier ${supplierName || supplierId} has been removed from the list. (Simulated)`,
+          `Beneficiary ${supplierName || supplierId} has been removed from the list. (Simulated)`,
           'success'
         );
       }
@@ -71,16 +71,16 @@ export default function SuppliersListPage() {
             <div>
               <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
                 <ListChecks className="h-7 w-7" />
-                Manage Suppliers
+                Manage Beneficiaries
               </CardTitle>
               <CardDescription>
-                View, search, and manage all supplier profiles.
+                View, search, and manage all beneficiary profiles.
               </CardDescription>
             </div>
             <Link href="/dashboard/suppliers/add" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Supplier
+                Add New Beneficiary
               </Button>
             </Link>
           </div>
@@ -90,7 +90,7 @@ export default function SuppliersListPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The supplier list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
+              The beneficiary list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
             </AlertDescription>
           </Alert>
 
@@ -98,7 +98,7 @@ export default function SuppliersListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Supplier Name</TableHead>
+                  <TableHead className="w-[200px]">Beneficiary Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Contact Person</TableHead>
@@ -120,15 +120,15 @@ export default function SuppliersListPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditSupplier(supplier.id)}
+                                onClick={() => handleEditBeneficiary(supplier.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
                                 <FileEdit className="h-4 w-4" />
-                                <span className="sr-only">Edit Supplier</span>
+                                <span className="sr-only">Edit Beneficiary</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Edit Supplier</p>
+                              <p>Edit Beneficiary</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -138,15 +138,15 @@ export default function SuppliersListPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDeleteSupplier(supplier.id, supplier.supplierName)}
+                                  onClick={() => handleDeleteBeneficiary(supplier.id, supplier.supplierName)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete Supplier</span>
+                                  <span className="sr-only">Delete Beneficiary</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Delete Supplier</p>
+                              <p>Delete Beneficiary</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -156,13 +156,13 @@ export default function SuppliersListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No suppliers found.
+                      No beneficiaries found.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your suppliers. (Currently displaying placeholder data)
+                A list of your beneficiaries. (Currently displaying placeholder data)
               </TableCaption>
             </Table>
           </div>

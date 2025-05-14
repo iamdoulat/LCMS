@@ -12,15 +12,14 @@ import { Info } from 'lucide-react';
 // Placeholder: In a real app, you would import your EditCustomerForm component
 // import { EditCustomerForm } from '@/components/forms/EditCustomerForm';
 
-export default function EditCustomerPage() {
+export default function EditApplicantPage() {
   const params = useParams();
-  const customerId = params.customerId as string;
+  const customerId = params.customerId as string; // customerId here refers to applicantId in context
 
-  // Placeholder: Fetch customer data based on customerId
-  // For now, we'll just display the ID.
-  // const [customerData, setCustomerData] = React.useState(null);
+  // Placeholder: Fetch applicant data based on customerId
+  // const [applicantData, setApplicantData] = React.useState(null);
   // React.useEffect(() => {
-  //  // Fetch customer data using customerId
+  //  // Fetch applicant data using customerId
   // }, [customerId]);
 
   return (
@@ -29,7 +28,7 @@ export default function EditCustomerPage() {
         <Link href="/dashboard/customers" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Customer List
+            Back to Applicant List
           </Button>
         </Link>
       </div>
@@ -37,10 +36,10 @@ export default function EditCustomerPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
             <UserCog className="h-7 w-7" />
-            Edit Customer Profile
+            Edit Applicant Profile
           </CardTitle>
           <CardDescription>
-            Modify the details for customer ID: <span className="font-semibold text-foreground">{customerId}</span>.
+            Modify the details for applicant ID: <span className="font-semibold text-foreground">{customerId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -48,8 +47,8 @@ export default function EditCustomerPage() {
             <Info className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle className="text-yellow-700 dark:text-yellow-300 font-semibold">Under Development</AlertTitle>
             <AlertDescription className="text-yellow-600 dark:text-yellow-400">
-              This page is for editing customer details. The form and data loading/saving functionality will be implemented here.
-              Currently, it only displays the customer ID from the URL.
+              This page is for editing applicant details. The form and data loading/saving functionality will be implemented here.
+              Currently, it only displays the applicant ID from the URL.
             </AlertDescription>
           </Alert>
           
@@ -58,7 +57,7 @@ export default function EditCustomerPage() {
           
           <div className="mt-6 p-4 border border-dashed rounded-md bg-muted/30">
             <p className="text-center text-muted-foreground">
-              Edit Customer Form for ID <span className="font-bold">{customerId}</span> will be displayed here.
+              Edit Applicant Form for ID <span className="font-bold">{customerId}</span> will be displayed here.
             </p>
           </div>
         </CardContent>
