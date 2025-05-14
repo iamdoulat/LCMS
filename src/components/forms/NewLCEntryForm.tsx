@@ -22,8 +22,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
-  supplierName: z.string().min(1, "Supplier name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Will be from supplier data
+  applicantName: z.string().min(1, "Applicant name is required"), // Was supplierName, now from customer data
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -76,16 +76,16 @@ const fileToDataUri = (file: File): Promise<string> => {
 };
 
 // Placeholder data for dropdowns - replace with actual data fetching
-const placeholderBeneficiaryOptions = [
-  { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
-  { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
-  { value: "Gamma Trading Co.", label: "Gamma Trading Co." },
+const placeholderBeneficiaryOptionsFromSuppliers = [ // Beneficiary is typically the supplier
+  { value: "Supplier One Corp", label: "Supplier One Corp" },
+  { value: "Advanced Tech Components", label: "Advanced Tech Components" },
+  { value: "Global Manufacturing Co.", label: "Global Manufacturing Co." },
 ];
 
-const placeholderSupplierOptions = [
-  { value: "Supplier One Corp", label: "Supplier One Corp" },
-  { value: "Supplier Two Global", label: "Supplier Two Global" },
-  { value: "Supplier Three Parts", label: "Supplier Three Parts" },
+const placeholderApplicantOptions = [ // Applicant is typically the customer
+  { value: "Customer Alpha Inc.", label: "Customer Alpha Inc." },
+  { value: "Beta Services Ltd.", label: "Beta Services Ltd." },
+  { value: "Global Imports Corp", label: "Global Imports Corp" },
 ];
 
 
@@ -96,8 +96,8 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Will be selected from dropdown
-      supplierName: '', // Will be selected from dropdown
+      beneficiaryName: '', // Will be selected from dropdown (supplier data)
+      applicantName: '', // Will be selected from dropdown (customer data)
       currency: 'USD' as Currency, 
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -258,18 +258,18 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="beneficiaryName"
+            name="applicantName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select beneficiary (customer)" />
+                      <SelectValue placeholder="Select applicant (customer)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {placeholderBeneficiaryOptions.map((option) => (
+                    {placeholderApplicantOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -281,20 +281,20 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-          <FormField
+           <FormField
             control={form.control}
-            name="supplierName"
+            name="beneficiaryName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name*</FormLabel>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
+                      <SelectValue placeholder="Select beneficiary (supplier)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {placeholderSupplierOptions.map((option) => (
+                    {placeholderBeneficiaryOptionsFromSuppliers.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -804,5 +804,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-    

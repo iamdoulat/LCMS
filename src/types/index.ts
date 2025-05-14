@@ -17,8 +17,8 @@ export type Currency = typeof currencyOptions[number] | "";
 
 export interface LCEntry {
   id?: string; // Optional: for existing entries from Firebase
-  beneficiaryName: string;
-  supplierName: string;
+  beneficiaryName: string; // Data will come from Supplier list
+  applicantName: string; // Data will come from Customer list (previously supplierName)
   currency: Currency;
   amount: number | ''; // Allow empty string for initial form state, parse to number on submit
   termsOfPay: TermsOfPay;
