@@ -31,11 +31,11 @@ export function CompanySetupForm() {
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
     defaultValues: {
-      companyName: '',
-      address: '',
+      companyName: 'Smart Solution',
+      address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
       contactPerson: '',
       cellNumber: '',
-      emailId: '',
+      emailId: 'info@smartsolution-bd.com',
       binNumber: '',
       tinNumber: '',
     },
