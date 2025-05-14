@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -610,7 +610,7 @@ export function NewLCEntryForm() {
         </div>
         
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
-            <Layers className="mr-2 h-5 w-5 text-primary" />
+            <FileSignature className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon */}
             46A: Documents Required
         </h3>
         <FormField
@@ -629,25 +629,32 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
-                name="shippingMarks"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipping Marks</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter shipping marks" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
                 name="certificateOfOrigin"
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Certificate of Origin</FormLabel>
                     <FormControl>
                     <Input placeholder="e.g., Required / Not Required / Specify details" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <Edit3 className="mr-2 h-5 w-5 text-primary" /> {/* Using Edit3 as a placeholder for conditions */}
+            47A: Additional Conditions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> {/* Keeping grid for potential future fields */}
+            <FormField
+                control={form.control}
+                name="shippingMarks"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipping Marks</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter shipping marks as specified in additional conditions" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -709,3 +716,6 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+
+    
