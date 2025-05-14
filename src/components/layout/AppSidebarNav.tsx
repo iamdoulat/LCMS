@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added TooltipProvider
 import {
   LayoutDashboard,
   ListChecks, 
@@ -33,7 +34,7 @@ import {
   Briefcase,
   Loader2,
   Store,      
-  UserPlus, // Icon for Add New Customer
+  UserPlus, 
   ChevronDown 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -270,3 +271,4 @@ type NavItem = {
     icon?: React.ElementType;
   }>;
 };
+
