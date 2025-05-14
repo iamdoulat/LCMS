@@ -529,7 +529,7 @@ export function NewLCEntryForm() {
             name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Name</FormLabel>
+                <FormLabel>Notify Party name</FormLabel>
                 <FormControl>
                 <Input placeholder="Enter notify party's name" {...field} />
                 </FormControl>
@@ -804,3 +804,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
