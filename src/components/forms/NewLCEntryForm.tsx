@@ -16,18 +16,27 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const termsOfPayOptions = [
+  "TT in Advance",
+  "LC at sight",
+  "UPAS",
+  "Deffered 120days",
+  "Deffered 180days",
+  "Deffered 360days",
+] as const;
 
 const lcEntrySchema = z.object({
-  customerName: z.string().min(1, "Customer name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Renamed from customerName
   supplierName: z.string().min(1, "Supplier name is required"),
   value: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number({ invalid_type_error: "Value must be a number" }).positive("Value must be positive")
   ),
-  termsOfPay: z.string().min(1, "Terms of pay are required"),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   ttNumber: z.string().optional(),
   lcNumber: z.string().min(1, "L/C number is required"),
   totalMachineQty: z.preprocess(
@@ -44,6 +53,9 @@ const lcEntrySchema = z.object({
   eta: z.string().optional(),
   itemDescriptions: z.string().optional(),
   shippingDocumentForAI: z.instanceof(File).optional().nullable(),
+  consigneeBankNameAddress: z.string().optional(), // New field
+  bankBin: z.string().optional(), // New field
+  bankTin: z.string().optional(), // New field (assuming TION was TIN)
 });
 
 // Helper function to convert File to Data URI
@@ -65,10 +77,10 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      customerName: '',
+      beneficiaryName: '', // Renamed
       supplierName: '',
       value: '',
-      termsOfPay: '',
+      termsOfPay: "", // Default to empty or first option
       ttNumber: '',
       lcNumber: '',
       totalMachineQty: '',
@@ -82,6 +94,9 @@ export function NewLCEntryForm() {
       eta: '',
       itemDescriptions: '',
       shippingDocumentForAI: null,
+      consigneeBankNameAddress: '', // New field
+      bankBin: '', // New field
+      bankTin: '', // New field
     },
   });
 
@@ -195,12 +210,12 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="customerName"
+            name="beneficiaryName" // Renamed
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Customer Name*</FormLabel>
+                <FormLabel>Beneficiary Name*</FormLabel> 
                 <FormControl>
-                  <Input placeholder="Enter customer name" {...field} />
+                  <Input placeholder="Enter beneficiary name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -238,9 +253,20 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="e.g., 30% TT Advance, 70% LC at sight" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select terms of payment" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {termsOfPayOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -298,6 +324,53 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+          <Landmark className="mr-2 h-5 w-5 text-primary" />
+          Consignee Bank Details
+        </h3>
+        <FormField
+            control={form.control}
+            name="consigneeBankNameAddress"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Consignee Bank Name and Address</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter bank name and full address" {...field} rows={3}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="bankBin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Bank BIN</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter Bank Identification Number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="bankTin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Bank TIN</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter Taxpayer Identification Number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Dates</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -425,7 +498,10 @@ export function NewLCEntryForm() {
               Submitting...
             </>
           ) : (
-            'Submit L/C Entry'
+            <>
+              <Library className="mr-2 h-4 w-4" />
+              Submit L/C Entry
+            </>
           )}
         </Button>
       </form>
