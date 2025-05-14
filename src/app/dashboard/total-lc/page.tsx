@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -16,12 +17,14 @@ import { format, parseISO, isValid } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
 import { firestore } from '@/lib/firebase/config'; 
 
-const getStatusBadgeVariant = (status?: LCStatus) => {
+const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
     case 'Transmitted':
       return 'secondary';
+    case 'Shipping pending':
+      return 'default'; // Could be a specific color like yellow/orange if theme supports
     case 'Shipping going on':
       return 'default'; 
     case 'Done':
@@ -180,7 +183,11 @@ export default function TotalLCPage() {
                       <TableCell>
                         <Badge 
                           variant={getStatusBadgeVariant(lc.status)} 
-                          className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : lc.status === 'Done' ? 'bg-green-600 text-white' : ''}
+                          className={
+                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : 
+                            lc.status === 'Done' ? 'bg-green-600 text-white' : 
+                            lc.status === 'Shipping pending' ? 'bg-yellow-500 text-black' : ''
+                          }
                         >
                           {lc.status || 'N/A'}
                         </Badge>
@@ -259,3 +266,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+

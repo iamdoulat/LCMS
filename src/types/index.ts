@@ -19,7 +19,8 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-export const lcStatusOptions = ["Draft", "Transmitted", "Shipping going on", "Done"] as const;
+// Updated LC Status Options
+export const lcStatusOptions = ["Draft", "Transmitted", "Shipping pending", "Shipping going on", "Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
 
@@ -77,8 +78,8 @@ export interface LCEntryDocument extends Omit<LCEntry,
   'amount' |
   'totalMachineQty' |
   'numberOfAmendments' |
-  'applicantName' | // Store actual name
-  'beneficiaryName' // Store actual name
+  'beneficiaryName' | // Store actual name
+  'applicantName' // Store actual name
 > {
   year: number;
   applicantName: string; // Actual name of the applicant for display

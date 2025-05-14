@@ -1,12 +1,13 @@
 
+
 "use client";
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
 import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -20,7 +21,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -69,7 +70,7 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
-  status: z.enum(["Draft", "Transmitted", "Shipping going on", "Done"]).default("Draft")
+  status: z.enum(lcStatusOptions).default("Draft")
 });
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -589,6 +590,30 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
+           <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "Draft"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select L/C status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {lcStatusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
             control={form.control}
@@ -1015,31 +1040,6 @@ export function NewLCEntryForm() {
           />
         </div>
         
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>L/C Status*</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "Draft"}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select L/C status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {(["Draft", "Transmitted", "Shipping going on", "Done"] as const).map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
