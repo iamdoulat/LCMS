@@ -19,6 +19,10 @@ const customerSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required"),
   contactPerson: z.string().optional(),
+  binNo: z.string().optional(),
+  tinNo: z.string().optional(),
+  newIrcNo: z.string().optional(),
+  oldIrcNo: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -33,6 +37,10 @@ export function AddCustomerForm() {
       phone: '',
       address: '',
       contactPerson: '',
+      binNo: '',
+      tinNo: '',
+      newIrcNo: '',
+      oldIrcNo: '',
     },
   });
 
@@ -112,7 +120,7 @@ export function AddCustomerForm() {
           name="contactPerson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contact Person (Optional)</FormLabel>
+              <FormLabel>Contact Person</FormLabel>
               <FormControl>
                 <Input placeholder="Enter name of the primary contact person" {...field} />
               </FormControl>
@@ -120,6 +128,64 @@ export function AddCustomerForm() {
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="binNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>BIN No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter BIN number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="tinNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>TIN No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter TIN number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="newIrcNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New IRC No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter New IRC number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="oldIrcNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Old IRC No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Old IRC number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? (
