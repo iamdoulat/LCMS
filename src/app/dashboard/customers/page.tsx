@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { PlusCircle, Users as UsersIcon, FileEdit, Info } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useToast } from "@/hooks/use-toast";
 
 
 // Placeholder data - replace with actual data fetching
@@ -18,14 +20,16 @@ const placeholderCustomers = [
 ];
 
 export default function CustomersListPage() {
+  const router = useRouter(); // Initialize useRouter
+  const { toast } = useToast();
 
   const handleEditCustomer = (customerId: string) => {
-    // Placeholder function - In a real app, this would navigate to an edit page or open a modal
-    console.log("Attempting to edit customer:", customerId);
-    // For now, you can use toast to show it's a placeholder
-    // import { useToast } from "@/hooks/use-toast";
-    // const { toast } = useToast();
-    // toast({ title: "Edit Action", description: `Edit for customer ${customerId} is a UI placeholder.`, variant: "default" });
+    toast({ 
+      title: "Redirecting...", 
+      description: `Navigating to edit page for customer ${customerId}.`,
+      variant: "default" 
+    });
+    router.push(`/dashboard/customers/${customerId}/edit`);
   };
 
   return (
@@ -53,9 +57,9 @@ export default function CustomersListPage() {
         <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data</AlertTitle>
+            <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The customer list below uses placeholder data. Actual data integration and full edit functionality require backend setup.
+              The customer list below uses placeholder data. Actual data integration and full edit functionality require backend setup and navigation to an edit form.
             </AlertDescription>
           </Alert>
 
@@ -93,7 +97,7 @@ export default function CustomersListPage() {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Edit Customer (UI Placeholder)</p>
+                              <p>Edit Customer</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
