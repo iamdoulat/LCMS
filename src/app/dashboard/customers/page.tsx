@@ -1,35 +1,69 @@
 
 "use client";
 
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, Users as UsersIcon, FileEdit, Info } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Info, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useToast } from "@/hooks/use-toast";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Placeholder data - replace with actual data fetching
-const placeholderCustomers = [
+const initialCustomers = [
   { id: 'cust1', customerName: 'Global Imports Corp', email: 'contact@globalimports.com', phone: '+1-202-555-0173', contactPerson: 'John Doe', address: '123 Import Lane, New York, NY' },
   { id: 'cust2', customerName: 'Tech Solutions Ltd.', email: 'info@techsolutions.io', phone: '+44 20 7946 0958', contactPerson: 'Jane Smith', address: '456 Tech Park, London, UK' },
   { id: 'cust3', customerName: 'Orient Exports Co.', email: 'sales@orientexports.asia', phone: '+65 6734 8888', contactPerson: 'Lee Wang', address: '789 Export Plaza, Singapore' },
 ];
 
 export default function CustomersListPage() {
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const { toast } = useToast();
+  const [customers, setCustomers] = useState(initialCustomers);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
 
   const handleEditCustomer = (customerId: string) => {
-    toast({ 
-      title: "Redirecting...", 
+    toast({
+      title: "Redirecting...",
       description: `Navigating to edit page for customer ${customerId}.`,
-      variant: "default" 
+      variant: "default"
     });
     router.push(`/dashboard/customers/${customerId}/edit`);
+  };
+
+  const handleDeleteCustomer = (customerId: string) => {
+    setCustomerToDelete(customerId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (customerToDelete) {
+      // Simulate API call for deletion
+      console.log(`Deleting customer ${customerToDelete}`);
+      
+      // Update local state
+      setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerToDelete));
+      
+      toast({
+        title: "Customer Deleted (Simulated)",
+        description: `Customer ${customerToDelete} has been removed from the list.`,
+        variant: "default" // Or "destructive" depending on desired styling for delete toasts
+      });
+      setCustomerToDelete(null); // Close dialog
+    }
   };
 
   return (
@@ -59,7 +93,7 @@ export default function CustomersListPage() {
             <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-blue-700 dark:text-blue-300 font-semibold">Placeholder Data & Functionality</AlertTitle>
             <AlertDescription className="text-blue-600 dark:text-blue-400">
-              The customer list below uses placeholder data. Actual data integration and full edit functionality require backend setup and navigation to an edit form.
+              The customer list below uses placeholder data. Actual data integration and full edit/delete functionality require backend setup.
             </AlertDescription>
           </Alert>
 
@@ -75,20 +109,20 @@ export default function CustomersListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {placeholderCustomers.length > 0 ? (
-                  placeholderCustomers.map((customer) => (
+                {customers.length > 0 ? (
+                  customers.map((customer) => (
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.customerName}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.phone}</TableCell>
                       <TableCell>{customer.contactPerson}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-1">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleEditCustomer(customer.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                               >
@@ -98,6 +132,26 @@ export default function CustomersListPage() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Edit Customer</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                           <Tooltip>
+                            <TooltipTrigger asChild>
+                               <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteCustomer(customer.id)}
+                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete Customer</span>
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete Customer</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -119,6 +173,30 @@ export default function CustomersListPage() {
           </div>
         </CardContent>
       </Card>
+
+      {customerToDelete && (
+        <AlertDialog open={!!customerToDelete} onOpenChange={() => setCustomerToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the customer
+                profile and remove their data from our servers (simulated).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
