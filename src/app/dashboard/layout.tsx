@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset className="flex flex-col">
           <AppHeader />
-          <main className="flex-1 overflow-y-auto p-6 bg-background"> {/* Ensure main has a background */}
+          <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
             {children}
           </main>
           {/* Toaster removed from here, it's now in RootLayout */}
