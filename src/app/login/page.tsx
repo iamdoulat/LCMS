@@ -2,8 +2,8 @@
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { Briefcase, Loader2, LogIn } from 'lucide-react';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { Briefcase, Loader2, LogIn, MailQuestion } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -89,6 +89,56 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const { value: email } = await Swal.fire({
+      title: 'Forgot Password?',
+      input: 'email',
+      inputLabel: 'Enter your email address',
+      inputPlaceholder: 'you@example.com',
+      showCancelButton: true,
+      confirmButtonText: 'Send Reset Link',
+      cancelButtonText: 'Cancel',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'You need to write something!'
+        }
+        // Basic email validation
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return 'Please enter a valid email address.'
+        }
+      }
+    });
+
+    if (email) {
+      setIsEmailLoading(true); // Reuse loading state or create a new one
+      setError(null);
+      try {
+        await sendPasswordResetEmail(auth, email);
+        Swal.fire({
+          title: 'Password Reset Email Sent',
+          text: `If an account exists for ${email}, a password reset link has been sent. Please check your inbox.`,
+          icon: 'success'
+        });
+      } catch (err: any) {
+        console.error("Forgot password error:", err);
+        let friendlyMessage = "Failed to send password reset email. Please try again.";
+        if (err.code === 'auth/user-not-found') {
+          friendlyMessage = "No account found with that email address.";
+        } else if (err.code === 'auth/invalid-email') {
+          friendlyMessage = "The email address is not valid.";
+        }
+        Swal.fire({
+          title: 'Error',
+          text: friendlyMessage,
+          icon: 'error'
+        });
+      } finally {
+        setIsEmailLoading(false);
+      }
+    }
+  };
+
+
   if (authLoading || (!authLoading && user)) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -135,7 +185,17 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                        <Button
+                            type="button"
+                            variant="link"
+                            className="p-0 h-auto text-xs text-primary hover:underline"
+                            onClick={handleForgotPassword}
+                        >
+                            Forgot Password?
+                        </Button>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
@@ -195,3 +255,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
