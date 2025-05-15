@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode } from '@/types';
+// Removed unused options imports: termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -17,18 +17,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, Save } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info } from 'lucide-react';
+// Removed Select imports as they are no longer used for these fields on this form
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Adjust schema: applicantName and beneficiaryName are no longer direct form inputs for ID selection here.
-// They will be displayed from initialData. The form now only validates fields that are editable.
+// Schema now only includes fields that are directly editable on this form.
+// Fields like applicantName, beneficiaryName, currency, termsOfPay, status, shipmentMode, trackingCourier
+// will be displayed from initialData but are not part of the form's editable state or validation here.
 const lcEntrySchema = z.object({
-  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
-  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -39,7 +39,6 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
@@ -47,7 +46,6 @@ const lcEntrySchema = z.object({
   consigneeBankNameAddress: z.string().optional(),
   bankBin: z.string().optional(),
   bankTin: z.string().optional(),
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   partialShipments: z.string().optional(),
@@ -62,10 +60,8 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
-  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required"})
 });
 
-// LCEditFormValues will not include applicantName/beneficiaryName as they are not directly editable form inputs
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
 
 interface EditLCEntryFormProps {
@@ -78,65 +74,62 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    // Default values are set by form.reset in useEffect below
   });
 
   React.useEffect(() => {
     if (initialData) {
-      console.log("Initial L/C Data for Form:", initialData);
-      // applicantName and beneficiaryName are displayed from initialData directly, not as form inputs
+      console.log("Initial L/C Data for Edit Form:", initialData);
       form.reset({
-        currency: initialData.currency,
+        // Only reset fields that are part of the LCEditFormValues (editable fields)
         amount: initialData.amount !== undefined ? initialData.amount : undefined,
-        termsOfPay: initialData.termsOfPay,
-        documentaryCreditNumber: initialData.documentaryCreditNumber,
-        proformaInvoiceNumber: initialData.proformaInvoiceNumber,
+        documentaryCreditNumber: initialData.documentaryCreditNumber || '',
+        proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
         invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
         totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
         lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
         expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
         latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
-        trackingCourier: initialData.trackingCourier || "",
-        trackingNumber: initialData.trackingNumber,
+        trackingNumber: initialData.trackingNumber || '',
         etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
         eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-        itemDescriptions: initialData.itemDescriptions,
-        consigneeBankNameAddress: initialData.consigneeBankNameAddress,
-        bankBin: initialData.bankBin,
-        bankTin: initialData.bankTin,
-        shipmentMode: initialData.shipmentMode || "" as LCEntryDocument['shipmentMode'],
-        vesselOrFlightName: initialData.vesselOrFlightName,
-        vesselImoNumber: initialData.vesselImoNumber,
-        partialShipments: initialData.partialShipments,
-        portOfLoading: initialData.portOfLoading,
-        portOfDischarge: initialData.portOfDischarge,
-        documentsRequired: initialData.documentsRequired,
-        shippingMarks: initialData.shippingMarks,
-        certificateOfOrigin: initialData.certificateOfOrigin,
-        notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress,
-        notifyPartyContactDetails: initialData.notifyPartyContactDetails,
+        itemDescriptions: initialData.itemDescriptions || '',
+        consigneeBankNameAddress: initialData.consigneeBankNameAddress || '',
+        bankBin: initialData.bankBin || '',
+        bankTin: initialData.bankTin || '',
+        vesselOrFlightName: initialData.vesselOrFlightName || '',
+        vesselImoNumber: initialData.vesselImoNumber || '',
+        partialShipments: initialData.partialShipments || '',
+        portOfLoading: initialData.portOfLoading || '',
+        portOfDischarge: initialData.portOfDischarge || '',
+        documentsRequired: initialData.documentsRequired || '',
+        shippingMarks: initialData.shippingMarks || '',
+        certificateOfOrigin: initialData.certificateOfOrigin || '',
+        notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || '',
+        notifyPartyContactDetails: initialData.notifyPartyContactDetails || '',
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
-        status: initialData.status || 'Draft',
       });
     }
   }, [initialData, form]);
-
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
     
     const dataToUpdate: Partial<LCEntryDocument> = {
-      // Fields from the form (LCEditFormValues)
-      ...(Object.fromEntries(
-        Object.entries(data).filter(([_, v]) => v !== undefined && v !== null && v !== '')
-      ) as Partial<LCEntryDocument>),
+      // Editable fields from the form
+      ...data, 
       
-      // Preserve existing Applicant and Beneficiary details from initialData
+      // Preserve non-editable (display-only) fields from initialData
       applicantId: initialData.applicantId,
-      applicantName: initialData.applicantName, // This comes from initialData, not the form
+      applicantName: initialData.applicantName,
       beneficiaryId: initialData.beneficiaryId,
-      beneficiaryName: initialData.beneficiaryName, // This comes from initialData, not the form
+      beneficiaryName: initialData.beneficiaryName,
+      currency: initialData.currency,
+      termsOfPay: initialData.termsOfPay,
+      status: initialData.status,
+      shipmentMode: initialData.shipmentMode,
+      trackingCourier: initialData.trackingCourier,
       
+      // Ensure correct types for numbers and dates
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
@@ -150,9 +143,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
-      status: data.status,
     };
-    
+        
     // Clean up undefined fields before sending to Firestore
     for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
@@ -183,26 +175,24 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }
   
-
-  const watchedShipmentMode = form.watch("shipmentMode");
+  const watchedShipmentModeFromInitial = initialData.shipmentMode; // Use initialData for display logic
   let viaLabel = "Vessel/Flight Name";
-  if (watchedShipmentMode === "Sea") {
+  if (watchedShipmentModeFromInitial === "Sea") {
     viaLabel = "Vessel Name";
-  } else if (watchedShipmentMode === "Air") {
+  } else if (watchedShipmentModeFromInitial === "Air") {
     viaLabel = "Flight Name";
   }
 
-  const watchedCurrency = form.watch("currency");
-  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
+  const amountLabel = initialData.currency ? `${initialData.currency} Amount*` : "Amount*";
   
   const handleTrackDocument = () => {
-    const courier = form.getValues("trackingCourier");
-    const number = form.getValues("trackingNumber");
+    const courier = initialData.trackingCourier; // Use initialData for tracking
+    const number = form.getValues("trackingNumber"); // Tracking number is editable
 
     if (!courier || courier.trim() === "" || !number || number.trim() === "") {
       Swal.fire({
         title: "Information Missing",
-        text: "Please select a courier and enter a tracking number.",
+        text: "Courier is not set or tracking number is missing.",
         icon: "info",
       });
       return;
@@ -220,14 +210,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     } else {
       Swal.fire({
         title: "Courier Not Supported",
-        text: "Tracking for the selected courier is not implemented.",
+        text: "Tracking for the selected courier is not implemented or courier not set.",
         icon: "warning",
       });
     }
   };
 
   const handleTrackVessel = () => {
-    const imoNumber = form.getValues("vesselImoNumber");
+    const imoNumber = form.getValues("vesselImoNumber"); // IMO number is editable
     if (!imoNumber || imoNumber.trim() === "") {
        Swal.fire({
         title: "IMO Number Missing",
@@ -266,30 +256,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormDescription>Beneficiary for this L/C (cannot be changed here).</FormDescription>
           </FormItem>
 
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {currencyOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel>Currency*</FormLabel>
+            <FormControl>
+                <Input value={initialData.currency || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            </FormControl>
+            <FormDescription>Currency of this L/C (cannot be changed here).</FormDescription>
+          </FormItem>
+
           <FormField
             control={form.control}
             name="amount"
@@ -303,30 +277,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="termsOfPay"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select terms of payment" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {termsOfPayOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel>Terms of Pay*</FormLabel>
+            <FormControl>
+                <Input value={initialData.termsOfPay || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            </FormControl>
+            <FormDescription>Terms of pay for this L/C (cannot be changed here).</FormDescription>
+          </FormItem>
+
           <FormField
             control={form.control}
             name="documentaryCreditNumber"
@@ -390,30 +348,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-           <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "Draft"}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select L/C status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {lcStatusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+            <FormControl>
+                <Input value={initialData.status || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            </FormControl>
+            <FormDescription>Current status of this L/C (cannot be changed here).</FormDescription>
+          </FormItem>
         </div>
         <FormField
             control={form.control}
@@ -593,32 +534,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             Shipping Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField
-                control={form.control}
-                name="shipmentMode"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <FormControl>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Select shipment mode" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {shipmentModeOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
-                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
-                            {option}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+            <FormItem>
+                <FormLabel>Shipment Mode*</FormLabel>
+                <FormControl>
+                    <Input value={initialData.shipmentMode || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                </FormControl>
+                <FormDescription>Shipment mode for this L/C (cannot be changed here).</FormDescription>
+            </FormItem>
             <FormField
                 control={form.control}
                 name="vesselOrFlightName"
@@ -627,18 +549,18 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
                     <Input
-                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        placeholder={watchedShipmentModeFromInitial ? `Enter ${watchedShipmentModeFromInitial === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
                         {...field}
-                        disabled={!watchedShipmentMode}
+                        disabled={!watchedShipmentModeFromInitial}
                     />
                     </FormControl>
-                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                    {!watchedShipmentModeFromInitial && <FormDescription>Shipment mode not set.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
             />
         </div>
-        {watchedShipmentMode === 'Sea' && (
+        {watchedShipmentModeFromInitial === 'Sea' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
                 <FormField
                     control={form.control}
@@ -672,28 +594,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-                <FormField
-                    control={form.control}
-                    name="trackingCourier"
-                    render={({ field }) => (
-                    <FormItem className="md:col-span-1">
-                        <FormLabel>Courier</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select Courier" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {trackingCourierOptions.map(courier => (
-                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
+                <FormItem className="md:col-span-1">
+                    <FormLabel>Courier</FormLabel>
+                    <FormControl>
+                        <Input value={initialData.trackingCourier || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                    </FormControl>
+                    <FormDescription>Courier (cannot be changed here).</FormDescription>
+                </FormItem>
                 <FormField
                     control={form.control}
                     name="trackingNumber"
@@ -701,7 +608,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} />
+                        <Input placeholder="Enter tracking number" {...field} disabled={!initialData.trackingCourier} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -711,7 +618,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     type="button"
                     variant="outline"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
+                    disabled={!form.watch("trackingNumber") || !initialData.trackingCourier || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >
@@ -799,6 +706,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             />
         </div>
         
+        {/* File uploads are not part of this edit form for simplicity. 
+            Could display existing file URLs/names if available in initialData.
+        */}
+         <FormItem>
+            <FormLabel>Final PI Document</FormLabel>
+            <Input value={initialData.finalPIUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            <FormDescription>Final PI file (cannot be changed here).</FormDescription>
+        </FormItem>
+        <FormItem>
+            <FormLabel>Shipping Documents</FormLabel>
+            <Input value={initialData.shippingDocumentsUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            <FormDescription>Shipping documents (cannot be changed here).</FormDescription>
+        </FormItem>
+
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
           {isSubmitting ? (
