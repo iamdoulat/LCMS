@@ -35,7 +35,7 @@ interface PieChartDataItem {
   fill: string;
 }
 
-interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'updatedAt' | 'status'> {
+interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'updatedAt' | 'status'> {
   updatedAtDate: Date;
 }
 
@@ -202,13 +202,14 @@ export default function DashboardPage() {
             id: lc.id,
             documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
+            applicantName: lc.applicantName, // Include applicantName
             updatedAt: lc.updatedAt,
             updatedAtDate: updatedAtDate,
             status: lc.status,
           } as RecentlyCompletedLC;
         })
         .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
-        .slice(0, 10); // Updated to show up to 10
+        .slice(0, 10); 
 
       setRecentlyCompletedLCs(completedLCs);
 
@@ -233,7 +234,7 @@ export default function DashboardPage() {
             etdDate: parseISO(lc.etd!), // etd is confirmed to exist here
         }))
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
-        .slice(0, 10); // Updated to show up to 10
+        .slice(0, 10); 
 
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
@@ -402,7 +403,7 @@ export default function DashboardPage() {
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <Ship className="h-6 w-6 text-accent" /> {/* Changed icon */}
+                <Ship className="h-6 w-6 text-accent" />
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
@@ -467,6 +468,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
+                    Applicant: {lc.applicantName || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     Beneficiary: {lc.beneficiaryName || 'N/A'}
                   </p>
                 </li>
@@ -484,3 +488,4 @@ export default function DashboardPage() {
   );
 }
 
+    
