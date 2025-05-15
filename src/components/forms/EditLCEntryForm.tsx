@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Library, Box, Weight, Scale } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Box, Weight, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -83,15 +83,15 @@ const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
   finalPIUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Final PI" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
   ),
   finalLcUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Final LC" }).optional()
   ),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
@@ -139,65 +139,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '',
-      beneficiaryName: '',
-      currency: 'USD',
-      termsOfPay: "" as TermsOfPay,
-      status: 'Draft',
-      shipmentMode: "" as ShipmentMode,
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: undefined,
-      expireDate: undefined,
-      latestShipmentDate: undefined,
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      bankTin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      totalPackageQty: undefined,
-      totalNetWeight: undefined,
-      totalGrossWeight: undefined,
-      totalCbm: undefined,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '',
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      partialShipmentAllowed: 'No',
-      firstPartialQty: undefined,
-      secondPartialQty: undefined,
-      thirdPartialQty: undefined,
-      firstPartialAmount: undefined,
-      secondPartialAmount: undefined,
-      thirdPartialAmount: undefined,
-      originalBlQty: undefined,
-      copyBlQty: undefined,
-      originalCooQty: undefined,
-      copyCooQty: undefined,
-      invoiceQty: undefined,
-      packingListQty: undefined,
-      beneficiaryCertificateQty: undefined,
-      brandNewCertificateQty: undefined,
-      beneficiaryWarrantyCertificateQty: undefined,
-      beneficiaryComplianceCertificateQty: undefined,
-      shipmentAdviceQty: undefined,
+      // Default values are set by form.reset in useEffect
     },
   });
 
@@ -836,7 +778,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
                 <FormLabel>Notify Party contact person Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''}/>
+                  <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -941,7 +883,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <Package className="mr-2 h-5 w-5 text-muted-foreground" />
               Partial Shipment Breakdown
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
               <FormField
                 control={form.control}
                 name="firstPartialQty"
@@ -950,19 +892,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormLabel>1st Partial Qty</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="firstPartialAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -983,12 +912,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               />
               <FormField
                 control={form.control}
-                name="secondPartialAmount"
+                name="thirdPartialQty"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormLabel>3rd Partial Qty</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
+                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -996,12 +925,25 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               />
               <FormField
                 control={form.control}
-                name="thirdPartialQty"
+                name="firstPartialAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>3rd Partial Qty</FormLabel>
+                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1265,8 +1207,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
               control={form.control}
               name="originalBlQty"
@@ -1293,8 +1234,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="originalCooQty"
@@ -1321,8 +1260,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="invoiceQty"
@@ -1349,8 +1286,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="beneficiaryCertificateQty"
@@ -1377,8 +1312,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <FormField
               control={form.control}
               name="beneficiaryWarrantyCertificateQty"
@@ -1405,7 +1338,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
               )}
             />
-          </div>
           <FormField
             control={form.control}
             name="shipmentAdviceQty"
@@ -1471,21 +1403,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={form.control}
-                name="shippingMarks"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipping Marks</FormLabel>
-                    <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
+        <FormField
+            control={form.control}
+            name="shippingMarks"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Shipping Marks</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+
 
         <h3 className={sectionHeadingClass}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs

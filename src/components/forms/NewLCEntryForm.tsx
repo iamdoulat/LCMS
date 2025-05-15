@@ -52,15 +52,15 @@ const lcEntrySchema = z.object({
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   finalPIUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Final PI" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
   ),
   finalLcUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : val),
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Final LC" }).optional()
   ),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
@@ -166,12 +166,12 @@ export function NewLCEntryForm() {
       applicantName: '',
       beneficiaryName: '',
       currency: 'USD' as Currency,
-      amount: undefined, // Changed from '' to undefined
+      amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
-      totalMachineQty: undefined, // Changed from '' to undefined
+      totalMachineQty: undefined,
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
@@ -202,7 +202,7 @@ export function NewLCEntryForm() {
       notifyPartyName: '',
       notifyPartyCell: '',
       notifyPartyEmail: '',
-      numberOfAmendments: undefined, // Changed from '' to undefined
+      numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
       firstPartialQty: undefined,
@@ -265,12 +265,12 @@ export function NewLCEntryForm() {
       beneficiaryId: data.beneficiaryName, // This is the ID
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
-      amount: data.amount, // Zod already ensures this is a number
+      amount: data.amount,
       termsOfPay: data.termsOfPay,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number
+      totalMachineQty: data.totalMachineQty,
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -301,7 +301,7 @@ export function NewLCEntryForm() {
       notifyPartyName: data.notifyPartyName,
       notifyPartyCell: data.notifyPartyCell,
       notifyPartyEmail: data.notifyPartyEmail,
-      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is a number
+      numberOfAmendments: data.numberOfAmendments,
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
@@ -325,7 +325,6 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
-     // Remove undefined fields to avoid overwriting with undefined in Firestore merge
     (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
       if (dataToSave[key] === undefined) {
         delete dataToSave[key];
@@ -862,7 +861,7 @@ export function NewLCEntryForm() {
               <Package className="mr-2 h-5 w-5 text-muted-foreground" />
               Partial Shipment Breakdown
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
               <FormField
                 control={form.control}
                 name="firstPartialQty"
@@ -871,19 +870,6 @@ export function NewLCEntryForm() {
                     <FormLabel>1st Partial Qty</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="firstPartialAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -904,12 +890,12 @@ export function NewLCEntryForm() {
               />
               <FormField
                 control={form.control}
-                name="secondPartialAmount"
+                name="thirdPartialQty"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormLabel>3rd Partial Qty</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
+                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -917,12 +903,25 @@ export function NewLCEntryForm() {
               />
               <FormField
                 control={form.control}
-                name="thirdPartialQty"
+                name="firstPartialAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>3rd Partial Qty</FormLabel>
+                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1185,8 +1184,7 @@ export function NewLCEntryForm() {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
               control={form.control}
               name="originalBlQty"
@@ -1213,8 +1211,6 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="originalCooQty"
@@ -1241,8 +1237,6 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="invoiceQty"
@@ -1269,8 +1263,6 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="beneficiaryCertificateQty"
@@ -1297,8 +1289,6 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <FormField
               control={form.control}
               name="beneficiaryWarrantyCertificateQty"
@@ -1325,7 +1315,6 @@ export function NewLCEntryForm() {
                 </FormItem>
               )}
             />
-          </div>
           <FormField
             control={form.control}
             name="shipmentAdviceQty"
