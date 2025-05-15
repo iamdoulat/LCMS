@@ -482,9 +482,9 @@ export default function DashboardPage() {
                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline">
                         {shipment.documentaryCreditNumber || 'N/A'}
                       </Link>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">Beneficiary: {shipment.beneficiaryName || 'N/A'}</span>
-                        <span className="font-semibold text-foreground">{format(shipment.etdDate, 'PPP')}</span>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-0.5">
+                        <span className="text-xs text-muted-foreground break-all">Beneficiary: {shipment.beneficiaryName || 'N/A'}</span>
+                        <span className="font-semibold text-foreground mt-1 sm:mt-0">{format(shipment.etdDate, 'PPP')}</span>
                       </div>
                       {upcomingEtdShipments.indexOf(shipment) < upcomingEtdShipments.length - 1 && <Separator className="mt-2" />}
                     </li>
@@ -514,11 +514,11 @@ export default function DashboardPage() {
               <ul className="space-y-3">
                 {draftLCs.map((lc) => (
                   <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
@@ -533,8 +533,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <p>Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
-                        <p>Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                        <p className="truncate">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                        <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
                         <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
                     </div>
                   </li>
@@ -563,11 +563,11 @@ export default function DashboardPage() {
               <ul className="space-y-3">
                 {recentlyCompletedLCs.map((lc) => (
                   <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
@@ -582,8 +582,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <p>Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
-                      <p>Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                      <p className="truncate">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                      <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
                       <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
                     </div>
                   </li>
