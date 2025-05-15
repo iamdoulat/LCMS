@@ -238,6 +238,7 @@ export default function BeneficiariesListPage() {
               </TableCaption>
             </Table>
           </div>
+           {/* Pagination controls will only show if there is more than one page */}
            {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
