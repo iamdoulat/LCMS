@@ -37,7 +37,7 @@ import {
   UserPlus,
   Building,
   FileText,
-  FileEdit // Added for Recent Draft LCs
+  FileEdit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -95,9 +95,9 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { logout, loading: authLoading } = useAuth();
 
-  // TODO: Fetch company name and logo URL from settings (e.g., Firestore)
-  const companyNameFromSettings = "Smart Solution"; // Placeholder
-  const companyLogoUrlFromSettings = "https://placehold.co/32x32.png"; // Placeholder logo
+  // TODO: Fetch company name from settings (e.g., Firestore)
+  const companyNameFromSettings = "Smart Solution"; 
+  const companyLogoUrlFromSettings = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
   const isActive = (href: string) => {
     // Exact match for dashboard
@@ -109,7 +109,7 @@ export function AppSidebarNav() {
         if (
           (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/')) ||
           (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/')) ||
-          (href === '/dashboard/shipments/recent-draft-lcs' && pathname !== '/dashboard/shipments/recent-draft-lcs') || // Added for new page
+          (href === '/dashboard/shipments/recent-draft-lcs' && pathname !== '/dashboard/shipments/recent-draft-lcs') || 
           (href === '/dashboard/settings/company-setup' && pathname !== '/dashboard/settings/company-setup') ||
           (href === '/dashboard/settings/users' && pathname !== '/dashboard/settings/users') ||
           (href === '/dashboard/settings/smtp' && pathname !== '/dashboard/settings/smtp')
@@ -189,14 +189,14 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
             src={companyLogoUrlFromSettings} 
-            alt="Company Logo Placeholder"
+            alt="Company Logo"
             width={32}
             height={32}
             className="rounded-sm"
-            data-ai-hint="logo company"
           />
           <span className="group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
             {companyNameFromSettings}
@@ -307,3 +307,4 @@ type NavItemGroup = {
     icon?: React.ElementType; 
   }>;
 };
+
