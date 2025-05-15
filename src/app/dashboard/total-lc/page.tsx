@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, FileText } from 'lucide-react'; // Added FileText
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Printer } from 'lucide-react'; // Changed FileText to Printer
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,7 +23,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default'; 
+      return 'default';
     case 'Shipping going on':
       return 'default';
     case 'Done':
@@ -87,20 +87,23 @@ export default function TotalLCPage() {
     router.push(`/dashboard/total-lc/${lcId}/edit`);
   };
   
-  const handleDownloadLCPdf = (lcId: string, lcNumber?: string) => {
+  const handlePrintLC = (lcId: string, lcNumber?: string) => {
     if (!lcId) {
-        Swal.fire("Error", "L/C ID is missing, cannot generate PDF.", "error");
+        Swal.fire("Error", "L/C ID is missing, cannot print.", "error");
         return;
     }
     Swal.fire({
-        title: "PDF Download (Placeholder)",
-        text: `PDF generation for L/C "${lcNumber || lcId}" would start here. This functionality is pending implementation.`,
+        title: "Print L/C Details",
+        text: `This will open the browser's print dialog for the current page. For a more specific L/C document printout, further customization is needed. L/C: "${lcNumber || lcId}"`,
         icon: "info",
-        confirmButtonText: "OK"
+        confirmButtonText: "Proceed to Print",
+        showCancelButton: true,
+        cancelButtonText: "Cancel",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.print();
+        }
     });
-    // In a real implementation, you would call a PDF generation library here
-    // e.g., using jsPDF, react-pdf, or a server-side PDF generation service.
-    // console.log(`Attempting to generate PDF for L/C ID: ${lcId}`);
   };
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
@@ -209,16 +212,16 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => lc.id && handleDownloadLCPdf(lc.id, lc.documentaryCreditNumber)}
+                                onClick={() => lc.id && handlePrintLC(lc.id, lc.documentaryCreditNumber)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                                 disabled={!lc.id}
                               >
-                                <FileText className="h-4 w-4" /> {/* Changed icon */}
-                                <span className="sr-only">Download L/C as PDF</span>
+                                <Printer className="h-4 w-4" /> 
+                                <span className="sr-only">Print L/C Details</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Download L/C as PDF</p> {/* Changed tooltip text */}
+                              <p>Print L/C Details</p> 
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip>
@@ -277,3 +280,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
