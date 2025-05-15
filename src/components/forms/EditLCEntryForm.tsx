@@ -5,32 +5,24 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, CustomerDocument, SupplierDocument, LCStatus } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
-// Removed AI import as it's not used in edit form: import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp, getDocs, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-// Removed FileInput import as file re-upload is not handled in this version
-// import { FileInput } from './FileInput'; 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, Save } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Schema is largely the same as NewLCEntryForm, ensure consistency
+// Adjust schema: applicantName and beneficiaryName are no longer direct form inputs for ID selection here.
+// They will be displayed from initialData. The form now only validates fields that are editable.
 const lcEntrySchema = z.object({
-  // beneficiaryName stores the ID of the selected beneficiary (from suppliers)
-  beneficiaryName: z.string().min(1, "Beneficiary ID is required"), 
-  // applicantName stores the ID of the selected applicant (from customers)
-  applicantName: z.string().min(1, "Applicant ID is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -73,12 +65,8 @@ const lcEntrySchema = z.object({
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required"})
 });
 
+// LCEditFormValues will not include applicantName/beneficiaryName as they are not directly editable form inputs
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
-
-interface DropdownOption {
-  value: string; // Firestore document ID
-  label: string; // Name to display
-}
 
 interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
@@ -88,84 +76,47 @@ interface EditLCEntryFormProps {
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
-  const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
-  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
-
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    // Default values will be set by form.reset in useEffect below
+    // Default values are set by form.reset in useEffect below
   });
 
-  // Fetch applicant (customer) options for dropdown
-  React.useEffect(() => {
-    const fetchApplicants = async () => {
-      setIsLoadingApplicants(true);
-      try {
-        const querySnapshot = await getDocs(collection(firestore, "customers"));
-        const fetchedApplicants = querySnapshot.docs.map(doc => {
-          const data = doc.data() as CustomerDocument;
-          return { value: doc.id, label: data.applicantName || `Unnamed Applicant (${doc.id.substring(0,5)})` };
-        });
-        setApplicantOptions(fetchedApplicants);
-        console.log("Fetched Applicant Options:", fetchedApplicants);
-      } catch (error) {
-        console.error("Error fetching applicants for dropdown: ", error);
-        Swal.fire("Error", "Could not fetch applicant data for dropdown. See console.", "error");
-      } finally {
-        setIsLoadingApplicants(false);
-      }
-    };
-    fetchApplicants();
-  }, []);
-
-  // Fetch beneficiary (supplier) options for dropdown
-  React.useEffect(() => {
-    const fetchBeneficiaries = async () => {
-      setIsLoadingBeneficiaries(true);
-      try {
-        const querySnapshot = await getDocs(collection(firestore, "suppliers"));
-        const fetchedBeneficiaries = querySnapshot.docs.map(doc => {
-          const data = doc.data() as SupplierDocument;
-          return { value: doc.id, label: data.beneficiaryName || `Unnamed Beneficiary (${doc.id.substring(0,5)})` };
-        });
-        setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
-      } catch (error) {
-        console.error("Error fetching beneficiaries for dropdown: ", error);
-        Swal.fire("Error", "Could not fetch beneficiary data for dropdown. See console.", "error");
-      } finally {
-        setIsLoadingBeneficiaries(false);
-      }
-    };
-    fetchBeneficiaries();
-  }, []);
-
-  // Populate form with initialData once it's available
   React.useEffect(() => {
     if (initialData) {
       console.log("Initial L/C Data for Form:", initialData);
-      console.log("Setting Applicant ID in form:", initialData.applicantId);
-      console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
+      // applicantName and beneficiaryName are displayed from initialData directly, not as form inputs
       form.reset({
-        ...initialData, // Spread initial data first
-        // Crucially, the form fields 'applicantName' and 'beneficiaryName' must be set to the IDs
-        // that correspond to the 'value' of the SelectItem options.
-        applicantName: initialData.applicantId || '', 
-        beneficiaryName: initialData.beneficiaryId || '', 
-        
-        // Convert ISO date strings from Firestore back to Date objects for DatePickerFields
+        currency: initialData.currency,
         amount: initialData.amount !== undefined ? initialData.amount : undefined,
-        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
-        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+        termsOfPay: initialData.termsOfPay,
+        documentaryCreditNumber: initialData.documentaryCreditNumber,
+        proformaInvoiceNumber: initialData.proformaInvoiceNumber,
         invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : undefined,
-        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : undefined,
-        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : undefined,
+        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
+        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+        trackingCourier: initialData.trackingCourier || "",
+        trackingNumber: initialData.trackingNumber,
         etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
         eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-        status: initialData.status || 'Draft', 
+        itemDescriptions: initialData.itemDescriptions,
+        consigneeBankNameAddress: initialData.consigneeBankNameAddress,
+        bankBin: initialData.bankBin,
+        bankTin: initialData.bankTin,
+        shipmentMode: initialData.shipmentMode || "" as LCEntryDocument['shipmentMode'],
+        vesselOrFlightName: initialData.vesselOrFlightName,
+        vesselImoNumber: initialData.vesselImoNumber,
+        partialShipments: initialData.partialShipments,
+        portOfLoading: initialData.portOfLoading,
+        portOfDischarge: initialData.portOfDischarge,
+        documentsRequired: initialData.documentsRequired,
+        shippingMarks: initialData.shippingMarks,
+        certificateOfOrigin: initialData.certificateOfOrigin,
+        notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress,
+        notifyPartyContactDetails: initialData.notifyPartyContactDetails,
+        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+        status: initialData.status || 'Draft',
       });
     }
   }, [initialData, form]);
@@ -173,28 +124,23 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
-
-    // Find the label for applicant and beneficiary based on selected ID for storing the name.
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName holds the ID
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName holds the ID
-
-    // Prepare data for Firestore update
+    
     const dataToUpdate: Partial<LCEntryDocument> = {
+      // Fields from the form (LCEditFormValues)
       ...(Object.fromEntries(
         Object.entries(data).filter(([_, v]) => v !== undefined && v !== null && v !== '')
       ) as Partial<LCEntryDocument>),
       
-      // Store both ID and Name for applicant and beneficiary
-      applicantId: data.applicantName, // This is the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Keep old name if new not found
-      beneficiaryId: data.beneficiaryName, // This is the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Keep old name if new not found
+      // Preserve existing Applicant and Beneficiary details from initialData
+      applicantId: initialData.applicantId,
+      applicantName: initialData.applicantName, // This comes from initialData, not the form
+      beneficiaryId: initialData.beneficiaryId,
+      beneficiaryName: initialData.beneficiaryName, // This comes from initialData, not the form
       
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
       
-      // Convert Date objects back to ISO strings for Firestore
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -304,60 +250,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           L/C & Invoice Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="applicantName" 
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {!isLoadingApplicants && applicantOptions.length === 0 && (
-                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
-                    )}
-                    {applicantOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="beneficiaryName" 
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                     {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
-                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
-                    )}
-                    {beneficiaryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
+            <FormControl>
+              <Input value={initialData.applicantName || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            </FormControl>
+            <FormDescription>Applicant for this L/C (cannot be changed here).</FormDescription>
+          </FormItem>
+          
+          <FormItem>
+            <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+            <FormControl>
+              <Input value={initialData.beneficiaryName || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+            </FormControl>
+            <FormDescription>Beneficiary for this L/C (cannot be changed here).</FormDescription>
+          </FormItem>
+
           <FormField
             control={form.control}
             name="currency"
@@ -892,7 +800,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         </div>
         
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -909,6 +817,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
-
-    
