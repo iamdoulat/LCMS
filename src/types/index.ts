@@ -37,14 +37,14 @@ export interface LCEntry {
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
-  finalPIFile?: File | null;
-  shippingDocumentsFile?: File | null;
+  finalPIUrl?: string; // Changed from File
+  shippingDocumentsUrl?: string; // Changed from File
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
   eta?: Date;
   itemDescriptions?: string;
-  shippingDocumentForAI?: File | null;
+  shippingDocumentForAI?: File | null; // For AI analysis, remains File
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;

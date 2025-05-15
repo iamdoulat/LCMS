@@ -17,11 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Schema includes fields that are editable on this form, including dropdowns.
 const lcEntrySchema = z.object({
+  // Editable dropdowns
   applicantName: z.string().min(1, "Applicant Name is required"), // Will hold applicant ID
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Will hold beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
@@ -30,7 +31,7 @@ const lcEntrySchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   
-  // Other editable fields
+  // Editable text/number/date fields
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
@@ -66,6 +67,8 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
+  finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
+  shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -125,8 +128,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    // Ensure options are loaded before resetting the form to prevent race conditions
-    // where form might be reset with an ID that isn't yet in the options list.
     if (initialData && (applicantOptions.length > 0 || !initialData.applicantId) && (beneficiaryOptions.length > 0 || !initialData.beneficiaryId)) {
       console.log("Initial L/C Data for Edit Form:", initialData);
       console.log("Setting Applicant ID in form:", initialData.applicantId);
@@ -166,9 +167,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || '',
         notifyPartyContactDetails: initialData.notifyPartyContactDetails || '',
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+        finalPIUrl: initialData.finalPIUrl || '',
+        shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
       });
     }
-  }, [initialData, form, applicantOptions, beneficiaryOptions]); // Rerun when options are loaded
+  }, [initialData, form, applicantOptions, beneficiaryOptions]);
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
@@ -177,29 +180,26 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
     
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data, // This 'data' comes from the form, includes IDs for applicantName/beneficiaryName
-      
-      applicantId: data.applicantName, // The form field 'applicantName' stores the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Get label for display name
-      beneficiaryId: data.beneficiaryName, // The form field 'beneficiaryName' stores the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Get label for display name
-
+      ...data, 
+      applicantId: data.applicantName,
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
+      beneficiaryId: data.beneficiaryName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
-      
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etd: data.etd ? format(data.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      
+      finalPIUrl: data.finalPIUrl || '', // Ensure empty string if undefined
+      shippingDocumentsUrl: data.shippingDocumentsUrl || '', // Ensure empty string if undefined
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
         
-    // Clean up undefined fields before sending to Firestore
     for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -285,6 +285,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleViewUrl = (url: string | undefined) => {
+    if (url && url.trim() !== "") {
+      try {
+        // Check if it's a valid URL structure before opening
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
 
   return (
     <Form {...form}>
@@ -297,7 +311,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName" // This field now stores applicantId
+            name="applicantName" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
@@ -325,7 +339,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           
           <FormField
             control={form.control}
-            name="beneficiaryName" // This field now stores beneficiaryId
+            name="beneficiaryName" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
@@ -887,26 +901,61 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             />
         </div>
         
-         <FormItem>
-            <FormLabel>Final PI Document</FormLabel>
-            <Input value={initialData.finalPIUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            {initialData.finalPIUrl && (
-                 <a href={initialData.finalPIUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
-                    View Uploaded PI <ExternalLink className="ml-1 h-3 w-3"/>
-                 </a>
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+          <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
+        </h3>
+        <div className="space-y-6">
+          <FormField
+            control={form.control}
+            name="finalPIUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Final PI URL</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/pi.pdf" {...field} />
+                  </FormControl>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Final PI"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
             )}
-            <FormDescription>Final PI file (file re-upload not available in edit mode).</FormDescription>
-        </FormItem>
-        <FormItem>
-            <FormLabel>Shipping Documents</FormLabel>
-            <Input value={initialData.shippingDocumentsUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-             {initialData.shippingDocumentsUrl && (
-                 <a href={initialData.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
-                    View Uploaded Shipping Docs <ExternalLink className="ml-1 h-3 w-3"/>
-                 </a>
+          />
+          <FormField
+            control={form.control}
+            name="shippingDocumentsUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shipping Documents URL</FormLabel>
+                 <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} />
+                    </FormControl>
+                     <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Shipping Documents"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
             )}
-            <FormDescription>Shipping documents (file re-upload not available in edit mode).</FormDescription>
-        </FormItem>
+          />
+        </div>
 
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
@@ -926,5 +975,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
-    
