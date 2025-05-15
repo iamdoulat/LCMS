@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -20,6 +20,7 @@ import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
@@ -29,7 +30,6 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-// Schema includes fields that are editable on this form, including dropdowns.
 const lcEntrySchema = z.object({
   applicantName: z.string().min(1, "Applicant Name is required"), 
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), 
@@ -67,7 +67,7 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   documentsRequired: z.string().optional(),
   shippingMarks: z.string().optional(),
-  certificateOfOrigin: z.string().optional(),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
@@ -77,7 +77,6 @@ const lcEntrySchema = z.object({
   finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
   shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
   finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')),
-  // Partial Shipment Fields
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
@@ -181,14 +180,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         portOfDischarge: initialData.portOfDischarge || '',
         documentsRequired: initialData.documentsRequired || '',
         shippingMarks: initialData.shippingMarks || '',
-        certificateOfOrigin: initialData.certificateOfOrigin || '',
+        certificateOfOrigin: initialData.certificateOfOrigin || [],
         notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || '',
         notifyPartyContactDetails: initialData.notifyPartyContactDetails || '',
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
         finalLcUrl: initialData.finalLcUrl || '',
-        // Partial Shipment Fields
         partialShipmentAllowed: initialData.partialShipmentAllowed || 'No',
         firstPartialQty: initialData.firstPartialQty ?? undefined,
         secondPartialQty: initialData.secondPartialQty ?? undefined,
@@ -207,12 +205,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
     setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-  }, [watchedPartialQtys, form]); // Added form to dependency array
+  }, [watchedPartialQtys, form]); 
 
   React.useEffect(() => {
     const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
     setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
-  }, [watchedPartialAmounts, form]); // Added form to dependency array
+  }, [watchedPartialAmounts, form]); 
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
@@ -240,7 +238,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       finalLcUrl: data.finalLcUrl || '',
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
-      // Partial Shipment Fields
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: toNumberOrUndefined(data.firstPartialQty),
       secondPartialQty: toNumberOrUndefined(data.secondPartialQty),
@@ -248,6 +245,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       firstPartialAmount: toNumberOrUndefined(data.firstPartialAmount),
       secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
       thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
+      certificateOfOrigin: data.certificateOfOrigin || [],
     };
 
     for (const key in dataToUpdate) {
@@ -348,7 +346,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   };
 
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -438,7 +435,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-
 
           <FormField
             control={form.control}
@@ -698,7 +694,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
         />
 
-
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -740,7 +735,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         </div>
         <Separator className="my-6" />
         
-        {/* Partial Shipment Section */}
         <FormField
           control={form.control}
           name="partialShipmentAllowed"
@@ -771,7 +765,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               Partial Shipment Breakdown
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              {/* 1st Partial */}
               <FormField
                 control={form.control}
                 name="firstPartialQty"
@@ -798,7 +791,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                   </FormItem>
                 )}
               />
-              {/* 2nd Partial */}
               <FormField
                 control={form.control}
                 name="secondPartialQty"
@@ -825,7 +817,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                   </FormItem>
                 )}
               />
-              {/* 3rd Partial */}
               <FormField
                 control={form.control}
                 name="thirdPartialQty"
@@ -873,7 +864,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormDescription>
           </div>
         )}
-
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <Workflow className="mr-2 h-5 w-5 text-primary" />
@@ -1050,21 +1040,51 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormItem>
             )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={form.control}
-                name="certificateOfOrigin"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Certificate of Origin</FormLabel>
-                    <FormControl>
-                    <Input placeholder="e.g., Required / Not Required / Specify details" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
+        <FormField
+          control={form.control}
+          name="certificateOfOrigin"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
+                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin
+              </FormLabel>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                {certificateOfOriginCountries.map((country) => (
+                  <FormField
+                    key={country}
+                    control={form.control}
+                    name="certificateOfOrigin"
+                    render={({ field }) => {
+                      return (
+                        <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(country)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value || [];
+                                return checked
+                                  ? field.onChange([...currentValue, country])
+                                  : field.onChange(
+                                      currentValue.filter(
+                                        (value) => value !== country
+                                      )
+                                    );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                            {country}
+                          </FormLabel>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
@@ -1166,7 +1186,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
-
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (

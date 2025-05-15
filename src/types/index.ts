@@ -24,11 +24,16 @@ export type LCStatus = typeof lcStatusOptions[number];
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
+export const certificateOfOriginCountries = [
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA AND HK",
+] as const;
+export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
+
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; // Represents beneficiaryId in the form for selection
-  applicantName: string;   // Represents applicantId in the form for selection
+  beneficiaryName: string; 
+  applicantName: string;   
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -53,18 +58,16 @@ export interface LCEntry {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
-  partialShipments?: string; // This was for 43P: Partial Shipments text field, distinct from the new logic
+  partialShipments?: string; 
   portOfLoading?: string;
   portOfDischarge?: string;
   documentsRequired?: string;
   shippingMarks?: string;
-  certificateOfOrigin?: string;
+  certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
-
-  // New fields for partial shipment logic
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number | '';
   secondPartialQty?: number | '';
@@ -74,14 +77,13 @@ export interface LCEntry {
   thirdPartialAmount?: number | '';
 }
 
-// This type represents the data structure in Firestore
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string; // Display name of the applicant
-  beneficiaryName: string; // Display name of the beneficiary
-  applicantId: string; // Firestore ID of the applicant from 'customers' collection
-  beneficiaryId: string; // Firestore ID of the beneficiary from 'suppliers' collection
+  applicantName: string; 
+  beneficiaryName: string; 
+  applicantId: string; 
+  beneficiaryId: string; 
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
@@ -111,15 +113,13 @@ export interface LCEntryDocument {
   portOfDischarge?: string;
   documentsRequired?: string;
   shippingMarks?: string;
-  certificateOfOrigin?: string;
+  certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number;
   status: LCStatus;
   createdAt: any;
   updatedAt: any;
-
-  // New fields for partial shipment logic in Firestore
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
