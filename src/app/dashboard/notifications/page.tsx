@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BellRing, CheckCheck, Info } from 'lucide-react';
@@ -10,28 +10,28 @@ import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { Separator } from '@/components/ui/separator';
 
 const initialNotifications: AppNotification[] = [
-  { 
-    id: '1', 
-    title: 'New L/C Created', 
+  {
+    id: '1',
+    title: 'New L/C Created',
     message: 'L/C #LC-2024-001 for Applicant Alpha with Beneficiary Beta has been successfully created and is in Draft status.',
     timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-    isRead: false, 
+    isRead: false,
     link: '/dashboard/total-lc' // Placeholder link
   },
-  { 
-    id: '2', 
-    title: 'Shipment Update: LC-2023-105', 
+  {
+    id: '2',
+    title: 'Shipment Update: LC-2023-105',
     message: 'The ETD for L/C #LC-2023-105 has been updated to 2024-09-15. Please review the details.',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     isRead: false,
     link: '/dashboard/total-lc' // Placeholder link
   },
-  { 
-    id: '3', 
-    title: 'User Profile Updated', 
+  {
+    id: '3',
+    title: 'User Profile Updated',
     message: 'Your display name was successfully changed.',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    isRead: true 
+    isRead: true
   },
   {
     id: '4',
@@ -46,18 +46,37 @@ const initialNotifications: AppNotification[] = [
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
 
+  // Function to update localStorage based on current notifications state
+  const updateUnreadStatusInStorage = (currentNotifications: AppNotification[]) => {
+    const anyUnread = currentNotifications.some(n => !n.isRead);
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('appNotificationsAllRead', anyUnread ? 'false' : 'true');
+        // Dispatch a custom event to notify the header
+        window.dispatchEvent(new Event('notificationsUpdated'));
+    }
+  };
+
+  // Initialize notifications and update storage on mount
+  useEffect(() => {
+    // In a real app, you'd fetch notifications here
+    updateUnreadStatusInStorage(notifications);
+  }, []);
+
+
   const handleToggleRead = (id: string) => {
-    setNotifications(prevNotifications =>
-      prevNotifications.map(notif =>
-        notif.id === id ? { ...notif, isRead: !notif.isRead } : notif
-      )
+    const updatedNotifications = notifications.map(notif =>
+      notif.id === id ? { ...notif, isRead: !notif.isRead } : notif
     );
+    setNotifications(updatedNotifications);
+    updateUnreadStatusInStorage(updatedNotifications);
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(prevNotifications =>
-      prevNotifications.map(notif => ({ ...notif, isRead: true }))
-    );
+    const updatedNotifications = notifications.map(notif => ({ ...notif, isRead: true }));
+    setNotifications(updatedNotifications);
+    updateUnreadStatusInStorage(updatedNotifications);
+    // Simulate saving to DB
+    console.log("Simulating: All notifications marked as read in DB.");
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

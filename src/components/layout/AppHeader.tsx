@@ -2,6 +2,7 @@
 "use client";
 
 import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
@@ -33,9 +35,33 @@ export function AppHeader() {
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
 
-  // For demonstration: In a real app, this would come from a shared state/context
-  // or a call to a service that knows the actual unread notification count.
-  const hasUnreadNotifications = true; // Simulate having unread notifications
+  // Check localStorage for notification status
+  const checkNotificationStatus = () => {
+    if (typeof window !== 'undefined') {
+      const allRead = localStorage.getItem('appNotificationsAllRead');
+      setHasUnreadNotifications(allRead !== 'true');
+    }
+  };
+
+  useEffect(() => {
+    checkNotificationStatus(); // Initial check
+
+    // Listen for custom event from notifications page
+    const handleNotificationsUpdate = () => {
+      checkNotificationStatus();
+    };
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('notificationsUpdated', handleNotificationsUpdate);
+    }
+
+    return () => {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('notificationsUpdated', handleNotificationsUpdate);
+        }
+    };
+  }, []);
+
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
@@ -59,8 +85,6 @@ export function AppHeader() {
           <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="sr-only">Notifications</span>
-            {/* Red dot indicator for unread notifications */}
-            {/* In a real app, 'hasUnreadNotifications' would be dynamic state */}
             {hasUnreadNotifications && (
               <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
