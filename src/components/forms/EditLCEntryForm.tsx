@@ -30,6 +30,7 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+// This schema is for the editable fields in the form
 const lcEntrySchema = z.object({
   applicantName: z.string().min(1, "Applicant Name is required"), 
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), 
@@ -162,8 +163,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '',
-        beneficiaryName: initialData.beneficiaryId || '',
+        applicantName: initialData.applicantId || '', // Field expects ID
+        beneficiaryName: initialData.beneficiaryId || '', // Field expects ID
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -226,68 +227,80 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
     setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-  }, [watchedPartialQtys, form]); // form added as dependency for watched values
+  }, [watchedPartialQtys, form]); 
 
   React.useEffect(() => {
     const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
     setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
-  }, [watchedPartialAmounts, form]); // form added as dependency for watched values
+  }, [watchedPartialAmounts, form]); 
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data, 
-      applicantId: data.applicantName, 
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName, 
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
-      amount: Number(data.amount),
-      totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
-      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
+      applicantId: data.applicantName, // Store the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Store the label
+      beneficiaryId: data.beneficiaryName, // Store the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Store the label
+      currency: data.currency,
+      termsOfPay: data.termsOfPay,
+      status: data.status,
+      shipmentMode: data.shipmentMode,
+      trackingCourier: data.trackingCourier || undefined, // ensure empty string becomes undefined
+      amount: data.amount, // Zod ensures this is a number
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number or undefined
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      trackingNumber: data.trackingNumber,
       etd: data.etd ? format(data.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      finalPIUrl: data.finalPIUrl || '',
-      shippingDocumentsUrl: data.shippingDocumentsUrl || '',
-      finalLcUrl: data.finalLcUrl || '',
+      itemDescriptions: data.itemDescriptions,
+      consigneeBankNameAddress: data.consigneeBankNameAddress,
+      bankBin: data.bankBin,
+      bankTin: data.bankTin,
+      vesselOrFlightName: data.vesselOrFlightName,
+      vesselImoNumber: data.vesselImoNumber,
+      partialShipments: data.partialShipments,
+      portOfLoading: data.portOfLoading,
+      portOfDischarge: data.portOfDischarge,
+      shippingMarks: data.shippingMarks,
+      certificateOfOrigin: data.certificateOfOrigin, // This is already array or undefined
+      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
+      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is number or undefined
+      finalPIUrl: data.finalPIUrl || undefined,
+      shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
+      finalLcUrl: data.finalLcUrl || undefined,
+      partialShipmentAllowed: data.partialShipmentAllowed,
+      firstPartialQty: data.firstPartialQty,
+      secondPartialQty: data.secondPartialQty,
+      thirdPartialQty: data.thirdPartialQty,
+      firstPartialAmount: data.firstPartialAmount,
+      secondPartialAmount: data.secondPartialAmount,
+      thirdPartialAmount: data.thirdPartialAmount,
+      originalBlQty: data.originalBlQty,
+      copyBlQty: data.copyBlQty,
+      originalCooQty: data.originalCooQty,
+      copyCooQty: data.copyCooQty,
+      invoiceQty: data.invoiceQty,
+      packingListQty: data.packingListQty,
+      beneficiaryCertificateQty: data.beneficiaryCertificateQty,
+      brandNewCertificateQty: data.brandNewCertificateQty,
+      beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
+      beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
+      shipmentAdviceQty: data.shipmentAdviceQty,
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
-      partialShipmentAllowed: data.partialShipmentAllowed,
-      firstPartialQty: toNumberOrUndefined(data.firstPartialQty),
-      secondPartialQty: toNumberOrUndefined(data.secondPartialQty),
-      thirdPartialQty: toNumberOrUndefined(data.thirdPartialQty),
-      firstPartialAmount: toNumberOrUndefined(data.firstPartialAmount),
-      secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
-      thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
-      certificateOfOrigin: data.certificateOfOrigin || [],
-      originalBlQty: toNumberOrUndefined(data.originalBlQty),
-      copyBlQty: toNumberOrUndefined(data.copyBlQty),
-      originalCooQty: toNumberOrUndefined(data.originalCooQty),
-      copyCooQty: toNumberOrUndefined(data.copyCooQty),
-      invoiceQty: toNumberOrUndefined(data.invoiceQty),
-      packingListQty: toNumberOrUndefined(data.packingListQty),
-      beneficiaryCertificateQty: toNumberOrUndefined(data.beneficiaryCertificateQty),
-      brandNewCertificateQty: toNumberOrUndefined(data.brandNewCertificateQty),
-      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(data.beneficiaryWarrantyCertificateQty),
-      beneficiaryComplianceCertificateQty: toNumberOrUndefined(data.beneficiaryComplianceCertificateQty),
-      shipmentAdviceQty: toNumberOrUndefined(data.shipmentAdviceQty),
     };
-
-    // Remove fields that should not be updated if they are undefined or meant to be handled by Firestore (like year if lcIssueDate is not changed)
-    if (!data.lcIssueDate) delete dataToUpdate.year; 
-
-    for (const key in dataToUpdate) {
-        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-            delete dataToUpdate[key as keyof typeof dataToUpdate];
-        }
-    }
+    
+    // Firestore omits undefined fields, so no need to manually delete them
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -997,6 +1010,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
+                                    <SelectItem value="">None</SelectItem>
                                     {trackingCourierOptions.map(courier => (
                                         <SelectItem key={courier} value={courier}>{courier}</SelectItem>
                                     ))}
@@ -1365,16 +1379,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Submitting...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <Library className="mr-2 h-4 w-4" />
+              Submit L/C Entry
             </>
           )}
         </Button>

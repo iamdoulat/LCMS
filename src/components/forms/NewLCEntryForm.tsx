@@ -154,8 +154,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '',
-      applicantName: '',
+      beneficiaryName: '', // Will store Beneficiary ID
+      applicantName: '',   // Will store Applicant ID
       currency: 'USD' as Currency,
       amount: undefined, 
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -238,61 +238,75 @@ export function NewLCEntryForm() {
   async function onSubmit(data: z.infer<typeof lcEntrySchema>) {
     setIsSubmitting(true);
 
-    const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
-    const extractedYear = lcIssueDate.getFullYear();
+    const lcIssueDateObj = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
+    const extractedYear = lcIssueDateObj.getFullYear();
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID here
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID here
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      ...data,
-      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName,
-      applicantId: data.applicantName, 
-      beneficiaryId: data.beneficiaryName, 
-      year: extractedYear,
-      amount: Number(data.amount),
-      totalMachineQty: data.totalMachineQty ? Number(data.totalMachineQty) : 0,
+      applicantId: data.applicantName, // This is the ID from the form
+      applicantName: selectedApplicant ? selectedApplicant.label : '',
+      beneficiaryId: data.beneficiaryName, // This is the ID from the form
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
+      currency: data.currency,
+      amount: data.amount, // Zod ensures this is a number
+      termsOfPay: data.termsOfPay,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number or undefined
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      finalPIUrl: data.finalPIUrl || undefined, // Save as undefined if empty
+      shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
+      finalLcUrl: data.finalLcUrl || undefined,
+      trackingCourier: data.trackingCourier || undefined,
+      trackingNumber: data.trackingNumber,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      numberOfAmendments: data.numberOfAmendments !== undefined && data.numberOfAmendments !== null && data.numberOfAmendments !== '' ? Number(data.numberOfAmendments) : undefined,
+      itemDescriptions: data.itemDescriptions,
+      consigneeBankNameAddress: data.consigneeBankNameAddress,
+      bankBin: data.bankBin,
+      bankTin: data.bankTin,
+      shipmentMode: data.shipmentMode,
+      vesselOrFlightName: data.vesselOrFlightName,
+      vesselImoNumber: data.vesselImoNumber,
+      partialShipments: data.partialShipments,
+      portOfLoading: data.portOfLoading,
+      portOfDischarge: data.portOfDischarge,
+      shippingMarks: data.shippingMarks,
+      certificateOfOrigin: data.certificateOfOrigin, // This is already an array or undefined
+      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
+      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is number or undefined
+      status: data.status || 'Draft',
+      partialShipmentAllowed: data.partialShipmentAllowed,
+      firstPartialQty: data.firstPartialQty,
+      secondPartialQty: data.secondPartialQty,
+      thirdPartialQty: data.thirdPartialQty,
+      firstPartialAmount: data.firstPartialAmount,
+      secondPartialAmount: data.secondPartialAmount,
+      thirdPartialAmount: data.thirdPartialAmount,
+      originalBlQty: data.originalBlQty,
+      copyBlQty: data.copyBlQty,
+      originalCooQty: data.originalCooQty,
+      copyCooQty: data.copyCooQty,
+      invoiceQty: data.invoiceQty,
+      packingListQty: data.packingListQty,
+      beneficiaryCertificateQty: data.beneficiaryCertificateQty,
+      brandNewCertificateQty: data.brandNewCertificateQty,
+      beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
+      beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
+      shipmentAdviceQty: data.shipmentAdviceQty,
+      year: extractedYear,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
-      status: data.status || 'Draft',
-      finalPIUrl: data.finalPIUrl || '',
-      shippingDocumentsUrl: data.shippingDocumentsUrl || '',
-      finalLcUrl: data.finalLcUrl || '',
-      partialShipmentAllowed: data.partialShipmentAllowed,
-      firstPartialQty: toNumberOrUndefined(data.firstPartialQty),
-      secondPartialQty: toNumberOrUndefined(data.secondPartialQty),
-      thirdPartialQty: toNumberOrUndefined(data.thirdPartialQty),
-      firstPartialAmount: toNumberOrUndefined(data.firstPartialAmount),
-      secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
-      thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
-      certificateOfOrigin: data.certificateOfOrigin || [],
-      originalBlQty: toNumberOrUndefined(data.originalBlQty),
-      copyBlQty: toNumberOrUndefined(data.copyBlQty),
-      originalCooQty: toNumberOrUndefined(data.originalCooQty),
-      copyCooQty: toNumberOrUndefined(data.copyCooQty),
-      invoiceQty: toNumberOrUndefined(data.invoiceQty),
-      packingListQty: toNumberOrUndefined(data.packingListQty),
-      beneficiaryCertificateQty: toNumberOrUndefined(data.beneficiaryCertificateQty),
-      brandNewCertificateQty: toNumberOrUndefined(data.brandNewCertificateQty),
-      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(data.beneficiaryWarrantyCertificateQty),
-      beneficiaryComplianceCertificateQty: toNumberOrUndefined(data.beneficiaryComplianceCertificateQty),
-      shipmentAdviceQty: toNumberOrUndefined(data.shipmentAdviceQty),
     };
 
-    (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
-        if (dataToSave[key as keyof Omit<LCEntryDocument, 'id'>] === undefined) {
-            delete dataToSave[key as keyof Omit<LCEntryDocument, 'id'>];
-        }
-    });
-
+    // Firestore omits undefined fields, so no need to manually delete them
+    
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
@@ -361,7 +375,7 @@ export function NewLCEntryForm() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleViewUrl = (url: string | undefined) => {
+  const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
         new URL(url);
@@ -989,6 +1003,7 @@ export function NewLCEntryForm() {
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                             <SelectItem value="">None</SelectItem>
                             {trackingCourierOptions.map(courier => (
                                 <SelectItem key={courier} value={courier}>{courier}</SelectItem>
                             ))}
