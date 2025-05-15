@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -17,13 +17,22 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+
+const toNumberOrUndefined = (val: unknown): number | undefined => {
+  if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+    return undefined;
+  }
+  const num = Number(String(val).trim());
+  return isNaN(num) ? undefined : num;
+};
 
 // Schema includes fields that are editable on this form, including dropdowns.
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), // Will hold applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Will hold beneficiary ID
+  applicantName: z.string().min(1, "Applicant Name is required"), 
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -62,12 +71,20 @@ const lcEntrySchema = z.object({
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
+    toNumberOrUndefined,
+    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
   finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
   shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
-  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')), // New field
+  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')),
+  // Partial Shipment Fields
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -88,6 +105,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
+  const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number | string>(0);
+  const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number | string>(0);
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
@@ -167,10 +187,32 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
-        finalLcUrl: initialData.finalLcUrl || '', // New field
+        finalLcUrl: initialData.finalLcUrl || '',
+        // Partial Shipment Fields
+        partialShipmentAllowed: initialData.partialShipmentAllowed || 'No',
+        firstPartialQty: initialData.firstPartialQty ?? undefined,
+        secondPartialQty: initialData.secondPartialQty ?? undefined,
+        thirdPartialQty: initialData.thirdPartialQty ?? undefined,
+        firstPartialAmount: initialData.firstPartialAmount ?? undefined,
+        secondPartialAmount: initialData.secondPartialAmount ?? undefined,
+        thirdPartialAmount: initialData.thirdPartialAmount ?? undefined,
       });
     }
   }, [initialData, form, applicantOptions, beneficiaryOptions]);
+
+  const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
+  const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
+  const watchedPartialAmounts = [form.watch("firstPartialAmount"), form.watch("secondPartialAmount"), form.watch("thirdPartialAmount")];
+
+  React.useEffect(() => {
+    const qtys = watchedPartialQtys.map(q => Number(q) || 0);
+    setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
+  }, [watchedPartialQtys, form]); // Added form to dependency array
+
+  React.useEffect(() => {
+    const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
+    setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
+  }, [watchedPartialAmounts, form]); // Added form to dependency array
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
@@ -179,10 +221,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data, // Spreads editable fields from form
-      applicantId: data.applicantName, // This form field now holds the ID
+      ...data, 
+      applicantId: data.applicantName, 
       applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName, // This form field now holds the ID
+      beneficiaryId: data.beneficiaryName, 
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
@@ -195,9 +237,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       finalPIUrl: data.finalPIUrl || '',
       shippingDocumentsUrl: data.shippingDocumentsUrl || '',
-      finalLcUrl: data.finalLcUrl || '', // New field
+      finalLcUrl: data.finalLcUrl || '',
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
+      // Partial Shipment Fields
+      partialShipmentAllowed: data.partialShipmentAllowed,
+      firstPartialQty: toNumberOrUndefined(data.firstPartialQty),
+      secondPartialQty: toNumberOrUndefined(data.secondPartialQty),
+      thirdPartialQty: toNumberOrUndefined(data.thirdPartialQty),
+      firstPartialAmount: toNumberOrUndefined(data.firstPartialAmount),
+      secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
+      thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
     };
 
     for (const key in dataToUpdate) {
@@ -651,7 +701,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-            Important Dates
+            Important Dates & Partial Shipment Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
@@ -688,6 +738,142 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 )}
             />
         </div>
+        <Separator className="my-6" />
+        
+        {/* Partial Shipment Section */}
+        <FormField
+          control={form.control}
+          name="partialShipmentAllowed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Partial Shipment Allowed*</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || "No"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select option" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {partialShipmentAllowedOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {watchedPartialShipmentAllowed === "Yes" && (
+          <div className="space-y-6 rounded-md border p-4 mt-4">
+            <h4 className="text-md font-medium text-foreground flex items-center mb-4">
+              <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+              Partial Shipment Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              {/* 1st Partial */}
+              <FormField
+                control={form.control}
+                name="firstPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>1st Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="firstPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 2nd Partial */}
+              <FormField
+                control={form.control}
+                name="secondPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 15" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 3rd Partial */}
+              <FormField
+                control={form.control}
+                name="thirdPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>3rd Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="thirdPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>3rd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 5000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <Separator className="my-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <FormItem>
+                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Qty</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialAmount} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+            </div>
+             <FormDescription>
+                Note: The 'Total L/C Machine Qty' and L/C 'Amount' fields above represent the overall L/C values. The totals here are sums of the partials entered.
+            </FormDescription>
+          </div>
+        )}
+
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <Workflow className="mr-2 h-5 w-5 text-primary" />
