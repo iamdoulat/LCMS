@@ -20,7 +20,7 @@ import { auth, storage } from '@/lib/firebase/config'; // Import storage
 import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FileInput } from '@/components/forms/FileInput'; // Assuming you have this component
+import { FileInput } from '@/components/forms/FileInput';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -39,7 +39,7 @@ const accountDetailsSchema = z.object({
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 
 export default function AccountDetailsPage() {
-  const { user, loading: authLoading, setUser: setAuthUser } = useAuth(); // Assuming useAuth exposes setUser
+  const { user, loading: authLoading, setUser: setAuthUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,13 +100,22 @@ export default function AccountDetailsPage() {
 
     setIsSubmitting(true);
     setError(null);
-    let newPhotoURL = user?.photoURL || null; // Keep current photoURL by default
+    let newPhotoURL = user?.photoURL || null; 
 
     try {
-      // Handle file upload if a new file is selected
       if (data.photoFile) {
         setIsUploading(true);
         const file = data.photoFile;
+
+        if (!storage.app.options.storageBucket) {
+          const configErrorMsg = "Firebase Storage Bucket is not configured. Please check your project's .env.local file for NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET and restart the server.";
+          setError(configErrorMsg);
+          Swal.fire("Configuration Error", configErrorMsg, "error");
+          setIsSubmitting(false);
+          setIsUploading(false);
+          return;
+        }
+        
         const filePath = `profileImages/${auth.currentUser.uid}/${file.name}`;
         const imageRef = storageRef(storage, filePath);
 
@@ -115,24 +124,19 @@ export default function AccountDetailsPage() {
         setIsUploading(false);
       }
 
-      // Update profile (displayName and potentially photoURL)
       await updateProfile(auth.currentUser, {
         displayName: data.displayName,
-        ...(newPhotoURL && { photoURL: newPhotoURL }), // Only include photoURL if it's changed or set
+        ...(newPhotoURL && { photoURL: newPhotoURL }), 
       });
 
-      // Update user in AuthContext if setUser is available
       if (setAuthUser && auth.currentUser) {
          const updatedUser = {
             ...auth.currentUser,
             displayName: data.displayName,
             photoURL: newPhotoURL || auth.currentUser.photoURL,
          };
-         // This cast might be necessary if your AuthContext User type is slightly different
-         // from firebase.User. Ensure types are compatible.
          setAuthUser(updatedUser as any);
       }
-
 
       Swal.fire({
         title: "Profile Updated",
@@ -141,10 +145,11 @@ export default function AccountDetailsPage() {
         timer: 2000,
         showConfirmButton: false,
       });
-      form.reset({ ...data, photoFile: null }); // Reset form, clear file input
-      if(newPhotoURL) setImagePreviewUrl(newPhotoURL); // Ensure preview shows the new Firebase URL
+      form.reset({ ...data, photoFile: null }); 
+      if(newPhotoURL) setImagePreviewUrl(newPhotoURL); 
 
     } catch (err: any) {
+      console.error("Profile update or file upload error:", err);
       const errorMessage = err.message || "Failed to update profile. Please try again.";
       setError(errorMessage);
       Swal.fire({
@@ -216,7 +221,7 @@ export default function AccountDetailsPage() {
                  <FormField
                   control={form.control}
                   name="photoFile"
-                  render={({ field }) => ( // `field` here is just for RHF, actual file handling is manual
+                  render={({ field }) => ( 
                     <FormItem className="w-full max-w-sm">
                       <FormLabel>Change Profile Picture</FormLabel>
                       <FormControl>
