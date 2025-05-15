@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, LCEntry } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -20,7 +20,7 @@ import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Schema now includes fields that are editable on this form.
+// Schema includes fields that are editable on this form, including dropdowns.
 const lcEntrySchema = z.object({
   applicantName: z.string().min(1, "Applicant Name is required"), // Will hold applicant ID
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Will hold beneficiary ID
@@ -29,6 +29,8 @@ const lcEntrySchema = z.object({
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  
+  // Other editable fields
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
@@ -101,6 +103,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -108,6 +111,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
+        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
+
       } catch (error) {
         console.error("Error fetching dropdown data: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
@@ -120,22 +125,21 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (initialData) {
+    // Ensure options are loaded before resetting the form to prevent race conditions
+    // where form might be reset with an ID that isn't yet in the options list.
+    if (initialData && (applicantOptions.length > 0 || !initialData.applicantId) && (beneficiaryOptions.length > 0 || !initialData.beneficiaryId)) {
       console.log("Initial L/C Data for Edit Form:", initialData);
       console.log("Setting Applicant ID in form:", initialData.applicantId);
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        // Fields that are now dropdowns
-        applicantName: initialData.applicantId || '', // Store ID
-        beneficiaryName: initialData.beneficiaryId || '', // Store ID
+        applicantName: initialData.applicantId || '', 
+        beneficiaryName: initialData.beneficiaryId || '', 
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '',
         status: initialData.status || 'Draft',
         shipmentMode: initialData.shipmentMode || '',
         trackingCourier: initialData.trackingCourier || '',
-
-        // Other editable fields
         amount: initialData.amount !== undefined ? initialData.amount : undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
         proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
@@ -164,25 +168,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
       });
     }
-  }, [initialData, form]);
+  }, [initialData, form, applicantOptions, beneficiaryOptions]); // Rerun when options are loaded
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
     
     const dataToUpdate: Partial<LCEntryDocument> = {
-      // Editable fields from the form
-      ...data, 
+      ...data, // This 'data' comes from the form, includes IDs for applicantName/beneficiaryName
       
-      // Handle Applicant and Beneficiary ID and Name
       applicantId: data.applicantName, // The form field 'applicantName' stores the ID
       applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Get label for display name
       beneficiaryId: data.beneficiaryName, // The form field 'beneficiaryName' stores the ID
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Get label for display name
 
-      // Ensure correct types for numbers and dates
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
@@ -925,3 +926,5 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+    
