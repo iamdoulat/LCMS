@@ -257,10 +257,10 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, // This is the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : '', // This is the name/label
-      beneficiaryId: data.beneficiaryName, // This is the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '', // This is the name/label
+      applicantId: data.applicantName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : '', 
+      beneficiaryId: data.beneficiaryName, 
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '', 
       currency: data.currency,
       amount: data.amount,
       termsOfPay: data.termsOfPay,
@@ -1405,3 +1405,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
