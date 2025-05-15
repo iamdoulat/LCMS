@@ -532,15 +532,11 @@ export default function DashboardPage() {
                           </span>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Applicant: {lc.applicantName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Beneficiary: {lc.beneficiaryName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Value: {formatCurrencyValue(lc.currency, lc.amount)}
-                    </p>
+                    <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <p>Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                        <p>Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                        <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -585,15 +581,11 @@ export default function DashboardPage() {
                           </span>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Applicant: {lc.applicantName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Beneficiary: {lc.beneficiaryName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Value: {formatCurrencyValue(lc.currency, lc.amount)}
-                    </p>
+                    <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <p>Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                      <p>Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                      <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
+                    </div>
                   </li>
                 ))}
               </ul>
