@@ -25,8 +25,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), 
-  applicantName: z.string().min(1, "Applicant name is required"), 
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
+  applicantName: z.string().min(1, "Applicant name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -69,7 +69,7 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
   ),
-  status: z.enum(lcStatusOptions).default("Draft")
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft")
 });
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -140,18 +140,18 @@ export function NewLCEntryForm() {
   }, []);
 
 
-  const form = useForm<LCEntry>({
+  const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', 
-      applicantName: '', 
+      beneficiaryName: '',
+      applicantName: '',
       currency: 'USD' as Currency,
-      amount: '',
+      amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
-      totalMachineQty: '',
+      totalMachineQty: undefined,
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
@@ -177,7 +177,7 @@ export function NewLCEntryForm() {
       certificateOfOrigin: '',
       notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
-      numberOfAmendments: '',
+      numberOfAmendments: undefined,
       status: 'Draft',
     },
   });
@@ -194,7 +194,7 @@ export function NewLCEntryForm() {
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
 
 
-  async function onSubmit(data: LCEntry) {
+  async function onSubmit(data: z.infer<typeof lcEntrySchema>) {
     setIsSubmitting(true);
 
     const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
@@ -207,8 +207,8 @@ export function NewLCEntryForm() {
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
       ...restOfData,
-      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, 
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName,
       applicantId: data.applicantName, 
       beneficiaryId: data.beneficiaryName, 
       year: extractedYear,
@@ -220,7 +220,7 @@ export function NewLCEntryForm() {
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
+      numberOfAmendments: data.numberOfAmendments !== undefined && data.numberOfAmendments !== null && data.numberOfAmendments !== '' ? Number(data.numberOfAmendments) : undefined,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
       status: data.status || 'Draft',
@@ -229,11 +229,11 @@ export function NewLCEntryForm() {
     };
 
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
-        if (dataToSave[key] === undefined) {
+        if (dataToSave[key as keyof Omit<LCEntryDocument, 'id'>] === undefined) {
             delete dataToSave[key as keyof Omit<LCEntryDocument, 'id'>];
         }
     });
-    
+
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
@@ -510,7 +510,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>{amountLabel}</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 50000" {...field} />
+                  <Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -584,7 +584,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Total Machine Qty*</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 5" {...field} />
+                  <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -597,7 +597,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 0" {...field} />
+                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -1031,10 +1031,10 @@ export function NewLCEntryForm() {
                   <FormControl className="flex-grow">
                     <Input type="url" placeholder="https://example.com/pi.pdf" {...field} />
                   </FormControl>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => handleViewUrl(field.value)}
                     disabled={!field.value}
                     title="View Final PI"
@@ -1056,10 +1056,10 @@ export function NewLCEntryForm() {
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} />
                     </FormControl>
-                     <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon" 
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
                         title="View Shipping Documents"
@@ -1072,7 +1072,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        
+
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (

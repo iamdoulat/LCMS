@@ -30,7 +30,7 @@ const lcEntrySchema = z.object({
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
-  
+
   // Editable text/number/date fields
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -134,8 +134,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '', 
-        beneficiaryName: initialData.beneficiaryId || '', 
+        applicantName: initialData.applicantId || '',
+        beneficiaryName: initialData.beneficiaryId || '',
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '',
         status: initialData.status || 'Draft',
@@ -178,13 +178,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
-    
+
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data, 
-      applicantId: data.applicantName,
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
+      ...data,
+      applicantId: data.applicantName, // This form field now holds the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Get the name for saving
+      beneficiaryId: data.beneficiaryName, // This form field now holds the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Get the name for saving
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
@@ -199,13 +199,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
-        
+
+    // Remove fields from dataToUpdate that are not meant to be directly updated via the form schema
+    // (e.g. if the form schema was smaller than LCEntryDocument) - but our schema is comprehensive.
+    // Filter out undefined values to avoid overriding fields with undefined in Firestore
     for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
         }
     }
-    
+
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
       await updateDoc(lcDocRef, dataToUpdate);
@@ -228,7 +231,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       setIsSubmitting(false);
     }
   }
-  
+
   const watchedShipmentMode = form.watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
   if (watchedShipmentMode === "Sea") {
@@ -239,7 +242,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const watchedCurrency = form.watch("currency");
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
-  
+
   const handleTrackDocument = () => {
     const courier = form.getValues("trackingCourier");
     const number = form.getValues("trackingNumber");
@@ -272,7 +275,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   };
 
   const handleTrackVessel = () => {
-    const imoNumber = form.getValues("vesselImoNumber"); 
+    const imoNumber = form.getValues("vesselImoNumber");
     if (!imoNumber || imoNumber.trim() === "") {
        Swal.fire({
         title: "IMO Number Missing",
@@ -285,7 +288,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleViewUrl = (url: string | undefined) => {
+  const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
         // Check if it's a valid URL structure before opening
@@ -311,7 +314,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName" 
+            name="applicantName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
@@ -336,10 +339,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
-            name="beneficiaryName" 
+            name="beneficiaryName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
@@ -900,7 +903,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 )}
             />
         </div>
-        
+
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
@@ -913,12 +916,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormLabel>Final PI URL</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl className="flex-grow">
-                    <Input type="url" placeholder="https://example.com/pi.pdf" {...field} />
+                    <Input type="url" placeholder="https://example.com/pi.pdf" {...field} value={field.value ?? ""} />
                   </FormControl>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => handleViewUrl(field.value)}
                     disabled={!field.value}
                     title="View Final PI"
@@ -938,12 +941,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormLabel>Shipping Documents URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
-                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} />
+                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
                     </FormControl>
-                     <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon" 
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
                         title="View Shipping Documents"
