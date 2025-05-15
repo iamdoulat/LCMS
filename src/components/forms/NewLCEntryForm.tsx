@@ -5,9 +5,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
-import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions } from '@/types';
+// AI Import removed: import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -18,15 +18,25 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { FileInput } from './FileInput';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// FileInput for AI removed: import { FileInput } from './FileInput';
+// Card related imports for AI section removed
+import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package } from 'lucide-react';
+// Alert related imports for AI section removed
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+
+
+const toNumberOrUndefined = (val: unknown): number | undefined => {
+  if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+    return undefined;
+  }
+  const num = Number(String(val).trim());
+  return isNaN(num) ? undefined : num;
+};
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant name is required"), // Will hold applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Will hold beneficiary ID
+  applicantName: z.string().min(1, "Applicant Name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -36,7 +46,7 @@ const lcEntrySchema = z.object({
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
-  totalMachineQty: z.preprocess(
+  totalMachineQty: z.preprocess( // This is the overall L/C quantity
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
@@ -45,20 +55,20 @@ const lcEntrySchema = z.object({
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
   shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
-  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')), // New field
+  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
   itemDescriptions: z.string().optional(),
-  shippingDocumentForAI: z.instanceof(File).optional().nullable(),
+  // shippingDocumentForAI removed
   consigneeBankNameAddress: z.string().optional(),
   bankBin: z.string().optional(),
   bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
-  partialShipments: z.string().optional(),
+  partialShipments: z.string().optional(), // This is for field 43P
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
   documentsRequired: z.string().optional(),
@@ -67,22 +77,21 @@ const lcEntrySchema = z.object({
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyContactDetails: z.string().optional(),
   numberOfAmendments: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
+    toNumberOrUndefined,
+    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
-  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft")
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft"),
+
+  // New fields for partial shipment logic
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
 });
 
-const fileToDataUri = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result as string);
-    };
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
-};
 
 interface DropdownOption {
   value: string;
@@ -90,14 +99,16 @@ interface DropdownOption {
 }
 
 export function NewLCEntryForm() {
-  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [aiError, setAiError] = React.useState<string | null>(null);
+  // AI states removed
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
+  const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number | string>(0);
+  const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number | string>(0);
 
 
   React.useEffect(() => {
@@ -144,27 +155,27 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Will store beneficiaryId
-      applicantName: '',   // Will store applicantId
+      beneficiaryName: '',
+      applicantName: '',
       currency: 'USD' as Currency,
-      amount: undefined,
+      amount: undefined, // Changed from ''
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
-      totalMachineQty: undefined,
+      totalMachineQty: undefined, // Changed from ''
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
       finalPIUrl: '',
       shippingDocumentsUrl: '',
-      finalLcUrl: '', // New field
+      finalLcUrl: '',
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
       eta: undefined,
       itemDescriptions: '',
-      shippingDocumentForAI: null,
+      // shippingDocumentForAI removed
       consigneeBankNameAddress: '',
       bankBin: '',
       bankTin: '',
@@ -179,8 +190,17 @@ export function NewLCEntryForm() {
       certificateOfOrigin: '',
       notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
-      numberOfAmendments: undefined,
+      numberOfAmendments: undefined, // Changed from ''
       status: 'Draft',
+
+      // New fields
+      partialShipmentAllowed: 'No',
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
     },
   });
 
@@ -194,6 +214,20 @@ export function NewLCEntryForm() {
 
   const watchedCurrency = form.watch("currency");
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
+  
+  const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
+  const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
+  const watchedPartialAmounts = [form.watch("firstPartialAmount"), form.watch("secondPartialAmount"), form.watch("thirdPartialAmount")];
+
+  React.useEffect(() => {
+    const qtys = watchedPartialQtys.map(q => Number(q) || 0);
+    setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
+  }, [watchedPartialQtys]);
+
+  React.useEffect(() => {
+    const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
+    setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
+  }, [watchedPartialAmounts]);
 
 
   async function onSubmit(data: z.infer<typeof lcEntrySchema>) {
@@ -202,17 +236,18 @@ export function NewLCEntryForm() {
     const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
     const extractedYear = lcIssueDate.getFullYear();
 
-    const { shippingDocumentForAI, ...restOfData } = data;
+    // shippingDocumentForAI removed from destructuring
+    const { ...restOfData } = data;
 
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
       ...restOfData,
-      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, // Store label
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, // Store label
-      applicantId: data.applicantName, // Store ID
-      beneficiaryId: data.beneficiaryName, // Store ID
+      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName,
+      applicantId: data.applicantName, // This is the ID
+      beneficiaryId: data.beneficiaryName, // This is the ID
       year: extractedYear,
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty ? Number(data.totalMachineQty) : 0,
@@ -228,9 +263,18 @@ export function NewLCEntryForm() {
       status: data.status || 'Draft',
       finalPIUrl: data.finalPIUrl || '',
       shippingDocumentsUrl: data.shippingDocumentsUrl || '',
-      finalLcUrl: data.finalLcUrl || '', // New field
+      finalLcUrl: data.finalLcUrl || '',
+      // Ensure new partial shipment fields are numbers or undefined
+      partialShipmentAllowed: data.partialShipmentAllowed,
+      firstPartialQty: toNumberOrUndefined(data.firstPartialQty),
+      secondPartialQty: toNumberOrUndefined(data.secondPartialQty),
+      thirdPartialQty: toNumberOrUndefined(data.thirdPartialQty),
+      firstPartialAmount: toNumberOrUndefined(data.firstPartialAmount),
+      secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
+      thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
     };
 
+    // Clean up undefined fields before saving
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
         if (dataToSave[key as keyof Omit<LCEntryDocument, 'id'>] === undefined) {
             delete dataToSave[key as keyof Omit<LCEntryDocument, 'id'>];
@@ -260,54 +304,7 @@ export function NewLCEntryForm() {
     }
   }
 
-  const handleAnalyzeDocument = async () => {
-    const file = form.getValues("shippingDocumentForAI");
-    if (!file) {
-      Swal.fire({
-        title: "No Document Selected",
-        text: "Please select a shipping document to analyze.",
-        icon: "warning",
-      });
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setAiError(null);
-    try {
-      const dataUri = await fileToDataUri(file);
-      const result: ExtractShippingDataOutput = await extractShippingData({ documentDataUri: dataUri });
-
-      const parsedEtd = result.etd ? parseISO(result.etd) : undefined;
-      const parsedEta = result.eta ? parseISO(result.eta) : undefined;
-
-      if (parsedEtd && isValid(parsedEtd)) {
-        form.setValue("etd", parsedEtd, { shouldValidate: true });
-      }
-      if (parsedEta && isValid(parsedEta)) {
-        form.setValue("eta", parsedEta, { shouldValidate: true });
-      }
-      form.setValue("itemDescriptions", result.itemDescriptions, { shouldValidate: true });
-
-      Swal.fire({
-        title: "Analysis Complete",
-        text: "ETD, ETA, and Item Descriptions have been populated.",
-        icon: "success",
-        timer: 2500,
-        showConfirmButton: false,
-      });
-    } catch (error) {
-      console.error("AI Analysis Error:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during analysis.";
-      setAiError(errorMessage);
-      Swal.fire({
-        title: "Analysis Failed",
-        text: errorMessage,
-        icon: "error",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  // AI analyzeDocument function removed
 
   const handleTrackDocument = () => {
     const courier = form.getValues("trackingCourier");
@@ -357,7 +354,7 @@ export function NewLCEntryForm() {
   const handleViewUrl = (url: string | undefined) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url); // Check if it's a valid URL structure
+        new URL(url);
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -371,55 +368,7 @@ export function NewLCEntryForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card className="border-dashed border-primary/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-primary">
-              <FileScan className="h-5 w-5" />
-              AI-Powered Data Extraction
-            </CardTitle>
-            <CardDescription>
-              Upload a shipping document (e.g., Proforma Invoice) to automatically extract ETD, ETA, and item descriptions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="shippingDocumentForAI"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Shipping Document for Analysis</FormLabel>
-                  <FormControl>
-                     <FileInput
-                        onFileChange={(file) => field.onChange(file)}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="button" onClick={handleAnalyzeDocument} disabled={isAnalyzing || isSubmitting} className="bg-primary hover:bg-primary/90">
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <FileScan className="mr-2 h-4 w-4" />
-                  Analyze Document
-                </>
-              )}
-            </Button>
-            {aiError && (
-                 <Alert variant="destructive" className="mt-4">
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Analysis Error</AlertTitle>
-                    <AlertDescription>{aiError}</AlertDescription>
-                </Alert>
-            )}
-          </CardContent>
-        </Card>
+        {/* AI Powered Data Extraction Card Removed */}
 
         <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
           <FileText className="mr-2 h-5 w-5 text-primary" />
@@ -513,7 +462,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>{amountLabel}</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} />
+                  <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -585,10 +534,11 @@ export function NewLCEntryForm() {
             name="totalMachineQty"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Machine Qty*</FormLabel>
+                <FormLabel>Total L/C Machine Qty*</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
                 </FormControl>
+                 <FormDescription>Overall quantity for this L/C.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -638,9 +588,8 @@ export function NewLCEntryForm() {
             <FormItem>
                 <FormLabel>Item Descriptions</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Auto-filled by AI or manually enter. Describe the items being shipped." {...field} rows={4} />
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} />
                 </FormControl>
-                <FormDescription>Can be extracted by AI from a shipping document.</FormDescription>
                 <FormMessage />
             </FormItem>
             )}
@@ -648,13 +597,14 @@ export function NewLCEntryForm() {
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
-            name="partialShipments"
+            name="partialShipments" // This is the text field for 43P, not the new dropdown
             render={({ field }) => (
               <FormItem>
-                <FormLabel>43P: Partial Shipments</FormLabel>
+                <FormLabel>43P: Partial Shipments Rule</FormLabel>
                 <FormControl>
                   <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
                 </FormControl>
+                <FormDescription>As per L/C document clause 43P.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -767,7 +717,7 @@ export function NewLCEntryForm() {
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-            Important Dates
+            Important Dates & Partial Shipment Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
@@ -804,6 +754,142 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
+        <Separator className="my-6" />
+        
+        {/* Partial Shipment Section */}
+        <FormField
+          control={form.control}
+          name="partialShipmentAllowed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Partial Shipment Allowed*</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || "No"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select option" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {partialShipmentAllowedOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {watchedPartialShipmentAllowed === "Yes" && (
+          <div className="space-y-6 rounded-md border p-4 mt-4">
+            <h4 className="text-md font-medium text-foreground flex items-center mb-4">
+              <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+              Partial Shipment Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              {/* 1st Partial */}
+              <FormField
+                control={form.control}
+                name="firstPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>1st Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="firstPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>1st Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 10000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 2nd Partial */}
+              <FormField
+                control={form.control}
+                name="secondPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 15" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="secondPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2nd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 15000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 3rd Partial */}
+              <FormField
+                control={form.control}
+                name="thirdPartialQty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>3rd Partial Qty</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="thirdPartialAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>3rd Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="e.g., 5000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <Separator className="my-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <FormItem>
+                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Qty</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialAmount} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+            </div>
+             <FormDescription>
+                Note: The 'Total L/C Machine Qty' and L/C 'Amount' fields above represent the overall L/C values. The totals here are sums of the partials entered.
+            </FormDescription>
+          </div>
+        )}
+
 
         <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
             <Workflow className="mr-2 h-5 w-5 text-primary" />
@@ -946,7 +1032,6 @@ export function NewLCEntryForm() {
                   <FormItem className="flex flex-col">
                     <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
                      <DatePickerField field={field} placeholder="Select ETD" />
-                    <FormDescription>Can be auto-filled by AI.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -958,7 +1043,6 @@ export function NewLCEntryForm() {
                   <FormItem className="flex flex-col">
                     <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
                     <DatePickerField field={field} placeholder="Select ETA" />
-                    <FormDescription>Can be auto-filled by AI.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -21,6 +21,9 @@ export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipping pending", "Shipping going on", "Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
+export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
+export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
+
 
 export interface LCEntry {
   id?: string;
@@ -38,20 +41,19 @@ export interface LCEntry {
   latestShipmentDate?: Date;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string; // New field
+  finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
   eta?: Date;
   itemDescriptions?: string;
-  shippingDocumentForAI?: File | null;
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
-  partialShipments?: string;
+  partialShipments?: string; // This was for 43P: Partial Shipments text field, distinct from the new logic
   portOfLoading?: string;
   portOfDischarge?: string;
   documentsRequired?: string;
@@ -61,6 +63,15 @@ export interface LCEntry {
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
+
+  // New fields for partial shipment logic
+  partialShipmentAllowed?: PartialShipmentAllowed;
+  firstPartialQty?: number | '';
+  secondPartialQty?: number | '';
+  thirdPartialQty?: number | '';
+  firstPartialAmount?: number | '';
+  secondPartialAmount?: number | '';
+  thirdPartialAmount?: number | '';
 }
 
 // This type represents the data structure in Firestore
@@ -83,7 +94,7 @@ export interface LCEntryDocument {
   latestShipmentDate?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string; // New field
+  finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string;
@@ -107,6 +118,15 @@ export interface LCEntryDocument {
   status: LCStatus;
   createdAt: any;
   updatedAt: any;
+
+  // New fields for partial shipment logic in Firestore
+  partialShipmentAllowed?: PartialShipmentAllowed;
+  firstPartialQty?: number;
+  secondPartialQty?: number;
+  thirdPartialQty?: number;
+  firstPartialAmount?: number;
+  secondPartialAmount?: number;
+  thirdPartialAmount?: number;
 }
 
 export interface Customer {
