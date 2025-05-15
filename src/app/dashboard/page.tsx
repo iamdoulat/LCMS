@@ -12,11 +12,12 @@ import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import type { LCEntryDocument } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import type { LCEntryDocument, LCStatus } from '@/types';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { Badge } from '@/components/ui/badge';
 
 const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
 
@@ -34,8 +35,8 @@ interface PieChartDataItem {
   fill: string;
 }
 
-interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'updatedAt'> {
-  updatedAtDate: Date; // For sorting and display
+interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'updatedAt' | 'status'> {
+  updatedAtDate: Date; 
 }
 
 // Predefined fill colors for the pie chart
@@ -46,6 +47,23 @@ const PIE_CHART_COLORS = [
   'hsl(var(--chart-4))',
   'hsl(var(--chart-5))',
 ];
+
+const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+  switch (status) {
+    case 'Draft':
+      return 'outline';
+    case 'Transmitted':
+      return 'secondary';
+    case 'Shipping pending':
+      return 'default'; 
+    case 'Shipping going on':
+      return 'default';
+    case 'Done':
+      return 'default';
+    default:
+      return 'outline';
+  }
+};
 
 
 export default function DashboardPage() {
@@ -76,20 +94,10 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-        // Ensure updatedAt is converted to a JavaScript Date if it's a Firestore Timestamp
-        let updatedAtJSDate;
-        if (data.updatedAt && typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
-          updatedAtJSDate = (data.updatedAt as unknown as Timestamp).toDate();
-        } else if (data.updatedAt) {
-          // Attempt to parse if it's already a string (less ideal)
-          updatedAtJSDate = parseISO(data.updatedAt as string);
-        }
-
+        
         lcEntriesForTheYear.push({ 
             id: doc.id, 
             ...data,
-            // For consistent handling, ensure dates are strings or proper Date objects based on LCEntryDocument
-            // This spread ensures all fields are present
           } as LCEntryDocument);
       });
 
@@ -163,14 +171,18 @@ export default function DashboardPage() {
       const completedLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Done')
         .map(lc => {
-          let updatedAtDate = new Date(); // Default to now if updatedAt is missing or invalid
+          let updatedAtDate = new Date(); 
           if (lc.updatedAt) {
             if (typeof (lc.updatedAt as unknown as Timestamp).toDate === 'function') {
               updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
             } else {
               try {
-                updatedAtDate = parseISO(lc.updatedAt as string);
-                if (!isValid(updatedAtDate)) updatedAtDate = new Date(0); // Fallback for invalid date string
+                const parsedDate = parseISO(lc.updatedAt as string);
+                if (isValid(parsedDate)) {
+                    updatedAtDate = parsedDate;
+                } else {
+                    updatedAtDate = new Date(0); // Fallback for invalid date string
+                }
               } catch {
                 updatedAtDate = new Date(0); // Fallback for unparseable string
               }
@@ -180,12 +192,13 @@ export default function DashboardPage() {
             id: lc.id,
             documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
-            updatedAt: lc.updatedAt, // Keep original for type consistency if needed elsewhere
+            updatedAt: lc.updatedAt,
             updatedAtDate: updatedAtDate,
+            status: lc.status, 
           } as RecentlyCompletedLC;
         })
-        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime()) // Sort by date descending
-        .slice(0, 5); // Take top 5
+        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime()) 
+        .slice(0, 5); 
 
       setRecentlyCompletedLCs(completedLCs);
 
@@ -219,7 +232,6 @@ export default function DashboardPage() {
       if (querySnapshot.empty) {
         Swal.fire("Not Found", `No L/C found with number: ${searchLcNumber}`, "warning");
       } else {
-        // Assuming L/C numbers are unique, take the first one
         const lcDoc = querySnapshot.docs[0];
         Swal.fire({
             title: "L/C Found!",
@@ -239,7 +251,6 @@ export default function DashboardPage() {
   };
 
 
-  // Placeholder data for upcoming shipments - to be replaced with real data
   const upcomingShipments = [
     { lcNumber: 'LC-00123', supplier: 'Supplier Beta', latestShipmentDate: '2024-08-15' },
     { lcNumber: 'LC-00124', supplier: 'Supplier Alpha', latestShipmentDate: '2024-08-22' },
@@ -276,7 +287,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"> {/* Adjusted for 5 cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           title="Total L/Cs"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -395,7 +406,6 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {/* Recently Completed L/Cs Card */}
       <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl font-semibold">
@@ -415,9 +425,19 @@ export default function DashboardPage() {
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
-                    <span className="text-xs text-muted-foreground">
-                      Completed: {format(lc.updatedAtDate, 'PPP')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <Badge
+                          variant={getStatusBadgeVariant(lc.status)}
+                          className={
+                            lc.status === 'Done' ? 'bg-green-600 text-white' : ''
+                          }
+                        >
+                          {lc.status || 'N/A'}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                        Completed: {format(lc.updatedAtDate, 'PPP')}
+                        </span>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Beneficiary: {lc.beneficiaryName || 'N/A'}
