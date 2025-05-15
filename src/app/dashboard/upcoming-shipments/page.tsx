@@ -23,11 +23,11 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default'; // Consider a yellow-ish or orange color via custom class if needed
+      return 'default'; 
     case 'Shipping going on':
-      return 'default'; // Consider a blue-ish color
+      return 'default';
     case 'Done':
-      return 'default'; // Consider a green color
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -56,7 +56,7 @@ export default function UpcomingShipmentsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        // Query for L/Cs that are not 'Done' and order by latestShipmentDate
+        // Query for active L/Cs, order by latestShipmentDate (nearest first), limit to 30
         const q = query(
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
@@ -67,9 +67,10 @@ export default function UpcomingShipmentsPage() {
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0); // Fallback to a default date
+          let latestShipmentDateObj = new Date(0); 
 
           if (data.latestShipmentDate) {
+            // Handle both Firestore Timestamp and ISO string dates
             if (typeof (data.latestShipmentDate as unknown as Timestamp).toDate === 'function') {
               latestShipmentDateObj = (data.latestShipmentDate as unknown as Timestamp).toDate();
             } else if (typeof data.latestShipmentDate === 'string') {
@@ -99,7 +100,7 @@ export default function UpcomingShipmentsPage() {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection: query 'status IN ${JSON.stringify(ACTIVE_LC_STATUSES)}' ordered by 'latestShipmentDate' ascending.`;
+            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (ascending) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -185,4 +186,3 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
-
