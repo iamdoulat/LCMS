@@ -21,7 +21,6 @@ export function AppHeader() {
 
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
-    // Check if it's an email to extract from before '@'
     const namePart = nameOrEmail.includes('@') ? nameOrEmail.split('@')[0] : nameOrEmail;
     return namePart
       .split(' ')
@@ -34,13 +33,17 @@ export function AppHeader() {
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
 
+  // For demonstration: In a real app, this would come from a shared state/context
+  // or a call to a service that knows the actual unread notification count.
+  const hasUnreadNotifications = true; // Simulate having unread notifications
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
         <Link
           href="/dashboard"
-          className="text-xl font-bold whitespace-nowrap bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+          className="text-lg md:text-xl font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
         >
           LC Management System
         </Link>
@@ -53,15 +56,17 @@ export function AppHeader() {
         </Button>
 
         <Link href="/dashboard/notifications" passHref>
-          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Notifications">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="sr-only">Notifications</span>
-            {/* Future: Add a badge for unread notifications
-            <span className="absolute top-1 right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            */}
+            {/* Red dot indicator for unread notifications */}
+            {/* In a real app, 'hasUnreadNotifications' would be dynamic state */}
+            {hasUnreadNotifications && (
+              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+              </span>
+            )}
           </Button>
         </Link>
 
