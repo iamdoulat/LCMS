@@ -205,7 +205,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("Fetched Applicant Options:", fetchedApplicants);
+        console.log("Fetched Applicant Options for Edit Form:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -213,10 +213,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
+        console.log("Fetched Beneficiary Options for Edit Form:", fetchedBeneficiaries);
 
       } catch (error) {
-        console.error("Error fetching dropdown data: ", error);
+        console.error("Error fetching dropdown data for Edit Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
@@ -227,11 +227,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    // Only reset the form if initialData is available AND dropdown options have been loaded
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("Populating form with Initial L/C Data:", initialData);
-      console.log("Using Applicant ID for form:", initialData.applicantId);
-      console.log("Using Beneficiary ID for form:", initialData.beneficiaryId);
+      console.log("Populating Edit Form with Initial L/C Data:", initialData);
+      console.log("Setting Applicant ID in Edit Form:", initialData.applicantId);
+      console.log("Setting Beneficiary ID in Edit Form:", initialData.beneficiaryId);
 
       form.reset({
         applicantName: initialData.applicantId || '',
@@ -812,12 +811,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         </h3>
         <FormField
             control={form.control}
-            name="notifyPartyName"
+            name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Name</FormLabel>
+                <FormLabel>Notify Party Address</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter notify party's name" {...field} value={field.value ?? ''}/>
+                <Textarea placeholder="Enter notify party's full address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -825,12 +824,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
         <FormField
             control={form.control}
-            name="notifyPartyNameAndAddress"
+            name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Address</FormLabel>
+                <FormLabel>Notify Party Name</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's full address" {...field} rows={3} value={field.value ?? ''}/>
+                  <Input placeholder="Enter notify party's name" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -1409,7 +1408,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
                 name="shippingMarks"
@@ -1417,13 +1416,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-        
+        </div>
 
         <h3 className={sectionHeadingClass}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
@@ -1510,12 +1509,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Submitting...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <Library className="mr-2 h-4 w-4" />
+              Submit L/C Entry
             </>
           )}
         </Button>
@@ -1523,4 +1522,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-

@@ -79,9 +79,9 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(), // For address
-  notifyPartyName: z.string().optional(),          // For name
-  notifyPartyCell: z.string().optional(),          // For cell
+  notifyPartyNameAndAddress: z.string().optional(), // This will be for the address
+  notifyPartyName: z.string().optional(),          // New field for name
+  notifyPartyCell: z.string().optional(),          // New field for cell
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), // For email
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
@@ -252,10 +252,10 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, 
-      applicantName: selectedApplicant ? selectedApplicant.label : '', 
-      beneficiaryId: data.beneficiaryName, 
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '', 
+      applicantId: data.applicantName,
+      applicantName: selectedApplicant ? selectedApplicant.label : '',
+      beneficiaryId: data.beneficiaryName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
       amount: data.amount,
       termsOfPay: data.termsOfPay,
@@ -269,7 +269,7 @@ export function NewLCEntryForm() {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
-      trackingCourier: data.trackingCourier || undefined,
+      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
       trackingNumber: data.trackingNumber,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -341,7 +341,7 @@ export function NewLCEntryForm() {
     const courier = form.getValues("trackingCourier");
     const number = form.getValues("trackingNumber");
 
-    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
+    if (!courier || courier.trim() === "" || courier === NONE_COURIER_VALUE || !number || number.trim() === "") {
       Swal.fire({
         title: "Information Missing",
         text: "Please select a courier and enter a tracking number.",
@@ -718,19 +718,6 @@ export function NewLCEntryForm() {
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
-         <FormField
-            control={form.control}
-            name="notifyPartyName"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notify Party Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter notify party's name" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
         <FormField
             control={form.control}
             name="notifyPartyNameAndAddress"
@@ -739,6 +726,19 @@ export function NewLCEntryForm() {
                 <FormLabel>Notify Party Address</FormLabel>
                 <FormControl>
                 <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+         <FormField
+            control={form.control}
+            name="notifyPartyName"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter notify party's name" {...field} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
