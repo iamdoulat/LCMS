@@ -1,5 +1,6 @@
 
 
+
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -26,8 +27,8 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; // Will store ID of supplier
-  applicantName: string; // Will store ID of customer
+  beneficiaryName: string; 
+  applicantName: string; 
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -64,7 +65,6 @@ export interface LCEntry {
   status?: LCStatus;
 }
 
-// This interface represents the data structure as it would be stored in Firestore
 export interface LCEntryDocument extends Omit<LCEntry,
   'finalPIFile' |
   'shippingDocumentsFile' |
@@ -78,34 +78,33 @@ export interface LCEntryDocument extends Omit<LCEntry,
   'amount' |
   'totalMachineQty' |
   'numberOfAmendments' |
-  'beneficiaryName' | // Store actual name
-  'applicantName' // Store actual name
+  'beneficiaryName' | 
+  'applicantName' 
 > {
   year: number;
-  applicantName: string; // Actual name of the applicant for display
-  beneficiaryName: string; // Actual name of the beneficiary for display
-  applicantId?: string; // ID from customers collection
-  beneficiaryId?: string; // ID from suppliers collection
-  amount: number; // Stored as number
-  totalMachineQty: number; // Stored as number
-  numberOfAmendments?: number; // Stored as number
-  finalPIUrl?: string; // URL after upload to Firebase Storage
-  shippingDocumentsUrl?: string; // URL after upload
-  etd?: string; // Stored as ISO string
-  eta?: string; // Stored as ISO string
-  lcIssueDate?: string; // Stored as ISO string
-  expireDate?: string; // Stored as ISO string
-  latestShipmentDate?: string; // Stored as ISO string
-  invoiceDate?: string; // Stored as ISO string
-  createdAt: any; // Firestore serverTimestamp for creation
-  updatedAt: any; // Firestore serverTimestamp for updates
+  applicantName: string; 
+  beneficiaryName: string; 
+  applicantId?: string; 
+  beneficiaryId?: string; 
+  amount: number; 
+  totalMachineQty: number; 
+  numberOfAmendments?: number; 
+  finalPIUrl?: string; 
+  shippingDocumentsUrl?: string; 
+  etd?: string; 
+  eta?: string; 
+  lcIssueDate?: string; 
+  expireDate?: string; 
+  latestShipmentDate?: string; 
+  invoiceDate?: string; 
+  createdAt: any; 
+  updatedAt: any; 
   status?: LCStatus;
-  id?: string; // Firestore document ID
+  id?: string; 
 }
 
-// For Applicant/Customer
 export interface Customer {
-  id?: string; // Firestore document ID
+  id?: string; 
   applicantName: string;
   email: string;
   phone?: string;
@@ -115,14 +114,13 @@ export interface Customer {
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
-  createdAt?: any; // Firestore serverTimestamp
-  updatedAt?: any; // Firestore serverTimestamp
+  createdAt?: any; 
+  updatedAt?: any; 
 }
-export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string }; // Ensure id and string timestamps when fetched
+export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string }; 
 
-// For Beneficiary/Supplier
 export interface Supplier {
-  id?: string; // Firestore document ID
+  id?: string; 
   beneficiaryName: string;
   headOfficeAddress: string;
   contactPersonName: string;
@@ -130,12 +128,20 @@ export interface Supplier {
   emailId: string;
   website?: string;
   brandName: string;
-  brandLogoFile?: File | null; // For file object before upload
-  brandLogoUrl?: string; // For URL after upload
-  createdAt?: any; // Firestore serverTimestamp
-  updatedAt?: any; // Firestore serverTimestamp
+  brandLogoFile?: File | null; 
+  brandLogoUrl?: string; 
+  createdAt?: any; 
+  updatedAt?: any; 
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string }; // Ensure id and string timestamps when fetched
+export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string }; 
 
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string; // ISO string
+  isRead: boolean;
+  link?: string; // Optional link for navigation
+}
     

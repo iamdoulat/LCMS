@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
+import { User, LogOut, Settings, Loader2, Search, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export function AppHeader() {
@@ -46,12 +46,24 @@ export function AppHeader() {
         </Link>
       </div>
 
-      <div className="ml-auto flex items-center gap-2"> {/* Reduced gap from gap-4 */}
-        {/* Placeholder Search Button */}
-        <Button variant="ghost" size="icon" className="h-9 w-9">
+      <div className="ml-auto flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Search">
           <Search className="h-5 w-5 text-muted-foreground" />
           <span className="sr-only">Search</span>
         </Button>
+
+        <Link href="/dashboard/notifications" passHref>
+          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Notifications">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <span className="sr-only">Notifications</span>
+            {/* Future: Add a badge for unread notifications
+            <span className="absolute top-1 right-1 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            */}
+          </Button>
+        </Link>
 
         {loading ? (
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
