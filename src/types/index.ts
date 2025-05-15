@@ -1,6 +1,4 @@
 
-
-
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -27,8 +25,8 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; 
-  applicantName: string; 
+  beneficiaryName: string; // In form, this is the ID of the beneficiary from 'suppliers'
+  applicantName: string;   // In form, this is the ID of the applicant from 'customers'
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -65,46 +63,53 @@ export interface LCEntry {
   status?: LCStatus;
 }
 
-export interface LCEntryDocument extends Omit<LCEntry,
-  'finalPIFile' |
-  'shippingDocumentsFile' |
-  'shippingDocumentForAI' |
-  'etd' |
-  'eta' |
-  'lcIssueDate' |
-  'expireDate' |
-  'latestShipmentDate' |
-  'invoiceDate' |
-  'amount' |
-  'totalMachineQty' |
-  'numberOfAmendments' |
-  'beneficiaryName' | 
-  'applicantName' 
-> {
+// This type represents the data structure in Firestore
+export interface LCEntryDocument {
+  id: string; // Firestore document ID
   year: number;
-  applicantName: string; 
-  beneficiaryName: string; 
-  applicantId?: string; 
-  beneficiaryId?: string; 
-  amount: number; 
-  totalMachineQty: number; 
-  numberOfAmendments?: number; 
-  finalPIUrl?: string; 
-  shippingDocumentsUrl?: string; 
-  etd?: string; 
-  eta?: string; 
-  lcIssueDate?: string; 
-  expireDate?: string; 
-  latestShipmentDate?: string; 
-  invoiceDate?: string; 
-  createdAt: any; 
-  updatedAt: any; 
-  status?: LCStatus;
-  id?: string; 
+  applicantName: string; // Display name of applicant
+  beneficiaryName: string; // Display name of beneficiary
+  applicantId: string; // ID from 'customers' collection
+  beneficiaryId: string; // ID from 'suppliers' collection
+  currency: Currency;
+  amount: number;
+  termsOfPay: TermsOfPay;
+  documentaryCreditNumber: string;
+  proformaInvoiceNumber?: string;
+  invoiceDate?: string; // ISO Date String
+  totalMachineQty: number;
+  lcIssueDate?: string; // ISO Date String
+  expireDate?: string; // ISO Date String
+  latestShipmentDate?: string; // ISO Date String
+  finalPIUrl?: string;
+  shippingDocumentsUrl?: string;
+  trackingCourier?: TrackingCourier | "";
+  trackingNumber?: string;
+  etd?: string; // ISO Date String
+  eta?: string; // ISO Date String
+  itemDescriptions?: string;
+  consigneeBankNameAddress?: string;
+  bankBin?: string;
+  bankTin?: string;
+  shipmentMode?: ShipmentMode;
+  vesselOrFlightName?: string;
+  vesselImoNumber?: string;
+  partialShipments?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  documentsRequired?: string;
+  shippingMarks?: string;
+  certificateOfOrigin?: string;
+  notifyPartyNameAndAddress?: string;
+  notifyPartyContactDetails?: string;
+  numberOfAmendments?: number;
+  status: LCStatus; // Status should be required in Firestore
+  createdAt: any; // Firestore Timestamp or ServerTimestamp
+  updatedAt: any; // Firestore Timestamp or ServerTimestamp
 }
 
 export interface Customer {
-  id?: string; 
+  id?: string;
   applicantName: string;
   email: string;
   phone?: string;
@@ -114,13 +119,13 @@ export interface Customer {
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
-  createdAt?: any; 
-  updatedAt?: any; 
+  createdAt?: any;
+  updatedAt?: any;
 }
-export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string }; 
+export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string };
 
 export interface Supplier {
-  id?: string; 
+  id?: string;
   beneficiaryName: string;
   headOfficeAddress: string;
   contactPersonName: string;
@@ -128,12 +133,12 @@ export interface Supplier {
   emailId: string;
   website?: string;
   brandName: string;
-  brandLogoFile?: File | null; 
-  brandLogoUrl?: string; 
-  createdAt?: any; 
-  updatedAt?: any; 
+  brandLogoFile?: File | null;
+  brandLogoUrl?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string }; 
+export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string };
 
 
 export interface AppNotification {

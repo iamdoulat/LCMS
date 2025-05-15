@@ -1,0 +1,909 @@
+
+"use client";
+
+import * as React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import type { LCEntry, LCEntryDocument, ShipmentMode, Currency, TrackingCourier, CustomerDocument, SupplierDocument, LCStatus } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
+import { extractShippingData, type ExtractShippingDataOutput } from '@/ai/flows/extract-shipping-data';
+import Swal from 'sweetalert2';
+import { isValid, parseISO, format } from 'date-fns';
+import { firestore } from '@/lib/firebase/config';
+import { doc, updateDoc, serverTimestamp, getDocs, collection } from 'firebase/firestore';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { DatePickerField } from './DatePickerField';
+import { FileInput } from './FileInput';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, Save } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Schema is largely the same as NewLCEntryForm, ensure consistency
+const lcEntrySchema = z.object({
+  beneficiaryName: z.string().min(1, "Beneficiary ID is required"), 
+  applicantName: z.string().min(1, "Applicant ID is required"), 
+  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
+  ),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
+  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
+  proformaInvoiceNumber: z.string().optional(),
+  invoiceDate: z.date().optional().nullable(),
+  totalMachineQty: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
+  ),
+  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
+  expireDate: z.date({ required_error: "Expire date is required" }),
+  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
+  // File fields are not directly part of Firestore document updates unless their URLs change.
+  // For this form, we'll omit direct handling of new file uploads in the edit, 
+  // assuming URLs are managed separately or this form focuses on text data.
+  // finalPIFile: z.instanceof(File).optional().nullable(), 
+  // shippingDocumentsFile: z.instanceof(File).optional().nullable(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
+  itemDescriptions: z.string().optional(),
+  // shippingDocumentForAI: z.instanceof(File).optional().nullable(),
+  consigneeBankNameAddress: z.string().optional(),
+  bankBin: z.string().optional(),
+  bankTin: z.string().optional(),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  partialShipments: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
+  documentsRequired: z.string().optional(),
+  shippingMarks: z.string().optional(),
+  certificateOfOrigin: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyContactDetails: z.string().optional(),
+  numberOfAmendments: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional().or(z.literal(''))
+  ),
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required"})
+});
+
+type LCEditFormValues = z.infer<typeof lcEntrySchema>;
+
+
+const fileToDataUri = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
+
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+interface EditLCEntryFormProps {
+  initialData: LCEntryDocument;
+  lcId: string;
+}
+
+export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [aiError, setAiError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
+  const form = useForm<LCEditFormValues>({
+    resolver: zodResolver(lcEntrySchema),
+    // Default values will be set by form.reset in useEffect
+  });
+
+  React.useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        beneficiaryName: initialData.beneficiaryId || '', // Use ID for dropdown value
+        applicantName: initialData.applicantId || '',   // Use ID for dropdown value
+        amount: initialData.amount !== undefined ? initialData.amount : '',
+        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : '',
+        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : '',
+        invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : undefined,
+        lcIssueDate: initialData.lcIssueDate ? parseISO(initialData.lcIssueDate) : undefined,
+        expireDate: initialData.expireDate ? parseISO(initialData.expireDate) : undefined,
+        latestShipmentDate: initialData.latestShipmentDate ? parseISO(initialData.latestShipmentDate) : undefined,
+        etd: initialData.etd ? parseISO(initialData.etd) : undefined,
+        eta: initialData.eta ? parseISO(initialData.eta) : undefined,
+        status: initialData.status || 'Draft', // Default to Draft if status is somehow missing
+      });
+    }
+  }, [initialData, form]);
+
+
+  React.useEffect(() => {
+    const fetchDropdownData = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const applicantSnapshot = await getDocs(collection(firestore, "customers"));
+        const fetchedApplicants = applicantSnapshot.docs.map(doc => {
+          const data = doc.data() as CustomerDocument;
+          return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+        });
+        setApplicantOptions(fetchedApplicants);
+
+        const beneficiarySnapshot = await getDocs(collection(firestore, "suppliers"));
+        const fetchedBeneficiaries = beneficiarySnapshot.docs.map(doc => {
+          const data = doc.data() as SupplierDocument;
+          return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
+        });
+        setBeneficiaryOptions(fetchedBeneficiaries);
+
+      } catch (error) {
+        console.error("Error fetching dropdown data: ", error);
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+    fetchDropdownData();
+  }, []);
+
+
+  async function onSubmit(data: LCEditFormValues) {
+    setIsSubmitting(true);
+
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+
+    // Prepare data for Firestore update
+    const dataToUpdate: Partial<LCEntryDocument> = {
+      ...data, // Spread form values
+      applicantId: data.applicantName, // This is the ID from the dropdown
+      beneficiaryId: data.beneficiaryName, // This is the ID from the dropdown
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Keep label
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Keep label
+      amount: Number(data.amount),
+      totalMachineQty: Number(data.totalMachineQty),
+      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
+      lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etd: data.etd ? format(data.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      updatedAt: serverTimestamp() as any,
+      // year field doesn't typically change on edit unless lcIssueDate changes significantly
+      year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
+    };
+
+    // Remove fields that shouldn't be directly updated if they are empty or not part of the schema's intent for partial update
+    (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
+        if (dataToUpdate[key] === undefined) {
+            delete dataToUpdate[key];
+        }
+    });
+    
+    try {
+      const lcDocRef = doc(firestore, "lc_entries", lcId);
+      await updateDoc(lcDocRef, dataToUpdate);
+      Swal.fire({
+        title: "L/C Entry Updated!",
+        text: `L/C entry (ID: ${lcId}) has been successfully updated.`,
+        icon: "success",
+        timer: 2500,
+        showConfirmButton: true,
+      });
+    } catch (error) {
+      console.error("Error updating L/C document: ", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      Swal.fire({
+        title: "Update Failed",
+        text: `Failed to update L/C entry: ${errorMessage}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+  
+  // AI Analyze Document and Tracking functions (copied from NewLCEntryForm, may need adjustment if file handling changes)
+  // For Edit form, AI analysis on an existing document might not be typical, but can be kept.
+  // Tracking functions are still relevant.
+
+  const watchedShipmentMode = form.watch("shipmentMode");
+  let viaLabel = "Vessel/Flight Name";
+  if (watchedShipmentMode === "Sea") {
+    viaLabel = "Vessel Name";
+  } else if (watchedShipmentMode === "Air") {
+    viaLabel = "Flight Name";
+  }
+
+  const watchedCurrency = form.watch("currency");
+  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
+  
+  const handleTrackDocument = () => {
+    const courier = form.getValues("trackingCourier");
+    const number = form.getValues("trackingNumber");
+
+    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
+      Swal.fire({
+        title: "Information Missing",
+        text: "Please select a courier and enter a tracking number.",
+        icon: "info",
+      });
+      return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(number.trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number.trim())}&trkqual=2460395000~${encodeURIComponent(number.trim())}~FX`;
+    }
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire({
+        title: "Courier Not Supported",
+        text: "Tracking for the selected courier is not implemented.",
+        icon: "warning",
+      });
+    }
+  };
+
+  const handleTrackVessel = () => {
+    const imoNumber = form.getValues("vesselImoNumber");
+    if (!imoNumber || imoNumber.trim() === "") {
+       Swal.fire({
+        title: "IMO Number Missing",
+        text: "Please enter a Vessel IMO number to track.",
+        icon: "info",
+      });
+      return;
+    }
+    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(imoNumber.trim())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+
+  // The AI analysis section is omitted for brevity in edit form, 
+  // as it typically applies to new document uploads which are not the primary focus of an edit form.
+  // It could be added back if needed, but would require careful consideration of how it interacts with existing data.
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* AI Extraction section omitted for edit form to simplify. Can be added back if needed. */}
+
+        <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
+          <FileText className="mr-2 h-5 w-5 text-primary" />
+          L/C & Invoice Details
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="applicantName" // This holds applicantId
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {!isLoadingApplicants && applicantOptions.length === 0 && (
+                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
+                    )}
+                    {applicantOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="beneficiaryName" // This holds beneficiaryId
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                     {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
+                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
+                    )}
+                    {beneficiaryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Currency*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {currencyOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{amountLabel}</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 50000" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="termsOfPay"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Terms of Pay*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select terms of payment" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {termsOfPayOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="documentaryCreditNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Documentary Credit Number*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Documentary Credit Number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="proformaInvoiceNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Proforma Invoice Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter PI number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="invoiceDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Invoice Date</FormLabel>
+                <DatePickerField field={field} placeholder="Select invoice date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalMachineQty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Total Machine Qty*</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 5" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="numberOfAmendments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 0" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "Draft"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select L/C status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {lcStatusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+            control={form.control}
+            name="itemDescriptions"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Item Descriptions</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="partialShipments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>43P: Partial Shipments</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="portOfLoading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44E: Port of Loading</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="portOfDischarge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44F: Port of Discharge</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+          <Landmark className="mr-2 h-5 w-5 text-primary" />
+          Consignee Bank Details
+        </h3>
+        <FormField
+            control={form.control}
+            name="consigneeBankNameAddress"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Consignee Bank Name and Address</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter bank name and full address" {...field} rows={3}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="bankBin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Bank BIN</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter Bank Identification Number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="bankTin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Bank TIN</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter Taxpayer Identification Number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <BellRing className="mr-2 h-5 w-5 text-primary" />
+            Notify Details
+        </h3>
+        <FormField
+            control={form.control}
+            name="notifyPartyNameAndAddress"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party name and Address</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter notify party's name and full address" {...field} rows={3}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="notifyPartyContactDetails"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Contact Details</FormLabel>
+                <FormControl>
+                <Input placeholder="e.g., Phone or Email" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+            Important Dates
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+                control={form.control}
+                name="lcIssueDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>L/C Issue Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select L/C issue date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="expireDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Expire Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select expire date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="latestShipmentDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Latest Shipment Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select latest shipment date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <Workflow className="mr-2 h-5 w-5 text-primary" />
+            Shipping Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <FormField
+                control={form.control}
+                name="shipmentMode"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select shipment mode" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {shipmentModeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                            {option}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="vesselOrFlightName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormControl>
+                    <Input
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        {...field}
+                        disabled={!watchedShipmentMode}
+                    />
+                    </FormControl>
+                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+        {watchedShipmentMode === 'Sea' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                    control={form.control}
+                    name="vesselImoNumber"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                            <FormLabel>Vessel IMO Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter Vessel IMO Number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTrackVessel}
+                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
+                    className="md:col-span-1"
+                    title="Track Vessel via IMO Number"
+                >
+                    <Search className="mr-2 h-4 w-4" />
+                    Track Vessel
+                </Button>
+            </div>
+        )}
+
+         <div className="mt-6">
+            <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+            </FormLabel>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+                <FormField
+                    control={form.control}
+                    name="trackingCourier"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Courier</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select Courier" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {trackingCourierOptions.map(courier => (
+                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="trackingNumber"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Tracking Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter tracking number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTrackDocument}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
+                    className="md:col-span-1 mt-4 md:mt-0"
+                    title="Track Original Document"
+                >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Track
+                </Button>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+             <FormField
+                control={form.control}
+                name="etd"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
+                     <DatePickerField field={field} placeholder="Select ETD" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="eta"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
+                    <DatePickerField field={field} placeholder="Select ETA" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <FileSignature className="mr-2 h-5 w-5 text-primary" />
+            46A: Documents Required
+        </h3>
+        <FormField
+            control={form.control}
+            name="documentsRequired"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Full Set of Documents</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Specify all required documents as per L/C terms" {...field} rows={5} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="certificateOfOrigin"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Certificate of Origin</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., Required / Not Required / Specify details" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+            <Edit3 className="mr-2 h-5 w-5 text-primary" />
+            47A: Additional Conditions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="shippingMarks"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipping Marks</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter shipping marks as specified" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+        
+        {/* File Upload fields are omitted for edit form as they require complex handling */}
+        {/* for existing files vs. new uploads. Focus is on text/date/select data update. */}
+
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving Changes...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
