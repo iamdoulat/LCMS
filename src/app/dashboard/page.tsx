@@ -20,7 +20,7 @@ import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
+const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"];
 
 interface DashboardStats {
   totalLCs: number;
@@ -606,3 +606,5 @@ export default function DashboardPage() {
   );
 }
 
+
+    
