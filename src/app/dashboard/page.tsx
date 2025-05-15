@@ -7,13 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2 } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2 } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 
 const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
 
@@ -31,6 +34,10 @@ interface PieChartDataItem {
   fill: string;
 }
 
+interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'updatedAt'> {
+  updatedAtDate: Date; // For sorting and display
+}
+
 // Predefined fill colors for the pie chart
 const PIE_CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -42,7 +49,8 @@ const PIE_CHART_COLORS = [
 
 
 export default function DashboardPage() {
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString()); // Default to current year
+  const router = useRouter();
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalLCs: 0,
@@ -52,6 +60,10 @@ export default function DashboardPage() {
     thisMonthLCQty: 0,
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
+  const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
+  const [searchLcNumber, setSearchLcNumber] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
 
   const fetchDashboardData = useCallback(async (year: string) => {
     setIsLoading(true);
@@ -63,7 +75,22 @@ export default function DashboardPage() {
 
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
-        lcEntriesForTheYear.push({ id: doc.id, ...doc.data() } as LCEntryDocument);
+        const data = doc.data() as Omit<LCEntryDocument, 'id'>;
+        // Ensure updatedAt is converted to a JavaScript Date if it's a Firestore Timestamp
+        let updatedAtJSDate;
+        if (data.updatedAt && typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
+          updatedAtJSDate = (data.updatedAt as unknown as Timestamp).toDate();
+        } else if (data.updatedAt) {
+          // Attempt to parse if it's already a string (less ideal)
+          updatedAtJSDate = parseISO(data.updatedAt as string);
+        }
+
+        lcEntriesForTheYear.push({ 
+            id: doc.id, 
+            ...data,
+            // For consistent handling, ensure dates are strings or proper Date objects based on LCEntryDocument
+            // This spread ensures all fields are present
+          } as LCEntryDocument);
       });
 
       if (lcEntriesForTheYear.length === 0) {
@@ -75,6 +102,7 @@ export default function DashboardPage() {
           thisMonthLCQty: 0,
         });
         setSupplierPieData([]);
+        setRecentlyCompletedLCs([]);
         setIsLoading(false);
         return;
       }
@@ -89,10 +117,9 @@ export default function DashboardPage() {
 
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth();
       
       let thisMonthLCQty = 0;
-      if (yearNumber === currentYear) { // Only calculate for current year selection
+      if (yearNumber === currentYear) {
         const firstDayOfMonth = startOfMonth(currentDate);
         const lastDayOfMonth = endOfMonth(currentDate);
 
@@ -106,7 +133,6 @@ export default function DashboardPage() {
           }
         }).length;
       }
-
 
       setDashboardStats({
         totalLCs: lcEntriesForTheYear.length,
@@ -129,15 +155,46 @@ export default function DashboardPage() {
           value,
           fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
         }))
-        .sort((a, b) => b.value - a.value); // Sort for consistent color assignment and legend order
+        .sort((a, b) => b.value - a.value); 
       
       setSupplierPieData(pieData);
 
+      // Recently Completed L/Cs
+      const completedLCs = lcEntriesForTheYear
+        .filter(lc => lc.status === 'Done')
+        .map(lc => {
+          let updatedAtDate = new Date(); // Default to now if updatedAt is missing or invalid
+          if (lc.updatedAt) {
+            if (typeof (lc.updatedAt as unknown as Timestamp).toDate === 'function') {
+              updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
+            } else {
+              try {
+                updatedAtDate = parseISO(lc.updatedAt as string);
+                if (!isValid(updatedAtDate)) updatedAtDate = new Date(0); // Fallback for invalid date string
+              } catch {
+                updatedAtDate = new Date(0); // Fallback for unparseable string
+              }
+            }
+          }
+          return {
+            id: lc.id,
+            documentaryCreditNumber: lc.documentaryCreditNumber,
+            beneficiaryName: lc.beneficiaryName,
+            updatedAt: lc.updatedAt, // Keep original for type consistency if needed elsewhere
+            updatedAtDate: updatedAtDate,
+          } as RecentlyCompletedLC;
+        })
+        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime()) // Sort by date descending
+        .slice(0, 5); // Take top 5
+
+      setRecentlyCompletedLCs(completedLCs);
+
     } catch (error) {
       console.error("Error fetching dashboard data: ", error);
+      Swal.fire("Error", `Could not fetch dashboard data: ${(error as Error).message}`, "error");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0 });
       setSupplierPieData([]);
-      // Consider showing a user-friendly error message, e.g., using SweetAlert
+      setRecentlyCompletedLCs([]);
     } finally {
       setIsLoading(false);
     }
@@ -146,6 +203,41 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData(selectedYear);
   }, [selectedYear, fetchDashboardData]);
+
+  const handleSearchLC = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchLcNumber.trim()) {
+      Swal.fire("Info", "Please enter an L/C number to search.", "info");
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const lcEntriesRef = collection(firestore, "lc_entries");
+      const q = query(lcEntriesRef, where("documentaryCreditNumber", "==", searchLcNumber.trim()));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        Swal.fire("Not Found", `No L/C found with number: ${searchLcNumber}`, "warning");
+      } else {
+        // Assuming L/C numbers are unique, take the first one
+        const lcDoc = querySnapshot.docs[0];
+        Swal.fire({
+            title: "L/C Found!",
+            text: `Redirecting to details for L/C ${lcDoc.data().documentaryCreditNumber}.`,
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        router.push(`/dashboard/total-lc/${lcDoc.id}/edit`);
+      }
+    } catch (error) {
+      console.error("Error searching L/C: ", error);
+      Swal.fire("Error", `Failed to search L/C: ${(error as Error).message}`, "error");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
 
   // Placeholder data for upcoming shipments - to be replaced with real data
   const upcomingShipments = [
@@ -184,7 +276,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"> {/* Adjusted for 5 cards */}
         <StatCard
           title="Total L/Cs"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -193,7 +285,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total L/C Value"
-          value={`$${dashboardStats.totalLCValue.toLocaleString()}`}
+          value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
         />
@@ -251,18 +343,19 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex w-full items-center space-x-2">
-                <Input type="text" placeholder="Enter L/C Number..." className="flex-1" />
-                <Button type="submit" variant="outline">
-                  <Search className="h-4 w-4" />
+              <form onSubmit={handleSearchLC} className="flex w-full items-center space-x-2">
+                <Input 
+                    type="text" 
+                    placeholder="Enter L/C Number..." 
+                    className="flex-1"
+                    value={searchLcNumber}
+                    onChange={(e) => setSearchLcNumber(e.target.value)}
+                />
+                <Button type="submit" variant="outline" disabled={isSearching}>
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </Button>
-              </div>
+              </form>
             </CardContent>
-            <CardFooter>
-                <p className="text-xs text-muted-foreground">
-                    Search functionality is a UI placeholder.
-                </p>
-            </CardFooter>
           </Card>
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -301,8 +394,45 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
+      
+      {/* Recently Completed L/Cs Card */}
+      <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+            Recently Completed L/Cs
+          </CardTitle>
+          <CardDescription>
+            L/Cs marked as &quot;Done&quot; in {selectedYear}, sorted by most recent update.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recentlyCompletedLCs.length > 0 ? (
+            <ul className="space-y-3">
+              {recentlyCompletedLCs.map((lc) => (
+                <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                  <div className="flex justify-between items-center mb-1">
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
+                      {lc.documentaryCreditNumber || 'N/A'}
+                    </Link>
+                    <span className="text-xs text-muted-foreground">
+                      Completed: {format(lc.updatedAtDate, 'PPP')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Beneficiary: {lc.beneficiaryName || 'N/A'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No L/Cs marked as &quot;Done&quot; found for {selectedYear}.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
-
-    
