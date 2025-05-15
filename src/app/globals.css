@@ -113,3 +113,100 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Print-specific styles */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
+    print-color-adjust: exact !important;         /* Standard */
+    color: #000000 !important; /* Ensure base text color is black */
+    background-color: #ffffff !important; /* Ensure background is white */
+  }
+
+  /* Ensure form inputs, textareas, and selects are visible and their text black */
+  input,
+  textarea,
+  select,
+  .input, /* Covering ShadCN classes too if they don't directly map */
+  .textarea {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cccccc !important; /* Add a light border for visibility */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure form labels are black */
+  label,
+  .form-label { /* Covering ShadCN classes */
+    color: #000000 !important;
+  }
+
+  /* Hide elements not typically wanted in a printout */
+  header, /* Main app header */
+  nav,    /* Sidebar nav */
+  aside,  /* General sidebar */
+  footer, /* Main app footer */
+  button, /* Hide all buttons by default */
+  .noprint, /* Add this class to elements you want to hide from print */
+  [data-sidebar="sidebar"], /* ShadCN sidebar */
+  .sidebar-trigger, /* If your sidebar trigger has a class */
+  .app-header-class, /* Replace with actual class of AppHeader if not just 'header' */
+  .app-sidebar-nav-class /* Replace with actual class of AppSidebarNav if not just 'nav' */
+  {
+    display: none !important;
+  }
+
+  /* Ensure the main content area (where the form is) is printable */
+  main,
+  .main-content-area /* Replace with actual class of your main content wrapper if needed */
+  {
+    margin: 0 !important;
+    padding: 15px !important; /* Add some padding for print layout */
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important; /* Ensure white background for content */
+  }
+
+  /* Card specific overrides for printing */
+  .card, .card-header, .card-content, .card-title, .card-description {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #dddddd !important; /* Lighten border for print */
+    box-shadow: none !important;
+  }
+
+  /* Override gradient text on titles for print */
+  .card-title.bg-gradient-to-r, /* Target specifically the gradient titles */
+  h1.bg-gradient-to-r,
+  h2.bg-gradient-to-r,
+  h3.bg-gradient-to-r {
+    color: #000000 !important;
+    background-image: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    text-fill-color: initial !important;
+  }
+
+  /* Ensure text in ShadCN badges is visible */
+  .badge { /* General badge selector */
+    color: #000000 !important;
+    background-color: #eeeeee !important; /* Light grey background for badges */
+    border: 1px solid #cccccc !important;
+  }
+
+  /* Ensure links are distinguishable */
+  a {
+    color: #000000 !important;
+    text-decoration: underline !important; /* Underline links for print */
+  }
+
+  /* Try to force display of disabled input values */
+  input[disabled] {
+    opacity: 1 !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important; /* For Safari */
+  }
+}
