@@ -31,9 +31,12 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+const NONE_COURIER_VALUE = "__NONE__";
+
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
+  // IDs for applicant and beneficiary are stored in these form fields
+  applicantName: z.string().min(1, "Applicant Name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -68,10 +71,10 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(), // For address
-  notifyPartyName: z.string().optional(),          // For name
-  notifyPartyCell: z.string().optional(),          // For cell
-  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), // For email
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyName: z.string().optional(),
+  notifyPartyCell: z.string().optional(),
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
@@ -119,7 +122,6 @@ interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
   lcId: string;
 }
-const NONE_COURIER_VALUE = "__NONE__";
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -133,7 +135,63 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    // Default values will be set by form.reset in useEffect
+    defaultValues: { // These are initial defaults, form.reset will override with initialData
+      applicantName: '', // Stores ID
+      beneficiaryName: '', // Stores ID
+      currency: 'USD',
+      termsOfPay: "" as TermsOfPay,
+      status: 'Draft',
+      shipmentMode: "" as ShipmentMode,
+      trackingCourier: '',
+      amount: undefined,
+      documentaryCreditNumber: '',
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      totalMachineQty: undefined,
+      lcIssueDate: undefined,
+      expireDate: undefined,
+      latestShipmentDate: undefined,
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
+      itemDescriptions: '',
+      consigneeBankNameAddress: '',
+      bankBin: '',
+      bankTin: '',
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shippingMarks: '',
+      certificateOfOrigin: [],
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
+      numberOfAmendments: undefined,
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
+      finalLcUrl: '',
+      partialShipmentAllowed: 'No',
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
+      originalBlQty: undefined,
+      copyBlQty: undefined,
+      originalCooQty: undefined,
+      copyCooQty: undefined,
+      invoiceQty: undefined,
+      packingListQty: undefined,
+      beneficiaryCertificateQty: undefined,
+      brandNewCertificateQty: undefined,
+      beneficiaryWarrantyCertificateQty: undefined,
+      beneficiaryComplianceCertificateQty: undefined,
+      shipmentAdviceQty: undefined,
+    },
   });
 
   React.useEffect(() => {
@@ -169,14 +227,15 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (initialData) {
-      console.log("Initial L/C Data for Edit Form:", initialData);
-      console.log("Setting Applicant ID in form:", initialData.applicantId);
-      console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
+    // Only reset the form if initialData is available AND dropdown options have been loaded
+    if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
+      console.log("Populating form with Initial L/C Data:", initialData);
+      console.log("Using Applicant ID for form:", initialData.applicantId);
+      console.log("Using Beneficiary ID for form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '', // Stores ID
-        beneficiaryName: initialData.beneficiaryId || '', // Stores ID
+        applicantName: initialData.applicantId || '',
+        beneficiaryName: initialData.beneficiaryId || '',
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -232,7 +291,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? undefined,
       });
     }
-  }, [initialData, form]); // Removed applicantOptions and beneficiaryOptions as form.reset handles IDs directly
+  }, [initialData, form, applicantOptions, beneficiaryOptions]);
 
   const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
   const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
@@ -255,15 +314,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName, // This is the ID from the form
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Update name based on new ID or keep old
-      beneficiaryId: data.beneficiaryName, // This is the ID from the form
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Update name based on new ID or keep old
+      // Editable fields from the form (data object)
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
       shipmentMode: data.shipmentMode,
-      trackingCourier: data.trackingCourier || undefined, // Store empty string as undefined
+      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
       amount: data.amount,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
@@ -312,9 +368,24 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
       beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: data.shipmentAdviceQty,
+
+      // Preserve IDs and Names for Applicant/Beneficiary
+      applicantId: data.applicantName, // data.applicantName now correctly holds the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Update name if ID changed
+      beneficiaryId: data.beneficiaryName, // data.beneficiaryName now correctly holds the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Update name if ID changed
+
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
+
+    // Remove undefined fields to avoid overwriting with undefined in Firestore merge
+    Object.keys(dataToUpdate).forEach(key => {
+      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
+        delete dataToUpdate[key as keyof typeof dataToUpdate];
+      }
+    });
+
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -354,7 +425,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const courier = form.getValues("trackingCourier");
     const number = form.getValues("trackingNumber");
 
-    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
+    if (!courier || courier.trim() === "" || courier === NONE_COURIER_VALUE || !number || number.trim() === "") {
       Swal.fire({
         title: "Information Missing",
         text: "Courier is not set or tracking number is missing.",
@@ -425,7 +496,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || ""}
+                  disabled={isLoadingApplicants}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
@@ -453,7 +528,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
+                 <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                    disabled={isLoadingBeneficiaries}
+                  >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
@@ -545,7 +624,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel>Documentary Credit Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Documentary Credit Number" {...field} />
+                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -558,7 +637,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel>Proforma Invoice Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter PI number" {...field} />
+                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -633,7 +712,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
                 <FormLabel>Item Descriptions</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} />
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -647,7 +726,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel>43P: Partial Shipments Rule</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
+                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -660,7 +739,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel>44E: Port of Loading</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port name" {...field} />
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -673,7 +752,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel>44F: Port of Discharge</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port name" {...field} />
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -692,7 +771,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
                 <FormLabel>Consignee Bank Name and Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter bank name and full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter bank name and full address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -706,7 +785,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Bank BIN</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter Bank Identification Number" {...field} />
+                    <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -719,7 +798,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Bank TIN</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter Taxpayer Identification Number" {...field} />
+                    <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -738,7 +817,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
                 <FormLabel>Notify Party Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter notify party's name" {...field} />
+                  <Input placeholder="Enter notify party's name" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -751,7 +830,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
                 <FormLabel>Notify Party Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter notify party's full address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -765,7 +844,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                   <FormLabel>Notify Party Cell</FormLabel>
                   <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''}/>
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -778,7 +857,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                   <FormLabel>Notify Party Email</FormLabel>
                   <FormControl>
-                  <Input type="email" placeholder="notify@example.com" {...field} />
+                  <Input type="email" placeholder="notify@example.com" {...field} value={field.value ?? ''}/>
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -999,6 +1078,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
                         {...field}
                         disabled={!watchedShipmentMode}
+                        value={field.value ?? ''}
                     />
                     </FormControl>
                     {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
@@ -1016,7 +1096,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         <FormItem className="md:col-span-2">
                             <FormLabel>Vessel IMO Number</FormLabel>
                             <FormControl>
-                                <Input placeholder="Enter Vessel IMO Number" {...field} />
+                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -1049,7 +1129,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                             <FormLabel>Courier</FormLabel>
                             <Select
                                 onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                                value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}
+                                value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
                             >
                                 <FormControl>
                                     <SelectTrigger>
@@ -1074,7 +1154,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} />
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} value={field.value ?? ''}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -1084,7 +1164,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     type="button"
                     variant="default"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >
@@ -1337,7 +1417,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -1430,12 +1510,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Saving Changes...
             </>
           ) : (
             <>
-              <Library className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
@@ -1443,3 +1523,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
