@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Library } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Library, Box, Weight, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,6 +65,10 @@ const lcEntrySchema = z.object({
   bankTin: z.string().optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
@@ -134,9 +138,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: { 
-      applicantName: '', 
-      beneficiaryName: '', 
+    defaultValues: {
+      applicantName: '',
+      beneficiaryName: '',
       currency: 'USD',
       termsOfPay: "" as TermsOfPay,
       status: 'Draft',
@@ -159,6 +163,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       bankTin: '',
       vesselOrFlightName: '',
       vesselImoNumber: '',
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -204,7 +212,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("Fetched Applicant Options for Edit Form:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -212,7 +219,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("Fetched Beneficiary Options for Edit Form:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
@@ -256,6 +262,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         bankTin: initialData.bankTin || '',
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
+        totalPackageQty: initialData.totalPackageQty ?? undefined,
+        totalNetWeight: initialData.totalNetWeight ?? undefined,
+        totalGrossWeight: initialData.totalGrossWeight ?? undefined,
+        totalCbm: initialData.totalCbm ?? undefined,
         partialShipments: initialData.partialShipments || '',
         portOfLoading: initialData.portOfLoading || '',
         portOfDischarge: initialData.portOfDischarge || '',
@@ -312,6 +322,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
+      applicantId: data.applicantName,
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
+      beneficiaryId: data.beneficiaryName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
@@ -334,6 +348,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       bankTin: data.bankTin,
       vesselOrFlightName: data.vesselOrFlightName,
       vesselImoNumber: data.vesselImoNumber,
+      totalPackageQty: data.totalPackageQty,
+      totalNetWeight: data.totalNetWeight,
+      totalGrossWeight: data.totalGrossWeight,
+      totalCbm: data.totalCbm,
       partialShipments: data.partialShipments,
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
@@ -365,17 +383,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
       beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: data.shipmentAdviceQty,
-      applicantId: data.applicantName, 
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, 
-      beneficiaryId: data.beneficiaryName, 
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, 
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    Object.keys(dataToUpdate).forEach(key => {
-      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-        delete dataToUpdate[key as keyof typeof dataToUpdate];
+    (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
+      if (dataToUpdate[key] === undefined) {
+        delete dataToUpdate[key];
       }
     });
 
@@ -1108,6 +1122,62 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </div>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+          <FormField
+            control={form.control}
+            name="totalPackageQty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total Package Qty</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalNetWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Weight className="mr-2 h-4 w-4 text-muted-foreground" />Total Net Weight (kg)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 1200.50" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalGrossWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Scale className="mr-2 h-4 w-4 text-muted-foreground" />Total Gross Weight (kg)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 1250.75" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalCbm"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total CBM</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.001" placeholder="e.g., 15.345" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+
          <div className="mt-6">
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -1156,7 +1226,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     type="button"
                     variant="default"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >

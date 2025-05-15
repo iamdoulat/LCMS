@@ -32,8 +32,8 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantName: string;   // Represents Applicant ID from customers collection, form stores ID
-  beneficiaryName: string; // Represents Beneficiary ID from suppliers collection, form stores ID
+  applicantName: string;   // Stores Applicant ID from customers collection, form stores ID
+  beneficiaryName: string; // Stores Beneficiary ID from suppliers collection, form stores ID
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -58,15 +58,19 @@ export interface LCEntry {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
+  totalPackageQty?: number | '';
+  totalNetWeight?: number | '';
+  totalGrossWeight?: number | '';
+  totalCbm?: number | '';
   partialShipments?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string; // This will be for the address
-  notifyPartyName?: string;           // New field for name
-  notifyPartyCell?: string;           // New field for cell
-  notifyPartyEmail?: string;          // New field for email
+  notifyPartyNameAndAddress?: string; // Stores address
+  notifyPartyName?: string;           // Stores contact person name
+  notifyPartyCell?: string;           // Stores cell
+  notifyPartyEmail?: string;          // Stores email
   numberOfAmendments?: number | '';
   status?: LCStatus;
   partialShipmentAllowed?: PartialShipmentAllowed;
@@ -120,13 +124,17 @@ export interface LCEntryDocument {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
+  totalPackageQty?: number;
+  totalNetWeight?: number;
+  totalGrossWeight?: number;
+  totalCbm?: number;
   partialShipments?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string; // Stores address
-  notifyPartyName?: string;           // Stores name
+  notifyPartyName?: string;           // Stores contact person name
   notifyPartyCell?: string;           // Stores cell
   notifyPartyEmail?: string;          // Stores email
   numberOfAmendments?: number;

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon } from 'lucide-react';
+import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -74,15 +74,19 @@ const lcEntrySchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(), 
-  notifyPartyName: z.string().optional(),          
-  notifyPartyCell: z.string().optional(),          
-  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), 
+  notifyPartyNameAndAddress: z.string().optional(), // This will be for the address
+  notifyPartyName: z.string().optional(),          // New field for name
+  notifyPartyCell: z.string().optional(),          // New field for cell
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
@@ -159,15 +163,15 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '', 
-      beneficiaryName: '', 
+      applicantName: '',
+      beneficiaryName: '',
       currency: 'USD' as Currency,
-      amount: undefined,
+      amount: undefined, // Changed from '' to undefined
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
-      totalMachineQty: undefined,
+      totalMachineQty: undefined, // Changed from '' to undefined
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
@@ -185,6 +189,10 @@ export function NewLCEntryForm() {
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
       vesselImoNumber: '',
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -194,7 +202,7 @@ export function NewLCEntryForm() {
       notifyPartyName: '',
       notifyPartyCell: '',
       notifyPartyEmail: '',
-      numberOfAmendments: undefined,
+      numberOfAmendments: undefined, // Changed from '' to undefined
       status: 'Draft',
       partialShipmentAllowed: 'No',
       firstPartialQty: undefined,
@@ -252,17 +260,17 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName,
+      applicantId: data.applicantName, // This is the ID
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName,
+      beneficiaryId: data.beneficiaryName, // This is the ID
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
-      amount: data.amount,
+      amount: data.amount, // Zod already ensures this is a number
       termsOfPay: data.termsOfPay,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty,
+      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -280,6 +288,10 @@ export function NewLCEntryForm() {
       shipmentMode: data.shipmentMode,
       vesselOrFlightName: data.vesselOrFlightName,
       vesselImoNumber: data.vesselImoNumber,
+      totalPackageQty: data.totalPackageQty,
+      totalNetWeight: data.totalNetWeight,
+      totalGrossWeight: data.totalGrossWeight,
+      totalCbm: data.totalCbm,
       partialShipments: data.partialShipments,
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
@@ -289,7 +301,7 @@ export function NewLCEntryForm() {
       notifyPartyName: data.notifyPartyName,
       notifyPartyCell: data.notifyPartyCell,
       notifyPartyEmail: data.notifyPartyEmail,
-      numberOfAmendments: data.numberOfAmendments,
+      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is a number
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
@@ -314,9 +326,9 @@ export function NewLCEntryForm() {
       updatedAt: serverTimestamp() as any,
     };
      // Remove undefined fields to avoid overwriting with undefined in Firestore merge
-    Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-        delete dataToSave[key as keyof typeof dataToSave];
+    (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
+      if (dataToSave[key] === undefined) {
+        delete dataToSave[key];
       }
     });
 
@@ -1031,6 +1043,61 @@ export function NewLCEntryForm() {
             </div>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+          <FormField
+            control={form.control}
+            name="totalPackageQty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total Package Qty</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalNetWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Weight className="mr-2 h-4 w-4 text-muted-foreground" />Total Net Weight (kg)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 1200.50" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalGrossWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Scale className="mr-2 h-4 w-4 text-muted-foreground" />Total Gross Weight (kg)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 1250.75" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalCbm"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total CBM</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.001" placeholder="e.g., 15.345" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
          <div className="mt-6">
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -1118,7 +1185,7 @@ export function NewLCEntryForm() {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-        <div className="space-y-4">
+         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
