@@ -5,26 +5,30 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode } from '@/types';
-// Removed unused options imports: termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, LCEntry } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info } from 'lucide-react';
-// Removed Select imports as they are no longer used for these fields on this form
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Schema now only includes fields that are directly editable on this form.
-// Fields like applicantName, beneficiaryName, currency, termsOfPay, status, shipmentMode, trackingCourier
-// will be displayed from initialData but are not part of the form's editable state or validation here.
+// Schema now includes fields that are editable on this form.
 const lcEntrySchema = z.object({
+  applicantName: z.string().min(1, "Applicant Name is required"), // Will hold applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Will hold beneficiary ID
+  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
@@ -64,6 +68,11 @@ const lcEntrySchema = z.object({
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
 interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
   lcId: string;
@@ -71,16 +80,62 @@ interface EditLCEntryFormProps {
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
+  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
+    // Default values will be set by form.reset in useEffect
   });
+
+  React.useEffect(() => {
+    const fetchDropdownData = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        const fetchedApplicants = customersSnapshot.docs.map(doc => {
+          const data = doc.data() as CustomerDocument;
+          return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+        });
+        setApplicantOptions(fetchedApplicants);
+
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
+          const data = doc.data() as SupplierDocument;
+          return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
+        });
+        setBeneficiaryOptions(fetchedBeneficiaries);
+      } catch (error) {
+        console.error("Error fetching dropdown data: ", error);
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+    fetchDropdownData();
+  }, []);
 
   React.useEffect(() => {
     if (initialData) {
       console.log("Initial L/C Data for Edit Form:", initialData);
+      console.log("Setting Applicant ID in form:", initialData.applicantId);
+      console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
+
       form.reset({
-        // Only reset fields that are part of the LCEditFormValues (editable fields)
+        // Fields that are now dropdowns
+        applicantName: initialData.applicantId || '', // Store ID
+        beneficiaryName: initialData.beneficiaryId || '', // Store ID
+        currency: initialData.currency || 'USD',
+        termsOfPay: initialData.termsOfPay || '',
+        status: initialData.status || 'Draft',
+        shipmentMode: initialData.shipmentMode || '',
+        trackingCourier: initialData.trackingCourier || '',
+
+        // Other editable fields
         amount: initialData.amount !== undefined ? initialData.amount : undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
         proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
@@ -113,22 +168,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
+
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID
     
     const dataToUpdate: Partial<LCEntryDocument> = {
       // Editable fields from the form
       ...data, 
       
-      // Preserve non-editable (display-only) fields from initialData
-      applicantId: initialData.applicantId,
-      applicantName: initialData.applicantName,
-      beneficiaryId: initialData.beneficiaryId,
-      beneficiaryName: initialData.beneficiaryName,
-      currency: initialData.currency,
-      termsOfPay: initialData.termsOfPay,
-      status: initialData.status,
-      shipmentMode: initialData.shipmentMode,
-      trackingCourier: initialData.trackingCourier,
-      
+      // Handle Applicant and Beneficiary ID and Name
+      applicantId: data.applicantName, // The form field 'applicantName' stores the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Get label for display name
+      beneficiaryId: data.beneficiaryName, // The form field 'beneficiaryName' stores the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Get label for display name
+
       // Ensure correct types for numbers and dates
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
@@ -175,19 +228,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }
   
-  const watchedShipmentModeFromInitial = initialData.shipmentMode; // Use initialData for display logic
+  const watchedShipmentMode = form.watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
-  if (watchedShipmentModeFromInitial === "Sea") {
+  if (watchedShipmentMode === "Sea") {
     viaLabel = "Vessel Name";
-  } else if (watchedShipmentModeFromInitial === "Air") {
+  } else if (watchedShipmentMode === "Air") {
     viaLabel = "Flight Name";
   }
 
-  const amountLabel = initialData.currency ? `${initialData.currency} Amount*` : "Amount*";
+  const watchedCurrency = form.watch("currency");
+  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
   
   const handleTrackDocument = () => {
-    const courier = initialData.trackingCourier; // Use initialData for tracking
-    const number = form.getValues("trackingNumber"); // Tracking number is editable
+    const courier = form.getValues("trackingCourier");
+    const number = form.getValues("trackingNumber");
 
     if (!courier || courier.trim() === "" || !number || number.trim() === "") {
       Swal.fire({
@@ -217,7 +271,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   };
 
   const handleTrackVessel = () => {
-    const imoNumber = form.getValues("vesselImoNumber"); // IMO number is editable
+    const imoNumber = form.getValues("vesselImoNumber"); 
     if (!imoNumber || imoNumber.trim() === "") {
        Swal.fire({
         title: "IMO Number Missing",
@@ -240,29 +294,87 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           L/C & Invoice Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormItem>
-            <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-            <FormControl>
-              <Input value={initialData.applicantName || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            </FormControl>
-            <FormDescription>Applicant for this L/C (cannot be changed here).</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="applicantName" // This field now stores applicantId
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {!isLoadingApplicants && applicantOptions.length === 0 && (
+                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
+                    )}
+                    {applicantOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
-          <FormItem>
-            <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-            <FormControl>
-              <Input value={initialData.beneficiaryName || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            </FormControl>
-            <FormDescription>Beneficiary for this L/C (cannot be changed here).</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="beneficiaryName" // This field now stores beneficiaryId
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+                 <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
+                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
+                    )}
+                    {beneficiaryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <FormItem>
-            <FormLabel>Currency*</FormLabel>
-            <FormControl>
-                <Input value={initialData.currency || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            </FormControl>
-            <FormDescription>Currency of this L/C (cannot be changed here).</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Currency*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {currencyOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
 
           <FormField
             control={form.control}
@@ -277,13 +389,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-          <FormItem>
-            <FormLabel>Terms of Pay*</FormLabel>
-            <FormControl>
-                <Input value={initialData.termsOfPay || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            </FormControl>
-            <FormDescription>Terms of pay for this L/C (cannot be changed here).</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="termsOfPay"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Terms of Pay*</FormLabel>
+                 <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select terms of payment" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {termsOfPayOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
@@ -348,13 +477,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-          <FormItem>
-            <FormLabel className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-            <FormControl>
-                <Input value={initialData.status || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            </FormControl>
-            <FormDescription>Current status of this L/C (cannot be changed here).</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "Draft"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select L/C status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {lcStatusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
             control={form.control}
@@ -534,13 +680,32 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             Shipping Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormItem>
-                <FormLabel>Shipment Mode*</FormLabel>
-                <FormControl>
-                    <Input value={initialData.shipmentMode || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                </FormControl>
-                <FormDescription>Shipment mode for this L/C (cannot be changed here).</FormDescription>
-            </FormItem>
+            <FormField
+                control={form.control}
+                name="shipmentMode"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipment Mode*</FormLabel>
+                     <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select shipment mode" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {shipmentModeOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                                {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                                {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                                {option}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
             <FormField
                 control={form.control}
                 name="vesselOrFlightName"
@@ -549,18 +714,18 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
                     <Input
-                        placeholder={watchedShipmentModeFromInitial ? `Enter ${watchedShipmentModeFromInitial === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
                         {...field}
-                        disabled={!watchedShipmentModeFromInitial}
+                        disabled={!watchedShipmentMode}
                     />
                     </FormControl>
-                    {!watchedShipmentModeFromInitial && <FormDescription>Shipment mode not set.</FormDescription>}
+                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
             />
         </div>
-        {watchedShipmentModeFromInitial === 'Sea' && (
+        {watchedShipmentMode === 'Sea' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
                 <FormField
                     control={form.control}
@@ -594,13 +759,28 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-                <FormItem className="md:col-span-1">
-                    <FormLabel>Courier</FormLabel>
-                    <FormControl>
-                        <Input value={initialData.trackingCourier || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                    </FormControl>
-                    <FormDescription>Courier (cannot be changed here).</FormDescription>
-                </FormItem>
+                <FormField
+                    control={form.control}
+                    name="trackingCourier"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-1">
+                            <FormLabel>Courier</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Select Courier" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {trackingCourierOptions.map(courier => (
+                                        <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="trackingNumber"
@@ -608,7 +788,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} disabled={!initialData.trackingCourier} />
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -618,7 +798,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     type="button"
                     variant="outline"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !initialData.trackingCourier || isSubmitting}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >
@@ -706,22 +886,29 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             />
         </div>
         
-        {/* File uploads are not part of this edit form for simplicity. 
-            Could display existing file URLs/names if available in initialData.
-        */}
          <FormItem>
             <FormLabel>Final PI Document</FormLabel>
             <Input value={initialData.finalPIUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            <FormDescription>Final PI file (cannot be changed here).</FormDescription>
+            {initialData.finalPIUrl && (
+                 <a href={initialData.finalPIUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
+                    View Uploaded PI <ExternalLink className="ml-1 h-3 w-3"/>
+                 </a>
+            )}
+            <FormDescription>Final PI file (file re-upload not available in edit mode).</FormDescription>
         </FormItem>
         <FormItem>
             <FormLabel>Shipping Documents</FormLabel>
             <Input value={initialData.shippingDocumentsUrl ? "File previously uploaded" : "No file uploaded"} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-            <FormDescription>Shipping documents (cannot be changed here).</FormDescription>
+             {initialData.shippingDocumentsUrl && (
+                 <a href={initialData.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline inline-flex items-center mt-1">
+                    View Uploaded Shipping Docs <ExternalLink className="ml-1 h-3 w-3"/>
+                 </a>
+            )}
+            <FormDescription>Shipping documents (file re-upload not available in edit mode).</FormDescription>
         </FormItem>
 
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
