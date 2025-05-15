@@ -365,7 +365,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">Dashboard Overview</h1>
+        <h1 className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>Dashboard Overview</h1>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
@@ -414,6 +414,7 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
+          className="lg:col-start-1"
         />
       </div>
 
@@ -478,9 +479,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {upcomingEtdShipments.length > 0 ? (
-                <ul className="space-y-3">
+                 <ul className="space-y-2">
                   {upcomingEtdShipments.map((shipment) => (
-                     <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                    <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
                         <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate sm:col-span-1">
                           {shipment.documentaryCreditNumber || 'N/A'}
@@ -606,6 +607,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
-    
