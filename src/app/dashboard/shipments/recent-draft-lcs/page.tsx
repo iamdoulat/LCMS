@@ -89,7 +89,7 @@ export default function RecentDraftLCsPage() {
       } catch (error: any) {
         console.error("Error fetching draft L/Cs: ", error);
         let errorMessage = `Could not fetch draft L/C data. Please ensure Firestore rules allow reads.`;
-        if (error.message && error.message.includes("indexes?create_composite")) {
+        if (error.message && error.message.toLowerCase().includes("index")) { // Check for index-related error messages
             errorMessage = `Could not fetch draft L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'createdAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
@@ -130,7 +130,9 @@ export default function RecentDraftLCsPage() {
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
-              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
+                 dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+              </p>
             </div>
           ) : draftLCs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
@@ -179,3 +181,4 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
+
