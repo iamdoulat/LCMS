@@ -168,8 +168,47 @@ export default function AccountDetailsPage() {
       if(newPhotoURL) setImagePreviewUrl(newPhotoURL); 
 
     } catch (err: any) {
-      console.error("Profile update or file upload error:", err);
-      const errorMessage = err.message || "Failed to update profile. Please try again.";
+      console.error("Profile update or file upload error details:", err); // Log the full error object
+      let errorMessage = "Failed to update profile. Please try again.";
+      if (err.code) { // Check if it's a Firebase error with a code
+        switch (err.code) {
+          case 'storage/unauthorized':
+            errorMessage = "Permission denied. Please check Firebase Storage security rules to allow uploads to your profileImages folder.";
+            break;
+          case 'storage/canceled':
+            errorMessage = "Upload was cancelled by the user.";
+            break;
+          case 'storage/object-not-found':
+             errorMessage = "File not found. This can happen if the storage path is incorrect or the object doesn't exist.";
+            break;
+          case 'storage/bucket-not-found':
+            errorMessage = "Firebase Storage bucket not found. Please ensure NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET in .env.local is correct and the bucket exists.";
+            break;
+          case 'storage/project-not-found':
+            errorMessage = "Firebase project not found. Please check your Firebase configuration.";
+            break;
+          case 'storage/quota-exceeded':
+            errorMessage = "Storage quota exceeded. Please check your Firebase Storage plan.";
+            break;
+          case 'storage/unauthenticated':
+            errorMessage = "User is not authenticated. Please log in again.";
+            break;
+          case 'storage/retry-limit-exceeded':
+            errorMessage = "Upload timed out. Please check your internet connection and try again.";
+            break;
+          case 'storage/invalid-checksum':
+            errorMessage = "File integrity check failed during upload. Please try again.";
+            break;
+          case 'auth/requires-recent-login':
+             errorMessage = "This operation is sensitive and requires recent authentication. Please log out and log back in before updating your profile.";
+             break;
+          default:
+            errorMessage = `An error occurred: ${err.message} (Code: ${err.code})`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       Swal.fire({
         title: "Update Failed",
@@ -327,3 +366,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
