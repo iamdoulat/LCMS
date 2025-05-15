@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
           <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card">
             © 2025, Design and develop by{' '}
             <a
-              href="https://gb.me/mddoulat2" // Ensured no space in URL
+              href="https://fb.me/mddoulat2" // Updated hyperlink
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium hover:text-primary hover:underline"
