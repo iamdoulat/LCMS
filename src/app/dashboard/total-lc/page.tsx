@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -24,7 +23,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default'; // Could be a specific color like yellow/orange if theme supports
+      return 'default'; // Consider specific color like yellow/orange if theme supports
     case 'Shipping going on':
       return 'default'; 
     case 'Done':
@@ -266,4 +265,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
