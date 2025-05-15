@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship, FileEdit } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 import { firestore } from '@/lib/firebase/config';
@@ -35,8 +35,24 @@ interface PieChartDataItem {
   fill: string;
 }
 
-interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'updatedAt' | 'status'> {
+interface RecentlyCompletedLC {
+  id: string;
+  documentaryCreditNumber?: string;
+  beneficiaryName?: string;
+  applicantName?: string;
   updatedAtDate: Date;
+  status?: LCStatus;
+  currency?: Currency;
+  amount?: number;
+}
+
+interface DraftLC {
+  id: string;
+  documentaryCreditNumber?: string;
+  beneficiaryName?: string;
+  applicantName?: string;
+  createdAtDate: Date;
+  status?: LCStatus;
   currency?: Currency;
   amount?: number;
 }
@@ -94,6 +110,7 @@ export default function DashboardPage() {
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
+  const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [searchLcNumber, setSearchLcNumber] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -127,6 +144,7 @@ export default function DashboardPage() {
         });
         setSupplierPieData([]);
         setRecentlyCompletedLCs([]);
+        setDraftLCs([]);
         setUpcomingEtdShipments([]);
         setIsLoading(false);
         return;
@@ -222,6 +240,42 @@ export default function DashboardPage() {
 
       setRecentlyCompletedLCs(completedLCs);
 
+      // Draft L/Cs
+      const currentDraftLCs = lcEntriesForTheYear
+        .filter(lc => lc.status === 'Draft')
+        .map(lc => {
+          let createdAtDate = new Date(0);
+          if (lc.createdAt) {
+            if (typeof (lc.createdAt as unknown as Timestamp).toDate === 'function') {
+              createdAtDate = (lc.createdAt as unknown as Timestamp).toDate();
+            } else {
+              try {
+                const parsedDate = parseISO(lc.createdAt as string);
+                if (isValid(parsedDate)) {
+                  createdAtDate = parsedDate;
+                }
+              } catch {
+                // Keep default invalid date if parsing fails
+              }
+            }
+          }
+          return {
+            id: lc.id,
+            documentaryCreditNumber: lc.documentaryCreditNumber,
+            beneficiaryName: lc.beneficiaryName,
+            applicantName: lc.applicantName,
+            createdAtDate: createdAtDate,
+            status: lc.status,
+            currency: lc.currency,
+            amount: lc.amount,
+          } as DraftLC;
+        })
+        .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime())
+        .slice(0, 10);
+      
+      setDraftLCs(currentDraftLCs);
+
+
       // Upcoming ETDs
       const today = new Date();
       today.setHours(0,0,0,0); // Set to start of today for comparison
@@ -254,6 +308,7 @@ export default function DashboardPage() {
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
+      setDraftLCs([]);
       setUpcomingEtdShipments([]);
     } finally {
       setIsLoading(false);
@@ -442,60 +497,116 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-
-      <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-            <CheckCircle2 className="h-6 w-6 text-green-600" />
-            Recently Completed L/Cs
-          </CardTitle>
-          <CardDescription>
-            L/Cs marked as &quot;Done&quot; in {selectedYear}, sorted by most recent update.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {recentlyCompletedLCs.length > 0 ? (
-            <ul className="space-y-3">
-              {recentlyCompletedLCs.map((lc) => (
-                <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                  <div className="flex justify-between items-center mb-1">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
-                      {lc.documentaryCreditNumber || 'N/A'}
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <Badge
-                          variant={getStatusBadgeVariant(lc.status)}
-                          className={
-                            lc.status === 'Done' ? 'bg-green-600 text-white' : ''
-                          }
-                        >
-                          {lc.status || 'N/A'}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                        Completed: {format(lc.updatedAtDate, 'PPP')}
-                        </span>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              <FileEdit className="h-6 w-6 text-orange-500" /> {/* Icon for Draft L/Cs */}
+              Draft L/Cs
+            </CardTitle>
+            <CardDescription>
+              L/Cs currently in &quot;Draft&quot; status for {selectedYear}, sorted by most recent creation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {draftLCs.length > 0 ? (
+              <ul className="space-y-3">
+                {draftLCs.map((lc) => (
+                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
+                        {lc.documentaryCreditNumber || 'N/A'}
+                      </Link>
+                      <div className="flex items-center gap-2">
+                          <Badge
+                            variant={getStatusBadgeVariant(lc.status)}
+                            className={
+                              lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300' : ''
+                            }
+                          >
+                            {lc.status || 'N/A'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                          Created: {isValid(lc.createdAtDate) && lc.createdAtDate.getFullYear() > 1 ? format(lc.createdAtDate, 'PPP') : 'Date N/A'}
+                          </span>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Applicant: {lc.applicantName || 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Beneficiary: {lc.beneficiaryName || 'N/A'}
-                  </p>
-                   <p className="text-xs text-muted-foreground">
-                    Value: {formatCurrencyValue(lc.currency, lc.amount)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No L/Cs marked as &quot;Done&quot; found for {selectedYear}.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                    <p className="text-xs text-muted-foreground">
+                      Applicant: {lc.applicantName || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Beneficiary: {lc.beneficiaryName || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Value: {formatCurrencyValue(lc.currency, lc.amount)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No L/Cs in &quot;Draft&quot; status found for {selectedYear}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+              Recently Completed L/Cs
+            </CardTitle>
+            <CardDescription>
+              L/Cs marked as &quot;Done&quot; in {selectedYear}, sorted by most recent update.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentlyCompletedLCs.length > 0 ? (
+              <ul className="space-y-3">
+                {recentlyCompletedLCs.map((lc) => (
+                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
+                        {lc.documentaryCreditNumber || 'N/A'}
+                      </Link>
+                      <div className="flex items-center gap-2">
+                          <Badge
+                            variant={getStatusBadgeVariant(lc.status)}
+                            className={
+                              lc.status === 'Done' ? 'bg-green-600 text-white' : ''
+                            }
+                          >
+                            {lc.status || 'N/A'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                          Completed: {format(lc.updatedAtDate, 'PPP')}
+                          </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Applicant: {lc.applicantName || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Beneficiary: {lc.beneficiaryName || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Value: {formatCurrencyValue(lc.currency, lc.amount)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No L/Cs marked as &quot;Done&quot; found for {selectedYear}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
     </div>
   );
 }
+
