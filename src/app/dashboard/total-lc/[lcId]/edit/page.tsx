@@ -4,10 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
-import { FileEdit as FileEditIcon, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { FileEdit as FileEditIcon, ArrowLeft, Loader2, AlertTriangle, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditLCEntryForm } from '@/components/forms/EditLCEntryForm'; // To be created
+import { EditLCEntryForm } from '@/components/forms/EditLCEntryForm'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { LCEntryDocument } from '@/types';
@@ -55,6 +55,21 @@ export default function EditLCPage() {
     }
   }, [lcId, router]);
 
+  const handlePrintThisLC = () => {
+    Swal.fire({
+      title: "Print L/C Details",
+      text: `This will open the browser's print dialog for the current L/C details.`,
+      icon: "info",
+      confirmButtonText: "Proceed to Print",
+      showCancelButton: true,
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.print();
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -89,7 +104,7 @@ export default function EditLCPage() {
   }
   
   if (!lcData) {
-     return ( // Should be covered by error state, but as a fallback
+     return ( 
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">L/C entry data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4">
@@ -105,13 +120,17 @@ export default function EditLCPage() {
 
   return (
     <div className="container mx-auto py-8">
-       <div className="mb-6">
+       <div className="mb-6 flex justify-between items-center">
         <Link href="/dashboard/total-lc" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to L/C List
           </Button>
         </Link>
+        <Button variant="outline" onClick={handlePrintThisLC}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print this L/C
+        </Button>
       </div>
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>

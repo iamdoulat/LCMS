@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Printer } from 'lucide-react'; // Changed FileText to Printer
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,11 +23,11 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default';
+      return 'default'; // Consider a yellow-ish or orange color via custom class if needed
     case 'Shipping going on':
-      return 'default';
+      return 'default'; // Consider a blue-ish color
     case 'Done':
-      return 'default';
+      return 'default'; // Consider a green color
     default:
       return 'outline';
   }
@@ -45,7 +45,7 @@ const formatDisplayDate = (dateString?: string) => {
 
 const formatCurrencyValue = (currency?: string, amount?: number) => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
-  return `${currency || ''} ${amount.toLocaleString()}`;
+  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 
@@ -87,23 +87,12 @@ export default function TotalLCPage() {
     router.push(`/dashboard/total-lc/${lcId}/edit`);
   };
   
-  const handlePrintLC = (lcId: string, lcNumber?: string) => {
+  const handlePrintLC = (lcId: string) => {
     if (!lcId) {
-        Swal.fire("Error", "L/C ID is missing, cannot print.", "error");
+        Swal.fire("Error", "L/C ID is missing, cannot open details for printing.", "error");
         return;
     }
-    Swal.fire({
-        title: "Print L/C Details",
-        text: `This will open the browser's print dialog for the current page. For a more specific L/C document printout, further customization is needed. L/C: "${lcNumber || lcId}"`,
-        icon: "info",
-        confirmButtonText: "Proceed to Print",
-        showCancelButton: true,
-        cancelButtonText: "Cancel",
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.print();
-        }
-    });
+    router.push(`/dashboard/total-lc/${lcId}/edit`);
   };
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
@@ -212,16 +201,16 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => lc.id && handlePrintLC(lc.id, lc.documentaryCreditNumber)}
+                                onClick={() => lc.id && handlePrintLC(lc.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                                 disabled={!lc.id}
                               >
                                 <Printer className="h-4 w-4" /> 
-                                <span className="sr-only">Print L/C Details</span>
+                                <span className="sr-only">View & Print L/C Details</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Print L/C Details</p> 
+                              <p>View & Print L/C Details</p> 
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip>
@@ -280,4 +269,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
