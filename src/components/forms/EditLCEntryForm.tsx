@@ -154,6 +154,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -161,6 +162,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
+        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
@@ -174,6 +176,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
+    // Ensure options are loaded before resetting the form to prevent race conditions
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
       console.log("Populating Edit Form with Initial L/C Data:", initialData);
       console.log("Setting Applicant ID in Edit Form:", initialData.applicantId);
@@ -264,10 +267,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName,
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
+      applicantId: data.applicantName, // This is the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Store the name based on selected ID
+      beneficiaryId: data.beneficiaryName, // This is the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Store the name based on selected ID
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
@@ -329,6 +332,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
+    // Filter out undefined fields before sending to Firestore
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
       if (dataToUpdate[key] === undefined) {
         delete dataToUpdate[key];
@@ -1403,7 +1407,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        <FormField
+         <FormField
             control={form.control}
             name="shippingMarks"
             render={({ field }) => (
@@ -1503,12 +1507,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Saving Changes...
             </>
           ) : (
             <>
-              <Library className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
@@ -1516,3 +1520,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+
+    
