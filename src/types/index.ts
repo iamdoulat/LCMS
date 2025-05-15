@@ -25,16 +25,16 @@ export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
-  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA AND HK",
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string;
+  beneficiaryName: string; // Represents Beneficiary ID from suppliers collection
   beneficiaryId?: string;
-  applicantName: string;
+  applicantName: string;   // Represents Applicant ID from customers collection
   applicantId?: string;
   currency: Currency;
   amount: number | '';
@@ -48,7 +48,7 @@ export interface LCEntry {
   latestShipmentDate?: Date;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string;
+  finalLcUrl?: string; // Added this field
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
@@ -92,27 +92,27 @@ export interface LCEntry {
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string;
-  beneficiaryName: string;
-  applicantId: string;
-  beneficiaryId: string;
+  applicantName: string; // Stores the actual name for display
+  applicantId: string;   // Stores the ID from the customers collection
+  beneficiaryName: string; // Stores the actual name for display
+  beneficiaryId: string;   // Stores the ID from the suppliers collection
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string;
+  invoiceDate?: string; // Stored as ISO string
   totalMachineQty: number;
-  lcIssueDate?: string;
-  expireDate?: string;
-  latestShipmentDate?: string;
+  lcIssueDate?: string; // Stored as ISO string
+  expireDate?: string; // Stored as ISO string
+  latestShipmentDate?: string; // Stored as ISO string
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string;
+  finalLcUrl?: string; // Added this field
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string;
-  eta?: string;
+  etd?: string; // Stored as ISO string
+  eta?: string; // Stored as ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -129,8 +129,8 @@ export interface LCEntryDocument {
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number;
   status: LCStatus;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -188,7 +188,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  timestamp: string;
+  timestamp: string; // ISO string
   isRead: boolean;
   link?: string;
 }
