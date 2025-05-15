@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { FileEdit as FileEditIcon, ArrowLeft, Loader2, AlertTriangle, Printer } from 'lucide-react';
@@ -23,36 +23,9 @@ export default function EditLCPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePrintThisLC = useCallback(() => {
-    const handleAlertKeyDown = (event: KeyboardEvent) => {
-      // Check if a SweetAlert2 modal is currently open and Ctrl+P is pressed
-      if (Swal.getPopup() && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
-        event.preventDefault(); // Prevent default browser print if alert is open
-        Swal.clickConfirm(); // Programmatically click the SweetAlert2 confirm button
-      }
-    };
-
-    Swal.fire({
-      title: "Print L/C Details",
-      text: `This will open the browser's print dialog for the current L/C details.`,
-      icon: "info",
-      confirmButtonText: "Proceed to Print",
-      showCancelButton: true,
-      cancelButtonText: "Cancel",
-      didOpen: () => {
-        // Add listener when the alert opens
-        document.addEventListener('keydown', handleAlertKeyDown);
-      },
-      willClose: () => {
-        // Remove listener when the alert closes
-        document.removeEventListener('keydown', handleAlertKeyDown);
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        window.print();
-      }
-    });
-  }, []);
+  const handleDirectPrint = () => {
+    window.print();
+  };
 
   useEffect(() => {
     if (lcId) {
@@ -87,14 +60,11 @@ export default function EditLCPage() {
     }
   }, [lcId, router]);
 
-  // Page-level shortcut to OPEN the print confirmation dialog
   useEffect(() => {
     const handlePageKeyDown = (event: KeyboardEvent) => {
-      // Only trigger if no SweetAlert is currently open to avoid double-triggering
-      // and to ensure this doesn't interfere with the alert-specific Ctrl+P
-      if (!Swal.getPopup() && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
         event.preventDefault();
-        handlePrintThisLC();
+        handleDirectPrint();
       }
     };
 
@@ -102,7 +72,7 @@ export default function EditLCPage() {
     return () => {
       window.removeEventListener('keydown', handlePageKeyDown);
     };
-  }, [handlePrintThisLC]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -161,9 +131,9 @@ export default function EditLCPage() {
             Back to L/C List
           </Button>
         </Link>
-        <Button variant="outline" onClick={handlePrintThisLC}>
+        <Button variant="outline" onClick={handleDirectPrint}>
             <Printer className="mr-2 h-4 w-4" />
-            Print this L/C
+            Ctrl+P
         </Button>
       </div>
       <Card className="max-w-4xl mx-auto shadow-xl">
