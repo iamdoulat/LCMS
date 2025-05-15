@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 interface DraftLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount'> {
   createdAtDate: Date;
@@ -112,9 +113,9 @@ export default function RecentDraftLCsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <FileEdit className="h-7 w-7" />
-            Recent Draft L/Cs
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <FileEdit className="h-7 w-7 text-primary" />
+            Recent Draft LCs
           </CardTitle>
           <CardDescription>
             List of Letters of Credit currently in "Draft" status, sorted by most recent creation date.
@@ -181,4 +182,3 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
-

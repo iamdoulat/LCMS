@@ -7,11 +7,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { UserCog, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditApplicantForm } from '@/components/forms/EditApplicantForm'; // To be created
+import { EditApplicantForm } from '@/components/forms/EditApplicantForm'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { CustomerDocument } from '@/types';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 export default function EditApplicantPage() {
   const params = useParams();
@@ -114,8 +115,8 @@ export default function EditApplicantPage() {
       </div>
       <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <UserCog className="h-7 w-7" />
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <UserCog className="h-7 w-7 text-primary" />
             Edit Applicant Profile
           </CardTitle>
           <CardDescription>

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
+import { cn } from '@/lib/utils';
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -86,6 +87,22 @@ export default function TotalLCPage() {
     }
     router.push(`/dashboard/total-lc/${lcId}/edit`);
   };
+
+  const handlePrintLC = (lcId: string) => {
+    if (!lcId) {
+      Swal.fire("Error", "L/C ID is missing, cannot print.", "error");
+      return;
+    }
+    // Navigate to the edit page which can then be printed
+    router.push(`/dashboard/total-lc/${lcId}/edit`);
+     Swal.fire({
+        title: "Redirecting to L/C Details",
+        text: `You will be taken to the L/C detail page. Use the 'Print this L/C' button there.`,
+        icon: "info",
+        timer: 3000,
+        showConfirmButton: false
+     });
+  };
   
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
@@ -126,8 +143,8 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-                <ListChecks className="h-7 w-7" />
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C Overview
               </CardTitle>
               <CardDescription>
@@ -163,7 +180,7 @@ export default function TotalLCPage() {
                    <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
                        <div className="flex justify-center items-center">
-                         <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading L/C entries...
+                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
                        </div>
                     </TableCell>
                   </TableRow>
@@ -191,6 +208,23 @@ export default function TotalLCPage() {
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                               <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => lc.id && handlePrintLC(lc.id)}
+                                className="hover:bg-accent/50 hover:text-accent-foreground"
+                                disabled={!lc.id}
+                               >
+                                <Printer className="h-4 w-4" />
+                                <span className="sr-only">View & Print L/C</span>
+                               </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View & Print L/C Details</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button

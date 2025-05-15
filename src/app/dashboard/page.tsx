@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
 
@@ -364,7 +365,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">Dashboard Overview</h1>
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">Dashboard Overview</h1>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
@@ -418,7 +419,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+            <CardTitle className={cn("flex items-center gap-2 text-xl font-semibold", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/C Value Distribution
             </CardTitle>
@@ -440,8 +441,8 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <Search className="h-6 w-6 text-accent" />
+              <CardTitle className={cn("flex items-center gap-2 text-xl font-semibold", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Search className="h-6 w-6 text-primary" />
                 Search L/C
               </CardTitle>
               <CardDescription>
@@ -466,8 +467,8 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <Ship className="h-6 w-6 text-accent" />
+              <CardTitle className={cn("flex items-center gap-2 text-xl font-semibold", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
@@ -478,15 +479,18 @@ export default function DashboardPage() {
               {upcomingEtdShipments.length > 0 ? (
                 <ul className="space-y-3">
                   {upcomingEtdShipments.map((shipment) => (
-                    <li key={shipment.id} className="text-sm">
-                       <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline">
-                        {shipment.documentaryCreditNumber || 'N/A'}
-                      </Link>
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-0.5">
-                        <span className="text-xs text-muted-foreground break-all">Beneficiary: {shipment.beneficiaryName || 'N/A'}</span>
-                        <span className="font-semibold text-foreground mt-1 sm:mt-0">{format(shipment.etdDate, 'PPP')}</span>
+                     <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate sm:col-span-1">
+                          {shipment.documentaryCreditNumber || 'N/A'}
+                        </Link>
+                        <span className="text-xs text-muted-foreground break-all truncate sm:col-span-1">
+                          Beneficiary: {shipment.beneficiaryName || 'N/A'}
+                        </span>
+                        <span className="font-semibold text-foreground mt-1 sm:mt-0 sm:text-right sm:col-span-1">
+                          {format(shipment.etdDate, 'PPP')}
+                        </span>
                       </div>
-                      {upcomingEtdShipments.indexOf(shipment) < upcomingEtdShipments.length - 1 && <Separator className="mt-2" />}
                     </li>
                   ))}
                 </ul>
@@ -501,8 +505,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <FileEdit className="h-6 w-6 text-orange-500" /> {/* Icon for Draft L/Cs */}
+            <CardTitle className={cn("flex items-center gap-2 text-xl font-semibold", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <FileEdit className="h-6 w-6 text-primary" /> {/* Icon for Draft L/Cs */}
               Draft L/Cs
             </CardTitle>
             <CardDescription>
@@ -550,8 +554,8 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <CardTitle className={cn("flex items-center gap-2 text-xl font-semibold", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
             <CardDescription>

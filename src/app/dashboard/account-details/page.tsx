@@ -21,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FileInput } from '@/components/forms/FileInput';
+import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -232,8 +233,8 @@ export default function AccountDetailsPage() {
       <div className="container mx-auto py-8">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-              <UserCircle className="h-7 w-7" />
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <UserCircle className="h-7 w-7 text-primary" />
               Account Details
             </CardTitle>
           </CardHeader>
@@ -249,8 +250,8 @@ export default function AccountDetailsPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <UserCircle className="h-7 w-7" />
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <UserCircle className="h-7 w-7 text-primary" />
             Account Details
           </CardTitle>
           <CardDescription>
@@ -364,5 +365,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
-    

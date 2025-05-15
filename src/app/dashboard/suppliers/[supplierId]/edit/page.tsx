@@ -7,11 +7,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { Store, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditBeneficiaryForm } from '@/components/forms/EditBeneficiaryForm'; // To be created
+import { EditBeneficiaryForm } from '@/components/forms/EditBeneficiaryForm'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { SupplierDocument } from '@/types';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 export default function EditBeneficiaryPage() {
   const params = useParams();
@@ -114,8 +115,8 @@ export default function EditBeneficiaryPage() {
       </div>
       <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <Store className="h-7 w-7" />
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <Store className="h-7 w-7 text-primary" />
             Edit Beneficiary Profile
           </CardTitle>
           <CardDescription>

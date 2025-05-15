@@ -21,6 +21,7 @@ import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workfl
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -256,10 +257,10 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName,
-      applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
+      applicantId: data.applicantName, // This is the ID
+      applicantName: selectedApplicant ? selectedApplicant.label : '', // This is the name/label
+      beneficiaryId: data.beneficiaryName, // This is the ID
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '', // This is the name/label
       currency: data.currency,
       amount: data.amount,
       termsOfPay: data.termsOfPay,
@@ -397,10 +398,13 @@ export function NewLCEntryForm() {
     }
   };
 
+  const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
         </h3>
@@ -667,7 +671,7 @@ export function NewLCEntryForm() {
           />
         </div>
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
         </h3>
@@ -713,7 +717,7 @@ export function NewLCEntryForm() {
             />
         </div>
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
@@ -744,7 +748,7 @@ export function NewLCEntryForm() {
             )}
         />
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
         </h3>
@@ -915,7 +919,7 @@ export function NewLCEntryForm() {
           </div>
         )}
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
             <Workflow className="mr-2 h-5 w-5 text-primary" />
             Shipping Information
         </h3>
@@ -1077,7 +1081,7 @@ export function NewLCEntryForm() {
               />
         </div>
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
@@ -1283,7 +1287,7 @@ export function NewLCEntryForm() {
           )}
         />
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
@@ -1303,7 +1307,7 @@ export function NewLCEntryForm() {
             />
         </div>
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+        <h3 className={sectionHeadingClass}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
         <div className="space-y-6">

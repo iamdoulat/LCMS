@@ -13,6 +13,7 @@ import Swal from 'sweetalert2';
 import type { SupplierDocument } from '@/types'; 
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
 import { firestore } from '@/lib/firebase/config'; 
+import { cn } from '@/lib/utils';
 
 
 export default function BeneficiariesListPage() {
@@ -27,9 +28,9 @@ export default function BeneficiariesListPage() {
         const querySnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierDocument));
         setBeneficiaries(fetchedBeneficiaries);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching beneficiaries: ", error);
-         Swal.fire("Error", `Could not fetch beneficiary data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
+         Swal.fire("Error", `Could not fetch beneficiary data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -83,8 +84,8 @@ export default function BeneficiariesListPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-                <ListChecks className="h-7 w-7" />
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <ListChecks className="h-7 w-7 text-primary" />
                 Manage Beneficiaries
               </CardTitle>
               <CardDescription>
@@ -116,7 +117,7 @@ export default function BeneficiariesListPage() {
                    <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading beneficiaries...
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading beneficiaries...
                       </div>
                     </TableCell>
                   </TableRow>

@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status'> {
   latestShipmentDateObj: Date;
@@ -122,8 +123,8 @@ export default function UpcomingShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <CalendarClock className="h-7 w-7" />
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CalendarClock className="h-7 w-7 text-primary" />
             Upcoming L/C Shipment Dates
           </CardTitle>
           <CardDescription>

@@ -12,6 +12,7 @@ import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { LCEntryDocument } from '@/types';
 import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 export default function EditLCPage() {
   const params = useParams();
@@ -134,8 +135,8 @@ export default function EditLCPage() {
       </div>
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
-            <FileEditIcon className="h-7 w-7" />
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <FileEditIcon className="h-7 w-7 text-primary" />
             Edit L/C Entry
           </CardTitle>
           <CardDescription>
