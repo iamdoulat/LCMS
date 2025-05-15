@@ -87,9 +87,9 @@ const lcEntrySchema = z.object({
   ),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft"),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
-  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
-  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
-  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
@@ -986,7 +986,7 @@ export function NewLCEntryForm() {
                 />
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     onClick={handleTrackVessel}
                     disabled={!form.watch("vesselImoNumber") || isSubmitting}
                     className="md:col-span-1"
@@ -1044,7 +1044,7 @@ export function NewLCEntryForm() {
                 />
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     onClick={handleTrackDocument}
                     disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
@@ -1299,7 +1299,7 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter shipping marks as specified in additional conditions" {...field} />
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -1323,7 +1323,7 @@ export function NewLCEntryForm() {
                   </FormControl>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     size="icon"
                     onClick={() => handleViewUrl(field.value)}
                     disabled={!field.value}
@@ -1348,7 +1348,7 @@ export function NewLCEntryForm() {
                     </FormControl>
                      <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
@@ -1373,7 +1373,7 @@ export function NewLCEntryForm() {
                     </FormControl>
                      <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}

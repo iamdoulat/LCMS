@@ -87,9 +87,9 @@ const lcEntrySchema = z.object({
     z.string().url({ message: "Invalid URL format for Final LC" }).optional()
   ),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
-  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
-  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
-  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
@@ -990,7 +990,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 />
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     onClick={handleTrackVessel}
                     disabled={!form.watch("vesselImoNumber") || isSubmitting}
                     className="md:col-span-1"
@@ -1048,7 +1048,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 />
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     onClick={handleTrackDocument}
                     disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
@@ -1295,7 +1295,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
             <FormField
                 control={form.control}
                 name="shippingMarks"
@@ -1303,13 +1303,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter shipping marks as specified in additional conditions" {...field} />
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-        </div>
+        
 
         <h3 className={sectionHeadingClass}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
@@ -1327,7 +1327,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                   </FormControl>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     size="icon"
                     onClick={() => handleViewUrl(field.value)}
                     disabled={!field.value}
@@ -1352,7 +1352,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     </FormControl>
                      <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
@@ -1377,7 +1377,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     </FormControl>
                      <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="icon"
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
@@ -1409,3 +1409,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
