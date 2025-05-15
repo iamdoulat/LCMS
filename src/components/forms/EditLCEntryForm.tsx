@@ -32,8 +32,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"),
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
+  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -68,8 +68,10 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyContactDetails: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(), // For address
+  notifyPartyName: z.string().optional(),          // For name
+  notifyPartyCell: z.string().optional(),          // For cell
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), // For email
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
@@ -117,7 +119,7 @@ interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
   lcId: string;
 }
-const NONE_COURIER_VALUE = "__NONE__"; // Special value for "None" option
+const NONE_COURIER_VALUE = "__NONE__";
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -167,14 +169,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (initialData && (applicantOptions.length > 0 || !initialData.applicantId) && (beneficiaryOptions.length > 0 || !initialData.beneficiaryId)) {
+    if (initialData) {
       console.log("Initial L/C Data for Edit Form:", initialData);
       console.log("Setting Applicant ID in form:", initialData.applicantId);
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '',
-        beneficiaryName: initialData.beneficiaryId || '',
+        applicantName: initialData.applicantId || '', // Stores ID
+        beneficiaryName: initialData.beneficiaryId || '', // Stores ID
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -203,7 +205,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         shippingMarks: initialData.shippingMarks || '',
         certificateOfOrigin: initialData.certificateOfOrigin || [],
         notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || '',
-        notifyPartyContactDetails: initialData.notifyPartyContactDetails || '',
+        notifyPartyName: initialData.notifyPartyName || '',
+        notifyPartyCell: initialData.notifyPartyCell || '',
+        notifyPartyEmail: initialData.notifyPartyEmail || '',
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
@@ -228,7 +232,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? undefined,
       });
     }
-  }, [initialData, form, applicantOptions, beneficiaryOptions]);
+  }, [initialData, form]); // Removed applicantOptions and beneficiaryOptions as form.reset handles IDs directly
 
   const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
   const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
@@ -237,12 +241,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
     setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-  }, [watchedPartialQtys, form]);
+  }, [watchedPartialQtys]);
 
   React.useEffect(() => {
     const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
     setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
-  }, [watchedPartialAmounts, form]);
+  }, [watchedPartialAmounts]);
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
@@ -251,10 +255,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName,
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
+      applicantId: data.applicantName, // This is the ID from the form
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Update name based on new ID or keep old
+      beneficiaryId: data.beneficiaryName, // This is the ID from the form
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Update name based on new ID or keep old
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
@@ -283,7 +287,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       shippingMarks: data.shippingMarks,
       certificateOfOrigin: data.certificateOfOrigin,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
-      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      notifyPartyName: data.notifyPartyName,
+      notifyPartyCell: data.notifyPartyCell,
+      notifyPartyEmail: data.notifyPartyEmail,
       numberOfAmendments: data.numberOfAmendments,
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
@@ -639,7 +645,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="partialShipments"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>43P: Partial Shipments</FormLabel>
+                <FormLabel>43P: Partial Shipments Rule</FormLabel>
                 <FormControl>
                   <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
                 </FormControl>
@@ -727,12 +733,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         </h3>
         <FormField
             control={form.control}
-            name="notifyPartyNameAndAddress"
+            name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party name and Address</FormLabel>
+                <FormLabel>Notify Party Name</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's name and full address" {...field} rows={3}/>
+                  <Input placeholder="Enter notify party's name" {...field} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -740,17 +746,45 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
         <FormField
             control={form.control}
-            name="notifyPartyContactDetails"
+            name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Contact Details</FormLabel>
+                <FormLabel>Notify Party Address</FormLabel>
                 <FormControl>
-                <Input placeholder="e.g., Phone or Email" {...field} />
+                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
             )}
         />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+              control={form.control}
+              name="notifyPartyCell"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Cell</FormLabel>
+                  <FormControl>
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+          <FormField
+              control={form.control}
+              name="notifyPartyEmail"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Email</FormLabel>
+                  <FormControl>
+                  <Input type="email" placeholder="notify@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+        </div>
 
         <h3 className={sectionHeadingClass}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
@@ -1409,4 +1443,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-

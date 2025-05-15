@@ -32,10 +32,8 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; // Represents Beneficiary ID from suppliers collection
-  beneficiaryId?: string;
-  applicantName: string;   // Represents Applicant ID from customers collection
-  applicantId?: string;
+  applicantName: string;   // Represents Applicant ID from customers collection, form stores ID
+  beneficiaryName: string; // Represents Beneficiary ID from suppliers collection, form stores ID
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -48,7 +46,7 @@ export interface LCEntry {
   latestShipmentDate?: Date;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string; // Added this field
+  finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
@@ -65,8 +63,10 @@ export interface LCEntry {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string;
-  notifyPartyContactDetails?: string;
+  notifyPartyNameAndAddress?: string; // This will be for the address
+  notifyPartyName?: string;           // New field for name
+  notifyPartyCell?: string;           // New field for cell
+  notifyPartyEmail?: string;          // New field for email
   numberOfAmendments?: number | '';
   status?: LCStatus;
   partialShipmentAllowed?: PartialShipmentAllowed;
@@ -108,7 +108,7 @@ export interface LCEntryDocument {
   latestShipmentDate?: string; // Stored as ISO string
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
-  finalLcUrl?: string; // Added this field
+  finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // Stored as ISO string
@@ -125,8 +125,10 @@ export interface LCEntryDocument {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string;
-  notifyPartyContactDetails?: string;
+  notifyPartyNameAndAddress?: string; // Stores address
+  notifyPartyName?: string;           // Stores name
+  notifyPartyCell?: string;           // Stores cell
+  notifyPartyEmail?: string;          // Stores email
   numberOfAmendments?: number;
   status: LCStatus;
   createdAt: any; // Firestore ServerTimestamp

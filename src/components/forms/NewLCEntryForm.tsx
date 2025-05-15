@@ -33,8 +33,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"),
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
+  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -79,8 +79,10 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyContactDetails: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(), // For address
+  notifyPartyName: z.string().optional(),          // For name
+  notifyPartyCell: z.string().optional(),          // For cell
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), // For email
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
@@ -112,7 +114,7 @@ interface DropdownOption {
   label: string;
 }
 
-const NONE_COURIER_VALUE = "__NONE__"; // Special value for "None" option
+const NONE_COURIER_VALUE = "__NONE__";
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -124,50 +126,41 @@ export function NewLCEntryForm() {
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number | string>(0);
 
   React.useEffect(() => {
-    const fetchApplicants = async () => {
+    const fetchDropdownData = async () => {
       setIsLoadingApplicants(true);
-      try {
-        const querySnapshot = await getDocs(collection(firestore, "customers"));
-        const fetchedApplicants = querySnapshot.docs.map(doc => {
-          const data = doc.data() as CustomerDocument;
-          return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
-        });
-        setApplicantOptions(fetchedApplicants);
-      } catch (error) {
-        console.error("Error fetching applicants: ", error);
-        Swal.fire("Error", "Could not fetch applicant data for dropdown. See console for details.", "error");
-      } finally {
-        setIsLoadingApplicants(false);
-      }
-    };
-    fetchApplicants();
-  }, []);
-
-  React.useEffect(() => {
-    const fetchBeneficiaries = async () => {
       setIsLoadingBeneficiaries(true);
       try {
-        const querySnapshot = await getDocs(collection(firestore, "suppliers"));
-        const fetchedBeneficiaries = querySnapshot.docs.map(doc => {
-          const data = doc.data() as SupplierDocument;
-          return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
-        });
-        setBeneficiaryOptions(fetchedBeneficiaries);
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(doc => {
+            const data = doc.data() as CustomerDocument;
+            return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+          })
+        );
+
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(doc => {
+            const data = doc.data() as SupplierDocument;
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
+          })
+        );
       } catch (error) {
-        console.error("Error fetching beneficiaries: ", error);
-        Swal.fire("Error", "Could not fetch beneficiary data for dropdown. See console for details.", "error");
+        console.error("Error fetching dropdown data: ", error);
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
       } finally {
+        setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
       }
     };
-    fetchBeneficiaries();
+    fetchDropdownData();
   }, []);
 
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '',
-      beneficiaryName: '',
+      applicantName: '', // Will store applicant ID
+      beneficiaryName: '', // Will store beneficiary ID
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -198,7 +191,9 @@ export function NewLCEntryForm() {
       shippingMarks: '',
       certificateOfOrigin: [],
       notifyPartyNameAndAddress: '',
-      notifyPartyContactDetails: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
       numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
@@ -291,7 +286,9 @@ export function NewLCEntryForm() {
       shippingMarks: data.shippingMarks,
       certificateOfOrigin: data.certificateOfOrigin,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
-      notifyPartyContactDetails: data.notifyPartyContactDetails,
+      notifyPartyName: data.notifyPartyName,
+      notifyPartyCell: data.notifyPartyCell,
+      notifyPartyEmail: data.notifyPartyEmail,
       numberOfAmendments: data.numberOfAmendments,
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
@@ -721,32 +718,61 @@ export function NewLCEntryForm() {
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
+         <FormField
+            control={form.control}
+            name="notifyPartyName"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Notify Party Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter notify party's name" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
         <FormField
             control={form.control}
             name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party name and Address</FormLabel>
+                <FormLabel>Notify Party Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's name and full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
             )}
         />
-        <FormField
-            control={form.control}
-            name="notifyPartyContactDetails"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notify Party Contact Details</FormLabel>
-                <FormControl>
-                <Input placeholder="e.g., Phone or Email" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+              control={form.control}
+              name="notifyPartyCell"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Cell</FormLabel>
+                  <FormControl>
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+          <FormField
+              control={form.control}
+              name="notifyPartyEmail"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Email</FormLabel>
+                  <FormControl>
+                  <Input type="email" placeholder="notify@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+        </div>
+
 
         <h3 className={sectionHeadingClass}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
@@ -1405,4 +1431,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
