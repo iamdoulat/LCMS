@@ -101,6 +101,7 @@ export default function AccountDetailsPage() {
     setIsSubmitting(true);
     setError(null);
     let newPhotoURL = user?.photoURL || null; 
+    const originalDisplayName = user?.displayName;
 
     try {
       if (data.photoFile) {
@@ -138,9 +139,27 @@ export default function AccountDetailsPage() {
          setAuthUser(updatedUser as any);
       }
 
+      const photoWasUpdated = data.photoFile && newPhotoURL && newPhotoURL !== user?.photoURL;
+      const nameWasUpdated = data.displayName !== originalDisplayName;
+      let successMessage = "No changes were made to your profile.";
+
+      if (photoWasUpdated && nameWasUpdated) {
+        successMessage = "Profile picture and display name updated successfully.";
+      } else if (photoWasUpdated) {
+        successMessage = "Profile picture updated successfully.";
+      } else if (nameWasUpdated) {
+        successMessage = "Display name updated successfully.";
+      } else if (data.photoFile && newPhotoURL === user?.photoURL) {
+        // This case means a new photo was selected, uploaded, but it resulted in the same URL (e.g. re-uploading same image)
+        // or if the name wasn't changed.
+        successMessage = "Profile picture re-saved. Display name was not changed.";
+         if(nameWasUpdated) successMessage = "Profile picture re-saved and display name updated.";
+      }
+
+
       Swal.fire({
         title: "Profile Updated",
-        text: "Your account details have been successfully updated.",
+        text: successMessage,
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
@@ -199,6 +218,8 @@ export default function AccountDetailsPage() {
           </CardTitle>
           <CardDescription>
             View and manage your personal account information and profile picture.
+            The profile picture preview is displayed at approximately 150x150px and in the header at 32x32px using CSS styling.
+            Actual client-side image cropping before upload is not implemented; the original selected image is uploaded.
           </CardDescription>
         </CardHeader>
         <CardContent>
