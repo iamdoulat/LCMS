@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package } from 'lucide-react';
+import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,7 +67,6 @@ const lcEntrySchema = z.object({
   partialShipments: z.string().optional(), 
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  documentsRequired: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
@@ -84,6 +83,17 @@ const lcEntrySchema = z.object({
   firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
 });
 
 
@@ -173,7 +183,6 @@ export function NewLCEntryForm() {
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
-      documentsRequired: '',
       shippingMarks: '',
       certificateOfOrigin: [],
       notifyPartyNameAndAddress: '',
@@ -187,6 +196,17 @@ export function NewLCEntryForm() {
       firstPartialAmount: undefined,
       secondPartialAmount: undefined,
       thirdPartialAmount: undefined,
+      originalBlQty: undefined,
+      copyBlQty: undefined,
+      originalCooQty: undefined,
+      copyCooQty: undefined,
+      invoiceQty: undefined,
+      packingListQty: undefined,
+      beneficiaryCertificateQty: undefined,
+      brandNewCertificateQty: undefined,
+      beneficiaryWarrantyCertificateQty: undefined,
+      beneficiaryComplianceCertificateQty: undefined,
+      shipmentAdviceQty: undefined,
     },
   });
 
@@ -254,6 +274,17 @@ export function NewLCEntryForm() {
       secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
       thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
       certificateOfOrigin: data.certificateOfOrigin || [],
+      originalBlQty: toNumberOrUndefined(data.originalBlQty),
+      copyBlQty: toNumberOrUndefined(data.copyBlQty),
+      originalCooQty: toNumberOrUndefined(data.originalCooQty),
+      copyCooQty: toNumberOrUndefined(data.copyCooQty),
+      invoiceQty: toNumberOrUndefined(data.invoiceQty),
+      packingListQty: toNumberOrUndefined(data.packingListQty),
+      beneficiaryCertificateQty: toNumberOrUndefined(data.beneficiaryCertificateQty),
+      brandNewCertificateQty: toNumberOrUndefined(data.brandNewCertificateQty),
+      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(data.beneficiaryWarrantyCertificateQty),
+      beneficiaryComplianceCertificateQty: toNumberOrUndefined(data.beneficiaryComplianceCertificateQty),
+      shipmentAdviceQty: toNumberOrUndefined(data.shipmentAdviceQty),
     };
 
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
@@ -1023,26 +1054,169 @@ export function NewLCEntryForm() {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-        <FormField
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="originalBlQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="copyBlQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="originalCooQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="copyCooQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="invoiceQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="packingListQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="beneficiaryCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="brandNewCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <FormField
+              control={form.control}
+              name="beneficiaryWarrantyCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="beneficiaryComplianceCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
             control={form.control}
-            name="documentsRequired"
+            name="shipmentAdviceQty"
             render={({ field }) => (
-            <FormItem>
-                <FormLabel>Full Set of Documents</FormLabel>
+              <FormItem>
+                <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Specify all required documents as per L/C terms (e.g., Commercial Invoice, Packing List, Bill of Lading/Air Waybill, etc.)" {...field} rows={5} />
+                  <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
-            </FormItem>
+              </FormItem>
             )}
-        />
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="certificateOfOrigin"
-          render={() => ( // Main FormField for layout
+          render={() => ( 
             <FormItem>
               <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
-                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin
+                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
               </FormLabel>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
                 {certificateOfOriginCountries.map((country) => (

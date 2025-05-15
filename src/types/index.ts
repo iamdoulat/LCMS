@@ -32,8 +32,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; 
-  applicantName: string;   
+  beneficiaryName: string;
+  beneficiaryId?: string;
+  applicantName: string;
+  applicantId?: string;
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -58,10 +60,9 @@ export interface LCEntry {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
-  partialShipments?: string; 
+  partialShipments?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
-  documentsRequired?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
@@ -75,15 +76,26 @@ export interface LCEntry {
   firstPartialAmount?: number | '';
   secondPartialAmount?: number | '';
   thirdPartialAmount?: number | '';
+  originalBlQty?: number | '';
+  copyBlQty?: number | '';
+  originalCooQty?: number | '';
+  copyCooQty?: number | '';
+  invoiceQty?: number | '';
+  packingListQty?: number | '';
+  beneficiaryCertificateQty?: number | '';
+  brandNewCertificateQty?: number | '';
+  beneficiaryWarrantyCertificateQty?: number | '';
+  beneficiaryComplianceCertificateQty?: number | '';
+  shipmentAdviceQty?: number | '';
 }
 
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string; 
-  beneficiaryName: string; 
-  applicantId: string; 
-  beneficiaryId: string; 
+  applicantName: string;
+  beneficiaryName: string;
+  applicantId: string;
+  beneficiaryId: string;
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
@@ -111,7 +123,6 @@ export interface LCEntryDocument {
   partialShipments?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
-  documentsRequired?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
@@ -127,6 +138,17 @@ export interface LCEntryDocument {
   firstPartialAmount?: number;
   secondPartialAmount?: number;
   thirdPartialAmount?: number;
+  originalBlQty?: number;
+  copyBlQty?: number;
+  originalCooQty?: number;
+  copyCooQty?: number;
+  invoiceQty?: number;
+  packingListQty?: number;
+  beneficiaryCertificateQty?: number;
+  brandNewCertificateQty?: number;
+  beneficiaryWarrantyCertificateQty?: number;
+  beneficiaryComplianceCertificateQty?: number;
+  shipmentAdviceQty?: number;
 }
 
 export interface Customer {

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,7 +65,6 @@ const lcEntrySchema = z.object({
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  documentsRequired: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
@@ -84,6 +83,17 @@ const lcEntrySchema = z.object({
   firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
   thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -178,7 +188,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         partialShipments: initialData.partialShipments || '',
         portOfLoading: initialData.portOfLoading || '',
         portOfDischarge: initialData.portOfDischarge || '',
-        documentsRequired: initialData.documentsRequired || '',
         shippingMarks: initialData.shippingMarks || '',
         certificateOfOrigin: initialData.certificateOfOrigin || [],
         notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || '',
@@ -194,6 +203,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         firstPartialAmount: initialData.firstPartialAmount ?? undefined,
         secondPartialAmount: initialData.secondPartialAmount ?? undefined,
         thirdPartialAmount: initialData.thirdPartialAmount ?? undefined,
+        originalBlQty: initialData.originalBlQty ?? undefined,
+        copyBlQty: initialData.copyBlQty ?? undefined,
+        originalCooQty: initialData.originalCooQty ?? undefined,
+        copyCooQty: initialData.copyCooQty ?? undefined,
+        invoiceQty: initialData.invoiceQty ?? undefined,
+        packingListQty: initialData.packingListQty ?? undefined,
+        beneficiaryCertificateQty: initialData.beneficiaryCertificateQty ?? undefined,
+        brandNewCertificateQty: initialData.brandNewCertificateQty ?? undefined,
+        beneficiaryWarrantyCertificateQty: initialData.beneficiaryWarrantyCertificateQty ?? undefined,
+        beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? undefined,
+        shipmentAdviceQty: initialData.shipmentAdviceQty ?? undefined,
       });
     }
   }, [initialData, form, applicantOptions, beneficiaryOptions]);
@@ -246,6 +266,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       secondPartialAmount: toNumberOrUndefined(data.secondPartialAmount),
       thirdPartialAmount: toNumberOrUndefined(data.thirdPartialAmount),
       certificateOfOrigin: data.certificateOfOrigin || [],
+      originalBlQty: toNumberOrUndefined(data.originalBlQty),
+      copyBlQty: toNumberOrUndefined(data.copyBlQty),
+      originalCooQty: toNumberOrUndefined(data.originalCooQty),
+      copyCooQty: toNumberOrUndefined(data.copyCooQty),
+      invoiceQty: toNumberOrUndefined(data.invoiceQty),
+      packingListQty: toNumberOrUndefined(data.packingListQty),
+      beneficiaryCertificateQty: toNumberOrUndefined(data.beneficiaryCertificateQty),
+      brandNewCertificateQty: toNumberOrUndefined(data.brandNewCertificateQty),
+      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(data.beneficiaryWarrantyCertificateQty),
+      beneficiaryComplianceCertificateQty: toNumberOrUndefined(data.beneficiaryComplianceCertificateQty),
+      shipmentAdviceQty: toNumberOrUndefined(data.shipmentAdviceQty),
     };
 
     for (const key in dataToUpdate) {
@@ -1027,26 +1058,169 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-        <FormField
+         <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="originalBlQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="copyBlQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="originalCooQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="copyCooQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="invoiceQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 3" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="packingListQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="beneficiaryCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="brandNewCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <FormField
+              control={form.control}
+              name="beneficiaryWarrantyCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="beneficiaryComplianceCertificateQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
             control={form.control}
-            name="documentsRequired"
+            name="shipmentAdviceQty"
             render={({ field }) => (
-            <FormItem>
-                <FormLabel>Full Set of Documents</FormLabel>
+              <FormItem>
+                <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Specify all required documents as per L/C terms" {...field} rows={5} />
+                  <Input type="number" placeholder="e.g., 1" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
-            </FormItem>
+              </FormItem>
             )}
-        />
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="certificateOfOrigin"
-          render={() => (
+          render={() => ( 
             <FormItem>
               <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
-                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin
+                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
               </FormLabel>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
                 {certificateOfOriginCountries.map((country) => (
@@ -1098,7 +1272,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter shipping marks as specified" {...field} />
+                    <Input placeholder="Enter shipping marks as specified in additional conditions" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -1191,12 +1365,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Submitting...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <Library className="mr-2 h-4 w-4" />
+              Submit L/C Entry
             </>
           )}
         </Button>
