@@ -15,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>; // Expose setUser
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -93,15 +94,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
 
   if (loading && !user) {
+    // Only show full page loader if truly loading initial auth state and no user yet
+    // Avoid showing this if user is already set (prevents flicker during quick updates like profile pic)
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
+  
+  // If loading is false, or if user exists even while loading=true (e.g. during a profile update re-check)
   return (
-    <AuthContext.Provider value={{ user, loading, logout, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, logout, signInWithGoogle, setUser }}>
       {children}
     </AuthContext.Provider>
   );
