@@ -121,16 +121,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         ...initialData,
         beneficiaryName: initialData.beneficiaryId || '', // Use ID for dropdown value
         applicantName: initialData.applicantId || '',   // Use ID for dropdown value
-        amount: initialData.amount !== undefined ? initialData.amount : '',
-        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : '',
-        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : '',
+        amount: initialData.amount !== undefined ? initialData.amount : undefined, // Ensure number or undefined
+        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
+        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
         invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : undefined,
         lcIssueDate: initialData.lcIssueDate ? parseISO(initialData.lcIssueDate) : undefined,
         expireDate: initialData.expireDate ? parseISO(initialData.expireDate) : undefined,
         latestShipmentDate: initialData.latestShipmentDate ? parseISO(initialData.latestShipmentDate) : undefined,
         etd: initialData.etd ? parseISO(initialData.etd) : undefined,
         eta: initialData.eta ? parseISO(initialData.eta) : undefined,
-        status: initialData.status || 'Draft', // Default to Draft if status is somehow missing
+        status: initialData.status || 'Draft', 
       });
     }
   }, [initialData, form]);
@@ -175,14 +175,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
     // Prepare data for Firestore update
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data, // Spread form values
-      applicantId: data.applicantName, // This is the ID from the dropdown
-      beneficiaryId: data.beneficiaryName, // This is the ID from the dropdown
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Keep label
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Keep label
+      // Spreading all data first, then overriding specific fields
+      ...(Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+      ) as Partial<LCEntryDocument>),
+      applicantId: data.applicantName, 
+      beneficiaryId: data.beneficiaryName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, 
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, 
       amount: Number(data.amount),
-      totalMachineQty: Number(data.totalMachineQty),
-      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined ? Number(data.numberOfAmendments) : undefined,
+      totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
+      numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -190,16 +193,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       etd: data.etd ? format(data.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       updatedAt: serverTimestamp() as any,
-      // year field doesn't typically change on edit unless lcIssueDate changes significantly
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
+      status: data.status, // Make sure status is always passed
     };
-
-    // Remove fields that shouldn't be directly updated if they are empty or not part of the schema's intent for partial update
-    (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
-        if (dataToUpdate[key] === undefined) {
-            delete dataToUpdate[key];
+    
+    // Clean up undefined fields before sending to Firestore
+    for (const key in dataToUpdate) {
+        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
+            delete dataToUpdate[key as keyof typeof dataToUpdate];
         }
-    });
+    }
     
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -224,9 +227,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }
   
-  // AI Analyze Document and Tracking functions (copied from NewLCEntryForm, may need adjustment if file handling changes)
-  // For Edit form, AI analysis on an existing document might not be typical, but can be kept.
-  // Tracking functions are still relevant.
 
   const watchedShipmentMode = form.watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
@@ -285,14 +285,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   };
 
 
-  // The AI analysis section is omitted for brevity in edit form, 
-  // as it typically applies to new document uploads which are not the primary focus of an edit form.
-  // It could be added back if needed, but would require careful consideration of how it interacts with existing data.
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* AI Extraction section omitted for edit form to simplify. Can be added back if needed. */}
 
         <h3 className="text-lg font-semibold border-b pb-2 text-foreground flex items-center">
           <FileText className="mr-2 h-5 w-5 text-primary" />
@@ -301,7 +296,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName" // This holds applicantId
+            name="applicantName" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
@@ -328,7 +323,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
            <FormField
             control={form.control}
-            name="beneficiaryName" // This holds beneficiaryId
+            name="beneficiaryName" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
@@ -886,8 +881,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             />
         </div>
         
-        {/* File Upload fields are omitted for edit form as they require complex handling */}
-        {/* for existing files vs. new uploads. Focus is on text/date/select data update. */}
 
         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
