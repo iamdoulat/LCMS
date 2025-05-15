@@ -7,14 +7,15 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from 'date-fns';
 import Link from "next/link";
-import { Eye, CheckCircle2, Circle } from "lucide-react";
+import { Eye, CheckCircle2, Circle, Trash2 } from "lucide-react";
 
 interface NotificationItemProps {
   notification: AppNotification;
   onToggleRead: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export function NotificationItem({ notification, onToggleRead }: NotificationItemProps) {
+export function NotificationItem({ notification, onToggleRead, onDelete }: NotificationItemProps) {
   const timeAgo = formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true });
 
   return (
@@ -48,6 +49,10 @@ export function NotificationItem({ notification, onToggleRead }: NotificationIte
         )}
         <Button variant="ghost" size="sm" onClick={() => onToggleRead(notification.id)}>
           {notification.isRead ? "Mark as Unread" : "Mark as Read"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => onDelete(notification.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
         </Button>
       </CardFooter>
     </Card>

@@ -4,10 +4,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BellRing, CheckCheck, Info } from 'lucide-react';
+import { BellRing, CheckCheck, Info, Trash2 } from 'lucide-react';
 import type { AppNotification } from '@/types';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { Separator } from '@/components/ui/separator';
+import Swal from 'sweetalert2';
 
 const initialNotifications: AppNotification[] = [
   {
@@ -16,7 +17,7 @@ const initialNotifications: AppNotification[] = [
     message: 'L/C #LC-2024-001 for Applicant Alpha with Beneficiary Beta has been successfully created and is in Draft status.',
     timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
     isRead: false,
-    link: '/dashboard/total-lc' // Placeholder link
+    link: '/dashboard/total-lc'
   },
   {
     id: '2',
@@ -24,7 +25,7 @@ const initialNotifications: AppNotification[] = [
     message: 'The ETD for L/C #LC-2023-105 has been updated to 2024-09-15. Please review the details.',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     isRead: false,
-    link: '/dashboard/total-lc' // Placeholder link
+    link: '/dashboard/total-lc'
   },
   {
     id: '3',
@@ -42,24 +43,47 @@ const initialNotifications: AppNotification[] = [
   }
 ];
 
+const NOTIFICATIONS_STORAGE_KEY = 'appNotificationsList';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // Function to update localStorage based on current notifications state
+  // Function to update localStorage for the global unread status (for header dot)
   const updateUnreadStatusInStorage = (currentNotifications: AppNotification[]) => {
     const anyUnread = currentNotifications.some(n => !n.isRead);
     if (typeof window !== 'undefined') {
         localStorage.setItem('appNotificationsAllRead', anyUnread ? 'false' : 'true');
-        // Dispatch a custom event to notify the header
-        window.dispatchEvent(new Event('notificationsUpdated'));
+        window.dispatchEvent(new Event('notificationsUpdated')); // Notify header
     }
   };
 
-  // Initialize notifications and update storage on mount
+  // Helper to save the entire notifications list to localStorage
+  const saveNotificationsToLocalStorage = (updatedNotifications: AppNotification[]) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updatedNotifications));
+    }
+  };
+
+  // Initialize notifications from localStorage or use initialNotifications
   useEffect(() => {
-    // In a real app, you'd fetch notifications here
-    updateUnreadStatusInStorage(notifications);
+    if (typeof window !== 'undefined') {
+      const storedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      let currentNotifications: AppNotification[];
+      if (storedNotifications) {
+        try {
+          currentNotifications = JSON.parse(storedNotifications);
+        } catch (e) {
+          console.error("Error parsing stored notifications, defaulting to initial:", e);
+          currentNotifications = [...initialNotifications];
+          saveNotificationsToLocalStorage(currentNotifications); // Save initial if parsing failed
+        }
+      } else {
+        currentNotifications = [...initialNotifications];
+        saveNotificationsToLocalStorage(currentNotifications);
+      }
+      setNotifications(currentNotifications);
+      updateUnreadStatusInStorage(currentNotifications);
+    }
   }, []);
 
 
@@ -68,15 +92,48 @@ export default function NotificationsPage() {
       notif.id === id ? { ...notif, isRead: !notif.isRead } : notif
     );
     setNotifications(updatedNotifications);
+    saveNotificationsToLocalStorage(updatedNotifications);
     updateUnreadStatusInStorage(updatedNotifications);
   };
 
   const handleMarkAllAsRead = () => {
     const updatedNotifications = notifications.map(notif => ({ ...notif, isRead: true }));
     setNotifications(updatedNotifications);
+    saveNotificationsToLocalStorage(updatedNotifications);
     updateUnreadStatusInStorage(updatedNotifications);
-    // Simulate saving to DB
-    console.log("Simulating: All notifications marked as read in DB.");
+    Swal.fire({
+      title: "All Read",
+      text: "All notifications have been marked as read.",
+      icon: "success",
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    const notificationToDelete = notifications.find(n => n.id === id);
+    Swal.fire({
+      title: 'Delete Notification?',
+      text: `Are you sure you want to delete the notification: "${notificationToDelete?.title || 'this notification'}"? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: 'hsl(var(--destructive))',
+      cancelButtonColor: 'hsl(var(--secondary))',
+      confirmButtonText: 'Yes, delete it!',
+      reverseButtons: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const updatedNotifications = notifications.filter(notif => notif.id !== id);
+        setNotifications(updatedNotifications);
+        saveNotificationsToLocalStorage(updatedNotifications);
+        updateUnreadStatusInStorage(updatedNotifications);
+        Swal.fire(
+          'Deleted!',
+          'The notification has been removed.',
+          'success'
+        );
+      }
+    });
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -118,6 +175,7 @@ export default function NotificationsPage() {
                   key={notification.id}
                   notification={notification}
                   onToggleRead={handleToggleRead}
+                  onDelete={handleDeleteNotification}
                 />
               ))}
             </div>
