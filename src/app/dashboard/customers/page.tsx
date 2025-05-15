@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,10 +15,13 @@ import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config'; 
 import { cn } from '@/lib/utils';
 
+const ITEMS_PER_PAGE = 10;
+
 export default function ApplicantsListPage() {
   const router = useRouter();
   const [applicants, setApplicants] = useState<CustomerDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true); 
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchApplicants = async () => {
@@ -77,6 +80,59 @@ export default function ApplicantsListPage() {
     });
   };
 
+  // Pagination Logic
+  const totalPages = Math.ceil(applicants.length / ITEMS_PER_PAGE);
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = applicants.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+    if (totalPages <= maxPagesToShow + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      pageNumbers.push(1);
+      let startPage = Math.max(2, currentPage - halfPagesToShow);
+      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+
+      if (currentPage <= halfPagesToShow + 1) {
+        endPage = Math.min(totalPages - 1, maxPagesToShow);
+      }
+      if (currentPage >= totalPages - halfPagesToShow) {
+        startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+      }
+      
+      if (startPage > 2) {
+        pageNumbers.push("...");
+      }
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+      if (endPage < totalPages - 1) {
+        pageNumbers.push("...");
+      }
+      pageNumbers.push(totalPages);
+    }
+    return pageNumbers;
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
@@ -120,8 +176,8 @@ export default function ApplicantsListPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : applicants.length > 0 ? (
-                  applicants.map((applicant) => (
+                ) : currentItems.length > 0 ? (
+                  currentItems.map((applicant) => (
                     <TableRow key={applicant.id}>
                       <TableCell className="font-medium">{applicant.applicantName || 'N/A'}</TableCell>
                       <TableCell>{applicant.email || 'N/A'}</TableCell>
@@ -176,12 +232,53 @@ export default function ApplicantsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants from Firestore. If empty, check Firestore data and security rules.
+                A list of your applicants from Firestore. 
+                Showing {applicants.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, applicants.length)} of {applicants.length} entries.
               </TableCaption>
             </Table>
           </div>
+           {totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              {getPageNumbers().map((page, index) =>
+                typeof page === 'number' ? (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                    className="w-9 h-9 p-0"
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
+                    {page}
+                  </span>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
