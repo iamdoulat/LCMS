@@ -31,8 +31,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), 
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), 
+  applicantName: z.string().min(1, "Applicant Name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -132,7 +132,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     resolver: zodResolver(lcEntrySchema),
     // Default values will be set by form.reset in useEffect
   });
-  
+
   React.useEffect(() => {
     const fetchDropdownData = async () => {
       setIsLoadingApplicants(true);
@@ -172,8 +172,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '', 
-        beneficiaryName: initialData.beneficiaryId || '', 
+        applicantName: initialData.applicantId || '',
+        beneficiaryName: initialData.beneficiaryId || '',
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -236,34 +236,34 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
     setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-  }, [watchedPartialQtys, form]); 
+  }, [watchedPartialQtys, form]);
 
   React.useEffect(() => {
     const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
     setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
-  }, [watchedPartialAmounts, form]); 
+  }, [watchedPartialAmounts, form]);
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); 
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName, 
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, 
-      beneficiaryId: data.beneficiaryName, 
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, 
+      applicantId: data.applicantName,
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
+      beneficiaryId: data.beneficiaryName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
       shipmentMode: data.shipmentMode,
-      trackingCourier: data.trackingCourier || undefined, 
-      amount: data.amount, 
+      trackingCourier: data.trackingCourier || undefined,
+      amount: data.amount,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty, 
+      totalMachineQty: data.totalMachineQty,
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -280,10 +280,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
       shippingMarks: data.shippingMarks,
-      certificateOfOrigin: data.certificateOfOrigin, 
+      certificateOfOrigin: data.certificateOfOrigin,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
       notifyPartyContactDetails: data.notifyPartyContactDetails,
-      numberOfAmendments: data.numberOfAmendments, 
+      numberOfAmendments: data.numberOfAmendments,
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
@@ -308,7 +308,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
-    
+
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
       await updateDoc(lcDocRef, dataToUpdate);
@@ -789,7 +789,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             />
         </div>
         <Separator className="my-6" />
-        
+
         <FormField
           control={form.control}
           name="partialShipmentAllowed"
@@ -1241,11 +1241,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="certificateOfOrigin"
-          render={() => ( 
+          render={() => (
             <FormItem>
               <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                  <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
@@ -1406,5 +1406,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
-    

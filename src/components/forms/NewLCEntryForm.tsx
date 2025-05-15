@@ -73,7 +73,7 @@ const lcEntrySchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
-  partialShipments: z.string().optional(), 
+  partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
@@ -165,15 +165,15 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', 
-      applicantName: '',   
+      applicantName: '',
+      beneficiaryName: '',
       currency: 'USD' as Currency,
-      amount: undefined, 
+      amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
-      totalMachineQty: undefined, 
+      totalMachineQty: undefined,
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
@@ -198,7 +198,7 @@ export function NewLCEntryForm() {
       certificateOfOrigin: [],
       notifyPartyNameAndAddress: '',
       notifyPartyContactDetails: '',
-      numberOfAmendments: undefined, 
+      numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
       firstPartialQty: undefined,
@@ -231,7 +231,7 @@ export function NewLCEntryForm() {
 
   const watchedCurrency = form.watch("currency");
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
-  
+
   const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
   const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
   const watchedPartialAmounts = [form.watch("firstPartialAmount"), form.watch("secondPartialAmount"), form.watch("thirdPartialAmount")];
@@ -252,25 +252,25 @@ export function NewLCEntryForm() {
     const lcIssueDateObj = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
     const extractedYear = lcIssueDateObj.getFullYear();
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); 
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); 
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, 
+      applicantId: data.applicantName,
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName, 
+      beneficiaryId: data.beneficiaryName,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
-      amount: data.amount, 
+      amount: data.amount,
       termsOfPay: data.termsOfPay,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty, 
+      totalMachineQty: data.totalMachineQty,
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      finalPIUrl: data.finalPIUrl || undefined, 
+      finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
       trackingCourier: data.trackingCourier || undefined,
@@ -288,10 +288,10 @@ export function NewLCEntryForm() {
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
       shippingMarks: data.shippingMarks,
-      certificateOfOrigin: data.certificateOfOrigin, 
+      certificateOfOrigin: data.certificateOfOrigin,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
       notifyPartyContactDetails: data.notifyPartyContactDetails,
-      numberOfAmendments: data.numberOfAmendments, 
+      numberOfAmendments: data.numberOfAmendments,
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
@@ -315,7 +315,7 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
-    
+
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
@@ -627,7 +627,7 @@ export function NewLCEntryForm() {
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
-            name="partialShipments" 
+            name="partialShipments"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>43P: Partial Shipments Rule</FormLabel>
@@ -784,7 +784,7 @@ export function NewLCEntryForm() {
             />
         </div>
         <Separator className="my-6" />
-        
+
         <FormField
           control={form.control}
           name="partialShipmentAllowed"
@@ -1236,11 +1236,11 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="certificateOfOrigin"
-          render={() => ( 
+          render={() => (
             <FormItem>
               <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                  <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
@@ -1401,5 +1401,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-    
