@@ -10,11 +10,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus } from '@/types'; 
+import type { LCEntryDocument, LCStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid } from 'date-fns'; 
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
-import { firestore } from '@/lib/firebase/config'; 
+import { format, parseISO, isValid } from 'date-fns';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -25,9 +25,9 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipping pending':
       return 'default'; // Consider specific color like yellow/orange if theme supports
     case 'Shipping going on':
-      return 'default'; 
+      return 'default';
     case 'Done':
-      return 'default'; 
+      return 'default';
     default:
       return 'outline';
   }
@@ -67,9 +67,9 @@ export default function TotalLCPage() {
           } as LCEntryDocument;
         });
         setLcEntries(fetchedLCs);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching L/C entries: ", error);
-        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
+        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -84,14 +84,22 @@ export default function TotalLCPage() {
         Swal.fire("Error", "L/C ID is missing, cannot edit.", "error");
         return;
     }
-    Swal.fire({
-      title: "Redirecting...",
-      text: `Navigating to edit page for L/C ${lcId}.`,
-      icon: "info",
-      timer: 1500,
-      showConfirmButton: false,
-    });
+    // Swal.fire({ // Optional: can be removed if direct navigation is preferred
+    //   title: "Redirecting...",
+    //   text: `Navigating to edit page for L/C ${lcId}.`,
+    //   icon: "info",
+    //   timer: 1000,
+    //   showConfirmButton: false,
+    // });
     router.push(`/dashboard/total-lc/${lcId}/edit`);
+  };
+  
+  const handleViewLC = (lcId: string) => {
+    if (!lcId) {
+        Swal.fire("Error", "L/C ID is missing, cannot view details.", "error");
+        return;
+    }
+    router.push(`/dashboard/total-lc/${lcId}/edit`); // Re-using edit page as details page for now
   };
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
@@ -104,8 +112,8 @@ export default function TotalLCPage() {
       text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: 'hsl(var(--destructive))', 
-      cancelButtonColor: 'hsl(var(--secondary))', 
+      confirmButtonColor: 'hsl(var(--destructive))',
+      cancelButtonColor: 'hsl(var(--secondary))',
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
     }).then(async (result) => {
@@ -158,6 +166,7 @@ export default function TotalLCPage() {
                   <TableHead>Beneficiary</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Issue Date</TableHead>
+                  <TableHead>Latest Shipment Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -165,7 +174,7 @@ export default function TotalLCPage() {
               <TableBody>
                  {isLoading ? (
                    <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                        <div className="flex justify-center items-center">
                          <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading L/C entries...
                        </div>
@@ -179,12 +188,13 @@ export default function TotalLCPage() {
                       <TableCell>{lc.beneficiaryName || 'N/A'}</TableCell>
                       <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.lcIssueDate)}</TableCell>
+                      <TableCell>{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={getStatusBadgeVariant(lc.status)} 
+                        <Badge
+                          variant={getStatusBadgeVariant(lc.status)}
                           className={
-                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : 
-                            lc.status === 'Done' ? 'bg-green-600 text-white' : 
+                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' :
+                            lc.status === 'Done' ? 'bg-green-600 text-white' :
                             lc.status === 'Shipping pending' ? 'bg-yellow-500 text-black' : ''
                           }
                         >
@@ -198,15 +208,16 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => Swal.fire("Info", "View L/C Details page is not yet implemented.", "info")}
+                                onClick={() => lc.id && handleViewLC(lc.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
+                                disabled={!lc.id}
                               >
                                 <Eye className="h-4 w-4" />
                                 <span className="sr-only">View Details</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>View L/C Details (Not Implemented)</p>
+                              <p>View L/C Details</p>
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip>
@@ -249,7 +260,7 @@ export default function TotalLCPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       No L/C entries found. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
@@ -265,3 +276,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
