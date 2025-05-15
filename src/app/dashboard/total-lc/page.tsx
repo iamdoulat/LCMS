@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, Eye } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -30,9 +30,9 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipping pending':
       return 'default';
     case 'Shipping going on':
-      return 'default'; // Example: Orange color, adjust in globals.css if specific
+      return 'default'; 
     case 'Done':
-      return 'default'; // Example: Green color
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -72,6 +72,7 @@ const sortOptions = [
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
+const ITEMS_PER_PAGE = 10;
 
 export default function TotalLCPage() {
   const router = useRouter();
@@ -92,6 +93,8 @@ export default function TotalLCPage() {
 
   const [sortBy, setSortBy] = useState<string>('lcIssueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -167,13 +170,11 @@ export default function TotalLCPage() {
       filtered = filtered.filter(lc => lc.status === filterStatus);
     }
 
-    // Sorting
     if (sortBy) {
       filtered.sort((a, b) => {
         let valA = (a as any)[sortBy];
         let valB = (b as any)[sortBy];
 
-        // Handle date strings
         if (sortBy.includes('Date') && typeof valA === 'string' && typeof valB === 'string') {
           try {
             valA = parseISO(valA);
@@ -184,12 +185,10 @@ export default function TotalLCPage() {
           } catch { /* ignore parsing error, will compare as strings or fall through */ }
         }
         
-        // Handle numbers (amount)
         if (sortBy === 'amount') {
             valA = Number(valA) || 0;
             valB = Number(valB) || 0;
         }
-
 
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
@@ -197,6 +196,7 @@ export default function TotalLCPage() {
       });
     }
     setDisplayedLcEntries(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
@@ -247,7 +247,66 @@ export default function TotalLCPage() {
     setFilterStatus('');
     setSortBy('lcIssueDate');
     setSortOrder('desc');
+    setCurrentPage(1);
   };
+
+  // Pagination Logic
+  const totalPages = Math.ceil(displayedLcEntries.length / ITEMS_PER_PAGE);
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; // Max number of page buttons to show (excluding Prev/Next and potential ellipsis)
+    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+    if (totalPages <= maxPagesToShow + 2) { // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      pageNumbers.push(1); // Always show first page
+
+      let startPage = Math.max(2, currentPage - halfPagesToShow);
+      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+
+      if (currentPage <= halfPagesToShow + 1) {
+        endPage = Math.min(totalPages - 1, maxPagesToShow);
+      }
+      if (currentPage >= totalPages - halfPagesToShow) {
+        startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+      }
+      
+      if (startPage > 2) {
+        pageNumbers.push("...");
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+
+      if (endPage < totalPages - 1) {
+        pageNumbers.push("...");
+      }
+
+      pageNumbers.push(totalPages); // Always show last page
+    }
+    return pageNumbers;
+  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -272,7 +331,6 @@ export default function TotalLCPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Filter Section */}
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter & Sort Options</CardTitle>
@@ -379,8 +437,8 @@ export default function TotalLCPage() {
                   <TableHead>Beneficiary</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Issue Date</TableHead>
-                  <TableHead>Expire Date*</TableHead>
                   <TableHead>Latest Shipment Date</TableHead>
+                  <TableHead>Expire Date*</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -394,16 +452,16 @@ export default function TotalLCPage() {
                        </div>
                     </TableCell>
                   </TableRow>
-                ) : displayedLcEntries.length > 0 ? (
-                  displayedLcEntries.map((lc) => (
+                ) : currentItems.length > 0 ? (
+                  currentItems.map((lc) => (
                     <TableRow key={lc.id}>
                       <TableCell className="font-medium">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
                       <TableCell>{lc.applicantName || 'N/A'}</TableCell>
                       <TableCell>{lc.beneficiaryName || 'N/A'}</TableCell>
                       <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                      <TableCell>{formatDisplayDate(lc.expireDate)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
+                      <TableCell>{formatDisplayDate(lc.expireDate)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={getStatusBadgeVariant(lc.status)}
@@ -467,9 +525,49 @@ export default function TotalLCPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your Letters of Credit from Firestore. Filters are applied client-side. For very large datasets, server-side filtering would be more performant.
+                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
               </TableCaption>
             </Table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              {getPageNumbers().map((page, index) =>
+                typeof page === 'number' ? (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePageChange(page)}
+                    className="w-9 h-9 p-0"
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
+                    {page}
+                  </span>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
