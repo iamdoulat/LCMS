@@ -12,7 +12,7 @@ import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import type { LCEntryDocument, LCStatus } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isFuture, isToday, compareAsc } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -37,6 +37,8 @@ interface PieChartDataItem {
 
 interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'updatedAt' | 'status'> {
   updatedAtDate: Date;
+  currency?: Currency;
+  amount?: number;
 }
 
 interface UpcomingEtdShipment {
@@ -71,6 +73,11 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     default:
       return 'outline';
   }
+};
+
+const formatCurrencyValue = (currency?: string, amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
+  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 
@@ -202,10 +209,12 @@ export default function DashboardPage() {
             id: lc.id,
             documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
-            applicantName: lc.applicantName, // Include applicantName
+            applicantName: lc.applicantName,
             updatedAt: lc.updatedAt,
             updatedAtDate: updatedAtDate,
             status: lc.status,
+            currency: lc.currency,
+            amount: lc.amount,
           } as RecentlyCompletedLC;
         })
         .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
@@ -473,6 +482,9 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">
                     Beneficiary: {lc.beneficiaryName || 'N/A'}
                   </p>
+                   <p className="text-xs text-muted-foreground">
+                    Value: {formatCurrencyValue(lc.currency, lc.amount)}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -487,5 +499,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
