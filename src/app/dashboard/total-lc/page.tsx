@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Eye, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, FileText } from 'lucide-react'; // Added FileText
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,7 +23,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default'; // Consider specific color like yellow/orange if theme supports
+      return 'default'; 
     case 'Shipping going on':
       return 'default';
     case 'Done':
@@ -84,22 +84,23 @@ export default function TotalLCPage() {
         Swal.fire("Error", "L/C ID is missing, cannot edit.", "error");
         return;
     }
-    // Swal.fire({ // Optional: can be removed if direct navigation is preferred
-    //   title: "Redirecting...",
-    //   text: `Navigating to edit page for L/C ${lcId}.`,
-    //   icon: "info",
-    //   timer: 1000,
-    //   showConfirmButton: false,
-    // });
     router.push(`/dashboard/total-lc/${lcId}/edit`);
   };
   
-  const handleViewLC = (lcId: string) => {
+  const handleDownloadLCPdf = (lcId: string, lcNumber?: string) => {
     if (!lcId) {
-        Swal.fire("Error", "L/C ID is missing, cannot view details.", "error");
+        Swal.fire("Error", "L/C ID is missing, cannot generate PDF.", "error");
         return;
     }
-    router.push(`/dashboard/total-lc/${lcId}/edit`); // Re-using edit page as details page for now
+    Swal.fire({
+        title: "PDF Download (Placeholder)",
+        text: `PDF generation for L/C "${lcNumber || lcId}" would start here. This functionality is pending implementation.`,
+        icon: "info",
+        confirmButtonText: "OK"
+    });
+    // In a real implementation, you would call a PDF generation library here
+    // e.g., using jsPDF, react-pdf, or a server-side PDF generation service.
+    // console.log(`Attempting to generate PDF for L/C ID: ${lcId}`);
   };
 
   const handleDeleteLC = (lcId: string, lcNumber?: string) => {
@@ -208,16 +209,16 @@ export default function TotalLCPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => lc.id && handleViewLC(lc.id)}
+                                onClick={() => lc.id && handleDownloadLCPdf(lc.id, lc.documentaryCreditNumber)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                                 disabled={!lc.id}
                               >
-                                <Eye className="h-4 w-4" />
-                                <span className="sr-only">View Details</span>
+                                <FileText className="h-4 w-4" /> {/* Changed icon */}
+                                <span className="sr-only">Download L/C as PDF</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>View L/C Details</p>
+                              <p>Download L/C as PDF</p> {/* Changed tooltip text */}
                             </TooltipContent>
                           </Tooltip>
                           <Tooltip>
@@ -276,4 +277,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
