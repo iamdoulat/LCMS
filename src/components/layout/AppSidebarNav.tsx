@@ -36,7 +36,8 @@ import {
   Store,
   UserPlus,
   Building,
-  FileText // Added for L/C Management icon consistency if needed
+  FileText,
+  FileEdit // Added for Recent Draft LCs
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -47,7 +48,7 @@ const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', ico
 const lcManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'L/C Management',
-    icon: Briefcase, // Main icon for L/C Management
+    icon: Briefcase, 
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
@@ -78,6 +79,7 @@ const managementNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
       { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
     ],
   },
 ];
@@ -107,6 +109,7 @@ export function AppSidebarNav() {
         if (
           (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/')) ||
           (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/')) ||
+          (href === '/dashboard/shipments/recent-draft-lcs' && pathname !== '/dashboard/shipments/recent-draft-lcs') || // Added for new page
           (href === '/dashboard/settings/company-setup' && pathname !== '/dashboard/settings/company-setup') ||
           (href === '/dashboard/settings/users' && pathname !== '/dashboard/settings/users') ||
           (href === '/dashboard/settings/smtp' && pathname !== '/dashboard/settings/smtp')
@@ -139,7 +142,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", // Hide default chevron in icon mode
+                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", 
                     isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -164,7 +167,7 @@ export function AppSidebarNav() {
                     isActive={pathname === subLink.href}
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                      "h-8 text-xs" // Smaller height for sub-items
+                      "h-8 text-xs" 
                     )}
                     tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                   >
@@ -186,10 +189,9 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: This should eventually display the actual company name and logo from the Company Setup page data. */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrlFromSettings} // Replace with actual logo URL from settings when available
+            src={companyLogoUrlFromSettings} 
             alt="Company Logo Placeholder"
             width={32}
             height={32}
@@ -298,10 +300,10 @@ type NavItem = {
 
 type NavItemGroup = {
   groupLabel?: string;
-  icon: React.ElementType; // Icon for the group itself
+  icon: React.ElementType; 
   subLinks?: Array<{
     href: string;
     label: string;
-    icon?: React.ElementType; // Icon for individual sub-links
+    icon?: React.ElementType; 
   }>;
 };
