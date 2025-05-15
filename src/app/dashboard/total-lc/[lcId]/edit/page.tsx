@@ -23,6 +23,21 @@ export default function EditLCPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handlePrintThisLC = () => {
+    Swal.fire({
+      title: "Print L/C Details",
+      text: `This will open the browser's print dialog for the current L/C details.`,
+      icon: "info",
+      confirmButtonText: "Proceed to Print",
+      showCancelButton: true,
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.print();
+      }
+    });
+  };
+
   useEffect(() => {
     if (lcId) {
       const fetchLCData = async () => {
@@ -56,20 +71,20 @@ export default function EditLCPage() {
     }
   }, [lcId, router]);
 
-  const handlePrintThisLC = () => {
-    Swal.fire({
-      title: "Print L/C Details",
-      text: `This will open the browser's print dialog for the current L/C details.`,
-      icon: "info",
-      confirmButtonText: "Proceed to Print",
-      showCancelButton: true,
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        window.print();
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
+        event.preventDefault();
+        handlePrintThisLC();
       }
-    });
-  };
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
 
   if (isLoading) {
     return (
