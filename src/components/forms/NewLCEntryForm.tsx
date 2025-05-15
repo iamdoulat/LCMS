@@ -79,10 +79,10 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(), // This will be for the address
-  notifyPartyName: z.string().optional(),          // New field for name
-  notifyPartyCell: z.string().optional(),          // New field for cell
-  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), // For email
+  notifyPartyNameAndAddress: z.string().optional(), 
+  notifyPartyName: z.string().optional(),          
+  notifyPartyCell: z.string().optional(),          
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')), 
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
@@ -159,8 +159,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '', // Will store applicant ID
-      beneficiaryName: '', // Will store beneficiary ID
+      applicantName: '', 
+      beneficiaryName: '', 
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -313,6 +313,12 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
+     // Remove undefined fields to avoid overwriting with undefined in Firestore merge
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+        delete dataToSave[key as keyof typeof dataToSave];
+      }
+    });
 
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
@@ -530,7 +536,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Documentary Credit Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Documentary Credit Number" {...field} />
+                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -543,7 +549,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Proforma Invoice Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter PI number" {...field} />
+                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -619,7 +625,7 @@ export function NewLCEntryForm() {
             <FormItem>
                 <FormLabel>Item Descriptions</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} />
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -633,7 +639,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>43P: Partial Shipments Rule</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} />
+                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormDescription>As per L/C document clause 43P.</FormDescription>
                 <FormMessage />
@@ -647,7 +653,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>44E: Port of Loading</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port name" {...field} />
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -660,7 +666,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>44F: Port of Discharge</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter port name" {...field} />
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -679,7 +685,7 @@ export function NewLCEntryForm() {
             <FormItem>
                 <FormLabel>Consignee Bank Name and Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter bank name and full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter bank name and full address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -693,7 +699,7 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>Bank BIN</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter Bank Identification Number" {...field} />
+                    <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -706,7 +712,7 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>Bank TIN</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter Taxpayer Identification Number" {...field} />
+                    <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -723,9 +729,9 @@ export function NewLCEntryForm() {
             name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Address</FormLabel>
+                <FormLabel>Notify Party Name and Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's full address" {...field} rows={3}/>
+                <Textarea placeholder="Enter notify party's full name and address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -736,9 +742,9 @@ export function NewLCEntryForm() {
             name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Name</FormLabel>
+                <FormLabel>Notify Party contact person Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter notify party's name" {...field} />
+                  <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -752,7 +758,7 @@ export function NewLCEntryForm() {
               <FormItem>
                   <FormLabel>Notify Party Cell</FormLabel>
                   <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -765,7 +771,7 @@ export function NewLCEntryForm() {
               <FormItem>
                   <FormLabel>Notify Party Email</FormLabel>
                   <FormControl>
-                  <Input type="email" placeholder="notify@example.com" {...field} />
+                  <Input type="email" placeholder="notify@example.com" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -987,6 +993,7 @@ export function NewLCEntryForm() {
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
                         {...field}
                         disabled={!watchedShipmentMode}
+                        value={field.value ?? ''}
                     />
                     </FormControl>
                     {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
@@ -1004,7 +1011,7 @@ export function NewLCEntryForm() {
                         <FormItem className="md:col-span-2">
                             <FormLabel>Vessel IMO Number</FormLabel>
                             <FormControl>
-                                <Input placeholder="Enter Vessel IMO Number" {...field} />
+                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -1037,7 +1044,7 @@ export function NewLCEntryForm() {
                         <FormLabel>Courier</FormLabel>
                         <Select
                             onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                            value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}
+                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
                         >
                         <FormControl>
                             <SelectTrigger>
@@ -1062,7 +1069,7 @@ export function NewLCEntryForm() {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} />
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} value={field.value ?? ''}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -1325,7 +1332,7 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>

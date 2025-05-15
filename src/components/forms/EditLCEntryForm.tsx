@@ -34,7 +34,6 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE__";
 
 const lcEntrySchema = z.object({
-  // IDs for applicant and beneficiary are stored in these form fields
   applicantName: z.string().min(1, "Applicant Name is required"),
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
@@ -135,9 +134,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: { // These are initial defaults, form.reset will override with initialData
-      applicantName: '', // Stores ID
-      beneficiaryName: '', // Stores ID
+    defaultValues: { 
+      applicantName: '', 
+      beneficiaryName: '', 
       currency: 'USD',
       termsOfPay: "" as TermsOfPay,
       status: 'Draft',
@@ -313,7 +312,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      // Editable fields from the form (data object)
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
@@ -367,24 +365,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
       beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: data.shipmentAdviceQty,
-
-      // Preserve IDs and Names for Applicant/Beneficiary
-      applicantId: data.applicantName, // data.applicantName now correctly holds the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Update name if ID changed
-      beneficiaryId: data.beneficiaryName, // data.beneficiaryName now correctly holds the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Update name if ID changed
-
+      applicantId: data.applicantName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, 
+      beneficiaryId: data.beneficiaryName, 
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, 
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    // Remove undefined fields to avoid overwriting with undefined in Firestore merge
     Object.keys(dataToUpdate).forEach(key => {
       if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
         delete dataToUpdate[key as keyof typeof dataToUpdate];
       }
     });
-
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -814,22 +807,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="notifyPartyNameAndAddress"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Address</FormLabel>
+                <FormLabel>Notify Party Name and Address</FormLabel>
                 <FormControl>
-                <Textarea placeholder="Enter notify party's full address" {...field} rows={3} value={field.value ?? ''}/>
+                <Textarea placeholder="Enter notify party's full name and address" {...field} rows={3} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
             )}
         />
-        <FormField
+         <FormField
             control={form.control}
             name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party Name</FormLabel>
+                <FormLabel>Notify Party contact person Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter notify party's name" {...field} value={field.value ?? ''}/>
+                  <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -1416,7 +1409,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormItem>
                     <FormLabel>Shipping Marks</FormLabel>
                     <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3}/>
+                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
