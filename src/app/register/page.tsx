@@ -201,12 +201,14 @@ export default function RegisterPage() {
             )}
           </Button>
 
+          {/*
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href="/login" className="font-medium text-primary hover:underline">
               Login here
             </Link>
           </p>
+          */}
         </CardContent>
       </Card>
     </div>
