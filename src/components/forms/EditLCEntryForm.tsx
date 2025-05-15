@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -120,6 +120,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
+    // Default values will be set by form.reset in useEffect
   });
 
   React.useEffect(() => {
@@ -164,9 +165,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         applicantName: initialData.applicantId || '',
         beneficiaryName: initialData.beneficiaryId || '',
         currency: initialData.currency || 'USD',
-        termsOfPay: initialData.termsOfPay || '',
+        termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
-        shipmentMode: initialData.shipmentMode || '',
+        shipmentMode: initialData.shipmentMode || '' as ShipmentMode,
         trackingCourier: initialData.trackingCourier || '',
         amount: initialData.amount !== undefined ? initialData.amount : undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
@@ -225,12 +226,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
     setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-  }, [watchedPartialQtys, form]); 
+  }, [watchedPartialQtys, form]); // form added as dependency for watched values
 
   React.useEffect(() => {
     const amounts = watchedPartialAmounts.map(a => Number(a) || 0);
     setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0).toFixed(2));
-  }, [watchedPartialAmounts, form]); 
+  }, [watchedPartialAmounts, form]); // form added as dependency for watched values
 
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
@@ -278,6 +279,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryComplianceCertificateQty: toNumberOrUndefined(data.beneficiaryComplianceCertificateQty),
       shipmentAdviceQty: toNumberOrUndefined(data.shipmentAdviceQty),
     };
+
+    // Remove fields that should not be updated if they are undefined or meant to be handled by Firestore (like year if lcIssueDate is not changed)
+    if (!data.lcIssueDate) delete dataToUpdate.year; 
 
     for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
@@ -1361,16 +1365,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Saving Changes...
             </>
           ) : (
             <>
-              <Library className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
