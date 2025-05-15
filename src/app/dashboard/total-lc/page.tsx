@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,6 +69,10 @@ const sortOptions = [
   { value: "status", label: "Status" },
 ];
 
+const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
+const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES__";
+const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
+
 export default function TotalLCPage() {
   const router = useRouter();
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
@@ -104,7 +108,7 @@ export default function TotalLCPage() {
         setAllLcEntries(fetchedLCs);
       } catch (error: any) {
         console.error("Error fetching L/C entries: ", error);
-        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details. Error: ${error.message}`, "error");
+        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -122,9 +126,9 @@ export default function TotalLCPage() {
         setBeneficiaryOptions(
           suppliersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching filter options:", error);
-        Swal.fire("Error", "Could not load filter options for applicants/beneficiaries.", "error");
+        Swal.fire("Error", `Could not load filter options for applicants/beneficiaries. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
@@ -221,7 +225,7 @@ export default function TotalLCPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "lc_entries", lcId));
-          setAllLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId)); // Update allLcEntries, useEffect will update displayedLcEntries
+          setAllLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId)); 
           Swal.fire(
             'Deleted!',
             `L/C "${lcNumber || lcId}" has been removed.`,
@@ -286,24 +290,32 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Select value={filterApplicantId} onValueChange={setFilterApplicantId} disabled={isLoadingApplicants}>
+                  <Select 
+                    value={filterApplicantId === '' ? ALL_APPLICANTS_VALUE : filterApplicantId} 
+                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)} 
+                    disabled={isLoadingApplicants}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingApplicants ? "Loading..." : "All Applicants"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Applicants</SelectItem>
+                      <SelectItem value={ALL_APPLICANTS_VALUE}>All Applicants</SelectItem>
                       {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Select value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} disabled={isLoadingBeneficiaries}>
+                  <Select 
+                    value={filterBeneficiaryId === '' ? ALL_BENEFICIARIES_VALUE : filterBeneficiaryId} 
+                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)} 
+                    disabled={isLoadingBeneficiaries}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Beneficiaries</SelectItem>
+                      <SelectItem value={ALL_BENEFICIARIES_VALUE}>All Beneficiaries</SelectItem>
                       {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -317,12 +329,15 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as LCStatus | '')}>
+                  <Select 
+                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus} 
+                    onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Statuses</SelectItem>
+                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
                       {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -405,12 +420,13 @@ export default function TotalLCPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
+                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => lc.id && handleEditLC(lc.id)}
                                 className="hover:bg-accent/50 hover:text-accent-foreground"
                                 disabled={!lc.id}
+                                title="Edit L/C"
                               >
                                 <FileEdit className="h-4 w-4" />
                                 <span className="sr-only">Edit L/C</span>
@@ -459,4 +475,6 @@ export default function TotalLCPage() {
     </div>
   );
 }
+    
+
     
