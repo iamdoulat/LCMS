@@ -208,7 +208,7 @@ export default function DashboardPage() {
           } as RecentlyCompletedLC;
         })
         .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
-        .slice(0, 5);
+        .slice(0, 10); // Updated to show up to 10
 
       setRecentlyCompletedLCs(completedLCs);
 
@@ -233,7 +233,7 @@ export default function DashboardPage() {
             etdDate: parseISO(lc.etd!), // etd is confirmed to exist here
         }))
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
-        .slice(0, 5); // Show top 5
+        .slice(0, 10); // Updated to show up to 10
 
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
@@ -483,3 +483,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
