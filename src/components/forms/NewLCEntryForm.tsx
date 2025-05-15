@@ -50,9 +50,18 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
-  shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
-  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')),
+  finalPIUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Final PI" }).optional()
+  ),
+  shippingDocumentsUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
+  ),
+  finalLcUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Final LC" }).optional()
+  ),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
@@ -1392,3 +1401,5 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+    

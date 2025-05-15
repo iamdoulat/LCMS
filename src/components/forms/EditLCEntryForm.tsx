@@ -73,9 +73,18 @@ const lcEntrySchema = z.object({
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
-  finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
-  shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
-  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')),
+  finalPIUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Final PI" }).optional()
+  ),
+  shippingDocumentsUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
+  ),
+  finalLcUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : val),
+    z.string().url({ message: "Invalid URL format for Final LC" }).optional()
+  ),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Quantity cannot be negative").optional()),
@@ -1397,3 +1406,5 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+    
