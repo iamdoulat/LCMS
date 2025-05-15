@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, ListFilter, TrendingUp, CalendarIcon } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, ListFilter, TrendingUp, CalendarIcon, Users } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 
@@ -21,6 +21,7 @@ export default function DashboardPage() {
     totalLCs: 125,
     totalLCValue: 5750000,
     activeSuppliers: 15,
+    activeApplicants: 30, // Added new stat
     thisMonthLCQty: 22,
   };
 
@@ -81,6 +82,12 @@ export default function DashboardPage() {
           title="Active Suppliers"
           value={stats.activeSuppliers.toLocaleString()}
           icon={<UsersRound className="h-7 w-7 text-primary" />}
+          description={`For year ${selectedYear}`}
+        />
+        <StatCard
+          title="Active Applicants"
+          value={stats.activeApplicants.toLocaleString()}
+          icon={<Users className="h-7 w-7 text-primary" />} 
           description={`For year ${selectedYear}`}
         />
         <StatCard
