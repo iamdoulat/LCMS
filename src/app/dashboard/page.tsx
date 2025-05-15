@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2 } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isFuture, isToday, compareAsc } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -36,8 +36,16 @@ interface PieChartDataItem {
 }
 
 interface RecentlyCompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'updatedAt' | 'status'> {
-  updatedAtDate: Date; 
+  updatedAtDate: Date;
 }
+
+interface UpcomingEtdShipment {
+  id: string;
+  documentaryCreditNumber?: string;
+  beneficiaryName?: string;
+  etdDate: Date;
+}
+
 
 // Predefined fill colors for the pie chart
 const PIE_CHART_COLORS = [
@@ -55,7 +63,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipping pending':
-      return 'default'; 
+      return 'default';
     case 'Shipping going on':
       return 'default';
     case 'Done':
@@ -79,6 +87,7 @@ export default function DashboardPage() {
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
+  const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [searchLcNumber, setSearchLcNumber] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
@@ -94,9 +103,9 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-        
-        lcEntriesForTheYear.push({ 
-            id: doc.id, 
+
+        lcEntriesForTheYear.push({
+            id: doc.id,
             ...data,
           } as LCEntryDocument);
       });
@@ -111,12 +120,13 @@ export default function DashboardPage() {
         });
         setSupplierPieData([]);
         setRecentlyCompletedLCs([]);
+        setUpcomingEtdShipments([]);
         setIsLoading(false);
         return;
       }
 
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (lc.amount || 0), 0);
-      
+
       const uniqueBeneficiaryIds = new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => id));
       const activeSuppliers = uniqueBeneficiaryIds.size;
 
@@ -125,7 +135,7 @@ export default function DashboardPage() {
 
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-      
+
       let thisMonthLCQty = 0;
       if (yearNumber === currentYear) {
         const firstDayOfMonth = startOfMonth(currentDate);
@@ -156,22 +166,22 @@ export default function DashboardPage() {
         const name = lc.beneficiaryName || 'Unknown Supplier';
         supplierValueMap[name] = (supplierValueMap[name] || 0) + (lc.amount || 0);
       });
-      
+
       const pieData = Object.entries(supplierValueMap)
         .map(([name, value], index) => ({
           name,
           value,
           fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
         }))
-        .sort((a, b) => b.value - a.value); 
-      
+        .sort((a, b) => b.value - a.value);
+
       setSupplierPieData(pieData);
 
       // Recently Completed L/Cs
       const completedLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Done')
         .map(lc => {
-          let updatedAtDate = new Date(); 
+          let updatedAtDate = new Date();
           if (lc.updatedAt) {
             if (typeof (lc.updatedAt as unknown as Timestamp).toDate === 'function') {
               updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
@@ -194,13 +204,39 @@ export default function DashboardPage() {
             beneficiaryName: lc.beneficiaryName,
             updatedAt: lc.updatedAt,
             updatedAtDate: updatedAtDate,
-            status: lc.status, 
+            status: lc.status,
           } as RecentlyCompletedLC;
         })
-        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime()) 
-        .slice(0, 5); 
+        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
+        .slice(0, 5);
 
       setRecentlyCompletedLCs(completedLCs);
+
+      // Upcoming ETDs
+      const today = new Date();
+      today.setHours(0,0,0,0); // Set to start of today for comparison
+
+      const filteredUpcomingEtds = lcEntriesForTheYear
+        .filter(lc => {
+            if (!lc.etd || lc.status === 'Done') return false;
+            try {
+                const etdDate = parseISO(lc.etd);
+                return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
+            } catch (e) {
+                return false;
+            }
+        })
+        .map(lc => ({
+            id: lc.id,
+            documentaryCreditNumber: lc.documentaryCreditNumber,
+            beneficiaryName: lc.beneficiaryName,
+            etdDate: parseISO(lc.etd!), // etd is confirmed to exist here
+        }))
+        .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
+        .slice(0, 5); // Show top 5
+
+      setUpcomingEtdShipments(filteredUpcomingEtds);
+
 
     } catch (error) {
       console.error("Error fetching dashboard data: ", error);
@@ -208,6 +244,7 @@ export default function DashboardPage() {
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
+      setUpcomingEtdShipments([]);
     } finally {
       setIsLoading(false);
     }
@@ -250,13 +287,6 @@ export default function DashboardPage() {
     }
   };
 
-
-  const upcomingShipments = [
-    { lcNumber: 'LC-00123', supplier: 'Supplier Beta', latestShipmentDate: '2024-08-15' },
-    { lcNumber: 'LC-00124', supplier: 'Supplier Alpha', latestShipmentDate: '2024-08-22' },
-    { lcNumber: 'LC-00125', supplier: 'Supplier Gamma', latestShipmentDate: '2024-09-01' },
-  ];
-
   if (isLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -286,7 +316,7 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           title="Total L/Cs"
@@ -309,7 +339,7 @@ export default function DashboardPage() {
         <StatCard
           title="Active Applicants"
           value={dashboardStats.activeApplicants.toLocaleString()}
-          icon={<Users className="h-7 w-7 text-primary" />} 
+          icon={<Users className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
         />
         <StatCard
@@ -341,7 +371,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        
+
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
@@ -355,9 +385,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSearchLC} className="flex w-full items-center space-x-2">
-                <Input 
-                    type="text" 
-                    placeholder="Enter L/C Number..." 
+                <Input
+                    type="text"
+                    placeholder="Enter L/C Number..."
                     className="flex-1"
                     value={searchLcNumber}
                     onChange={(e) => setSearchLcNumber(e.target.value)}
@@ -372,40 +402,37 @@ export default function DashboardPage() {
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <CalendarDays className="h-6 w-6 text-accent" />
-                Upcoming Shipments
+                <Ship className="h-6 w-6 text-accent" /> {/* Changed icon */}
+                Upcoming ETDs
               </CardTitle>
               <CardDescription>
-                Key upcoming latest shipment dates.
+                L/Cs from {selectedYear} nearing their Estimated Time of Departure.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {upcomingShipments.length > 0 ? (
+              {upcomingEtdShipments.length > 0 ? (
                 <ul className="space-y-3">
-                  {upcomingShipments.map((shipment, index) => (
-                    <li key={index} className="text-sm">
+                  {upcomingEtdShipments.map((shipment) => (
+                    <li key={shipment.id} className="text-sm">
+                       <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline">
+                        {shipment.documentaryCreditNumber || 'N/A'}
+                      </Link>
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-foreground">{shipment.lcNumber}</span>
-                        <span className="text-muted-foreground">{new Date(shipment.latestShipmentDate).toLocaleDateString()}</span>
+                        <span className="text-xs text-muted-foreground">Beneficiary: {shipment.beneficiaryName || 'N/A'}</span>
+                        <span className="font-semibold text-foreground">{format(shipment.etdDate, 'PPP')}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">Beneficiary: {shipment.supplier}</p>
-                      {index < upcomingShipments.length - 1 && <Separator className="mt-2" />}
+                      {upcomingEtdShipments.indexOf(shipment) < upcomingEtdShipments.length - 1 && <Separator className="mt-2" />}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No upcoming shipments scheduled for {selectedYear}.</p>
+                <p className="text-sm text-muted-foreground">No upcoming ETDs found for {selectedYear}.</p>
               )}
             </CardContent>
-             <CardFooter>
-                <p className="text-xs text-muted-foreground">
-                    Displaying placeholder data for upcoming shipments.
-                </p>
-            </CardFooter>
           </Card>
         </div>
       </div>
-      
+
       <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl font-semibold">
