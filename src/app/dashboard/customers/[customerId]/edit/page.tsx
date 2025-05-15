@@ -1,26 +1,106 @@
 
 "use client";
 
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useParams } from 'next/navigation';
-import { UserCog, ArrowLeft } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { UserCog, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
-
-// Placeholder: In a real app, you would import your EditCustomerForm component
-// import { EditCustomerForm } from '@/components/forms/EditCustomerForm';
+import { EditApplicantForm } from '@/components/forms/EditApplicantForm'; // To be created
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import type { CustomerDocument } from '@/types';
+import Swal from 'sweetalert2';
 
 export default function EditApplicantPage() {
   const params = useParams();
-  const customerId = params.customerId as string; // customerId here refers to applicantId in context
+  const router = useRouter();
+  const customerId = params.customerId as string;
 
-  // Placeholder: Fetch applicant data based on customerId
-  // const [applicantData, setApplicantData] = React.useState(null);
-  // React.useEffect(() => {
-  //  // Fetch applicant data using customerId
-  // }, [customerId]);
+  const [applicantData, setApplicantData] = useState<CustomerDocument | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (customerId) {
+      const fetchApplicantData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const applicantDocRef = doc(firestore, "customers", customerId);
+          const applicantDocSnap = await getDoc(applicantDocRef);
+
+          if (applicantDocSnap.exists()) {
+            setApplicantData({ id: applicantDocSnap.id, ...applicantDocSnap.data() } as CustomerDocument);
+          } else {
+            setError("Applicant not found.");
+            Swal.fire("Error", `Applicant with ID ${customerId} not found.`, "error");
+          }
+        } catch (err: any) {
+          console.error("Error fetching applicant data: ", err);
+          setError(`Failed to fetch applicant data: ${err.message}`);
+          Swal.fire("Error", `Failed to fetch applicant data: ${err.message}`, "error");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchApplicantData();
+    } else {
+      setError("No Applicant ID provided.");
+      setIsLoading(false);
+       Swal.fire("Error", "No Applicant ID specified in the URL.", "error").then(() => {
+         router.push('/dashboard/customers');
+       });
+    }
+  }, [customerId, router]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading applicant details for ID: {customerId}...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="max-w-3xl mx-auto shadow-xl border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
+              <AlertTriangle className="h-7 w-7" />
+              Error Loading Applicant
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive-foreground">{error}</p>
+            <Button variant="outline" asChild className="mt-4">
+              <Link href="/dashboard/customers">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Applicant List
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  if (!applicantData) {
+     return (
+      <div className="container mx-auto py-8 text-center">
+        <p className="text-muted-foreground">Applicant data could not be loaded.</p>
+         <Button variant="outline" asChild className="mt-4">
+            <Link href="/dashboard/customers">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Applicant List
+            </Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -43,23 +123,7 @@ export default function EditApplicantPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert variant="default" className="mb-6 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/30 dark:border-yellow-700">
-            <Info className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            <AlertTitle className="text-yellow-700 dark:text-yellow-300 font-semibold">Under Development</AlertTitle>
-            <AlertDescription className="text-yellow-600 dark:text-yellow-400">
-              This page is for editing applicant details. The form and data loading/saving functionality will be implemented here.
-              Currently, it only displays the applicant ID from the URL.
-            </AlertDescription>
-          </Alert>
-          
-          {/* Placeholder for the actual edit form */}
-          {/* <EditCustomerForm customerId={customerId} /> */}
-          
-          <div className="mt-6 p-4 border border-dashed rounded-md bg-muted/30">
-            <p className="text-center text-muted-foreground">
-              Edit Applicant Form for ID <span className="font-bold">{customerId}</span> will be displayed here.
-            </p>
-          </div>
+          <EditApplicantForm initialData={applicantData} applicantId={customerId} />
         </CardContent>
       </Card>
     </div>
