@@ -22,7 +22,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 // Schema includes fields that are editable on this form, including dropdowns.
 const lcEntrySchema = z.object({
-  // Editable dropdowns
   applicantName: z.string().min(1, "Applicant Name is required"), // Will hold applicant ID
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Will hold beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
@@ -31,7 +30,6 @@ const lcEntrySchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
 
-  // Editable text/number/date fields
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
@@ -69,6 +67,7 @@ const lcEntrySchema = z.object({
   ),
   finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
   shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
+  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')), // New field
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -92,7 +91,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    // Default values will be set by form.reset in useEffect
   });
 
   React.useEffect(() => {
@@ -169,6 +167,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
+        finalLcUrl: initialData.finalLcUrl || '', // New field
       });
     }
   }, [initialData, form, applicantOptions, beneficiaryOptions]);
@@ -180,11 +179,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      ...data,
+      ...data, // Spreads editable fields from form
       applicantId: data.applicantName, // This form field now holds the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Get the name for saving
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
       beneficiaryId: data.beneficiaryName, // This form field now holds the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Get the name for saving
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty !== undefined ? Number(data.totalMachineQty) : undefined,
       numberOfAmendments: data.numberOfAmendments !== '' && data.numberOfAmendments !== undefined && data.numberOfAmendments !== null ? Number(data.numberOfAmendments) : undefined,
@@ -194,15 +193,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etd: data.etd ? format(data.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(data.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      finalPIUrl: data.finalPIUrl || '', // Ensure empty string if undefined
-      shippingDocumentsUrl: data.shippingDocumentsUrl || '', // Ensure empty string if undefined
+      finalPIUrl: data.finalPIUrl || '',
+      shippingDocumentsUrl: data.shippingDocumentsUrl || '',
+      finalLcUrl: data.finalLcUrl || '', // New field
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    // Remove fields from dataToUpdate that are not meant to be directly updated via the form schema
-    // (e.g. if the form schema was smaller than LCEntryDocument) - but our schema is comprehensive.
-    // Filter out undefined values to avoid overriding fields with undefined in Firestore
     for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -291,7 +288,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        // Check if it's a valid URL structure before opening
         new URL(url);
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
@@ -950,6 +946,31 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
                         title="View Shipping Documents"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="finalLcUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Final LC URL</FormLabel>
+                 <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Final LC"
                     >
                         <ExternalLink className="h-4 w-4" />
                     </Button>

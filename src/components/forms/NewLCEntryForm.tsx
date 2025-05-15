@@ -25,8 +25,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"),
-  applicantName: z.string().min(1, "Applicant name is required"),
+  applicantName: z.string().min(1, "Applicant name is required"), // Will hold applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // Will hold beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -45,6 +45,7 @@ const lcEntrySchema = z.object({
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
   shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
+  finalLcUrl: z.string().url({ message: "Invalid URL format for Final LC" }).optional().or(z.literal('')), // New field
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
@@ -143,8 +144,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '',
-      applicantName: '',
+      beneficiaryName: '', // Will store beneficiaryId
+      applicantName: '',   // Will store applicantId
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -157,6 +158,7 @@ export function NewLCEntryForm() {
       latestShipmentDate: undefined,
       finalPIUrl: '',
       shippingDocumentsUrl: '',
+      finalLcUrl: '', // New field
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
@@ -207,10 +209,10 @@ export function NewLCEntryForm() {
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
       ...restOfData,
-      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName,
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName,
-      applicantId: data.applicantName, 
-      beneficiaryId: data.beneficiaryName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, // Store label
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, // Store label
+      applicantId: data.applicantName, // Store ID
+      beneficiaryId: data.beneficiaryName, // Store ID
       year: extractedYear,
       amount: Number(data.amount),
       totalMachineQty: data.totalMachineQty ? Number(data.totalMachineQty) : 0,
@@ -226,6 +228,7 @@ export function NewLCEntryForm() {
       status: data.status || 'Draft',
       finalPIUrl: data.finalPIUrl || '',
       shippingDocumentsUrl: data.shippingDocumentsUrl || '',
+      finalLcUrl: data.finalLcUrl || '', // New field
     };
 
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
@@ -1063,6 +1066,31 @@ export function NewLCEntryForm() {
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
                         title="View Shipping Documents"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="finalLcUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Final LC URL</FormLabel>
+                 <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} />
+                    </FormControl>
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Final LC"
                     >
                         <ExternalLink className="h-4 w-4" />
                     </Button>

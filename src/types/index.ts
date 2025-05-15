@@ -24,8 +24,8 @@ export type LCStatus = typeof lcStatusOptions[number];
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; 
-  applicantName: string;   
+  beneficiaryName: string; // Represents beneficiaryId in the form for selection
+  applicantName: string;   // Represents applicantId in the form for selection
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -36,14 +36,15 @@ export interface LCEntry {
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
-  finalPIUrl?: string; 
-  shippingDocumentsUrl?: string; 
+  finalPIUrl?: string;
+  shippingDocumentsUrl?: string;
+  finalLcUrl?: string; // New field
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
   eta?: Date;
   itemDescriptions?: string;
-  shippingDocumentForAI?: File | null; 
+  shippingDocumentForAI?: File | null;
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
@@ -64,28 +65,29 @@ export interface LCEntry {
 
 // This type represents the data structure in Firestore
 export interface LCEntryDocument {
-  id: string; 
+  id: string;
   year: number;
-  applicantName: string; 
-  beneficiaryName: string; 
-  applicantId: string; 
-  beneficiaryId: string; 
+  applicantName: string; // Display name of the applicant
+  beneficiaryName: string; // Display name of the beneficiary
+  applicantId: string; // Firestore ID of the applicant from 'customers' collection
+  beneficiaryId: string; // Firestore ID of the beneficiary from 'suppliers' collection
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string; 
+  invoiceDate?: string;
   totalMachineQty: number;
-  lcIssueDate?: string; 
-  expireDate?: string; 
-  latestShipmentDate?: string; 
+  lcIssueDate?: string;
+  expireDate?: string;
+  latestShipmentDate?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
+  finalLcUrl?: string; // New field
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string; 
-  eta?: string; 
+  etd?: string;
+  eta?: string;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -102,9 +104,9 @@ export interface LCEntryDocument {
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number;
-  status: LCStatus; 
-  createdAt: any; 
-  updatedAt: any; 
+  status: LCStatus;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export interface Customer {
@@ -144,8 +146,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  timestamp: string; 
+  timestamp: string;
   isRead: boolean;
-  link?: string; 
+  link?: string;
 }
-    
