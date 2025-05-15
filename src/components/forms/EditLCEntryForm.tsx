@@ -1003,7 +1003,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                             <FormLabel>Courier</FormLabel>
                             <Select
                                 onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                                value={field.value === "" ? NONE_COURIER_VALUE : field.value}
+                                value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}
                             >
                                 <FormControl>
                                     <SelectTrigger>
