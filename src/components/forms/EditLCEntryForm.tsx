@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Library } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +30,6 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-// This schema is for the editable fields in the form
 const lcEntrySchema = z.object({
   applicantName: z.string().min(1, "Applicant Name is required"), 
   beneficiaryName: z.string().min(1, "Beneficiary Name is required"), 
@@ -108,6 +107,7 @@ interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
   lcId: string;
 }
+const NONE_COURIER_VALUE = "__NONE__"; // Special value for "None" option
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -123,7 +123,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     resolver: zodResolver(lcEntrySchema),
     // Default values will be set by form.reset in useEffect
   });
-
+  
   React.useEffect(() => {
     const fetchDropdownData = async () => {
       setIsLoadingApplicants(true);
@@ -163,8 +163,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId);
 
       form.reset({
-        applicantName: initialData.applicantId || '', // Field expects ID
-        beneficiaryName: initialData.beneficiaryId || '', // Field expects ID
+        applicantName: initialData.applicantId || '', 
+        beneficiaryName: initialData.beneficiaryId || '', 
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -237,24 +237,24 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); 
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName, // Store the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Store the label
-      beneficiaryId: data.beneficiaryName, // Store the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Store the label
+      applicantId: data.applicantName, 
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, 
+      beneficiaryId: data.beneficiaryName, 
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, 
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
       shipmentMode: data.shipmentMode,
-      trackingCourier: data.trackingCourier || undefined, // ensure empty string becomes undefined
-      amount: data.amount, // Zod ensures this is a number
+      trackingCourier: data.trackingCourier || undefined, 
+      amount: data.amount, 
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number or undefined
+      totalMachineQty: data.totalMachineQty, 
       lcIssueDate: data.lcIssueDate ? format(data.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(data.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(data.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -271,10 +271,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
       shippingMarks: data.shippingMarks,
-      certificateOfOrigin: data.certificateOfOrigin, // This is already array or undefined
+      certificateOfOrigin: data.certificateOfOrigin, 
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
       notifyPartyContactDetails: data.notifyPartyContactDetails,
-      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is number or undefined
+      numberOfAmendments: data.numberOfAmendments, 
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
@@ -300,8 +300,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
     
-    // Firestore omits undefined fields, so no need to manually delete them
-
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
       await updateDoc(lcDocRef, dataToUpdate);
@@ -564,7 +562,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="totalMachineQty"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Machine Qty*</FormLabel>
+                <FormLabel>Total L/C Machine Qty*</FormLabel>
                 <FormControl>
                   <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
                 </FormControl>
@@ -1003,14 +1001,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     render={({ field }) => (
                         <FormItem className="md:col-span-1">
                             <FormLabel>Courier</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <Select
+                                onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                                value={field.value === "" ? NONE_COURIER_VALUE : field.value}
+                            >
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Select Courier" />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    <SelectItem value="">None</SelectItem>
+                                    <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
                                     {trackingCourierOptions.map(courier => (
                                         <SelectItem key={courier} value={courier}>{courier}</SelectItem>
                                     ))}

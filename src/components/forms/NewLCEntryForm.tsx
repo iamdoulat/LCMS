@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -102,6 +102,8 @@ interface DropdownOption {
   label: string;
 }
 
+const NONE_COURIER_VALUE = "__NONE__"; // Special value for "None" option
+
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
@@ -154,8 +156,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Will store Beneficiary ID
-      applicantName: '',   // Will store Applicant ID
+      beneficiaryName: '', 
+      applicantName: '',   
       currency: 'USD' as Currency,
       amount: undefined, 
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -241,25 +243,25 @@ export function NewLCEntryForm() {
     const lcIssueDateObj = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
     const extractedYear = lcIssueDateObj.getFullYear();
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); // data.applicantName is ID here
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); // data.beneficiaryName is ID here
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName); 
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName); 
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, // This is the ID from the form
+      applicantId: data.applicantName, 
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName, // This is the ID from the form
+      beneficiaryId: data.beneficiaryName, 
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
-      amount: data.amount, // Zod ensures this is a number
+      amount: data.amount, 
       termsOfPay: data.termsOfPay,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: data.totalMachineQty, // Zod ensures this is a number or undefined
+      totalMachineQty: data.totalMachineQty, 
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      finalPIUrl: data.finalPIUrl || undefined, // Save as undefined if empty
+      finalPIUrl: data.finalPIUrl || undefined, 
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
       trackingCourier: data.trackingCourier || undefined,
@@ -277,10 +279,10 @@ export function NewLCEntryForm() {
       portOfLoading: data.portOfLoading,
       portOfDischarge: data.portOfDischarge,
       shippingMarks: data.shippingMarks,
-      certificateOfOrigin: data.certificateOfOrigin, // This is already an array or undefined
+      certificateOfOrigin: data.certificateOfOrigin, 
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
       notifyPartyContactDetails: data.notifyPartyContactDetails,
-      numberOfAmendments: data.numberOfAmendments, // Zod ensures this is number or undefined
+      numberOfAmendments: data.numberOfAmendments, 
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
@@ -304,8 +306,6 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
-
-    // Firestore omits undefined fields, so no need to manually delete them
     
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
@@ -996,14 +996,17 @@ export function NewLCEntryForm() {
                     render={({ field }) => (
                     <FormItem className="md:col-span-1">
                         <FormLabel>Courier</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select
+                            onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                            value={field.value === "" ? NONE_COURIER_VALUE : field.value}
+                        >
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Select Courier" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                             <SelectItem value="">None</SelectItem>
+                             <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
                             {trackingCourierOptions.map(courier => (
                                 <SelectItem key={courier} value={courier}>{courier}</SelectItem>
                             ))}
