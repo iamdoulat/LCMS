@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Printer } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,9 +38,9 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A'; // Changed 'Invalid Date' to 'N/A' for consistency
   } catch (e) {
-    return 'Invalid Date Format';
+    return 'N/A'; // Changed 'Invalid Date Format' to 'N/A'
   }
 };
 
@@ -86,22 +86,6 @@ export default function TotalLCPage() {
         return;
     }
     router.push(`/dashboard/total-lc/${lcId}/edit`);
-  };
-
-  const handlePrintLC = (lcId: string) => {
-    if (!lcId) {
-      Swal.fire("Error", "L/C ID is missing, cannot print.", "error");
-      return;
-    }
-    // Navigate to the edit page which can then be printed
-    router.push(`/dashboard/total-lc/${lcId}/edit`);
-     Swal.fire({
-        title: "Redirecting to L/C Details",
-        text: `You will be taken to the L/C detail page. Use the 'Print this L/C' button there.`,
-        icon: "info",
-        timer: 3000,
-        showConfirmButton: false
-     });
   };
   
 
@@ -208,23 +192,6 @@ export default function TotalLCPage() {
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                               <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => lc.id && handlePrintLC(lc.id)}
-                                className="hover:bg-accent/50 hover:text-accent-foreground"
-                                disabled={!lc.id}
-                               >
-                                <Printer className="h-4 w-4" />
-                                <span className="sr-only">View & Print L/C</span>
-                               </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>View & Print L/C Details</p>
-                            </TooltipContent>
-                          </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
