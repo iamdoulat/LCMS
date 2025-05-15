@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -21,13 +20,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { FileInput } from './FileInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare } from 'lucide-react';
+import { FileScan, Loader2, Info, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lcEntrySchema = z.object({
-  beneficiaryName: z.string().min(1, "Beneficiary name is required"), // This will be the ID from suppliers collection
-  applicantName: z.string().min(1, "Applicant name is required"), // This will be the ID from customers collection
+  beneficiaryName: z.string().min(1, "Beneficiary name is required"), 
+  applicantName: z.string().min(1, "Applicant name is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -36,7 +35,7 @@ const lcEntrySchema = z.object({
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
-  invoiceDate: z.date().optional(),
+  invoiceDate: z.date().optional().nullable(),
   totalMachineQty: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
@@ -44,12 +43,12 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  finalPIFile: z.instanceof(File).optional().nullable(),
-  shippingDocumentsFile: z.instanceof(File).optional().nullable(),
+  finalPIUrl: z.string().url({ message: "Invalid URL format for Final PI" }).optional().or(z.literal('')),
+  shippingDocumentsUrl: z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional().or(z.literal('')),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
-  etd: z.date().optional(),
-  eta: z.date().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
   itemDescriptions: z.string().optional(),
   shippingDocumentForAI: z.instanceof(File).optional().nullable(),
   consigneeBankNameAddress: z.string().optional(),
@@ -112,7 +111,7 @@ export function NewLCEntryForm() {
         setApplicantOptions(fetchedApplicants);
       } catch (error) {
         console.error("Error fetching applicants: ", error);
-        Swal.fire("Error", "Could not fetch applicant data. See console for details.", "error");
+        Swal.fire("Error", "Could not fetch applicant data for dropdown. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
       }
@@ -132,7 +131,7 @@ export function NewLCEntryForm() {
         setBeneficiaryOptions(fetchedBeneficiaries);
       } catch (error) {
         console.error("Error fetching beneficiaries: ", error);
-        Swal.fire("Error", "Could not fetch beneficiary data. See console for details.", "error");
+        Swal.fire("Error", "Could not fetch beneficiary data for dropdown. See console for details.", "error");
       } finally {
         setIsLoadingBeneficiaries(false);
       }
@@ -144,8 +143,8 @@ export function NewLCEntryForm() {
   const form = useForm<LCEntry>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      beneficiaryName: '', // Will store ID
-      applicantName: '', // Will store ID
+      beneficiaryName: '', 
+      applicantName: '', 
       currency: 'USD' as Currency,
       amount: '',
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -156,8 +155,8 @@ export function NewLCEntryForm() {
       lcIssueDate: undefined,
       expireDate: undefined,
       latestShipmentDate: undefined,
-      finalPIFile: null,
-      shippingDocumentsFile: null,
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
@@ -201,21 +200,20 @@ export function NewLCEntryForm() {
     const lcIssueDate = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
     const extractedYear = lcIssueDate.getFullYear();
 
-    const { finalPIFile, shippingDocumentsFile, shippingDocumentForAI, ...restOfData } = data;
+    const { shippingDocumentForAI, ...restOfData } = data;
 
-    // Get display names for applicant and beneficiary based on selected IDs
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
-    const dataToSave: Omit<LCEntryDocument, 'id' | 'finalPIUrl' | 'shippingDocumentsUrl'> = {
+    const dataToSave: Omit<LCEntryDocument, 'id'> = {
       ...restOfData,
-      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, // Save label
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, // Save label
-      applicantId: data.applicantName, // Save ID as applicantId
-      beneficiaryId: data.beneficiaryName, // Save ID as beneficiaryId
+      applicantName: selectedApplicant ? selectedApplicant.label : data.applicantName, 
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : data.beneficiaryName, 
+      applicantId: data.applicantName, 
+      beneficiaryId: data.beneficiaryName, 
       year: extractedYear,
       amount: Number(data.amount),
-      totalMachineQty: Number(data.totalMachineQty),
+      totalMachineQty: data.totalMachineQty ? Number(data.totalMachineQty) : 0,
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -226,11 +224,13 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
       status: data.status || 'Draft',
+      finalPIUrl: data.finalPIUrl || '',
+      shippingDocumentsUrl: data.shippingDocumentsUrl || '',
     };
 
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
         if (dataToSave[key] === undefined) {
-            delete dataToSave[key];
+            delete dataToSave[key as keyof Omit<LCEntryDocument, 'id'>];
         }
     });
     
@@ -238,7 +238,7 @@ export function NewLCEntryForm() {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
         title: "L/C Entry Saved!",
-        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}. File uploads are pending implementation.`,
+        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
@@ -349,6 +349,19 @@ export function NewLCEntryForm() {
     }
     const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(imoNumber.trim())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleViewUrl = (url: string | undefined) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url); // Check if it's a valid URL structure
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
   };
 
 
@@ -902,7 +915,7 @@ export function NewLCEntryForm() {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} />
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -1004,36 +1017,56 @@ export function NewLCEntryForm() {
         </div>
 
 
-        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground">Document Uploads</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <h3 className="text-lg font-semibold border-b pb-2 mt-6 mb-4 text-foreground flex items-center">
+          <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
+        </h3>
+        <div className="space-y-6">
           <FormField
             control={form.control}
-            name="finalPIFile"
+            name="finalPIUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Final PI (PDF/JPG)</FormLabel>
-                <FormControl>
-                  <FileInput
-                    onFileChange={(file) => field.onChange(file)}
-                    accept=".pdf,.jpg,.jpeg"
-                  />
-                </FormControl>
+                <FormLabel>Final PI URL</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/pi.pdf" {...field} />
+                  </FormControl>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Final PI"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
           <FormField
             control={form.control}
-            name="shippingDocumentsFile"
+            name="shippingDocumentsUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Shipping Documents (PDF/JPG)</FormLabel>
-                <FormControl>
-                  <FileInput
-                    onFileChange={(file) => field.onChange(file)}
-                    accept=".pdf,.jpg,.jpeg"
-                  />
-                </FormControl>
+                <FormLabel>Shipping Documents URL</FormLabel>
+                 <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} />
+                    </FormControl>
+                     <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Shipping Documents"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -1058,6 +1091,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-
-    

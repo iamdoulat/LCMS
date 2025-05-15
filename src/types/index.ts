@@ -18,15 +18,14 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-// Updated LC Status Options
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipping pending", "Shipping going on", "Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
 
 export interface LCEntry {
   id?: string;
-  beneficiaryName: string; // In form, this is the ID of the beneficiary from 'suppliers'
-  applicantName: string;   // In form, this is the ID of the applicant from 'customers'
+  beneficiaryName: string; 
+  applicantName: string;   
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -37,14 +36,14 @@ export interface LCEntry {
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
-  finalPIUrl?: string; // Changed from File
-  shippingDocumentsUrl?: string; // Changed from File
+  finalPIUrl?: string; 
+  shippingDocumentsUrl?: string; 
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date;
   eta?: Date;
   itemDescriptions?: string;
-  shippingDocumentForAI?: File | null; // For AI analysis, remains File
+  shippingDocumentForAI?: File | null; 
   consigneeBankNameAddress?: string;
   bankBin?: string;
   bankTin?: string;
@@ -65,28 +64,28 @@ export interface LCEntry {
 
 // This type represents the data structure in Firestore
 export interface LCEntryDocument {
-  id: string; // Firestore document ID
+  id: string; 
   year: number;
-  applicantName: string; // Display name of applicant
-  beneficiaryName: string; // Display name of beneficiary
-  applicantId: string; // ID from 'customers' collection
-  beneficiaryId: string; // ID from 'suppliers' collection
+  applicantName: string; 
+  beneficiaryName: string; 
+  applicantId: string; 
+  beneficiaryId: string; 
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string; // ISO Date String
+  invoiceDate?: string; 
   totalMachineQty: number;
-  lcIssueDate?: string; // ISO Date String
-  expireDate?: string; // ISO Date String
-  latestShipmentDate?: string; // ISO Date String
+  lcIssueDate?: string; 
+  expireDate?: string; 
+  latestShipmentDate?: string; 
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string; // ISO Date String
-  eta?: string; // ISO Date String
+  etd?: string; 
+  eta?: string; 
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -103,9 +102,9 @@ export interface LCEntryDocument {
   notifyPartyNameAndAddress?: string;
   notifyPartyContactDetails?: string;
   numberOfAmendments?: number;
-  status: LCStatus; // Status should be required in Firestore
-  createdAt: any; // Firestore Timestamp or ServerTimestamp
-  updatedAt: any; // Firestore Timestamp or ServerTimestamp
+  status: LCStatus; 
+  createdAt: any; 
+  updatedAt: any; 
 }
 
 export interface Customer {
@@ -122,7 +121,7 @@ export interface Customer {
   createdAt?: any;
   updatedAt?: any;
 }
-export type CustomerDocument = Customer & { id: string, createdAt: string, updatedAt: string };
+export type CustomerDocument = Customer & { id: string, createdAt: any, updatedAt: any };
 
 export interface Supplier {
   id?: string;
@@ -138,15 +137,15 @@ export interface Supplier {
   createdAt?: any;
   updatedAt?: any;
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: string, updatedAt: string };
+export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any };
 
 
 export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  timestamp: string; // ISO string
+  timestamp: string; 
   isRead: boolean;
-  link?: string; // Optional link for navigation
+  link?: string; 
 }
     
