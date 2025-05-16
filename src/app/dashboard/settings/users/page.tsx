@@ -13,9 +13,9 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { UserDocumentForAdmin, UserRole } from '@/types'; // Ensure UserDocumentForAdmin is correctly typed
+import type { UserDocumentForAdmin } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
 
 export default function UserSettingsPage() {
   const { userRole: adminUserRole, loading: authLoading } = useAuth();
@@ -24,25 +24,30 @@ export default function UserSettingsPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUserProfiles = useCallback(async () => {
     if (adminUserRole !== "Super Admin") {
       setIsLoadingUsers(false);
-      return; // Only Super Admins can view the user list from Firestore
+      setFetchError("You do not have permission to view user profiles.");
+      // No Swal here, access control handles redirection or UI blocking
+      return;
     }
     setIsLoadingUsers(true);
     setFetchError(null);
     try {
+      // Fetches user profiles from the 'users' collection in Firestore
       const usersCollectionRef = collection(firestore, "users");
-      const querySnapshot = await getDocs(usersCollectionRef);
+      const q = query(usersCollectionRef, orderBy("createdAt", "desc")); // Optional: order by creation date
+      const querySnapshot = await getDocs(q);
       const fetchedUsers = querySnapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...(docSnap.data() as Omit<UserDocumentForAdmin, 'id'>)
       }));
       setUsers(fetchedUsers);
     } catch (error: any) {
-      console.error("Error fetching users from Firestore:", error);
-      setFetchError(`Failed to fetch users: ${error.message}. Ensure Firestore rules allow reads for Super Admins.`);
-      Swal.fire("Error", `Failed to fetch users: ${error.message}`, "error");
+      console.error("Error fetching user profiles from Firestore:", error);
+      const errorMessage = `Failed to fetch user profiles from Firestore: ${error.message}. Ensure Firestore rules allow reads for Super Admins on the 'users' collection.`;
+      setFetchError(errorMessage);
+      Swal.fire("Fetch Error", errorMessage, "error");
     } finally {
       setIsLoadingUsers(false);
     }
@@ -50,28 +55,30 @@ export default function UserSettingsPage() {
 
   useEffect(() => {
     if (!authLoading && adminUserRole !== "Super Admin") {
-      Swal.fire({
-        title: 'Access Denied',
-        text: 'You are not permitted to manage users.',
-        icon: 'error',
-        timer: 2000,
-        showConfirmButton: false,
-      }).then(() => {
-        router.push('/dashboard');
-      });
+      // Client-side protection, already handled by page access control
+      // but good to prevent unnecessary fetch attempts.
+      setIsLoadingUsers(false);
     } else if (!authLoading && adminUserRole === "Super Admin") {
-      fetchUsers();
+      fetchUserProfiles();
     }
-  }, [adminUserRole, authLoading, router, fetchUsers]);
+  }, [adminUserRole, authLoading, fetchUserProfiles]);
 
   const handleEditUser = (userId: string) => {
+    if (adminUserRole !== "Super Admin") {
+        Swal.fire("Access Denied", "You are not permitted to edit user profiles.", "error");
+        return;
+    }
     router.push(`/dashboard/settings/users/${userId}/edit`);
   };
 
   const handleDeleteUser = (userId: string, userName?: string) => {
+    if (adminUserRole !== "Super Admin") {
+        Swal.fire("Access Denied", "You are not permitted to delete user profiles.", "error");
+        return;
+    }
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the user profile for "${userName || userId}" from the Firestore database. This does NOT delete their Firebase Authentication account (if one exists).`,
+      text: `This action will permanently delete the user profile for "${userName || userId}" from the Firestore database. This does NOT delete their Firebase Authentication account (if one exists).`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
@@ -90,17 +97,17 @@ export default function UserSettingsPage() {
           );
         } catch (error: any) {
           console.error("Error deleting user profile from Firestore:", error);
-          Swal.fire("Error", `Could not delete user profile: ${error.message}`, "error");
+          Swal.fire("Error", `Could not delete user profile from Firestore: ${error.message}`, "error");
         }
       }
     });
   };
 
-  if (authLoading || (adminUserRole !== "Super Admin" && isLoadingUsers)) { // Keep loading if auth or users are still loading
+  if (authLoading || isLoadingUsers) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading or verifying access...</p>
+        <p className="ml-3 text-muted-foreground">Loading user profiles or verifying access...</p>
       </div>
     );
   }
@@ -114,18 +121,17 @@ export default function UserSettingsPage() {
             User Management
           </CardTitle>
           <CardDescription>
-            View and manage user profiles stored in the application database.
+            View and manage user profiles stored in the application&apos;s Firestore database.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="default" className="mb-6 bg-primary/10 border-primary/30">
             <ShieldAlert className="h-5 w-5 text-primary" />
-            <AlertTitle className="text-primary font-semibold">User Profile Management</AlertTitle>
+            <AlertTitle className="text-primary font-semibold">User Profile Management (Firestore)</AlertTitle>
             <AlertDescription className="text-primary/90">
-              - This page lists user profiles from the Firestore database.
-              - Creating a profile here does **not** automatically create a Firebase Authentication login.
-              - Deleting a profile here deletes the Firestore record, not the Firebase Auth account.
-              - Actual Firebase Authentication user management (linking profiles, password resets for Auth accounts, deleting Auth accounts) typically requires secure backend operations.
+              - This page lists user profiles from the Firestore `users` collection.
+              - Actions here manage these Firestore profiles.
+              - Managing Firebase Authentication accounts (e.g., creating actual logins, deleting Auth accounts, listing all Auth users) requires secure backend operations with the Firebase Admin SDK.
             </AlertDescription>
           </Alert>
 
@@ -140,7 +146,7 @@ export default function UserSettingsPage() {
           {fetchError && (
             <Alert variant="destructive" className="mb-4">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Error Fetching Users</AlertTitle>
+              <AlertTitle>Error Fetching User Profiles</AlertTitle>
               <AlertDescription>{fetchError}</AlertDescription>
             </Alert>
           )}
@@ -157,11 +163,11 @@ export default function UserSettingsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoadingUsers ? (
+                {isLoadingUsers ? ( // This state is primarily for initial load indication
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading users from database...
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading user profiles from database...
                       </div>
                     </TableCell>
                   </TableRow>
@@ -181,7 +187,7 @@ export default function UserSettingsPage() {
                                 <span className="sr-only">Edit User Profile</span>
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Edit User Profile</p></TooltipContent>
+                            <TooltipContent><p>Edit User Profile (Firestore)</p></TooltipContent>
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
@@ -199,13 +205,14 @@ export default function UserSettingsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      {adminUserRole === "Super Admin" ? "No user profiles found in the database." : "Access to user list restricted."}
+                      {adminUserRole === "Super Admin" && !fetchError ? "No user profiles found in the Firestore database." : 
+                       fetchError ? "Error loading profiles. Check console." : "Access to user profiles restricted or no data."}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                List of user profiles from Firestore. {users.length} profile(s) found.
+                List of user profiles from the Firestore `users` collection. {users.length} profile(s) found.
               </TableCaption>
             </Table>
           </div>
