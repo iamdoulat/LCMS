@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Added import
 
 interface AppLog {
   id: string;
