@@ -48,8 +48,9 @@ export default function UserSettingsPage() {
         html: `Editing user <strong>${userId}</strong> requires backend integration with the Firebase Admin SDK.<br/>This would typically involve fetching user data from Firebase Authentication and updating it securely.`,
         icon: 'info',
         confirmButtonText: 'Got it!',
+    }).then(() => {
+        router.push(`/dashboard/settings/users/${userId}/edit`); 
     });
-    // router.push(`/dashboard/settings/users/${userId}/edit`); // Navigation is kept for UI flow demonstration
   };
 
   const handleDeleteUser = (userId?: string, userName?: string) => {
@@ -127,7 +128,7 @@ export default function UserSettingsPage() {
             <AlertTitle className="text-primary font-semibold">Backend Required for Full Functionality</AlertTitle>
             <AlertDescription className="text-primary/90">
               - Displaying a list of all users directly from Firebase Authentication is **not possible from the client-side** for security reasons. This requires a backend service using the Firebase Admin SDK.
-              - The "Add New User Profile (to Firestore)" button below creates a user profile record in your Firestore database, not directly in Firebase Authentication.
+              - The "Add New User Profile (to Firebase)" button below currently creates a user profile record in your Firestore database. For this to also create a Firebase Authentication user, backend integration is required.
               - Full create, update (including roles/permissions via custom claims), and delete operations for Firebase Authentication accounts by an admin **must be handled by secure backend functions.**
             </AlertDescription>
           </Alert>
@@ -135,7 +136,7 @@ export default function UserSettingsPage() {
           <div className="mb-4 flex justify-end">
             <Link href="/dashboard/settings/users/add" passHref>
               <Button variant="default" disabled={adminUserRole !== "Super Admin"}>
-                <UserPlus className="mr-2 h-4 w-4" /> Add New User Profile (to Firestore)
+                <UserPlus className="mr-2 h-4 w-4" /> Add New User Profile (to Firebase)
               </Button>
             </Link>
           </div>
@@ -147,7 +148,7 @@ export default function UserSettingsPage() {
                   <TableHead className="w-[200px]">Display Name (from Auth)</TableHead>
                   <TableHead>Email (from Auth)</TableHead>
                   <TableHead>Firebase UID</TableHead>
-                  <TableHead>Role (Application - via Firestore)</TableHead>
+                  <TableHead>Role (Application)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -176,7 +177,7 @@ export default function UserSettingsPage() {
                                 <span className="sr-only">Edit User (Simulated)</span>
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Edit User (Requires Backend)</p></TooltipContent>
+                            <TooltipContent><p>Edit User Profile (Requires Backend)</p></TooltipContent>
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
@@ -219,3 +220,4 @@ export default function UserSettingsPage() {
     </div>
   );
 }
+
