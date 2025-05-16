@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Added Label import
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -43,6 +43,8 @@ export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile } = useAuth();
+  
+  // Local state for previewing the logo URL from the input field
   const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl);
 
   const form = useForm<CompanySetupFormValues>({
@@ -77,29 +79,30 @@ export function CompanySetupForm() {
             tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || '',
           });
-          setCurrentLogoUrlForPreview(data.companyLogoUrl);
-          // Ensure context is updated if Firestore has more recent data than localStorage
+          setCurrentLogoUrlForPreview(data.companyLogoUrl); // Initialize preview with fetched data
+          // Update context if Firestore has more recent data than localStorage might have initialized it with
           if (data.companyName !== contextCompanyName || data.companyLogoUrl !== contextCompanyLogoUrl) {
-            updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
+             updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
           }
+
         } else {
           // If no data in Firestore, rely on context (which loads from localStorage or defaults)
-          form.reset({
+           form.reset({
             companyName: contextCompanyName || 'Smart Solution',
-            address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230', // Default address if not in context
-            emailId: 'info@smartsolution-bd.com', // Default email if not in context
+            address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230', // Default address
+            emailId: 'info@smartsolution-bd.com', // Default email
             contactPerson: '',
             cellNumber: '',
             binNumber: '',
             tinNumber: '',
-            companyLogoUrl: contextCompanyLogoUrl || '',
+            companyLogoUrl: contextCompanyLogoUrl || '', // Default logo URL from context
           });
-          setCurrentLogoUrlForPreview(contextCompanyLogoUrl);
+          setCurrentLogoUrlForPreview(contextCompanyLogoUrl); // Initialize preview with context/default
         }
       } catch (error) {
         console.error("Error fetching company profile:", error);
-        Swal.fire("Error", "Could not load company profile. Using default or cached values.", "error");
-        // Fallback to context values if Firestore fetch fails
+        Swal.fire("Error", "Could not load company profile from Firestore. Using default or cached values.", "error");
+         // Fallback to context values if Firestore fetch fails
         form.reset({
           companyName: contextCompanyName || 'Smart Solution',
           address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
@@ -112,9 +115,9 @@ export function CompanySetupForm() {
       }
     };
     fetchCompanyData();
-  }, [form, contextCompanyName, contextCompanyLogoUrl, updateCompanyProfile]);
+  }, [form, contextCompanyName, contextCompanyLogoUrl, updateCompanyProfile]); // updateCompanyProfile added to dependencies
 
-  // Update preview if URL changes in form
+  // Watch the companyLogoUrl field from the form to update the preview
   const watchedLogoUrlField = form.watch("companyLogoUrl");
   React.useEffect(() => {
     setCurrentLogoUrlForPreview(watchedLogoUrlField);
@@ -125,17 +128,31 @@ export function CompanySetupForm() {
     setIsSubmitting(true);
     
     const dataToSave: CompanyProfile = {
-      ...data,
+      companyName: data.companyName,
+      address: data.address,
+      contactPerson: data.contactPerson || undefined,
+      cellNumber: data.cellNumber || undefined,
+      emailId: data.emailId || undefined,
+      binNumber: data.binNumber || undefined,
+      tinNumber: data.tinNumber || undefined,
       companyLogoUrl: data.companyLogoUrl || undefined,
       updatedAt: serverTimestamp(),
     };
+
+    // Filter out undefined fields manually for good measure
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof CompanyProfile] === undefined) {
+        delete dataToSave[key as keyof CompanyProfile];
+      }
+    });
+
 
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
-      // Update AuthContext and localStorage after successful save
-      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl || undefined });
+      // Update AuthContext and localStorage AFTER successful save
+      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
 
       Swal.fire({
         title: "Company Information Saved!",
@@ -179,7 +196,6 @@ export function CompanySetupForm() {
                 <Input 
                   placeholder="Enter your company's official name" 
                   {...field}
-                  // Remove direct context update from onChange, it will happen on submit
                 />
               </FormControl>
               <FormMessage />
@@ -204,7 +220,7 @@ export function CompanySetupForm() {
         <FormField
           control={form.control}
           name="companyLogoUrl"
-          render={({ field }) => ( // field already includes onChange, value, name, etc.
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Company Logo URL</FormLabel>
               <FormControl>
@@ -212,8 +228,6 @@ export function CompanySetupForm() {
                   type="url" 
                   placeholder="https://example.com/logo.png" 
                   {...field} // Spread field props here
-                  // The onChange from field will update react-hook-form state.
-                  // The local preview state is updated by the watch effect.
                 />
               </FormControl>
               <FormDescription>
@@ -233,7 +247,6 @@ export function CompanySetupForm() {
               height={32} 
               className="rounded-sm border object-contain"
               onError={() => {
-                // Optionally handle image load errors for the preview
                 console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
               }}
               data-ai-hint="company logo"
