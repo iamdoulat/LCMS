@@ -13,32 +13,27 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { UserRole } from '@/types';
 
-// Placeholder structure for user data (would be fetched from backend)
-interface UserAuthData {
+// Interface for simulated user data stored in localStorage
+interface SimulatedUser {
   id: string;
-  email?: string;
   displayName?: string;
-  role?: string; // Would come from custom claims
+  email?: string;
+  contactNumber?: string;
+  role?: UserRole;
 }
 
-// Simulate an empty list initially, or a loading state
-const initialUsers: UserAuthData[] = [
-    // Example placeholder - remove if you want to show "fetching" state first
-    // { id: 'user1_abc', email: 'alice@example.com', displayName: 'Alice Wonderland', role: 'Admin' },
-    // { id: 'user4_mdd', email: 'mddoulat@gmail.com', displayName: 'Doulat (Super Admin)', role: 'Super Admin' },
-    // { id: 'user5_css', email: 'commercial@smartsolution-bd.com', displayName: 'Commercial (Admin)', role: 'Admin' },
-];
-
+const SIMULATED_USERS_STORAGE_KEY = 'simulatedUsersList';
 
 export default function UserSettingsPage() {
-  const { userRole, loading: authLoading } = useAuth();
+  const { userRole: adminUserRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [users, setUsers] = useState<UserAuthData[]>(initialUsers); // Will hold users fetched from backend
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true); // Simulate loading state
+  const [users, setUsers] = useState<SimulatedUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin") {
+    if (!authLoading && adminUserRole !== "Super Admin") {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to manage users.',
@@ -48,63 +43,65 @@ export default function UserSettingsPage() {
       }).then(() => {
         router.push('/dashboard');
       });
-    } else if (userRole === "Super Admin") {
-      // Simulate fetching users from backend
+    } else if (adminUserRole === "Super Admin") {
       setIsLoadingUsers(true);
-      console.log("UserSettingsPage: Would fetch all users from backend Admin SDK here.");
-      // Replace with actual fetch call
-      setTimeout(() => {
-        // For demonstration, we'll re-populate with placeholders.
-        // In a real app, this would be data from your backend.
-        setUsers([
-            { id: 'user1_abc_fetched', email: 'alice.fetched@example.com', displayName: 'Alice (Fetched)', role: 'Admin' },
-            { id: 'mddoulat_gmail_com', email: 'mddoulat@gmail.com', displayName: 'Doulat (Super Admin)', role: 'Super Admin' },
-            { id: 'commercial_smartsolution_bd_com', email: 'commercial@smartsolution-bd.com', displayName: 'Commercial (Admin)', role: 'Admin' },
-            { id: 'user2_xyz_fetched', email: 'bob.fetched@example.com', displayName: 'Bob (Fetched)', role: 'Editor' },
-        ]);
-        setIsLoadingUsers(false);
-      }, 1500);
+      try {
+        const storedUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
+        if (storedUsersString) {
+          setUsers(JSON.parse(storedUsersString));
+        } else {
+          setUsers([]);
+        }
+      } catch (e) {
+        console.error("Error loading simulated users from localStorage:", e);
+        setUsers([]);
+      }
+      setIsLoadingUsers(false);
     }
-  }, [userRole, authLoading, router]);
+  }, [adminUserRole, authLoading, router]);
 
   const handleEditUser = (userId: string) => {
-    Swal.fire({
-      title: "Backend Required",
-      text: `Editing user (ID: ${userId}) profile details, email, password, or roles requires backend integration with Firebase Admin SDK. You will be navigated to a UI placeholder for editing.`,
+     Swal.fire({
+      title: "Edit User (Simulated)",
+      text: `Navigating to edit page for simulated user ID: ${userId}. Changes will be saved locally.`,
       icon: "info",
-      timer: 3000,
+      timer: 2000,
       showConfirmButton: false,
-    }).then(() => {
-      router.push(`/dashboard/settings/users/${userId}/edit`);
     });
+    router.push(`/dashboard/settings/users/${userId}/edit`);
   };
 
   const handleDeleteUser = (userId: string, userName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will request to permanently delete the user "${userName || userId}".`,
+      text: `This will remove the user "${userName || userId}" from the local simulated list. This action cannot be undone locally. Actual Firebase user deletion requires backend integration.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
       cancelButtonColor: 'hsl(var(--secondary))',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: 'Yes, delete from local list!',
       reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
-        console.log(`UserSettingsPage: Would call backend function to delete user ${userId} from Firebase Authentication.`);
-        // Simulate local deletion for UI feedback
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-        Swal.fire(
-          'Deletion Requested (Simulated)',
-          `Request to delete user ${userName || userId} has been processed. Actual deletion from Firebase Authentication requires backend integration with Firebase Admin SDK.`,
-          'success'
-        );
+        try {
+          const updatedUsers = users.filter(user => user.id !== userId);
+          setUsers(updatedUsers);
+          localStorage.setItem(SIMULATED_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+          Swal.fire(
+            'Deleted (Locally Simulated)!',
+            `User ${userName || userId} has been removed from the local list. Actual Firebase deletion requires backend.`,
+            'success'
+          );
+        } catch (e) {
+            console.error("Error deleting simulated user from localStorage:", e);
+            Swal.fire("Error", "Could not delete user from local simulation. Check console.", "error");
+        }
       }
     });
   };
 
 
-  if (authLoading || userRole !== "Super Admin") {
+  if (authLoading || adminUserRole !== "Super Admin") {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -118,10 +115,10 @@ export default function UserSettingsPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Users className="h-7 w-7 text-primary" />
-            User Management
+            User Management (Simulated)
           </CardTitle>
           <CardDescription>
-            View and manage user accounts, roles, and permissions. Full functionality requires backend integration.
+            View and manage user accounts from a local simulated list. Full functionality requires backend integration.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,15 +126,15 @@ export default function UserSettingsPage() {
             <ShieldAlert className="h-5 w-5 text-primary" />
             <AlertTitle className="text-primary font-semibold">Backend Required for Full Functionality</AlertTitle>
             <AlertDescription className="text-primary/90">
-              Displaying a complete list of users from Firebase Authentication, creating new users with specific roles, editing other users' roles/details, and deleting users are administrative actions that **require a secure backend (e.g., Firebase Cloud Functions with Admin SDK).**
-              The data below is illustrative or fetched via placeholder mechanisms.
+              - This page displays users from a <strong>local simulated list</strong> for demonstration.
+              - Actual Firebase Authentication user management (listing all Firebase users, creating users with roles, editing roles/details in Firebase Auth, deleting from Firebase Auth) requires secure backend operations using the Firebase Admin SDK.
             </AlertDescription>
           </Alert>
 
           <div className="mb-4 flex justify-end">
             <Link href="/dashboard/settings/users/add" passHref>
-              <Button variant="default" disabled={userRole !== "Super Admin"}>
-                 <UserPlus className="mr-2 h-4 w-4" /> Add New User
+              <Button variant="default" disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>
+                 <UserPlus className="mr-2 h-4 w-4" /> Add New User (to Local List)
               </Button>
             </Link>
           </div>
@@ -146,9 +143,9 @@ export default function UserSettingsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">User ID (Simulated)</TableHead>
+                  <TableHead className="w-[200px]">Display Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Display Name</TableHead>
+                  <TableHead>Contact Number</TableHead>
                   <TableHead>Role (Simulated)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -158,34 +155,34 @@ export default function UserSettingsPage() {
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading users (simulated fetch)...
+                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading users from local simulation...
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : users.length > 0 ? (
                   users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium truncate max-w-[200px]">{user.id}</TableCell>
+                      <TableCell className="font-medium truncate max-w-[200px]">{user.displayName || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.displayName || 'N/A'}</TableCell>
+                      <TableCell>{user.contactNumber || 'N/A'}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditUser(user.id)} disabled={userRole !== "Super Admin"}>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditUser(user.id)} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>
                                 <FileEdit className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Edit User (Backend Required)</p></TooltipContent>
+                            <TooltipContent><p>Edit User (Simulated Local)</p></TooltipContent>
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
-                               <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.displayName)} disabled={userRole !== "Super Admin"}>
+                               <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.displayName)} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>
                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Delete User (Backend Required)</p></TooltipContent>
+                            <TooltipContent><p>Delete User (Simulated Local)</p></TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
@@ -194,13 +191,13 @@ export default function UserSettingsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No users found or backend call needed to list users.
+                      No users found in the local simulated list. Add users via the "Add New User" button.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                This user list is illustrative. Actual user management and listing requires backend integration with Firebase Admin SDK.
+                This user list is managed in your browser's local storage for simulation purposes.
               </TableCaption>
             </Table>
           </div>

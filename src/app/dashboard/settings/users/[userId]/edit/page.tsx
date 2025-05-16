@@ -11,50 +11,39 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input'; // Assuming Input and Select might be used
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { UserRole } from '@/types';
 
-interface UserData {
+// Interface for simulated user data stored in localStorage
+interface SimulatedUser {
   id: string;
-  email?: string;
   displayName?: string;
-  role?: string; // Simulated role, would come from custom claims
+  email?: string;
+  contactNumber?: string;
+  role?: UserRole;
 }
-
-// Placeholder for what a backend might return for a single user
-const fetchUserFromBackendPlaceholder = async (userId: string): Promise<UserData | null> => {
-  console.log(`EditUserPage: Would fetch user ${userId} data from backend Admin SDK here.`);
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // Simulate finding a user or not
-  const demoUsers = [
-    { id: 'user1_abc_fetched', email: 'alice.fetched@example.com', displayName: 'Alice (Fetched)', role: 'Admin' },
-    { id: 'mddoulat_gmail_com', email: 'mddoulat@gmail.com', displayName: 'Doulat (Super Admin)', role: 'Super Admin' },
-    { id: 'commercial_smartsolution_bd_com', email: 'commercial@smartsolution-bd.com', displayName: 'Commercial (Admin)', role: 'Admin' },
-    { id: 'user2_xyz_fetched', email: 'bob.fetched@example.com', displayName: 'Bob (Fetched)', role: 'Editor' },
-  ];
-  const foundUser = demoUsers.find(u => u.id === userId);
-  return foundUser || null;
-};
+const SIMULATED_USERS_STORAGE_KEY = 'simulatedUsersList';
 
 
 export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
   const userId = params.userId as string;
-  const { userRole: adminUserRole, loading: authLoading } = useAuth(); // Renamed to avoid conflict
+  const { userRole: adminUserRole, loading: authLoading } = useAuth(); 
   
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState<SimulatedUser | null>(null);
   
   // Form state simulation for edit
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editRole, setEditRole] = useState('');
+  const [editContactNumber, setEditContactNumber] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('User');
 
 
   useEffect(() => {
-    if (!authLoading && adminUserRole !== "Super Admin") {
+    if (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin") {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to edit users.',
@@ -66,18 +55,27 @@ export default function EditUserPage() {
       });
     } else if (userId) {
       setIsLoadingUserData(true);
-      fetchUserFromBackendPlaceholder(userId).then(user => {
-        if (user) {
-          setUserData(user);
-          setEditDisplayName(user.displayName || '');
-          setEditEmail(user.email || '');
-          setEditRole(user.role || 'User'); // Default to 'User' if no role
+      try {
+        const storedUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
+        const existingUsers: SimulatedUser[] = storedUsersString ? JSON.parse(storedUsersString) : [];
+        const foundUser = existingUsers.find(u => u.id === userId);
+        
+        if (foundUser) {
+          setUserData(foundUser);
+          setEditDisplayName(foundUser.displayName || '');
+          setEditEmail(foundUser.email || '');
+          setEditContactNumber(foundUser.contactNumber || '');
+          setEditRole(foundUser.role || 'User');
         } else {
-          Swal.fire("Error", `User with ID ${userId} not found (simulated backend fetch).`, "error");
+          Swal.fire("Error", `User with ID ${userId} not found in local simulated list.`, "error");
           setUserData(null);
         }
-        setIsLoadingUserData(false);
-      });
+      } catch (e) {
+        console.error("Error loading simulated user from localStorage for edit:", e);
+        Swal.fire("Error", "Could not load user from local simulation. Check console.", "error");
+        setUserData(null);
+      }
+      setIsLoadingUserData(false);
     } else {
       Swal.fire("Error", "No User ID provided.", "error");
       router.push('/dashboard/settings/users');
@@ -85,7 +83,7 @@ export default function EditUserPage() {
   }, [userId, adminUserRole, authLoading, router]);
 
 
-  if (authLoading || isLoadingUserData || adminUserRole !== "Super Admin") {
+  if (authLoading || isLoadingUserData || (adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -97,7 +95,7 @@ export default function EditUserPage() {
   if (!userData) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <p className="text-muted-foreground mb-4">User data could not be loaded or user not found.</p>
+        <p className="text-muted-foreground mb-4">User data could not be loaded or user not found in local list.</p>
         <Link href="/dashboard/settings/users" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -109,16 +107,45 @@ export default function EditUserPage() {
   }
 
   const handleSaveChanges = () => {
-    const updatedData = {
-        displayName: editDisplayName,
-        email: editEmail, // Note: Changing email via Admin SDK is possible but complex (re-verification etc.)
-        role: editRole, // Role changes would involve setting custom claims
+    const updatedUserData: SimulatedUser = {
+      id: userId,
+      displayName: editDisplayName,
+      email: editEmail,
+      contactNumber: editContactNumber,
+      role: editRole,
     };
-    console.log(`EditUserPage: Would call backend function to update user ${userId}. New Data:`, updatedData);
+
+    try {
+      const storedUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
+      let existingUsers: SimulatedUser[] = storedUsersString ? JSON.parse(storedUsersString) : [];
+      const userIndex = existingUsers.findIndex(u => u.id === userId);
+
+      if (userIndex > -1) {
+        existingUsers[userIndex] = updatedUserData;
+        localStorage.setItem(SIMULATED_USERS_STORAGE_KEY, JSON.stringify(existingUsers));
+        Swal.fire({
+          title: 'User Updated (Locally Simulated)',
+          text: `User ${editDisplayName}'s details have been updated in the local simulated list.`,
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false,
+        }).then(() => {
+            router.push('/dashboard/settings/users');
+        });
+      } else {
+        Swal.fire("Error", "Could not find user in local list to update.", "error");
+      }
+    } catch (e) {
+        console.error("Error updating simulated user in localStorage:", e);
+        Swal.fire("Error", "Could not update user in local simulation. Check console.", "error");
+    }
+
+    console.log(`EditUserPage: Would call backend function to update user ${userId}. New Data:`, updatedUserData);
     Swal.fire({
-        title: 'Backend Required for Update',
-        html: `Updating user (ID: ${userId}) details (Display Name, Email) or role (via custom claims) requires a secure backend function using the Firebase Admin SDK.
-               <br/><br/>Data to send to backend: <pre class="text-left text-xs bg-muted p-2 rounded">${JSON.stringify(updatedData, null, 2)}</pre>`,
+        title: 'Backend Required for Actual Update',
+        html: `Updating user (ID: ${userId}) details in Firebase Authentication (Display Name, Email, Password, Role/Custom Claims) requires a secure backend function using the Firebase Admin SDK.
+               <br/><br/>The changes have been saved to the <strong>local simulated list</strong>.
+               <br/><br/>Data to send to backend for actual update: <pre class="text-left text-xs bg-muted p-2 rounded">${JSON.stringify(updatedUserData, null, 2)}</pre>`,
         icon: 'info',
     });
   };
@@ -137,10 +164,10 @@ export default function EditUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserCog className="h-7 w-7 text-primary" />
-            Edit User (Backend Dependent)
+            Edit User (Simulated Local Edit)
           </CardTitle>
           <CardDescription>
-            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Actual updates require backend.
+            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Changes are saved to the local simulated list.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +175,7 @@ export default function EditUserPage() {
             <ShieldAlert className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-700 font-semibold">Backend Required for Full Functionality</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              Editing other users' details (like email, password, display name, or role/custom claims) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page simulates the UI for such an operation.
+              Editing other users' details (like email, password, display name, or role/custom claims) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page simulates the UI for such an operation, saving changes to a <strong>local list</strong>.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
@@ -160,7 +187,7 @@ export default function EditUserPage() {
                 className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
                 value={editDisplayName}
                 onChange={(e) => setEditDisplayName(e.target.value)}
-                disabled={adminUserRole !== "Super Admin"}
+                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
               />
             </div>
             <div>
@@ -171,16 +198,27 @@ export default function EditUserPage() {
                 className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                disabled={adminUserRole !== "Super Admin"}
+                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
               />
-               <p className="mt-1 text-xs text-muted-foreground">Note: Changing a user's email directly via Admin SDK has implications (e.g., verification status).</p>
+               <p className="mt-1 text-xs text-muted-foreground">Note: Actually changing a user's email in Firebase Auth has implications (e.g., verification status) and requires Admin SDK.</p>
+            </div>
+             <div>
+              <label htmlFor="contactNumber" className="block text-sm font-medium text-muted-foreground">Contact Number</label>
+              <Input
+                type="tel"
+                id="contactNumber"
+                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
+                value={editContactNumber}
+                onChange={(e) => setEditContactNumber(e.target.value)}
+                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
+              />
             </div>
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (via Custom Claims)</label>
+              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (Simulated)</label>
               <Select 
                 value={editRole} 
-                onValueChange={setEditRole}
-                disabled={adminUserRole !== "Super Admin"}
+                onValueChange={(value) => setEditRole(value as UserRole)}
+                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select role" />
@@ -189,13 +227,12 @@ export default function EditUserPage() {
                   <SelectItem value="Super Admin">Super Admin</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="User">User</SelectItem>
-                  {/* Add other roles as needed */}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-xs text-muted-foreground">Role changes are managed by setting custom claims on the user via Firebase Admin SDK.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Actual role changes are managed by setting custom claims on the user via Firebase Admin SDK.</p>
             </div>
             <div className="pt-4">
-                <Button onClick={handleSaveChanges} disabled={adminUserRole !== "Super Admin"}>Save Changes (Backend Required)</Button>
+                <Button onClick={handleSaveChanges} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>Save Changes (to Local List)</Button>
             </div>
           </div>
         </CardContent>
