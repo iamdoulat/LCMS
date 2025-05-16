@@ -205,8 +205,11 @@ export default function IssuedPIListPage() {
   }, [allProformaInvoices, filterPiNo, filterApplicantId, filterBeneficiaryId, filterMonth, filterYear, sortBy, sortOrder]);
 
   const handleEditPI = (piId: string) => {
-    // router.push(`/dashboard/commission-management/edit-pi/${piId}`); // Future: implement edit page
-    Swal.fire("Info", `Edit functionality for PI ${piId} is not yet implemented.`, "info");
+    if (!piId) {
+        Swal.fire("Error", "PI ID is missing, cannot edit.", "error");
+        return;
+    }
+    router.push(`/dashboard/commission-management/edit-pi/${piId}`);
   };
 
   const handleDeletePI = (piId: string, piNumber?: string) => {
@@ -463,7 +466,7 @@ export default function IssuedPIListPage() {
                                 <span className="sr-only">Edit PI</span>
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent><p>Edit PI (Not Implemented)</p></TooltipContent>
+                            <TooltipContent><p>Edit PI</p></TooltipContent>
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
@@ -543,3 +546,4 @@ export default function IssuedPIListPage() {
     </div>
   );
 }
+
