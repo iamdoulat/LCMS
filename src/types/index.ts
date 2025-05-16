@@ -32,8 +32,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantName: string;   // Stores Applicant ID
-  beneficiaryName: string; // Stores Beneficiary ID
+  applicantId: string;     // Stores Applicant ID from 'customers' collection
+  applicantName: string;   // Stores Applicant Name (label)
+  beneficiaryId: string;   // Stores Beneficiary ID from 'suppliers' collection
+  beneficiaryName: string; // Stores Beneficiary Name (label)
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -67,8 +69,8 @@ export interface LCEntry {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyNameAndAddress?: string; // This will be for the address
+  notifyPartyName?: string;          // This will be for the contact person name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -96,27 +98,27 @@ export interface LCEntry {
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string;
   applicantId: string;
-  beneficiaryName: string;
+  applicantName: string;
   beneficiaryId: string;
+  beneficiaryName: string;
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string;
+  invoiceDate?: string; // Stored as ISO string
   totalMachineQty: number;
-  lcIssueDate?: string;
-  expireDate?: string;
-  latestShipmentDate?: string;
+  lcIssueDate?: string; // Stored as ISO string
+  expireDate?: string; // Stored as ISO string
+  latestShipmentDate?: string; // Stored as ISO string
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string;
-  eta?: string;
+  etd?: string; // Stored as ISO string
+  eta?: string; // Stored as ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -139,8 +141,8 @@ export interface LCEntryDocument {
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
   status: LCStatus;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -186,7 +188,6 @@ export interface Supplier {
   emailId: string;
   website?: string;
   brandName: string;
-  brandLogoFile?: File | null;
   brandLogoUrl?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -206,8 +207,8 @@ export interface AppNotification {
 export type UserRole = "Super Admin" | "Admin" | "User";
 
 export interface CompanyProfile {
-  companyName: string;
-  address: string;
+  companyName?: string;
+  address?: string;
   contactPerson?: string;
   cellNumber?: string;
   emailId?: string;
@@ -217,15 +218,61 @@ export interface CompanyProfile {
   updatedAt?: any; // Firestore ServerTimestamp
 }
 
-// Represents a user profile document stored in Firestore 'users' collection
+// Represents a user profile document stored in Firestore 'users' collection by an admin
 export interface UserDocumentForAdmin {
   id: string; // Firestore document ID
-  uid?: string; // Firebase Auth UID, optional if profile created before Auth account
+  uid?: string; // Optional: Firebase Auth UID, if the user has an Auth account
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
-  photoURL?: string; // To store profile picture URL
+  // Passwords are not stored in Firestore profiles managed by admin
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
+  photoURL?: string; // For consistency with AuthContext user
 }
+
+// --- Proforma Invoice Types ---
+export interface ProformaInvoiceLineItem {
+  id?: string; // For useFieldArray
+  slNo?: string;
+  modelNo: string;
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  // Calculated fields (display only, not directly saved per line item)
+  totalPurchasePricePerLine?: number;
+  totalSalesPricePerLine?: number;
+}
+
+export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
+export type FreightChargeOption = typeof freightChargeOptions[number];
+
+export interface ProformaInvoice {
+  id?: string; // Firestore document ID
+  beneficiaryId: string;
+  beneficiaryName: string;
+  applicantId: string;
+  applicantName: string;
+  piNo: string;
+  piDate: Date; // Stored as Date object in form, converted to ISO string for Firestore
+  salesPersonName: string;
+  lineItems: ProformaInvoiceLineItem[];
+  freightChargeOption: FreightChargeOption;
+  freightChargeAmount?: number | '';
+  // Calculated fields, also stored for querying/reporting
+  totalQty: number;
+  totalPurchasePrice: number; // Sum of purchase prices from line items
+  totalSalesPrice: number;   // Sum of sales prices from line items
+  grandTotalSalesPrice: number; // totalSalesPrice + (freightChargeAmount if excluded)
+  totalCommissionPercentage: number;
+  createdAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any; // Firestore ServerTimestamp
+}
+
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate'> & {
+  piDate: string; // Stored as ISO string in Firestore
+  createdAt: any;
+  updatedAt: any;
+};
+
