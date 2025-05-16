@@ -6,36 +6,27 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ProformaInvoice, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument } from '@/types';
+import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption, LCEntryDocument } from '@/types';
 import { freightChargeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Link2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 
-const toNumberOrUndefined = (val: unknown): number | undefined => {
-  if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
-    return undefined;
-  }
-  const num = Number(String(val).trim());
-  return isNaN(num) ? undefined : num;
-};
-
-// Zod schema for a single line item - accepting strings for form input
 const lineItemFormSchema = z.object({
   slNo: z.string().optional(),
   modelNo: z.string().min(1, "Model No. is required"),
   qty: z.string().min(1, "Qty is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
-  purchasePrice: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Purchase Price must be > 0" }),
-  salesPrice: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Sales Price must be > 0" }),
+  purchasePrice: z.string().min(1, "Purchase Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Purchase Price must be > 0" }),
+  salesPrice: z.string().min(1, "Sales Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Sales Price must be > 0" }),
 });
 
 const proformaInvoiceSchema = z.object({
@@ -44,6 +35,7 @@ const proformaInvoiceSchema = z.object({
   piNo: z.string().min(1, "PI No. is required"),
   piDate: z.date({ required_error: "PI Date is required" }),
   salesPersonName: z.string().min(1, "Sales Person Name is required"),
+  connectedLcId: z.string().optional(),
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
   freightChargeAmount: z.string().optional(),
@@ -72,9 +64,10 @@ export function AddProformaInvoiceForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [lcOptions, setLcOptions] = React.useState<LcOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const [selectedLcIssueDate, setSelectedLcIssueDate] = React.useState<string | null>(null);
 
-  // Calculated Totals State
   const [totalQty, setTotalQty] = React.useState(0);
   const [totalPurchasePriceAmount, setTotalPurchasePriceAmount] = React.useState(0);
   const [totalSalesPriceAmount, setTotalSalesPriceAmount] = React.useState(0);
@@ -89,6 +82,7 @@ export function AddProformaInvoiceForm() {
       piNo: '',
       piDate: new Date(),
       salesPersonName: '',
+      connectedLcId: '',
       lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
       freightChargeOption: "Freight Included",
       freightChargeAmount: '',
@@ -100,14 +94,14 @@ export function AddProformaInvoiceForm() {
     name: "lineItems",
   });
 
-  // Fetch Applicant and Beneficiary Options
   React.useEffect(() => {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, suppliersSnap] = await Promise.all([
+        const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "suppliers"))
+          getDocs(collection(firestore, "suppliers")),
+          getDocs(collection(firestore, "lc_entries"))
         ]);
         
         setApplicantOptions(
@@ -116,9 +110,15 @@ export function AddProformaInvoiceForm() {
         setBeneficiaryOptions(
           suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
+        setLcOptions(
+          lcsSnap.docs.map(doc => {
+            const data = doc.data() as LCEntryDocument;
+            return { value: doc.id, label: data.documentaryCreditNumber || 'Unnamed L/C', issueDate: data.lcIssueDate };
+          })
+        );
       } catch (error) {
         console.error("Error fetching dropdown options for PI form: ", error);
-        Swal.fire("Error", "Could not load applicant/beneficiary data. Please try again.", "error");
+        Swal.fire("Error", "Could not load supporting data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
       }
@@ -126,11 +126,24 @@ export function AddProformaInvoiceForm() {
     fetchOptions();
   }, []);
 
+  const watchedConnectedLcId = form.watch("connectedLcId");
+  React.useEffect(() => {
+    if (watchedConnectedLcId) {
+      const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
+      if (selectedLc && selectedLc.issueDate) {
+        setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
+      } else {
+        setSelectedLcIssueDate(null);
+      }
+    } else {
+      setSelectedLcIssueDate(null);
+    }
+  }, [watchedConnectedLcId, lcOptions]);
+
   const watchedLineItems = form.watch("lineItems");
   const watchedFreightOption = form.watch("freightChargeOption");
   const watchedFreightAmountString = form.watch("freightChargeAmount");
 
-  // Calculate Totals
   React.useEffect(() => {
     let newTotalQty = 0;
     let newTotalPurchase = 0;
@@ -167,15 +180,14 @@ export function AddProformaInvoiceForm() {
     } else {
       setTotalCommissionPercentage(0);
     }
-
   }, [watchedLineItems, watchedFreightOption, watchedFreightAmountString]);
-
 
   async function onSubmit(data: ProformaInvoiceFormValues) {
     setIsSubmitting(true);
 
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
+    const selectedLc = lcOptions.find(opt => opt.value === data.connectedLcId);
 
     const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
     if (data.freightChargeOption === "Freight Excluded" && (isNaN(freightAmountForDb!) || freightAmountForDb! < 0)) {
@@ -184,7 +196,6 @@ export function AddProformaInvoiceForm() {
         return;
     }
     
-    // Recalculate totals one last time before saving, to ensure consistency
     let finalTotalQty = 0;
     let finalTotalPurchasePrice = 0;
     let finalTotalSalesPrice = 0;
@@ -217,15 +228,17 @@ export function AddProformaInvoiceForm() {
       finalTotalCommissionPercentage = parseFloat((((finalGrandTotalSalesPrice - finalTotalPurchasePrice) / finalTotalPurchasePrice) * 100).toFixed(2));
     }
 
-
     const dataToSave: Omit<ProformaInvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       applicantId: data.applicantId,
       applicantName: selectedApplicant?.label || 'N/A',
       piNo: data.piNo,
-      piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Convert Date to ISO string
+      piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesPersonName: data.salesPersonName,
+      connectedLcId: data.connectedLcId || undefined,
+      connectedLcNumber: selectedLc?.label || undefined,
+      connectedLcIssueDate: selectedLc?.issueDate || undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
@@ -257,10 +270,12 @@ export function AddProformaInvoiceForm() {
         piNo: '',
         piDate: new Date(),
         salesPersonName: '',
+        connectedLcId: '',
         lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
         freightChargeOption: "Freight Included",
         freightChargeAmount: '',
       });
+      setSelectedLcIssueDate(null);
     } catch (error: any) {
       console.error("Error adding PI document: ", error);
       Swal.fire({
@@ -364,6 +379,37 @@ export function AddProformaInvoiceForm() {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          <FormField
+            control={form.control}
+            name="connectedLcId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {selectedLcIssueDate && (
+            <div className="mt-2">
+              <FormLabel className="text-sm text-muted-foreground">LC Issue Date:</FormLabel>
+              <p className="text-sm font-medium p-2 border rounded-md bg-muted/50 h-10 flex items-center">{selectedLcIssueDate}</p>
+            </div>
+          )}
+        </div>
+
+
         <Separator />
         <h3 className={cn(sectionHeadingClass, "text-lg")}>
            <DollarSign className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -451,7 +497,7 @@ export function AddProformaInvoiceForm() {
             </TableBody>
           </Table>
         </div>
-        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && !Array.isArray(form.formState.errors.lineItems) && (
+        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
             <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
         )}
         <Button type="button" variant="outline" onClick={handleAddLineItem} className="mt-2">
@@ -528,4 +574,3 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
-

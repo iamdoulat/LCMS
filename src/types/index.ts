@@ -220,53 +220,54 @@ export interface CompanyProfile {
 
 export interface UserDocumentForAdmin {
   id: string; // Firestore document ID
-  uid?: string; // Optional: Firebase Auth UID
+  uid?: string; // Optional: Firebase Auth UID, if you link them
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
-  photoURL?: string;
+  photoURL?: string; // Optional photo URL
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Use string for form input, convert to number for saving
-  purchasePrice: number | ''; // Use string for form input
-  salesPrice: number | ''; // Use string for form input
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
 
 export interface ProformaInvoice {
-  id?: string; // Firestore document ID
+  id?: string;
   beneficiaryId: string;
   beneficiaryName: string;
   applicantId: string;
   applicantName: string;
   piNo: string;
-  piDate: Date; // Stored as Date object in form, converted to ISO string for Firestore
+  piDate: Date;
   salesPersonName: string;
+  connectedLcId?: string; // ID of the LCEntryDocument
+  connectedLcNumber?: string;
+  connectedLcIssueDate?: string; // ISO string
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
-  freightChargeAmount?: number | ''; // Use string for form input
-  // Calculated fields, also stored for querying/reporting
+  freightChargeAmount?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number;
   grandTotalSalesPrice: number;
   totalCommissionPercentage: number;
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-// Type for saving to Firestore, dates are strings, numbers are numbers
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount'> & {
-  piDate: string; // ISO string
+  piDate: string;
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice'> & {
     qty: number;
     purchasePrice: number;
@@ -276,3 +277,10 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   createdAt: any;
   updatedAt: any;
 };
+
+// Option type for L/C dropdown in PI form
+export interface LcOption {
+  value: string; // L/C document ID
+  label: string; // L/C Number (documentaryCreditNumber)
+  issueDate?: string; // L/C Issue Date (ISO string)
+}
