@@ -38,23 +38,34 @@ import {
   Building,
   FileText,
   FileEdit,
-  ImageIcon 
+  ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext'; 
-import Image from 'next/image'; 
+import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 import type { UserRole } from '@/types';
-import React from 'react'; 
+import React from 'react';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
 const lcManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'L/C Management',
-    icon: Briefcase, 
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
+    ],
+  },
+];
+
+const commissionManagementNavItems: NavItemGroup[] = [
+  {
+    groupLabel: 'Commission Management',
+    icon: Briefcase, 
+    subLinks: [
+      { href: '/dashboard/commission-management/add-pi', label: 'Add new PI', icon: FilePlus2 },
+      { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
     ],
   },
 ];
@@ -96,7 +107,7 @@ const settingsNavItems: NavItemWithRoles[] = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth(); 
+  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
 
   React.useEffect(() => {
     console.log("Current User Role in Sidebar:", userRole);
@@ -107,26 +118,25 @@ export function AppSidebarNav() {
     if (href !== '/dashboard' && pathname.startsWith(href)) {
         // More specific checks for parent routes that shouldn't be active if a child is
         if (
-          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/add')) ||
-          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')) ||
-          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/add')) ||
-          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')) ||
-          (href === '/dashboard/total-lc' && pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit'))
+          (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
+          (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
+          (href === '/dashboard/total-lc' && (pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit'))) ||
+          (href === '/dashboard/commission-management/issued-pi-list' && pathname.startsWith('/dashboard/commission-management/add-pi')) // Example for commission
         ) {
-          return pathname === href; 
+          return pathname === href;
         }
-        return true; 
+        return true;
     }
     return false;
   };
-  
+
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const combinedNavGroups = [...lcManagementNavItems, ...managementNavItems];
+  const allAccordionGroups = [...lcManagementNavItems, ...commissionManagementNavItems, ...managementNavItems];
 
-  const defaultOpenAccordions = combinedNavGroups
+  const defaultOpenAccordions = allAccordionGroups
     .filter(item => item.subLinks && isGroupActive(item.subLinks))
     .map(item => item.groupLabel || '');
 
@@ -141,7 +151,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden", 
+                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden",
                     isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -163,10 +173,10 @@ export function AppSidebarNav() {
                 <Link href={subLink.href} passHref legacyBehavior>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === subLink.href} // Exact match for sub-items
+                    isActive={pathname === subLink.href}
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                      "h-8 text-xs" 
+                      "h-8 text-xs"
                     )}
                     tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                   >
@@ -191,7 +201,7 @@ export function AppSidebarNav() {
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           {companyLogoUrl ? (
              <Image
-                src={companyLogoUrl} 
+                src={companyLogoUrl}
                 alt="Company Logo"
                 width={32}
                 height={32}
@@ -207,7 +217,7 @@ export function AppSidebarNav() {
             "group-data-[collapsible=icon]:hidden font-bold text-lg bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
-            {companyName || "Smart Solution"} 
+            {companyName || "Smart Solution"}
           </span>
         </Link>
       </SidebarHeader>
@@ -234,10 +244,11 @@ export function AppSidebarNav() {
 
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            L/C Tools
+            Core Modules
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
             {lcManagementNavItems.map(renderNavGroup)}
+            {commissionManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
 
@@ -318,10 +329,11 @@ type NavItemWithRoles = NavItem & {
 
 type NavItemGroup = {
   groupLabel?: string;
-  icon: React.ElementType; 
+  icon: React.ElementType;
   subLinks?: Array<{
     href: string;
     label: string;
-    icon?: React.ElementType; 
+    icon?: React.ElementType;
   }>;
 };
+
