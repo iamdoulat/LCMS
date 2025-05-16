@@ -2,47 +2,40 @@
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, UploadCloud } from 'lucide-react';
+import { updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import Image from 'next/image';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { auth, storage } from '@/lib/firebase/config'; // Import storage
+import { auth, firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FileInput } from '@/components/forms/FileInput';
 import { cn } from '@/lib/utils';
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
   email: z.string().email("Invalid email address."), // Will be read-only
-  photoFile: z.instanceof(File).optional().nullable()
-    .refine(file => !file || file.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
-    .refine(
-      file => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
-      "Only .jpg, .jpeg, .png, and .webp files are accepted."
-    ),
+  photoURLInput: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for profile picture." }).optional()
+  ),
 });
 
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 
 export default function AccountDetailsPage() {
-  const { user, loading: authLoading, setUser: setAuthUser } = useAuth();
+  const { user, loading: authLoading, setUser: setAuthUser, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
@@ -51,34 +44,38 @@ export default function AccountDetailsPage() {
     defaultValues: {
       displayName: '',
       email: '',
-      photoFile: null,
+      photoURLInput: '',
     },
   });
+
+  const watchedPhotoURLInput = form.watch('photoURLInput');
 
   useEffect(() => {
     if (user) {
       form.reset({
         displayName: user.displayName || '',
         email: user.email || '',
-        photoFile: null,
+        photoURLInput: user.photoURL || '',
       });
-      if (user.photoURL) {
-        setImagePreviewUrl(user.photoURL);
-      }
+      setImagePreviewUrl(user.photoURL || null);
     }
   }, [user, form]);
 
-  const handleFileChange = (file: File | null) => {
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreviewUrl(previewUrl);
-      form.setValue('photoFile', file, { shouldValidate: true });
-    } else {
-      setImagePreviewUrl(user?.photoURL || null); // Revert to original if file cleared
-      form.setValue('photoFile', null);
+  useEffect(() => {
+    if (watchedPhotoURLInput !== undefined) {
+        // Basic check for URL validity before attempting to set as preview
+        if (watchedPhotoURLInput && (watchedPhotoURLInput.startsWith('http://') || watchedPhotoURLInput.startsWith('https://'))) {
+            setImagePreviewUrl(watchedPhotoURLInput);
+        } else if (!watchedPhotoURLInput && user?.photoURL) {
+            setImagePreviewUrl(user.photoURL); // Revert to original if URL cleared
+        } else if (!watchedPhotoURLInput) {
+            setImagePreviewUrl(null); // Clear preview if URL is empty
+        }
+        // If it's an invalid URL, we don't update the preview to avoid broken image
     }
-  };
-  
+  }, [watchedPhotoURLInput, user?.photoURL]);
+
+
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
     const namePart = nameOrEmail.includes('@') ? nameOrEmail.split('@')[0] : nameOrEmail;
@@ -101,60 +98,71 @@ export default function AccountDetailsPage() {
 
     setIsSubmitting(true);
     setError(null);
-    let newPhotoURL = user?.photoURL || null; 
-    const originalDisplayName = user?.displayName;
+
+    const originalDisplayName = auth.currentUser.displayName;
+    const originalPhotoURL = auth.currentUser.photoURL;
+
+    const newDisplayName = data.displayName;
+    let newPhotoURL = data.photoURLInput?.trim() || null;
+    if (newPhotoURL === "") newPhotoURL = null; // Treat empty string as clearing the photo
+
+    const nameChanged = newDisplayName !== originalDisplayName;
+    const photoChanged = newPhotoURL !== originalPhotoURL;
+
+    if (!nameChanged && !photoChanged) {
+      Swal.fire({
+        title: "No Changes",
+        text: "No changes were made to your profile.",
+        icon: "info",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      if (data.photoFile) {
-        setIsUploading(true);
-        const file = data.photoFile;
-
-        if (!storage || !storage.app || !storage.app.options || !storage.app.options.storageBucket || storage.app.options.storageBucket.includes("YOUR_STORAGE_BUCKET_HERE")) {
-          const configErrorMsg = "Firebase Storage Bucket is not configured correctly. Please check your project's .env.local file for NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (it should NOT be a placeholder like 'YOUR_STORAGE_BUCKET_HERE') and restart the server.";
-          setError(configErrorMsg);
-          Swal.fire("Configuration Error", configErrorMsg, "error");
-          setIsSubmitting(false);
-          setIsUploading(false);
-          return;
-        }
-        
-        const filePath = `profileImages/${auth.currentUser.uid}/${file.name}`;
-        const imageRef = storageRef(storage, filePath);
-
-        await uploadBytes(imageRef, file);
-        newPhotoURL = await getDownloadURL(imageRef);
-        setIsUploading(false);
-      }
-
+      // Update Firebase Auth profile
       await updateProfile(auth.currentUser, {
-        displayName: data.displayName,
-        ...(newPhotoURL && { photoURL: newPhotoURL }), 
+        displayName: newDisplayName,
+        photoURL: newPhotoURL,
       });
 
+      // Update Firestore user profile document
+      if (auth.currentUser.uid) {
+        const userDocRef = doc(firestore, "users", auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          await updateDoc(userDocRef, {
+            displayName: newDisplayName,
+            photoURL: newPhotoURL, // Store null if cleared, or the URL
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          console.warn("User document not found in Firestore for UID:", auth.currentUser.uid, "Cannot update Firestore profile.");
+          // Optionally, create the Firestore profile here if it's missing
+        }
+      }
+
+      // Update AuthContext
       if (setAuthUser && auth.currentUser) {
          const updatedUser = {
-            ...auth.currentUser,
-            displayName: data.displayName,
-            photoURL: newPhotoURL || auth.currentUser.photoURL,
+            ...auth.currentUser, // This will have the latest from Firebase Auth
          };
-         setAuthUser(updatedUser as any);
+         setAuthUser(updatedUser as any); // Auth context gets updated user
       }
+      
+      setImagePreviewUrl(newPhotoURL); // Update preview to reflect saved state
+      form.setValue('photoURLInput', newPhotoURL || ''); // Sync form field
 
-      const photoWasUpdated = data.photoFile && newPhotoURL && newPhotoURL !== user?.photoURL;
-      const nameWasUpdated = data.displayName !== originalDisplayName;
-      let successMessage = "No changes were made to your profile.";
-
-      if (photoWasUpdated && nameWasUpdated) {
-        successMessage = "Profile picture and display name updated successfully.";
-      } else if (photoWasUpdated) {
-        successMessage = "Profile picture updated successfully.";
-      } else if (nameWasUpdated) {
+      let successMessage = "Profile updated successfully.";
+      if (nameChanged && photoChanged) {
+        successMessage = "Display name and profile picture updated successfully.";
+      } else if (nameChanged) {
         successMessage = "Display name updated successfully.";
-      } else if (data.photoFile && newPhotoURL === user?.photoURL) {
-        successMessage = "Profile picture re-saved. Display name was not changed.";
-         if(nameWasUpdated) successMessage = "Profile picture re-saved and display name updated.";
+      } else if (photoChanged) {
+        successMessage = "Profile picture updated successfully.";
       }
-
 
       Swal.fire({
         title: "Profile Updated",
@@ -163,41 +171,12 @@ export default function AccountDetailsPage() {
         timer: 2000,
         showConfirmButton: false,
       });
-      form.reset({ ...data, photoFile: null }); 
-      if(newPhotoURL) setImagePreviewUrl(newPhotoURL); 
 
     } catch (err: any) {
-      console.error("Profile update or file upload error details:", err); 
+      console.error("Profile update error details:", err);
       let errorMessage = "Failed to update profile. Please try again.";
-      if (err.code) { 
+      if (err.code) {
         switch (err.code) {
-          case 'storage/unauthorized':
-            errorMessage = "Permission denied for Firebase Storage. Please check your Firebase Storage security rules to allow uploads to the 'profileImages/{userId}/' path for authenticated users.";
-            break;
-          case 'storage/canceled':
-            errorMessage = "Upload was cancelled by the user.";
-            break;
-          case 'storage/object-not-found':
-             errorMessage = "File not found during storage operation. This can happen if the storage path is incorrect or the object doesn't exist.";
-            break;
-          case 'storage/bucket-not-found':
-            errorMessage = "Firebase Storage bucket not found. Please ensure NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET in .env.local is correct (e.g., your-project-id.appspot.com) and the bucket exists. Restart your server after changes.";
-            break;
-          case 'storage/project-not-found':
-            errorMessage = "Firebase project not found. Please check your Firebase configuration.";
-            break;
-          case 'storage/quota-exceeded':
-            errorMessage = "Storage quota exceeded. Please check your Firebase Storage plan.";
-            break;
-          case 'storage/unauthenticated':
-            errorMessage = "User is not authenticated for this storage operation. Please log in again.";
-            break;
-          case 'storage/retry-limit-exceeded':
-            errorMessage = "Upload timed out. Please check your internet connection and try again.";
-            break;
-          case 'storage/invalid-checksum':
-            errorMessage = "File integrity check failed during upload. Please try again.";
-            break;
           case 'auth/requires-recent-login':
              errorMessage = "This operation is sensitive and requires recent authentication. Please log out and log back in before updating your profile.";
              break;
@@ -207,7 +186,7 @@ export default function AccountDetailsPage() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       Swal.fire({
         title: "Update Failed",
@@ -216,9 +195,60 @@ export default function AccountDetailsPage() {
       });
     } finally {
       setIsSubmitting(false);
-      setIsUploading(false);
     }
   };
+
+  const handlePasswordReset = async () => {
+    if (!user || !user.email) {
+      Swal.fire("Error", "No user email found to send reset link.", "error");
+      return;
+    }
+
+    // Check if the user signed in with a password provider
+    const isPasswordProvider = user.providerData.some(
+      (provider) => provider.providerId === 'password'
+    );
+
+    if (!isPasswordProvider) {
+      Swal.fire({
+        title: "Password Reset Not Applicable",
+        text: `You signed in with ${user.providerData[0]?.providerId || 'an external provider'}. Please reset your password through that provider.`,
+        icon: "info",
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: 'Reset Password?',
+      text: `A password reset link will be sent to ${user.email}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Send Reset Link',
+      cancelButtonText: 'Cancel',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setIsSubmitting(true); // Use isSubmitting to disable buttons
+        try {
+          await sendPasswordResetEmail(auth, user.email!);
+          Swal.fire(
+            'Reset Email Sent!',
+            'A password reset link has been sent to your email address. Please check your inbox.',
+            'success'
+          );
+        } catch (error: any) {
+          console.error("Error sending password reset email:", error);
+          Swal.fire(
+            'Error',
+            `Failed to send password reset email: ${error.message}`,
+            'error'
+          );
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
+  };
+
 
   if (authLoading) {
     return (
@@ -256,8 +286,7 @@ export default function AccountDetailsPage() {
           </CardTitle>
           <CardDescription>
             View and manage your personal account information and profile picture.
-            The profile picture preview is displayed at approximately 150x150px and in the header at 32x32px using CSS styling.
-            Actual client-side image cropping before upload is not implemented; the original selected image is uploaded.
+            The profile picture preview is displayed at approximately 128x128px and in the header at 36x36px.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -277,20 +306,17 @@ export default function AccountDetailsPage() {
                     {getInitials(user.displayName || user.email || "U")}
                   </AvatarFallback>
                 </Avatar>
-                 <FormField
+                <FormField
                   control={form.control}
-                  name="photoFile"
-                  render={({ field }) => ( 
+                  name="photoURLInput"
+                  render={({ field }) => (
                     <FormItem className="w-full max-w-sm">
-                      <FormLabel>Change Profile Picture</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><Link2 className="h-4 w-4 text-muted-foreground"/>Profile Picture URL</FormLabel>
                       <FormControl>
-                        <FileInput
-                          onFileChange={(file) => handleFileChange(file)}
-                          accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                        />
+                        <Input type="url" placeholder="https://example.com/your-image.png" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormDescription>
-                        Upload a new profile picture. Max 5MB. (JPG, PNG, WEBP)
+                        Enter a valid URL for your profile picture. (e.g., JPG, PNG, WEBP)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -331,12 +357,12 @@ export default function AccountDetailsPage() {
                   </FormItem>
                 )}
               />
-              
-              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting || isUploading}>
-                {isSubmitting || isUploading ? (
+
+              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isUploading ? "Uploading Image..." : "Saving..."}
+                    Saving...
                   </>
                 ) : (
                   <>
@@ -348,7 +374,19 @@ export default function AccountDetailsPage() {
             </form>
           </Form>
           <Separator className="my-8" />
-            <div className="space-y-2">
+            <div className="space-y-4">
+                <div>
+                    <h3 className="text-lg font-semibold text-foreground">Password</h3>
+                     <Button variant="outline" onClick={handlePasswordReset} disabled={isSubmitting || !user.providerData.some(p => p.providerId === 'password')}>
+                        Send Password Reset Email
+                     </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        {user.providerData.some(p => p.providerId === 'password')
+                        ? "Click to send a password reset link to your email."
+                        : "Password reset is not available for accounts signed in via an external provider (e.g., Google)."}
+                    </p>
+                </div>
+                <Separator />
                 <h3 className="text-lg font-semibold text-foreground">User ID</h3>
                 <p className="text-sm text-muted-foreground break-all">{user.uid}</p>
                 <h3 className="text-lg font-semibold text-foreground mt-4">Provider Data</h3>

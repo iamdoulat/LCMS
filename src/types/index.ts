@@ -1,5 +1,4 @@
 
-
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -33,8 +32,8 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantName: string;   // Stores Applicant ID from customers collection, form stores ID
-  beneficiaryName: string; // Stores Beneficiary ID from suppliers collection, form stores ID
+  applicantName: string;   // Stores Applicant ID
+  beneficiaryName: string; // Stores Beneficiary ID
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -69,9 +68,9 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;          
-  notifyPartyCell?: string;          
-  notifyPartyEmail?: string;        
+  notifyPartyName?: string;
+  notifyPartyCell?: string;
+  notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
   partialShipmentAllowed?: PartialShipmentAllowed;
@@ -97,27 +96,27 @@ export interface LCEntry {
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string; 
-  applicantId: string;  
-  beneficiaryName: string; 
-  beneficiaryId: string;  
+  applicantName: string;
+  applicantId: string;
+  beneficiaryName: string;
+  beneficiaryId: string;
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string; 
+  invoiceDate?: string;
   totalMachineQty: number;
-  lcIssueDate?: string; 
-  expireDate?: string; 
-  latestShipmentDate?: string; 
+  lcIssueDate?: string;
+  expireDate?: string;
+  latestShipmentDate?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string; 
-  eta?: string; 
+  etd?: string;
+  eta?: string;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -134,14 +133,14 @@ export interface LCEntryDocument {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string; 
-  notifyPartyName?: string;          
-  notifyPartyCell?: string;          
-  notifyPartyEmail?: string;          
+  notifyPartyNameAndAddress?: string;
+  notifyPartyName?: string;
+  notifyPartyCell?: string;
+  notifyPartyEmail?: string;
   numberOfAmendments?: number;
   status: LCStatus;
-  createdAt: any; 
-  updatedAt: any; 
+  createdAt: any;
+  updatedAt: any;
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -187,7 +186,7 @@ export interface Supplier {
   emailId: string;
   website?: string;
   brandName: string;
-  brandLogoFile?: File | null; // Kept for add form, edit will use URL
+  brandLogoFile?: File | null;
   brandLogoUrl?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -199,7 +198,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  timestamp: string; 
+  timestamp: string;
   isRead: boolean;
   link?: string;
 }
@@ -216,4 +215,17 @@ export interface CompanyProfile {
   tinNumber?: string;
   companyLogoUrl?: string;
   updatedAt?: any; // Firestore ServerTimestamp
+}
+
+// Represents a user profile document stored in Firestore 'users' collection
+export interface UserDocumentForAdmin {
+  id: string; // Firestore document ID
+  uid?: string; // Firebase Auth UID, optional if profile created before Auth account
+  displayName: string;
+  email: string;
+  contactNumber?: string;
+  role: UserRole;
+  photoURL?: string; // To store profile picture URL
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }
