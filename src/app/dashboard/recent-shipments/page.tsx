@@ -168,18 +168,20 @@ export default function RecentShipmentsPage() {
                       {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <p className="text-muted-foreground">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
+                    <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
-                    <p className="text-muted-foreground">
-                      Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
-                    </p>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground md:col-span-1">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
-                     <p className="text-muted-foreground">
+                     <p className="text-muted-foreground md:col-span-1">
                       Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
+                    </p>
+                  </div>
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">
+                      Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                     </p>
                   </div>
                   <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
