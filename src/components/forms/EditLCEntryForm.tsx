@@ -139,7 +139,65 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      // Default values are set by form.reset in useEffect
+      applicantName: initialData?.applicantId || '',
+      beneficiaryName: initialData?.beneficiaryId || '',
+      currency: initialData?.currency || 'USD',
+      termsOfPay: initialData?.termsOfPay || '' as TermsOfPay,
+      status: initialData?.status || 'Draft',
+      shipmentMode: initialData?.shipmentMode || '' as ShipmentMode,
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount ?? undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty ?? undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      bankTin: initialData?.bankTin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? undefined,
+      totalNetWeight: initialData?.totalNetWeight ?? undefined,
+      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
+      totalCbm: initialData?.totalCbm ?? undefined,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
+      firstPartialQty: initialData?.firstPartialQty ?? undefined,
+      secondPartialQty: initialData?.secondPartialQty ?? undefined,
+      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
+      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
+      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
+      originalBlQty: initialData?.originalBlQty ?? undefined,
+      copyBlQty: initialData?.copyBlQty ?? undefined,
+      originalCooQty: initialData?.originalCooQty ?? undefined,
+      copyCooQty: initialData?.copyCooQty ?? undefined,
+      invoiceQty: initialData?.invoiceQty ?? undefined,
+      packingListQty: initialData?.packingListQty ?? undefined,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? undefined,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? undefined,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? undefined,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? undefined,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? undefined,
     },
   });
 
@@ -154,7 +212,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -162,7 +219,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
@@ -176,12 +232,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
-    // Ensure options are loaded before resetting the form to prevent race conditions
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("Populating Edit Form with Initial L/C Data:", initialData);
-      console.log("Setting Applicant ID in Edit Form:", initialData.applicantId);
-      console.log("Setting Beneficiary ID in Edit Form:", initialData.beneficiaryId);
-
       form.reset({
         applicantName: initialData.applicantId || '',
         beneficiaryName: initialData.beneficiaryId || '',
@@ -267,10 +318,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName, // This is the ID
-      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName, // Store the name based on selected ID
-      beneficiaryId: data.beneficiaryName, // This is the ID
-      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName, // Store the name based on selected ID
+      applicantId: data.applicantName,
+      applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
+      beneficiaryId: data.beneficiaryName,
+      beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       currency: data.currency,
       termsOfPay: data.termsOfPay,
       status: data.status,
@@ -332,7 +383,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    // Filter out undefined fields before sending to Firestore
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
       if (dataToUpdate[key] === undefined) {
         delete dataToUpdate[key];
@@ -380,7 +430,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     if (!courier || courier.trim() === "" || courier === NONE_COURIER_VALUE || !number || number.trim() === "") {
       Swal.fire({
         title: "Information Missing",
-        text: "Courier is not set or tracking number is missing.",
+        text: "Please select a courier and enter a tracking number.",
         icon: "info",
       });
       return;
@@ -398,7 +448,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     } else {
       Swal.fire({
         title: "Courier Not Supported",
-        text: "Tracking for the selected courier is not implemented or courier not set.",
+        text: "Tracking for the selected courier is not implemented.",
         icon: "warning",
       });
     }
@@ -1407,7 +1457,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-         <FormField
+        <FormField
             control={form.control}
             name="shippingMarks"
             render={({ field }) => (

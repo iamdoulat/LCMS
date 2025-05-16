@@ -23,12 +23,12 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipping pending':
+    case 'Shipment Pending': // Updated
       return 'default';
     case 'Shipping going on':
       return 'default';
     case 'Done':
-      return 'default'; // Green color for 'Done'
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -61,13 +61,12 @@ export default function RecentShipmentsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        // This query requires a composite index on 'status' (asc) and 'updatedAt' (desc)
         const q = query(lcEntriesRef, where("status", "==", "Done"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let updatedAtDate = new Date(0); // Fallback to a default date
+          let updatedAtDate = new Date(0); 
 
           if (data.updatedAt) {
             if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
@@ -110,7 +109,7 @@ export default function RecentShipmentsPage() {
         setFetchError(errorMessage);
         Swal.fire({
           title: "Fetch Error",
-          html: errorMessage.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>'), // Make links clickable
+          html: errorMessage.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>'), 
           icon: "error",
         });
       } finally {
@@ -201,4 +200,5 @@ export default function RecentShipmentsPage() {
     </div>
   );
 }
+
 

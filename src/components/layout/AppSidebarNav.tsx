@@ -38,7 +38,8 @@ import {
   Building,
   FileText,
   FileEdit,
-  ImageIcon
+  ImageIcon,
+  Package // Added Package icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -48,8 +49,8 @@ import React from 'react';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
-const lcManagementNavItems: NavItemGroup[] = [
-  {
+const coreModulesNavItems: NavItemGroup[] = [
+ {
     groupLabel: 'L/C Management',
     icon: Briefcase,
     subLinks: [
@@ -57,9 +58,6 @@ const lcManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
     ],
   },
-];
-
-const commissionManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Commission Management',
     icon: Briefcase, 
@@ -69,6 +67,7 @@ const commissionManagementNavItems: NavItemGroup[] = [
     ],
   },
 ];
+
 
 const managementNavItems: NavItemGroup[] = [
  {
@@ -94,6 +93,7 @@ const managementNavItems: NavItemGroup[] = [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
       { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
+      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package }, // New Link
     ],
   },
 ];
@@ -110,18 +110,18 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
 
   React.useEffect(() => {
-    console.log("Current User Role in Sidebar:", userRole);
+    console.log("AuthContext: Current User Role in Sidebar:", userRole);
   }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        // More specific checks for parent routes that shouldn't be active if a child is
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/total-lc' && (pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit'))) ||
-          (href === '/dashboard/commission-management/issued-pi-list' && pathname.startsWith('/dashboard/commission-management/add-pi')) // Example for commission
+          (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
+          (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
           return pathname === href;
         }
@@ -134,7 +134,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const allAccordionGroups = [...lcManagementNavItems, ...commissionManagementNavItems, ...managementNavItems];
+  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems];
 
   const defaultOpenAccordions = allAccordionGroups
     .filter(item => item.subLinks && isGroupActive(item.subLinks))
@@ -201,7 +201,7 @@ export function AppSidebarNav() {
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           {companyLogoUrl ? (
              <Image
-                src={companyLogoUrl}
+                src={companyLogoUrl} 
                 alt="Company Logo"
                 width={32}
                 height={32}
@@ -247,8 +247,7 @@ export function AppSidebarNav() {
             Core Modules
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-            {lcManagementNavItems.map(renderNavGroup)}
-            {commissionManagementNavItems.map(renderNavGroup)}
+            {coreModulesNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
 
@@ -336,4 +335,5 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
 

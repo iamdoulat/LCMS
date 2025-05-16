@@ -18,7 +18,8 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-export const lcStatusOptions = ["Draft", "Transmitted", "Shipping pending", "Shipping going on", "Done"] as const;
+// Updated lcStatusOptions
+export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;

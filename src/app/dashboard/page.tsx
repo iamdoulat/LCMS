@@ -68,7 +68,6 @@ interface UpcomingEtdShipment {
 }
 
 
-// Predefined fill colors for the pie chart
 const PIE_CHART_COLORS = [
   'hsl(var(--chart-1))',
   'hsl(var(--chart-2))',
@@ -83,7 +82,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipping pending':
+    case 'Shipment Pending': // Updated status name
       return 'default';
     case 'Shipping going on':
       return 'default';
@@ -124,7 +123,6 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async (year: string) => {
     if (!auth.currentUser) {
       console.log("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
-      // Optionally, clear dashboard data or show a message, but AuthGuard should handle redirection.
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -152,7 +150,6 @@ export default function DashboardPage() {
       });
 
       if (lcEntriesForTheYear.length === 0 && querySnapshot.empty) {
-        // No LCs for the year, reset all stats
         setDashboardStats({
           totalLCs: 0,
           totalLCValue: 0,
@@ -269,7 +266,6 @@ export default function DashboardPage() {
         .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
-      // Fetch Proforma Invoices to calculate totalLinkedPIs
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
       const piQuerySnapshot = await getDocs(piCollectionRef);
@@ -312,21 +308,17 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && authUser) { // Ensure user is loaded and authenticated
+    if (!authLoading && authUser) { 
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
-      // User is not authenticated, clear data or handle as appropriate
       console.log("Dashboard: User not authenticated. Clearing dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setIsLoading(false); // Stop loading if auth state is resolved and no user
+      setIsLoading(false); 
     }
-    // We don't include fetchDashboardData in dependency array if it's not memoized with useCallback
-    // to avoid potential infinite loops if it recreated on every render.
-    // It's called when selectedYear or authUser/authLoading changes.
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
   const handleSearchLC = async (e: React.FormEvent) => {
@@ -362,7 +354,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || (isLoading && authUser)) { // Show loading if auth is loading OR if dashboard data is loading AND user is present
+  if (authLoading || (isLoading && authUser)) { 
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -371,7 +363,7 @@ export default function DashboardPage() {
     );
   }
   
-  if (!authUser && !authLoading) { // If auth is done loading and there's no user
+  if (!authUser && !authLoading) { 
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -413,6 +405,7 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
+          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -431,6 +424,7 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
+          className="lg:col-start-1"
         />
          <StatCard
           title={`PIs Linked to LCs (${selectedYear})`}
@@ -646,3 +640,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

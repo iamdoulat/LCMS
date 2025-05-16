@@ -26,7 +26,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipping pending':
+    case 'Shipment Pending': // Updated
       return 'default';
     case 'Shipping going on':
       return 'default';
@@ -266,3 +266,4 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
+

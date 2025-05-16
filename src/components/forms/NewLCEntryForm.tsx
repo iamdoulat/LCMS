@@ -32,9 +32,11 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+const NONE_COURIER_VALUE = "__NONE__";
+
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
+  applicantName: z.string().min(1, "Applicant Name is required"),
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -83,9 +85,9 @@ const lcEntrySchema = z.object({
   portOfDischarge: z.string().optional(),
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(), // This will be for the address
-  notifyPartyName: z.string().optional(),          // New field for name
-  notifyPartyCell: z.string().optional(),          // New field for cell
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyName: z.string().optional(),
+  notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
@@ -117,8 +119,6 @@ interface DropdownOption {
   value: string;
   label: string;
 }
-
-const NONE_COURIER_VALUE = "__NONE__";
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -260,9 +260,9 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, // This is the ID
+      applicantId: data.applicantName, 
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName, // This is the ID
+      beneficiaryId: data.beneficiaryName, 
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
       amount: data.amount,
@@ -1380,21 +1380,20 @@ export function NewLCEntryForm() {
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={form.control}
-                name="shippingMarks"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipping Marks</FormLabel>
-                    <FormControl>
-                    <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
+        <FormField
+            control={form.control}
+            name="shippingMarks"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Shipping Marks</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+
 
         <h3 className={sectionHeadingClass}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
@@ -1494,3 +1493,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+

@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
-import { lcStatusOptions, currencyOptions } from '@/types';
+import { lcStatusOptions, currencyOptions } from '@/types'; // Ensure lcStatusOptions is imported
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -27,7 +27,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipping pending':
+    case 'Shipment Pending': // Updated status name
       return 'default';
     case 'Shipping going on':
       return 'default'; 
@@ -195,7 +195,7 @@ export default function TotalLCPage() {
           } catch { /* ignore parsing error, will compare as strings or fall through */ }
         }
         
-        if (sortBy === 'amount' || sortBy === 'year') { // Add 'year' here
+        if (sortBy === 'amount' || sortBy === 'year') { 
             valA = Number(valA) || 0;
             valB = Number(valB) || 0;
         }
@@ -206,7 +206,7 @@ export default function TotalLCPage() {
       });
     }
     setDisplayedLcEntries(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1); 
   }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
@@ -261,7 +261,6 @@ export default function TotalLCPage() {
     setCurrentPage(1);
   };
 
-  // Pagination Logic
   const totalPages = Math.ceil(displayedLcEntries.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
@@ -493,7 +492,7 @@ export default function TotalLCPage() {
                           className={
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' :
                             lc.status === 'Done' ? 'bg-green-600 text-white' :
-                            lc.status === 'Shipping pending' ? 'bg-yellow-500 text-black' : ''
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black' : '' // Updated status name
                           }
                         >
                           {lc.status || 'N/A'}
@@ -601,4 +600,5 @@ export default function TotalLCPage() {
     
 
     
+
 
