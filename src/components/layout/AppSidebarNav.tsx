@@ -39,7 +39,8 @@ import {
   FileText,
   FileEdit,
   ImageIcon,
-  Package
+  Package,
+  History // Added History icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -88,7 +89,7 @@ const managementNavItems: NavItemGroup[] = [
     ],
   },
   {
-    groupLabel: 'Shipment Management', // Renamed from 'Shipments'
+    groupLabel: 'Shipment Management',
     icon: Truck,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
@@ -102,6 +103,7 @@ const settingsNavItems: NavItemWithRoles[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] }, // Added Logs
 ];
 
 
@@ -111,14 +113,13 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      console.log("AppSidebarNav: Current User Role from AuthContext:", userRole);
+      // console.log("AppSidebarNav: Current User Role from AuthContext:", userRole);
     }
   }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        // More specific checks for parent routes that should not be active if a child is active
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -126,10 +127,9 @@ export function AppSidebarNav() {
           (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
           (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
-          // If we are on an add/edit page, the parent list page itself should not be marked as active
           return pathname === href; 
         }
-        return true; // General case for parent routes
+        return true;
     }
     return false;
   };
@@ -177,7 +177,7 @@ export function AppSidebarNav() {
                 <Link href={subLink.href} passHref legacyBehavior>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === subLink.href} // Exact match for sub-links
+                    isActive={pathname === subLink.href} 
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                       "h-8 text-xs"
@@ -202,7 +202,6 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
             src={companyLogoUrl || "https://placehold.co/32x32.png"} 
@@ -334,7 +333,4 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
-
-
-
 
