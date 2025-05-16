@@ -2,9 +2,8 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
-import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
-// Toaster removed as SweetAlert2 will be used globally
+import './globals.css'; // Moved AuthProvider import before globals.css
 
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
@@ -21,7 +20,6 @@ export default function RootLayout({
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}
-          {/* <Toaster /> component removed */}
         </AuthProvider>
       </body>
     </html>
