@@ -140,17 +140,19 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     let newTotalPurchase = 0;
     let newTotalSales = 0;
 
-    watchedLineItems.forEach(item => {
-      const qty = parseFloat(item.qty) || 0;
-      const purchaseP = parseFloat(item.purchasePrice) || 0;
-      const salesP = parseFloat(item.salesPrice) || 0;
-      
-      if (qty > 0) {
-        newTotalQty += qty;
-        if (purchaseP > 0) newTotalPurchase += qty * purchaseP;
-        if (salesP > 0) newTotalSales += qty * salesP;
-      }
-    });
+    if (Array.isArray(watchedLineItems)) {
+        watchedLineItems.forEach(item => {
+        const qty = parseFloat(item.qty) || 0;
+        const purchaseP = parseFloat(item.purchasePrice) || 0;
+        const salesP = parseFloat(item.salesPrice) || 0;
+        
+        if (qty > 0) {
+            newTotalQty += qty;
+            if (purchaseP > 0) newTotalPurchase += qty * purchaseP;
+            if (salesP > 0) newTotalSales += qty * salesP;
+        }
+        });
+    }
 
     setTotalQty(newTotalQty);
     setTotalPurchasePriceAmount(newTotalPurchase);
