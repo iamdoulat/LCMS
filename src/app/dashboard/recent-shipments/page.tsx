@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, PackageCheck, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
@@ -157,8 +157,8 @@ export default function RecentShipmentsPage() {
             <ul className="space-y-4">
               {completedLCs.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
                     <Badge
@@ -168,21 +168,28 @@ export default function RecentShipmentsPage() {
                       {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Completed: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
-                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <p className="text-muted-foreground">
+                      Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                    </p>
+                     <p className="text-muted-foreground">
+                      Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
+                    </p>
+                  </div>
+                  <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <p className="text-xs text-muted-foreground">
+                      Completed: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
+                    </p>
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline mt-1 sm:mt-0 inline-flex items-center">
+                     View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
+                   </Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -192,3 +199,4 @@ export default function RecentShipmentsPage() {
     </div>
   );
 }
+
