@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, PackageCheck, Info, AlertTriangle } from 'lucide-react';
-import type { LCEntryDocument, LCStatus } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status'> {
+interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate'> {
   updatedAtDate: Date;
 }
 
@@ -33,6 +33,22 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
   }
 };
+
+const formatDisplayDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
+const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
+  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 
 export default function RecentShipmentsPage() {
   const [completedLCs, setCompletedLCs] = useState<CompletedLC[]>([]);
@@ -74,6 +90,10 @@ export default function RecentShipmentsPage() {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
             beneficiaryName: data.beneficiaryName,
+            applicantName: data.applicantName,
+            currency: data.currency,
+            amount: data.amount,
+            lcIssueDate: data.lcIssueDate,
             updatedAtDate: updatedAtDate,
             status: data.status,
           };
@@ -149,7 +169,16 @@ export default function RecentShipmentsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">
+                    Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">
                     Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Completed: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
