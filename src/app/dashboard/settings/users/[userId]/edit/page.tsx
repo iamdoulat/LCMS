@@ -1,56 +1,103 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, UserCog, ShieldAlert } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, ArrowLeft, UserCog, ShieldAlert, Save } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { UserRole } from '@/types';
+import type { UserRole, UserDocumentForAdmin } from '@/types';
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
+const userRoleOptions: UserRole[] = ["Super Admin", "Admin", "User"];
 
-// Placeholder structure for demonstrating table
-interface PlaceholderUser {
-  id: string;
-  displayName?: string;
-  email?: string;
-  contactNumber?: string; 
-  role?: UserRole;
-}
+const editUserSchema = z.object({
+  displayName: z.string().min(1, "Display name is required."),
+  email: z.string().email("Invalid email address.").min(1, "Email is required."),
+  contactNumber: z.string().optional(),
+  role: z.enum(userRoleOptions, { required_error: "Role is required." }),
+  newPassword: z.string().optional().refine(val => !val || val.length >= 6, {
+    message: "New password must be at least 6 characters if provided.",
+  }),
+  confirmNewPassword: z.string().optional(),
+}).refine(data => data.newPassword === data.confirmNewPassword, {
+  message: "New passwords do not match.",
+  path: ["confirmNewPassword"],
+});
 
-// This would typically be fetched from a backend or come from route state if listing real users
-const initialPlaceholderUsers: PlaceholderUser[] = [
-  { id: 'sim_user_1', displayName: 'Demo User One', email: 'user1@example.com', contactNumber: '123-456-7890', role: 'User' },
-  { id: 'sim_user_2', displayName: 'Demo Admin User', email: 'admin.test@example.com', contactNumber: '987-654-3210', role: 'Admin' },
-  { id: 'sim_user_3', displayName: 'Another User', email: 'user2@example.com', role: 'User' },
-];
-
+type EditUserFormValues = z.infer<typeof editUserSchema>;
 
 export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
-  const userId = params.userId as string;
+  const userId = params.userId as string; // This is Firestore document ID
   const { userRole: adminUserRole, loading: authLoading } = useAuth(); 
   
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
-  const [userData, setUserData] = useState<PlaceholderUser | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState<UserDocumentForAdmin | null>(null);
   
-  // Form state simulation for edit
-  const [editDisplayName, setEditDisplayName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editContactNumber, setEditContactNumber] = useState('');
-  const [editRole, setEditRole] = useState<UserRole>('User');
+  const form = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      displayName: '',
+      email: '',
+      contactNumber: '',
+      role: 'User',
+      newPassword: '',
+      confirmNewPassword: '',
+    },
+  });
 
+  const fetchUserData = useCallback(async () => {
+    if (!userId) {
+      Swal.fire("Error", "No User ID provided.", "error").then(() => router.push('/dashboard/settings/users'));
+      setIsLoadingUserData(false);
+      return;
+    }
+    setIsLoadingUserData(true);
+    try {
+      const userDocRef = doc(firestore, "users", userId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const fetchedData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
+        setUserData(fetchedData);
+        form.reset({
+          displayName: fetchedData.displayName || '',
+          email: fetchedData.email || '',
+          contactNumber: fetchedData.contactNumber || '',
+          role: fetchedData.role || 'User',
+          newPassword: '', // Passwords are not pre-filled
+          confirmNewPassword: '',
+        });
+      } else {
+        Swal.fire("Error", `User profile with ID ${userId} not found in Firestore.`, "error");
+        setUserData(null);
+        router.push('/dashboard/settings/users');
+      }
+    } catch (error: any) {
+      console.error("Error fetching user profile from Firestore:", error);
+      Swal.fire("Error", `Failed to fetch user profile: ${error.message}`, "error");
+      router.push('/dashboard/settings/users');
+    } finally {
+      setIsLoadingUserData(false);
+    }
+  }, [userId, router, form]);
 
   useEffect(() => {
-    if (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin") {
+    if (!authLoading && adminUserRole !== "Super Admin") {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to edit users.',
@@ -60,29 +107,58 @@ export default function EditUserPage() {
       }).then(() => {
         router.push('/dashboard/settings/users');
       });
-    } else if (userId) {
-      setIsLoadingUserData(true);
-      // Simulate fetching user data. In a real app, this would be an API call to your backend.
-      const foundUser = initialPlaceholderUsers.find(u => u.id === userId);
-      if (foundUser) {
-        setUserData(foundUser);
-        setEditDisplayName(foundUser.displayName || '');
-        setEditEmail(foundUser.email || '');
-        setEditContactNumber(foundUser.contactNumber || '');
-        setEditRole(foundUser.role || 'User');
-      } else {
-        Swal.fire("Error", `User with ID ${userId} not found in placeholder list.`, "error");
-        setUserData(null);
-      }
-      setIsLoadingUserData(false);
-    } else {
-      Swal.fire("Error", "No User ID provided.", "error");
-      router.push('/dashboard/settings/users');
+    } else if (!authLoading && adminUserRole === "Super Admin") {
+      fetchUserData();
     }
-  }, [userId, adminUserRole, authLoading, router]);
+  }, [userId, adminUserRole, authLoading, router, fetchUserData]);
 
+  const onSubmit = async (data: EditUserFormValues) => {
+    if (!userData) {
+      Swal.fire("Error", "User data not loaded, cannot save.", "error");
+      return;
+    }
+    setIsSubmitting(true);
 
-  if (authLoading || isLoadingUserData || (adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
+    const profileDataToUpdate: Partial<Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt' | 'uid'>> & { updatedAt: any } = {
+      displayName: data.displayName,
+      email: data.email,
+      contactNumber: data.contactNumber || undefined, // Store undefined if empty
+      role: data.role,
+      updatedAt: serverTimestamp(),
+    };
+    
+    // Remove undefined fields
+    Object.keys(profileDataToUpdate).forEach(key => {
+        if (profileDataToUpdate[key as keyof typeof profileDataToUpdate] === undefined) {
+            delete profileDataToUpdate[key as keyof typeof profileDataToUpdate];
+        }
+    });
+
+    try {
+      const userDocRef = doc(firestore, "users", userId);
+      await updateDoc(userDocRef, profileDataToUpdate);
+      
+      let successMessage = `User profile for ${data.displayName} updated successfully in Firestore.`;
+      if (data.newPassword) {
+        successMessage += "\n\nNote: Password change for Firebase Authentication requires a secure backend function using the Firebase Admin SDK. This form does not directly update Firebase Auth passwords.";
+      }
+
+      Swal.fire({
+        title: "Profile Updated!",
+        text: successMessage,
+        icon: "success",
+      });
+      // Optionally refetch data or update local state if needed, or simply rely on next navigation
+      // fetchUserData(); // To re-fetch and re-populate form, showing updated data
+    } catch (error: any) {
+      console.error("Error updating user profile in Firestore:", error);
+      Swal.fire("Error", `Failed to update user profile: ${error.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (authLoading || isLoadingUserData || (adminUserRole !== "Super Admin" && !userData)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -91,7 +167,7 @@ export default function EditUserPage() {
     );
   }
 
-  if (!userData) {
+  if (!userData && !isLoadingUserData) {
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground mb-4">User data could not be loaded or user not found.</p>
@@ -104,28 +180,6 @@ export default function EditUserPage() {
       </div>
     );
   }
-
-  const handleSaveChanges = () => {
-    const updatedUserDataSim = {
-      id: userId,
-      displayName: editDisplayName,
-      email: editEmail,
-      contactNumber: editContactNumber,
-      role: editRole,
-    };
-
-    console.log(`Simulating save for user ${userId}. New Data:`, updatedUserDataSim);
-    Swal.fire({
-        title: 'Changes Simulated (Backend Required)',
-        html: `Updating user (ID: ${userId}) details in Firebase Authentication (Display Name, Email, Password, Role/Custom Claims) requires a secure backend function using the Firebase Admin SDK.
-               <br/><br/>The changes have <strong>not</strong> been saved to Firebase Auth. This is a UI simulation.
-               <br/><br/>Data that would be sent to backend: <pre class="text-left text-xs bg-muted p-2 rounded">${JSON.stringify(updatedUserDataSim, null, 2)}</pre>`,
-        icon: 'info',
-        confirmButtonText: "OK",
-    }).then(() => {
-        // router.push('/dashboard/settings/users'); // Optional: redirect after simulation
-    });
-  };
 
   return (
     <div className="container mx-auto py-8">
@@ -141,77 +195,139 @@ export default function EditUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserCog className="h-7 w-7 text-primary" />
-            Edit User (Simulated)
+            Edit User Profile
           </CardTitle>
           <CardDescription>
-            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Changes are simulated.
+            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="default" className="mb-6 bg-amber-500/10 border-amber-500/30">
             <ShieldAlert className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-700 font-semibold">Backend Required for Full Functionality</AlertTitle>
+            <AlertTitle className="text-amber-700 font-semibold">Important Note</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              Editing other users' details (like email, password, display name, or role/custom claims) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page simulates the UI for such an operation.
+              - Changes here update the user's profile in the Firestore database.
+              - Password changes for Firebase Authentication accounts require backend operations using the Firebase Admin SDK. This form only captures the intent for a password change.
             </AlertDescription>
           </Alert>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-muted-foreground">Display Name</label>
-              <Input
-                type="text"
-                id="displayName"
-                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter user's full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-muted-foreground">Email</label>
-              <Input
-                type="email"
-                id="email"
-                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address*</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="user@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-               <p className="mt-1 text-xs text-muted-foreground">Note: Actually changing a user's email in Firebase Auth has implications (e.g., verification status) and requires Admin SDK.</p>
-            </div>
-             <div>
-              <label htmlFor="contactNumber" className="block text-sm font-medium text-muted-foreground">Contact Number (from Profile)</label>
-              <Input
-                type="tel"
-                id="contactNumber"
-                className="mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2"
-                value={editContactNumber}
-                onChange={(e) => setEditContactNumber(e.target.value)}
-                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
+              <FormField
+                control={form.control}
+                name="contactNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (from Claims - Simulated)</label>
-              <Select 
-                value={editRole} 
-                onValueChange={(value) => setEditRole(value as UserRole)}
-                disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Super Admin">Super Admin</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="User">User</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="mt-1 text-xs text-muted-foreground">Actual role changes are managed by setting custom claims on the user via Firebase Admin SDK.</p>
-            </div>
-            <div className="pt-4">
-                <Button onClick={handleSaveChanges} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>Save Changes (Simulated)</Button>
-            </div>
-          </div>
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Role* (Application Level)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userRoleOptions.map(roleOpt => (
+                          <SelectItem key={roleOpt} value={roleOpt}>{roleOpt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="pt-2">
+                <h3 className="text-md font-semibold text-muted-foreground mb-2">Change Password (Optional)</h3>
+                 <Alert variant="default" className="mb-4 text-xs bg-blue-500/10 border-blue-500/30 text-blue-700/90">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription>
+                        Leave blank to keep the current Firebase Authentication password (if one exists for this user).
+                        Actual password updates for Firebase Auth require a secure backend process.
+                    </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                            <Input type="password" placeholder="Enter new password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="confirmNewPassword"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Confirm New Password</FormLabel>
+                            <FormControl>
+                            <Input type="password" placeholder="Re-enter new password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingUserData}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving Changes...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
