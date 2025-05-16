@@ -29,22 +29,13 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-const lineItemSchema = z.object({
-  id: z.string().optional(), // for useFieldArray
+// Zod schema for a single line item - accepting strings for form input
+const lineItemFormSchema = z.object({
   slNo: z.string().optional(),
   modelNo: z.string().min(1, "Model No. is required"),
-  qty: z.preprocess(
-    (val) => toNumberOrUndefined(val) ?? 0, // Default to 0 if blank for calculation, but Zod makes it required > 0
-    z.number().int().positive({ message: "Qty must be > 0" })
-  ),
-  purchasePrice: z.preprocess(
-    (val) => toNumberOrUndefined(val) ?? 0,
-    z.number().positive({ message: "Purchase Price must be > 0" })
-  ),
-  salesPrice: z.preprocess(
-    (val) => toNumberOrUndefined(val) ?? 0,
-    z.number().positive({ message: "Sales Price must be > 0" })
-  ),
+  qty: z.string().min(1, "Qty is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+  purchasePrice: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Purchase Price must be > 0" }),
+  salesPrice: z.string().min(1, "Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Sales Price must be > 0" }),
 });
 
 const proformaInvoiceSchema = z.object({
@@ -53,15 +44,13 @@ const proformaInvoiceSchema = z.object({
   piNo: z.string().min(1, "PI No. is required"),
   piDate: z.date({ required_error: "PI Date is required" }),
   salesPersonName: z.string().min(1, "Sales Person Name is required"),
-  lineItems: z.array(lineItemSchema).min(1, "At least one line item is required."),
+  lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
-  freightChargeAmount: z.preprocess(
-    toNumberOrUndefined,
-    z.number().nonnegative("Freight Amount cannot be negative").optional()
-  ),
+  freightChargeAmount: z.string().optional(),
 }).refine(data => {
-    if (data.freightChargeOption === "Freight Excluded" && (data.freightChargeAmount === undefined || data.freightChargeAmount < 0)) {
-        return false;
+    if (data.freightChargeOption === "Freight Excluded") {
+        const amount = parseFloat(data.freightChargeAmount || '');
+        return !isNaN(amount) && amount >= 0;
     }
     return true;
 }, {
@@ -87,11 +76,10 @@ export function AddProformaInvoiceForm() {
 
   // Calculated Totals State
   const [totalQty, setTotalQty] = React.useState(0);
-  const [totalPurchasePrice, setTotalPurchasePrice] = React.useState(0);
-  const [totalSalesPrice, setTotalSalesPrice] = React.useState(0);
+  const [totalPurchasePriceAmount, setTotalPurchasePriceAmount] = React.useState(0);
+  const [totalSalesPriceAmount, setTotalSalesPriceAmount] = React.useState(0);
   const [grandTotalSalesPrice, setGrandTotalSalesPrice] = React.useState(0);
   const [totalCommissionPercentage, setTotalCommissionPercentage] = React.useState(0);
-
 
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
@@ -103,7 +91,7 @@ export function AddProformaInvoiceForm() {
       salesPersonName: '',
       lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
       freightChargeOption: "Freight Included",
-      freightChargeAmount: undefined,
+      freightChargeAmount: '',
     },
   });
 
@@ -140,7 +128,7 @@ export function AddProformaInvoiceForm() {
 
   const watchedLineItems = form.watch("lineItems");
   const watchedFreightOption = form.watch("freightChargeOption");
-  const watchedFreightAmount = form.watch("freightChargeAmount");
+  const watchedFreightAmountString = form.watch("freightChargeAmount");
 
   // Calculate Totals
   React.useEffect(() => {
@@ -149,22 +137,27 @@ export function AddProformaInvoiceForm() {
     let newTotalSales = 0;
 
     watchedLineItems.forEach(item => {
-      const qty = Number(item.qty) || 0;
-      const purchaseP = Number(item.purchasePrice) || 0;
-      const salesP = Number(item.salesPrice) || 0;
+      const qty = parseFloat(item.qty) || 0;
+      const purchaseP = parseFloat(item.purchasePrice) || 0;
+      const salesP = parseFloat(item.salesPrice) || 0;
       
-      newTotalQty += qty;
-      newTotalPurchase += qty * purchaseP;
-      newTotalSales += qty * salesP;
+      if (qty > 0) {
+        newTotalQty += qty;
+        if (purchaseP > 0) newTotalPurchase += qty * purchaseP;
+        if (salesP > 0) newTotalSales += qty * salesP;
+      }
     });
 
     setTotalQty(newTotalQty);
-    setTotalPurchasePrice(newTotalPurchase);
-    setTotalSalesPrice(newTotalSales);
+    setTotalPurchasePriceAmount(newTotalPurchase);
+    setTotalSalesPriceAmount(newTotalSales);
 
     let currentGrandTotal = newTotalSales;
     if (watchedFreightOption === "Freight Excluded") {
-      currentGrandTotal += Number(watchedFreightAmount) || 0;
+      const freightAmountNum = parseFloat(watchedFreightAmountString || '');
+      if (!isNaN(freightAmountNum) && freightAmountNum >= 0) {
+        currentGrandTotal += freightAmountNum;
+      }
     }
     setGrandTotalSalesPrice(currentGrandTotal);
 
@@ -175,7 +168,7 @@ export function AddProformaInvoiceForm() {
       setTotalCommissionPercentage(0);
     }
 
-  }, [watchedLineItems, watchedFreightOption, watchedFreightAmount]);
+  }, [watchedLineItems, watchedFreightOption, watchedFreightAmountString]);
 
 
   async function onSubmit(data: ProformaInvoiceFormValues) {
@@ -184,34 +177,68 @@ export function AddProformaInvoiceForm() {
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
-    const dataToSave: Omit<ProformaInvoice, 'id' | 'createdAt' | 'updatedAt'> = {
+    const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
+    if (data.freightChargeOption === "Freight Excluded" && (isNaN(freightAmountForDb!) || freightAmountForDb! < 0)) {
+        form.setError("freightChargeAmount", { type: "manual", message: "Freight Amount must be a valid non-negative number if 'Excluded'." });
+        setIsSubmitting(false);
+        return;
+    }
+    
+    // Recalculate totals one last time before saving, to ensure consistency
+    let finalTotalQty = 0;
+    let finalTotalPurchasePrice = 0;
+    let finalTotalSalesPrice = 0;
+
+    const processedLineItems = data.lineItems.map(item => {
+      const qty = parseFloat(item.qty);
+      const purchasePrice = parseFloat(item.purchasePrice);
+      const salesPrice = parseFloat(item.salesPrice);
+
+      finalTotalQty += qty;
+      finalTotalPurchasePrice += qty * purchasePrice;
+      finalTotalSalesPrice += qty * salesPrice;
+      
+      return {
+        slNo: item.slNo,
+        modelNo: item.modelNo,
+        qty: qty,
+        purchasePrice: purchasePrice,
+        salesPrice: salesPrice,
+      };
+    });
+
+    let finalGrandTotalSalesPrice = finalTotalSalesPrice;
+    if (data.freightChargeOption === "Freight Excluded" && freightAmountForDb !== undefined) {
+      finalGrandTotalSalesPrice += freightAmountForDb;
+    }
+
+    let finalTotalCommissionPercentage = 0;
+    if (finalTotalPurchasePrice > 0 && finalGrandTotalSalesPrice > finalTotalPurchasePrice) {
+      finalTotalCommissionPercentage = parseFloat((((finalGrandTotalSalesPrice - finalTotalPurchasePrice) / finalTotalPurchasePrice) * 100).toFixed(2));
+    }
+
+
+    const dataToSave: Omit<ProformaInvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       applicantId: data.applicantId,
       applicantName: selectedApplicant?.label || 'N/A',
       piNo: data.piNo,
-      piDate: data.piDate, // Will be converted to ISO string before Firestore
+      piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Convert Date to ISO string
       salesPersonName: data.salesPersonName,
-      lineItems: data.lineItems.map(item => ({
-        slNo: item.slNo,
-        modelNo: item.modelNo,
-        qty: Number(item.qty),
-        purchasePrice: Number(item.purchasePrice),
-        salesPrice: Number(item.salesPrice),
-      })),
+      lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
-      freightChargeAmount: data.freightChargeOption === "Freight Excluded" ? Number(data.freightChargeAmount) : undefined,
-      totalQty,
-      totalPurchasePrice,
-      totalSalesPrice,
-      grandTotalSalesPrice,
-      totalCommissionPercentage,
+      freightChargeAmount: freightAmountForDb,
+      totalQty: finalTotalQty,
+      totalPurchasePrice: finalTotalPurchasePrice,
+      totalSalesPrice: finalTotalSalesPrice,
+      grandTotalSalesPrice: finalGrandTotalSalesPrice,
+      totalCommissionPercentage: finalTotalCommissionPercentage,
     };
 
     try {
       const docToSaveInFirestore = {
         ...dataToSave,
-        piDate: format(dataToSave.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Convert Date to ISO string
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -224,14 +251,16 @@ export function AddProformaInvoiceForm() {
         timer: 2000,
         showConfirmButton: false,
       });
-      form.reset();
-      // Reset calculated totals manually if needed
-      setTotalQty(0);
-      setTotalPurchasePrice(0);
-      setTotalSalesPrice(0);
-      setGrandTotalSalesPrice(0);
-      setTotalCommissionPercentage(0);
-
+      form.reset({
+        beneficiaryId: '',
+        applicantId: '',
+        piNo: '',
+        piDate: new Date(),
+        salesPersonName: '',
+        lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
+        freightChargeOption: "Freight Included",
+        freightChargeAmount: '',
+      });
     } catch (error: any) {
       console.error("Error adding PI document: ", error);
       Swal.fire({
@@ -243,6 +272,10 @@ export function AddProformaInvoiceForm() {
       setIsSubmitting(false);
     }
   }
+
+  const handleAddLineItem = () => {
+    append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '' });
+  };
 
   return (
     <Form {...form}>
@@ -336,21 +369,98 @@ export function AddProformaInvoiceForm() {
            <DollarSign className="mr-2 h-5 w-5 text-primary" /> Line Items
         </h3>
         
-        {/* Placeholder for Line Items Table */}
-        <div className="text-muted-foreground p-4 border rounded-md">
-            Line items table will be implemented here in the next step.
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px]">SL No.</TableHead>
+                <TableHead>Model No.*</TableHead>
+                <TableHead className="w-[120px]">Qty*</TableHead>
+                <TableHead className="w-[150px]">Purchase Price*</TableHead>
+                <TableHead className="w-[150px]">Sales Price*</TableHead>
+                <TableHead className="w-[80px] text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((item, index) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.slNo`}
+                      render={({ field }) => (
+                        <Input placeholder="SL" {...field} className="h-9"/>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.modelNo`}
+                      render={({ field }) => (
+                        <>
+                          <Input placeholder="Model No." {...field} className="h-9"/>
+                          <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.modelNo?.message}</FormMessage>
+                        </>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                     <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.qty`}
+                      render={({ field }) => (
+                        <>
+                          <Input type="text" placeholder="Qty" {...field} className="h-9"/>
+                          <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
+                        </>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                     <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.purchasePrice`}
+                      render={({ field }) => (
+                         <>
+                          <Input type="text" placeholder="Purchase Price" {...field} className="h-9"/>
+                          <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.purchasePrice?.message}</FormMessage>
+                        </>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                     <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.salesPrice`}
+                      render={({ field }) => (
+                        <>
+                          <Input type="text" placeholder="Sales Price" {...field} className="h-9"/>
+                          <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.salesPrice?.message}</FormMessage>
+                        </>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && (
-            <p className="text-sm font-medium text-destructive">At least one line item is required.</p>
+        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && !Array.isArray(form.formState.errors.lineItems) && (
+            <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
         )}
-         {form.formState.errors.lineItems?.root?.message && (
-            <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root.message}</p>
-        )}
+        <Button type="button" variant="outline" onClick={handleAddLineItem} className="mt-2">
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
+        </Button>
         
 
         <Separator />
-        {/* Placeholder for Freight and Totals */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
              <FormField
                 control={form.control}
                 name="freightChargeOption"
@@ -379,7 +489,7 @@ export function AddProformaInvoiceForm() {
                     <FormItem>
                         <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Freight Amount</FormLabel>
                         <FormControl>
-                            <Input type="number" placeholder="Enter freight amount" {...field} value={field.value ?? ''} />
+                            <Input type="text" placeholder="Enter freight amount" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -389,14 +499,14 @@ export function AddProformaInvoiceForm() {
         </div>
 
         <Separator />
-        <div className="space-y-2 text-sm">
-            <h4 className="font-medium text-lg">Calculated Totals:</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 p-2 border rounded-md">
-                <p><strong>Total Qty:</strong> {totalQty}</p>
-                <p><strong>Total Purchase Price:</strong> {totalPurchasePrice.toFixed(2)}</p>
-                <p><strong>Total Sales Price:</strong> {totalSalesPrice.toFixed(2)}</p>
-                <p className="font-semibold text-primary col-span-full md:col-span-1 mt-2 md:mt-0"><strong>Grand Total Sales:</strong> {grandTotalSalesPrice.toFixed(2)}</p>
-                <p className="font-semibold text-green-600 col-span-full md:col-span-2 mt-2 md:mt-0"><strong>Total Comm. (%):</strong> {totalCommissionPercentage}%</p>
+        <div className="space-y-2 text-sm p-4 border rounded-md shadow-sm bg-muted/30">
+            <h4 className="font-medium text-lg text-foreground">Calculated Totals:</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
+                <p><strong className="text-muted-foreground">Total Qty:</strong> <span className="font-semibold text-foreground">{totalQty}</span></p>
+                <p><strong className="text-muted-foreground">Total Purchase Price:</strong> <span className="font-semibold text-foreground">{totalPurchasePriceAmount.toFixed(2)}</span></p>
+                <p><strong className="text-muted-foreground">Total Sales Price:</strong> <span className="font-semibold text-foreground">{totalSalesPriceAmount.toFixed(2)}</span></p>
+                <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
+                <p className="font-semibold text-green-600 md:col-span-2 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
             </div>
         </div>
 
@@ -418,3 +528,4 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
+
