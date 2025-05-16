@@ -88,7 +88,7 @@ const managementNavItems: NavItemGroup[] = [
     ],
   },
   {
-    groupLabel: 'Shipments',
+    groupLabel: 'Shipment Management', // Renamed from 'Shipments'
     icon: Truck,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
@@ -110,12 +110,15 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
 
   React.useEffect(() => {
-    console.log("AuthContext: Current User Role in Sidebar:", userRole);
+    if (typeof window !== 'undefined') {
+      console.log("AppSidebarNav: Current User Role from AuthContext:", userRole);
+    }
   }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname.startsWith(href)) {
+        // More specific checks for parent routes that should not be active if a child is active
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -123,9 +126,10 @@ export function AppSidebarNav() {
           (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
           (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
-          return pathname === href;
+          // If we are on an add/edit page, the parent list page itself should not be marked as active
+          return pathname === href; 
         }
-        return true;
+        return true; // General case for parent routes
     }
     return false;
   };
@@ -173,7 +177,7 @@ export function AppSidebarNav() {
                 <Link href={subLink.href} passHref legacyBehavior>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === subLink.href}
+                    isActive={pathname === subLink.href} // Exact match for sub-links
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                       "h-8 text-xs"
@@ -198,21 +202,16 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
-          {companyLogoUrl ? (
-             <Image
-                src={companyLogoUrl} 
-                alt="Company Logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain"
-                data-ai-hint="company logo"
-              />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-              <ImageIcon className="h-5 w-5" />
-            </div>
-          )}
+          <Image
+            src={companyLogoUrl || "https://placehold.co/32x32.png"} 
+            alt="Company Logo"
+            width={32}
+            height={32}
+            className="rounded-sm object-contain"
+            data-ai-hint="company logo"
+          />
           <span className={cn(
             "group-data-[collapsible=icon]:hidden font-bold text-lg bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
@@ -335,6 +334,7 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
 
 
 
