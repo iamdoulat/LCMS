@@ -16,8 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+// Firebase client-side auth imports like createUserWithEmailAndPassword are removed as this is now conceptual backend operation
 
 const addUserSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
@@ -25,6 +24,8 @@ const addUserSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long."),
   confirmPassword: z.string().min(6, "Confirm password is required."),
   contactNumber: z.string().optional(),
+  // Add role selection if you want admins to assign roles during creation
+  // role: z.enum(["Admin", "User"]).default("User"), 
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -33,7 +34,7 @@ const addUserSchema = z.object({
 type AddUserFormValues = z.infer<typeof addUserSchema>;
 
 export default function AddUserPage() {
-  const { userRole, loading: authLoading, user: adminUser, logout: adminLogout } = useAuth();
+  const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,6 +46,7 @@ export default function AddUserPage() {
       password: '',
       confirmPassword: '',
       contactNumber: '',
+      // role: "User", // Default role if added to schema
     },
   });
 
@@ -64,63 +66,26 @@ export default function AddUserPage() {
 
   const onSubmit = async (data: AddUserFormValues) => {
     setIsSubmitting(true);
+    // The actual Firebase Admin SDK call would be made from a backend function
+    console.log("AddUserPage: Data to be sent to backend for user creation:", data);
 
-    try {
-      // Create the user
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const newUser = userCredential.user;
+    // Simulate backend call
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Update the new user's profile with the display name
-      await updateProfile(newUser, {
-        displayName: data.displayName
-      });
-      
-      // If a contact number was provided, it would typically be stored in Firestore
-      // alongside the user's UID, as Firebase Auth doesn't have a direct field for it.
-      // This part is omitted as it requires Firestore setup for user profiles.
-      console.log("Contact number (if provided, store in Firestore):", data.contactNumber);
+    Swal.fire({
+      title: "User Creation (Simulated)",
+      html: `User <b>${data.displayName}</b> (${data.email}) details would be sent to a backend function for creation in Firebase Authentication.
+             <br/><br/>This backend function (using Firebase Admin SDK) would handle password hashing, role assignment (via custom claims), and storing additional details like contact number in Firestore if needed.
+             <br/><br/>The admin performing this action would remain logged in.`,
+      icon: "info",
+      confirmButtonText: "OK",
+    }).then(() => {
+      form.reset();
+      // Optionally, redirect or refresh user list if backend integration was real
+      // router.push('/dashboard/settings/users'); 
+    });
 
-      // IMPORTANT: The admin is now signed in as the new user.
-      // We must sign out this new user session. This will also sign out the admin.
-      await signOut(auth);
-
-      Swal.fire({
-        title: "User Created Successfully!",
-        html: `User <b>${data.displayName}</b> (${data.email}) has been created in Firebase Authentication.<br/><br/><b>Important:</b> You (the admin) have been signed out as part of this process. Please log in again.`,
-        icon: "success",
-        confirmButtonText: "OK",
-      }).then(() => {
-        form.reset();
-        // Since the admin is logged out, redirect to login.
-        // The AuthGuard will handle this, but we can be explicit.
-        router.push('/login'); 
-      });
-
-    } catch (error: any) {
-      console.error("Error creating user:", error);
-      let errorMessage = "Failed to create user. Please try again.";
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            errorMessage = "This email address is already in use by another account.";
-            break;
-          case 'auth/invalid-email':
-            errorMessage = "The email address is not valid.";
-            break;
-          case 'auth/operation-not-allowed':
-            errorMessage = "Email/password accounts are not enabled. Please enable it in the Firebase Console.";
-            break;
-          case 'auth/weak-password':
-            errorMessage = "The password is too weak.";
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      }
-      Swal.fire("User Creation Failed", errorMessage, "error");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setIsSubmitting(false);
   };
 
   if (authLoading || (userRole !== "Super Admin" && userRole !== "Admin")) {
@@ -149,17 +114,17 @@ export default function AddUserPage() {
             Add New User
           </CardTitle>
           <CardDescription>
-            Fill in the details below to create a new user account in Firebase Authentication.
+            Fill in the details below. User creation is handled via a secure backend process.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="default" className="mb-6 bg-amber-500/10 border-amber-500/30">
             <ShieldAlert className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-700 font-semibold">Important Considerations</AlertTitle>
+            <AlertTitle className="text-amber-700 font-semibold">Backend Operation</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              - Creating a user here will add them to Firebase Authentication. <br/>
-              - **You (the admin) will be signed out after creating a user.** This is a side effect of using the client-side SDK for user creation in an admin context. You will need to log back in.<br/>
-              - Role assignment (e.g., Admin, User) and storing contact numbers require backend functions (Firebase Admin SDK) and are not handled by this form.
+              - Creating a user with a password, assigning roles, and storing additional details (like contact number) is performed by a secure backend function using the Firebase Admin SDK.
+              - This form collects the necessary information to be sent to that backend process.
+              - The admin performing this action will remain logged in.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -226,23 +191,46 @@ export default function AddUserPage() {
                       <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Contact number is not stored in Firebase Auth; it would require a separate database (e.g., Firestore) entry linked to the user.
+                      Contact number would be stored in a separate database (e.g., Firestore) entry linked to the user by the backend.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {/* Example: Role selection
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Role*</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="User">User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              */}
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating User...
+                    Requesting User Creation...
                   </>
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Create User
+                    Create User via Backend
                   </>
                 )}
               </Button>
