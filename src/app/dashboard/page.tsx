@@ -7,18 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship, FileEdit } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
 import { Separator } from '@/components/ui/separator';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isFuture, isToday, compareAsc } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"];
 
@@ -28,6 +29,7 @@ interface DashboardStats {
   activeSuppliers: number;
   activeApplicants: number;
   thisMonthLCQty: number;
+  totalLinkedPIs: number;
 }
 
 interface PieChartDataItem {
@@ -100,6 +102,7 @@ const formatCurrencyValue = (currency?: string, amount?: number) => {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
@@ -108,6 +111,7 @@ export default function DashboardPage() {
     activeSuppliers: 0,
     activeApplicants: 0,
     thisMonthLCQty: 0,
+    totalLinkedPIs: 0,
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
@@ -118,6 +122,19 @@ export default function DashboardPage() {
 
 
   const fetchDashboardData = useCallback(async (year: string) => {
+    if (!auth.currentUser) {
+      console.log("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
+      // Optionally, clear dashboard data or show a message, but AuthGuard should handle redirection.
+      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
+      setSupplierPieData([]);
+      setRecentlyCompletedLCs([]);
+      setDraftLCs([]);
+      setUpcomingEtdShipments([]);
+      setIsLoading(false);
+      return;
+    }
+    console.log("Dashboard: Fetching data for year", year);
+    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
     setIsLoading(true);
     try {
       const yearNumber = parseInt(year);
@@ -128,20 +145,21 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-
         lcEntriesForTheYear.push({
             id: doc.id,
             ...data,
           } as LCEntryDocument);
       });
 
-      if (lcEntriesForTheYear.length === 0) {
+      if (lcEntriesForTheYear.length === 0 && querySnapshot.empty) {
+        // No LCs for the year, reset all stats
         setDashboardStats({
           totalLCs: 0,
           totalLCValue: 0,
           activeSuppliers: 0,
           activeApplicants: 0,
           thisMonthLCQty: 0,
+          totalLinkedPIs: 0,
         });
         setSupplierPieData([]);
         setRecentlyCompletedLCs([]);
@@ -150,49 +168,33 @@ export default function DashboardPage() {
         setIsLoading(false);
         return;
       }
-
+      
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (lc.amount || 0), 0);
-
       const uniqueBeneficiaryIds = new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => id));
       const activeSuppliers = uniqueBeneficiaryIds.size;
-
       const uniqueApplicantIds = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => id));
       const activeApplicants = uniqueApplicantIds.size;
 
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-
       let thisMonthLCQty = 0;
       if (yearNumber === currentYear) {
         const firstDayOfMonth = startOfMonth(currentDate);
         const lastDayOfMonth = endOfMonth(currentDate);
-
         thisMonthLCQty = lcEntriesForTheYear.filter(lc => {
           if (!lc.lcIssueDate) return false;
           try {
             const issueDate = parseISO(lc.lcIssueDate);
-            return isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
-          } catch (e) {
-            return false;
-          }
+            return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
+          } catch (e) { return false; }
         }).length;
       }
 
-      setDashboardStats({
-        totalLCs: lcEntriesForTheYear.length,
-        totalLCValue,
-        activeSuppliers,
-        activeApplicants,
-        thisMonthLCQty,
-      });
-
-      // Prepare data for pie chart
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
         const name = lc.beneficiaryName || 'Unknown Supplier';
         supplierValueMap[name] = (supplierValueMap[name] || 0) + (lc.amount || 0);
       });
-
       const pieData = Object.entries(supplierValueMap)
         .map(([name, value], index) => ({
           name,
@@ -200,113 +202,106 @@ export default function DashboardPage() {
           fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
         }))
         .sort((a, b) => b.value - a.value);
-
       setSupplierPieData(pieData);
 
-      // Recently Completed L/Cs
       const completedLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Done')
         .map(lc => {
-          let updatedAtDate = new Date();
+          let updatedAtDate = new Date(0);
           if (lc.updatedAt) {
-            if (typeof (lc.updatedAt as unknown as Timestamp).toDate === 'function') {
+            if (typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
               updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
-            } else {
-              try {
-                const parsedDate = parseISO(lc.updatedAt as string);
-                if (isValid(parsedDate)) {
-                    updatedAtDate = parsedDate;
-                } else {
-                    updatedAtDate = new Date(0); // Fallback for invalid date string
-                }
-              } catch {
-                updatedAtDate = new Date(0); // Fallback for unparseable string
-              }
+            } else if (typeof lc.updatedAt === 'string') {
+              const parsed = parseISO(lc.updatedAt);
+              if (isValid(parsed)) updatedAtDate = parsed;
             }
           }
           return {
-            id: lc.id,
-            documentaryCreditNumber: lc.documentaryCreditNumber,
-            beneficiaryName: lc.beneficiaryName,
-            applicantName: lc.applicantName,
-            updatedAt: lc.updatedAt,
-            updatedAtDate: updatedAtDate,
-            status: lc.status,
-            currency: lc.currency,
-            amount: lc.amount,
+            id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
+            beneficiaryName: lc.beneficiaryName, applicantName: lc.applicantName,
+            updatedAtDate: updatedAtDate, status: lc.status,
+            currency: lc.currency, amount: lc.amount,
           } as RecentlyCompletedLC;
         })
         .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
-        .slice(0, 10); 
-
+        .slice(0, 10);
       setRecentlyCompletedLCs(completedLCs);
 
-      // Draft L/Cs
       const currentDraftLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Draft')
         .map(lc => {
           let createdAtDate = new Date(0);
           if (lc.createdAt) {
-            if (typeof (lc.createdAt as unknown as Timestamp).toDate === 'function') {
+            if (typeof (lc.createdAt as unknown as Timestamp)?.toDate === 'function') {
               createdAtDate = (lc.createdAt as unknown as Timestamp).toDate();
-            } else {
-              try {
-                const parsedDate = parseISO(lc.createdAt as string);
-                if (isValid(parsedDate)) {
-                  createdAtDate = parsedDate;
-                }
-              } catch {
-                // Keep default invalid date if parsing fails
-              }
+            } else if (typeof lc.createdAt === 'string') {
+              const parsed = parseISO(lc.createdAt);
+              if (isValid(parsed)) createdAtDate = parsed;
             }
           }
           return {
-            id: lc.id,
-            documentaryCreditNumber: lc.documentaryCreditNumber,
-            beneficiaryName: lc.beneficiaryName,
-            applicantName: lc.applicantName,
-            createdAtDate: createdAtDate,
-            status: lc.status,
-            currency: lc.currency,
-            amount: lc.amount,
+            id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
+            beneficiaryName: lc.beneficiaryName, applicantName: lc.applicantName,
+            createdAtDate: createdAtDate, status: lc.status,
+            currency: lc.currency, amount: lc.amount,
           } as DraftLC;
         })
         .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime())
         .slice(0, 10);
-      
       setDraftLCs(currentDraftLCs);
 
-
-      // Upcoming ETDs
       const today = new Date();
-      today.setHours(0,0,0,0); // Set to start of today for comparison
-
+      today.setHours(0,0,0,0);
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
             if (!lc.etd || lc.status === 'Done') return false;
             try {
                 const etdDate = parseISO(lc.etd);
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
-            } catch (e) {
-                return false;
-            }
+            } catch (e) { return false; }
         })
         .map(lc => ({
-            id: lc.id,
-            documentaryCreditNumber: lc.documentaryCreditNumber,
+            id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
-            etdDate: parseISO(lc.etd!), // etd is confirmed to exist here
+            etdDate: parseISO(lc.etd!),
         }))
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
-        .slice(0, 10); 
-
+        .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
+      // Fetch Proforma Invoices to calculate totalLinkedPIs
+      const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
+      const piCollectionRef = collection(firestore, "proforma_invoices");
+      const piQuerySnapshot = await getDocs(piCollectionRef);
+      const allProformaInvoices: ProformaInvoiceDocument[] = [];
+      piQuerySnapshot.forEach((doc) => {
+        allProformaInvoices.push({ id: doc.id, ...doc.data() } as ProformaInvoiceDocument);
+      });
 
-    } catch (error) {
-      console.error("Error fetching dashboard data: ", error);
-      Swal.fire("Error", `Could not fetch dashboard data: ${(error as Error).message}`, "error");
-      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0 });
+      const linkedPIsForTheYear = allProformaInvoices.filter(pi => 
+        pi.connectedLcId && lcIdsForTheYear.has(pi.connectedLcId)
+      );
+      const totalLinkedPIsCount = linkedPIsForTheYear.length;
+
+      setDashboardStats({
+        totalLCs: lcEntriesForTheYear.length,
+        totalLCValue,
+        activeSuppliers,
+        activeApplicants,
+        thisMonthLCQty,
+        totalLinkedPIs: totalLinkedPIsCount,
+      });
+
+    } catch (error: any) {
+      console.error("Dashboard: Detailed error fetching dashboard data: ", error);
+      let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
+       if (error.message && (error.message.toLowerCase().includes("permission") || error.message.toLowerCase().includes("missing or insufficient"))) {
+         errorMessage = `Could not fetch dashboard data. This is often due to Firestore security rules. Please ensure your rules allow read access to the 'lc_entries' collection for authenticated users (e.g., by having 'allow read: if request.auth != null;' for the '/lc_entries/{lcEntryId}' path). Original Firebase error: ${error.message} (Code: ${error.code || 'N/A'})`;
+       } else if (error.message) {
+         errorMessage = `Could not fetch dashboard data: ${error.message} (Code: ${error.code || 'N/A'})`;
+       }
+      Swal.fire("Dashboard Error", errorMessage, "error");
+      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
@@ -317,8 +312,22 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData(selectedYear);
-  }, [selectedYear, fetchDashboardData]);
+    if (!authLoading && authUser) { // Ensure user is loaded and authenticated
+      fetchDashboardData(selectedYear);
+    } else if (!authLoading && !authUser) {
+      // User is not authenticated, clear data or handle as appropriate
+      console.log("Dashboard: User not authenticated. Clearing dashboard data.");
+      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
+      setSupplierPieData([]);
+      setRecentlyCompletedLCs([]);
+      setDraftLCs([]);
+      setUpcomingEtdShipments([]);
+      setIsLoading(false); // Stop loading if auth state is resolved and no user
+    }
+    // We don't include fetchDashboardData in dependency array if it's not memoized with useCallback
+    // to avoid potential infinite loops if it recreated on every render.
+    // It's called when selectedYear or authUser/authLoading changes.
+  }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
   const handleSearchLC = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,7 +362,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || (isLoading && authUser)) { // Show loading if auth is loading OR if dashboard data is loading AND user is present
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -361,6 +370,15 @@ export default function DashboardPage() {
       </div>
     );
   }
+  
+  if (!authUser && !authLoading) { // If auth is done loading and there's no user
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <p className="text-muted-foreground">Please log in to view the dashboard.</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -383,7 +401,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Total L/Cs"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -395,7 +413,6 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -414,7 +431,12 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-1"
+        />
+         <StatCard
+          title={`PIs Linked to LCs (${selectedYear})`}
+          value={dashboardStats.totalLinkedPIs.toLocaleString()}
+          icon={<Layers className="h-7 w-7 text-primary" />}
+          description={`Proforma Invoices connected to LCs issued in ${selectedYear}`}
         />
       </div>
 
@@ -430,7 +452,12 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] w-full">
-            {supplierPieData.length > 0 ? (
+            {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" /> 
+                    <p className="ml-2 text-muted-foreground">Loading chart data...</p>
+                </div>
+            ) : supplierPieData.length > 0 ? (
               <SupplierPieChart data={supplierPieData} />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -478,22 +505,26 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {upcomingEtdShipments.length > 0 ? (
-                 <ul className="space-y-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : upcomingEtdShipments.length > 0 ? (
+                 <ul className="space-y-3">
                   {upcomingEtdShipments.map((shipment) => (
-                    <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate sm:col-span-1">
-                          {shipment.documentaryCreditNumber || 'N/A'}
-                        </Link>
-                        <span className="text-xs text-muted-foreground break-all truncate sm:col-span-1">
-                          Beneficiary: {shipment.beneficiaryName || 'N/A'}
-                        </span>
-                        <span className="font-semibold text-foreground mt-1 sm:mt-0 sm:text-right sm:col-span-1">
-                          {format(shipment.etdDate, 'PPP')}
-                        </span>
-                      </div>
-                    </li>
+                     <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-4 items-center">
+                         <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate">
+                           {shipment.documentaryCreditNumber || 'N/A'}
+                         </Link>
+                         <span className="font-semibold text-foreground mt-1 sm:mt-0 sm:text-right">
+                           {format(shipment.etdDate, 'PPP')}
+                         </span>
+                       </div>
+                       <p className="text-xs text-muted-foreground break-all truncate mt-0.5">
+                           Beneficiary: {shipment.beneficiaryName || 'N/A'}
+                       </p>
+                     </li>
                   ))}
                 </ul>
               ) : (
@@ -508,7 +539,7 @@ export default function DashboardPage() {
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
             <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <FileEdit className="h-6 w-6 text-primary" /> {/* Icon for Draft L/Cs */}
+              <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
             <CardDescription>
@@ -516,7 +547,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {draftLCs.length > 0 ? (
+             {isLoading ? (
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : draftLCs.length > 0 ? (
               <ul className="space-y-3">
                 {draftLCs.map((lc) => (
                   <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
@@ -539,9 +574,9 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <p className="truncate">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
-                        <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
-                        <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
+                        <p className="truncate sm:col-span-1">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                        <p className="truncate sm:col-span-1">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                        <p className="truncate sm:col-span-1">Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
                     </div>
                   </li>
                 ))}
@@ -565,7 +600,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {recentlyCompletedLCs.length > 0 ? (
+            {isLoading ? (
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : recentlyCompletedLCs.length > 0 ? (
               <ul className="space-y-3">
                 {recentlyCompletedLCs.map((lc) => (
                   <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
@@ -583,14 +622,14 @@ export default function DashboardPage() {
                             {lc.status || 'N/A'}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                          Completed: {format(lc.updatedAtDate, 'PPP')}
+                          Completed: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP') : 'Date N/A'}
                           </span>
                       </div>
                     </div>
-                    <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <p className="truncate">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
-                      <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
-                      <p>Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
+                     <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <p className="truncate sm:col-span-1">Applicant: <span className="font-medium text-foreground">{lc.applicantName || 'N/A'}</span></p>
+                      <p className="truncate sm:col-span-1">Beneficiary: <span className="font-medium text-foreground">{lc.beneficiaryName || 'N/A'}</span></p>
+                      <p className="truncate sm:col-span-1">Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span></p>
                     </div>
                   </li>
                 ))}
@@ -607,4 +646,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
