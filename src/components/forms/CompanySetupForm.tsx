@@ -2,17 +2,18 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Save, UploadCloud } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput'; // Assuming FileInput is in the same directory or path is adjusted
+import { FileInput } from './FileInput'; 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml"];
@@ -37,11 +38,12 @@ type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
 
 export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { companyName: currentCompanyName, updateCompanyName } = useAuth(); // Get updateCompanyName from context
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
     defaultValues: {
-      companyName: 'Smart Solution',
+      companyName: currentCompanyName || 'Smart Solution', // Initialize with context or default
       address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
       contactPerson: '',
       cellNumber: '',
@@ -52,6 +54,12 @@ export function CompanySetupForm() {
     },
   });
 
+  // Effect to update form if companyName changes in context (e.g. from localStorage on initial load)
+  React.useEffect(() => {
+    form.setValue('companyName', currentCompanyName || 'Smart Solution');
+  }, [currentCompanyName, form]);
+
+
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
     console.log("Company Setup Form Data:", data);
@@ -61,13 +69,21 @@ export function CompanySetupForm() {
         type: data.companyLogo.type,
         size: data.companyLogo.size,
       });
+      // TODO: Implement logo upload to Firebase Storage and get URL
+      // For now, we won't update the logo URL in context from here
     }
+
+    // Update company name in context and localStorage
+    if (data.companyName) {
+      updateCompanyName(data.companyName);
+    }
+
     // Placeholder for actual submission to a backend/Firebase
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
 
     Swal.fire({
       title: "Company Information Saved (Simulated)",
-      text: "Company data logged to console. Implement backend submission to save permanently.",
+      text: "Company data logged to console. Name updated in sidebar. Implement backend submission to save permanently.",
       icon: "success",
       timer: 3000,
       showConfirmButton: true,
@@ -85,7 +101,14 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Company Name*</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your company's official name" {...field} />
+                <Input 
+                  placeholder="Enter your company's official name" 
+                  {...field}
+                  onChange={(e) => {
+                    field.onChange(e); // Propagate change to react-hook-form
+                    updateCompanyName(e.target.value); // Update context immediately
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -109,12 +132,12 @@ export function CompanySetupForm() {
         <FormField
           control={form.control}
           name="companyLogo"
-          render={({ field }) => (
+          render={({ field }) => ( // field here is from Controller, specifically field.onChange for FileInput
             <FormItem>
               <FormLabel>Company Logo</FormLabel>
               <FormControl>
                 <FileInput
-                  onFileChange={(file) => field.onChange(file)}
+                  onFileChange={(file) => field.onChange(file)} // Pass file to RHF
                   accept={ACCEPTED_IMAGE_TYPES.join(',')}
                 />
               </FormControl>

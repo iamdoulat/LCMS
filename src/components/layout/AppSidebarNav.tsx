@@ -40,8 +40,9 @@ import {
   FileEdit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext'; // Updated import
 import Image from 'next/image'; 
+import type { UserRole } from '@/types';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
@@ -84,28 +85,22 @@ const managementNavItems: NavItemGroup[] = [
   },
 ];
 
-
-const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
+const settingsNavItems: NavItemWithRoles[] = [
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
 ];
+
+const companyLogoUrlFromSettings = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { logout, loading: authLoading } = useAuth();
-
-  // TODO: Fetch company name from settings (e.g., Firestore)
-  const companyNameFromSettings = "Smart Solution"; 
-  const companyLogoUrlFromSettings = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const { userRole, logout, loading: authLoading, companyName } = useAuth(); // Get userRole and companyName
 
   const isActive = (href: string) => {
-    // Exact match for dashboard
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    
-    // For non-dashboard links, check if the current path starts with the href
     if (href !== '/dashboard' && pathname.startsWith(href)) {
-        // Specific handling for grouped items like suppliers/customers/settings to avoid highlighting parent when child is active
         if (
           (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/')) ||
           (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/')) ||
@@ -114,9 +109,9 @@ export function AppSidebarNav() {
           (href === '/dashboard/settings/users' && pathname !== '/dashboard/settings/users') ||
           (href === '/dashboard/settings/smtp' && pathname !== '/dashboard/settings/smtp')
         ) {
-          return pathname === href; // Only active if it's an exact match for the base group link
+          return pathname === href; 
         }
-        return true; // Active if path starts with href for other cases
+        return true; 
     }
     return false;
   };
@@ -192,14 +187,15 @@ export function AppSidebarNav() {
         {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrlFromSettings} 
+            src={companyLogoUrlFromSettings} // For now, use the static URL
             alt="Company Logo"
             width={32}
             height={32}
             className="rounded-sm"
+            data-ai-hint="company logo"
           />
-          <span className="group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-            {companyNameFromSettings}
+          <span className={cn("group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            {companyName || "Smart Solution"} {/* Use companyName from context, fallback to default */}
           </span>
         </Link>
       </SidebarHeader>
@@ -251,24 +247,30 @@ export function AppSidebarNav() {
             Settings
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
-            {settingsNavItems.map((item) => (
-              item.href &&
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref legacyBehavior>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                    tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                  >
-                    <a>
-                      <item.icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
+            {settingsNavItems.map((item) => {
+              // Role-based rendering for settings
+              const canView = !item.roles || (userRole && item.roles.includes(userRole));
+              if (!canView) return null;
+
+              return (
+                item.href &&
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} passHref legacyBehavior>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href)}
+                      className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                      tooltip={{children: item.label!, side: "right", className: "ml-2"}}
+                    >
+                      <a>
+                        <item.icon className="h-5 w-5" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -298,6 +300,12 @@ type NavItem = {
   icon: React.ElementType;
 };
 
+// Extending NavItem for settings to include roles
+type NavItemWithRoles = NavItem & {
+  roles?: UserRole[];
+};
+
+
 type NavItemGroup = {
   groupLabel?: string;
   icon: React.ElementType; 
@@ -307,4 +315,3 @@ type NavItemGroup = {
     icon?: React.ElementType; 
   }>;
 };
-
