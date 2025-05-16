@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount'> {
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount'> {
   latestShipmentDateObj: Date;
 }
 
@@ -69,8 +69,8 @@ export default function UpcomingShipmentsPage() {
         const q = query(
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
-          orderBy("latestShipmentDate", "asc")
-          // Limit will be applied client-side after sorting all potential upcoming LCs
+          orderBy("latestShipmentDate", "asc"),
+          limit(30) // Still fetching top 30 nearest, pagination will be client-side on these 30
         );
         const querySnapshot = await getDocs(q);
 
@@ -103,15 +103,14 @@ export default function UpcomingShipmentsPage() {
             amount: data.amount,
           };
         });
-        // Sort client-side again to ensure correct ordering after mapping
-        const sortedFetchedLCs = fetchedLCs.sort((a, b) => a.latestShipmentDateObj.getTime() - b.latestShipmentDateObj.getTime());
-        setAllUpcomingLCs(sortedFetchedLCs);
+        
+        setAllUpcomingLCs(fetchedLCs);
 
       } catch (error: any) {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any or IN) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -129,13 +128,10 @@ export default function UpcomingShipmentsPage() {
     fetchUpcomingLCs();
   }, []);
 
-  // Apply limit after all data is fetched and sorted for accurate "top 30 nearest"
-  const limitedUpcomingLCs = allUpcomingLCs.slice(0, 30);
-
-  const totalPages = Math.ceil(limitedUpcomingLCs.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(allUpcomingLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = limitedUpcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = allUpcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -181,8 +177,8 @@ export default function UpcomingShipmentsPage() {
             Upcoming L/C Shipment Dates
           </CardTitle>
           <CardDescription>
-            List of active Letters of Credit approaching their latest shipment date (up to 30). 
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, limitedUpcomingLCs.length)} of {limitedUpcomingLCs.length} entries.
+            List of active Letters of Credit approaching their latest shipment date (up to 30 shown, paginated). 
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -195,7 +191,9 @@ export default function UpcomingShipmentsPage() {
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
-              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+              </p>
             </div>
           ) : currentItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
@@ -290,3 +288,4 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
+
