@@ -2,21 +2,26 @@
 "use client";
 
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, UploadCloud } from 'lucide-react';
+import { Loader2, Save, UploadCloud, Eye } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { useAuth } from '@/context/AuthContext';
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import type { CompanyProfile } from '@/types';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput'; 
+import { Separator } from '@/components/ui/separator';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml"];
+const COMPANY_PROFILE_COLLECTION = 'company_profile';
+const COMPANY_PROFILE_DOC_ID = 'main_profile';
+
 
 const companySetupSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -26,69 +31,124 @@ const companySetupSchema = z.object({
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
-  companyLogo: z.instanceof(File).optional().nullable()
-    .refine(file => !file || file.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
-    .refine(
-      file => !file || ACCEPTED_IMAGE_TYPES.includes(file.type),
-      "Only .jpg, .jpeg, .png, .webp and .svg files are accepted."
-    ),
+  companyLogoUrl: z.string().url("Invalid URL format for Company Logo").optional().or(z.literal('')),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
 
 export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const { companyName: currentCompanyName, updateCompanyName } = useAuth(); // Get updateCompanyName from context
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
+  const { updateCompanyProfile } = useAuth();
+  const [currentLogoUrl, setCurrentLogoUrl] = React.useState<string | undefined>(undefined);
+
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
     defaultValues: {
-      companyName: currentCompanyName || 'Smart Solution', // Initialize with context or default
-      address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
+      companyName: '',
+      address: '',
       contactPerson: '',
       cellNumber: '',
-      emailId: 'info@smartsolution-bd.com',
+      emailId: '',
       binNumber: '',
       tinNumber: '',
-      companyLogo: null,
+      companyLogoUrl: '',
     },
   });
 
-  // Effect to update form if companyName changes in context (e.g. from localStorage on initial load)
   React.useEffect(() => {
-    form.setValue('companyName', currentCompanyName || 'Smart Solution');
-  }, [currentCompanyName, form]);
+    const fetchCompanyData = async () => {
+      setIsLoadingData(true);
+      try {
+        const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+        const profileDocSnap = await getDoc(profileDocRef);
+        if (profileDocSnap.exists()) {
+          const data = profileDocSnap.data() as CompanyProfile;
+          form.reset({
+            companyName: data.companyName || '',
+            address: data.address || '',
+            contactPerson: data.contactPerson || '',
+            cellNumber: data.cellNumber || '',
+            emailId: data.emailId || '',
+            binNumber: data.binNumber || '',
+            tinNumber: data.tinNumber || '',
+            companyLogoUrl: data.companyLogoUrl || '',
+          });
+          setCurrentLogoUrl(data.companyLogoUrl);
+        } else {
+          // If no data, use defaults (already set in useForm)
+          // but explicitly set default name for initial context update if needed
+           form.reset({
+              companyName: 'Smart Solution',
+              address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
+              emailId: 'info@smartsolution-bd.com',
+              contactPerson: '',
+              cellNumber: '',
+              binNumber: '',
+              tinNumber: '',
+              companyLogoUrl: '',
+            });
+        }
+      } catch (error) {
+        console.error("Error fetching company profile:", error);
+        Swal.fire("Error", "Could not load company profile. Using default values.", "error");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchCompanyData();
+  }, [form]);
+
+  const watchedLogoUrl = form.watch("companyLogoUrl");
+
+  React.useEffect(() => {
+    setCurrentLogoUrl(watchedLogoUrl);
+  }, [watchedLogoUrl]);
 
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
-    console.log("Company Setup Form Data:", data);
-    if (data.companyLogo) {
-      console.log("Company Logo details:", {
-        name: data.companyLogo.name,
-        type: data.companyLogo.type,
-        size: data.companyLogo.size,
+    
+    const dataToSave: CompanyProfile = {
+      ...data,
+      companyLogoUrl: data.companyLogoUrl || undefined, // Ensure empty string becomes undefined
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      await setDoc(profileDocRef, dataToSave, { merge: true });
+      
+      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl || undefined });
+
+      Swal.fire({
+        title: "Company Information Saved!",
+        text: "Company profile has been successfully updated in Firestore.",
+        icon: "success",
+        timer: 2500,
+        showConfirmButton: true,
       });
-      // TODO: Implement logo upload to Firebase Storage and get URL
-      // For now, we won't update the logo URL in context from here
+    } catch (error) {
+      console.error("Error saving company profile: ", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save company profile: ${errorMessage}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  }
 
-    // Update company name in context and localStorage
-    if (data.companyName) {
-      updateCompanyName(data.companyName);
-    }
-
-    // Placeholder for actual submission to a backend/Firebase
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-
-    Swal.fire({
-      title: "Company Information Saved (Simulated)",
-      text: "Company data logged to console. Name updated in sidebar. Implement backend submission to save permanently.",
-      icon: "success",
-      timer: 3000,
-      showConfirmButton: true,
-    });
-    setIsSubmitting(false);
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading company settings...</p>
+      </div>
+    );
   }
 
   return (
@@ -105,8 +165,9 @@ export function CompanySetupForm() {
                   placeholder="Enter your company's official name" 
                   {...field}
                   onChange={(e) => {
-                    field.onChange(e); // Propagate change to react-hook-form
-                    updateCompanyName(e.target.value); // Update context immediately
+                    field.onChange(e);
+                    // Optimistic update to context for immediate sidebar feedback
+                    updateCompanyProfile({ name: e.target.value });
                   }}
                 />
               </FormControl>
@@ -131,24 +192,49 @@ export function CompanySetupForm() {
         
         <FormField
           control={form.control}
-          name="companyLogo"
-          render={({ field }) => ( // field here is from Controller, specifically field.onChange for FileInput
+          name="companyLogoUrl"
+          render={({ field }) => (
             <FormItem>
-              <FormLabel>Company Logo</FormLabel>
+              <FormLabel>Company Logo URL</FormLabel>
               <FormControl>
-                <FileInput
-                  onFileChange={(file) => field.onChange(file)} // Pass file to RHF
-                  accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                <Input 
+                  type="url" 
+                  placeholder="https://example.com/logo.png" 
+                  {...field}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    setCurrentLogoUrl(e.target.value); // For immediate preview update
+                    // Optimistic update for context if needed, or wait for save
+                    updateCompanyProfile({ logoUrl: e.target.value });
+                  }}
                 />
               </FormControl>
               <FormDescription>
-                Upload your company logo. Recommended size: 512x512px. Max 5MB. (JPG, PNG, WEBP, SVG)
+                Enter the direct URL to your company logo. Recommended size for display: 512x512px.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+        {currentLogoUrl && (
+          <div className="space-y-2">
+            <Label>Logo Preview (32x32)</Label>
+            <Image 
+              src={currentLogoUrl} 
+              alt="Company Logo Preview" 
+              width={32} 
+              height={32} 
+              className="rounded-sm border object-contain"
+              onError={() => {
+                // Optionally handle image load errors for the preview
+                console.warn("Error loading logo preview from URL:", currentLogoUrl);
+              }}
+              data-ai-hint="company logo"
+            />
+          </div>
+        )}
 
+        <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -223,7 +309,7 @@ export function CompanySetupForm() {
         </div>
         
         <FormDescription>
-          This information will be used to pre-fill relevant fields in other parts of the application.
+          This information will be used to pre-fill relevant fields in other parts of the application and for display purposes.
         </FormDescription>
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>

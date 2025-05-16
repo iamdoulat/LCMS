@@ -1,4 +1,5 @@
 
+
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -25,7 +26,7 @@ export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
-  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG",
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "Thailand", "Hong Kong",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
@@ -67,10 +68,10 @@ export interface LCEntry {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string; // Stores address
-  notifyPartyName?: string;           // Stores contact person name
-  notifyPartyCell?: string;           // Stores cell
-  notifyPartyEmail?: string;          // Stores email
+  notifyPartyNameAndAddress?: string;
+  notifyPartyName?: string;          
+  notifyPartyCell?: string;          
+  notifyPartyEmail?: string;        
   numberOfAmendments?: number | '';
   status?: LCStatus;
   partialShipmentAllowed?: PartialShipmentAllowed;
@@ -96,27 +97,27 @@ export interface LCEntry {
 export interface LCEntryDocument {
   id: string;
   year: number;
-  applicantName: string; // Stores the actual name for display
-  applicantId: string;   // Stores the ID from the customers collection
-  beneficiaryName: string; // Stores the actual name for display
-  beneficiaryId: string;   // Stores the ID from the suppliers collection
+  applicantName: string; 
+  applicantId: string;  
+  beneficiaryName: string; 
+  beneficiaryId: string;  
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string; // Stored as ISO string
+  invoiceDate?: string; 
   totalMachineQty: number;
-  lcIssueDate?: string; // Stored as ISO string
-  expireDate?: string; // Stored as ISO string
-  latestShipmentDate?: string; // Stored as ISO string
+  lcIssueDate?: string; 
+  expireDate?: string; 
+  latestShipmentDate?: string; 
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string; // Stored as ISO string
-  eta?: string; // Stored as ISO string
+  etd?: string; 
+  eta?: string; 
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -133,14 +134,14 @@ export interface LCEntryDocument {
   portOfDischarge?: string;
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string; // Stores address
-  notifyPartyName?: string;           // Stores contact person name
-  notifyPartyCell?: string;           // Stores cell
-  notifyPartyEmail?: string;          // Stores email
+  notifyPartyNameAndAddress?: string; 
+  notifyPartyName?: string;          
+  notifyPartyCell?: string;          
+  notifyPartyEmail?: string;          
   numberOfAmendments?: number;
   status: LCStatus;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any; 
+  updatedAt: any; 
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -186,19 +187,33 @@ export interface Supplier {
   emailId: string;
   website?: string;
   brandName: string;
-  brandLogoFile?: File | null;
+  brandLogoFile?: File | null; // Kept for add form, edit will use URL
   brandLogoUrl?: string;
   createdAt?: any;
   updatedAt?: any;
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any };
+export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any, brandLogoUrl?: string };
 
 
 export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  timestamp: string; // ISO string
+  timestamp: string; 
   isRead: boolean;
   link?: string;
+}
+
+export type UserRole = "Super Admin" | "Admin" | "User";
+
+export interface CompanyProfile {
+  companyName: string;
+  address: string;
+  contactPerson?: string;
+  cellNumber?: string;
+  emailId?: string;
+  binNumber?: string;
+  tinNumber?: string;
+  companyLogoUrl?: string;
+  updatedAt?: any; // Firestore ServerTimestamp
 }

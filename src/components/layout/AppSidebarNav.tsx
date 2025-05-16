@@ -37,10 +37,11 @@ import {
   UserPlus,
   Building,
   FileText,
-  FileEdit
+  FileEdit,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext'; // Updated import
+import { useAuth } from '@/context/AuthContext'; 
 import Image from 'next/image'; 
 import type { UserRole } from '@/types';
 
@@ -91,12 +92,10 @@ const settingsNavItems: NavItemWithRoles[] = [
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
 ];
 
-const companyLogoUrlFromSettings = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { userRole, logout, loading: authLoading, companyName } = useAuth(); // Get userRole and companyName
+  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth(); 
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -184,18 +183,26 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
-          <Image
-            src={companyLogoUrlFromSettings} // For now, use the static URL
-            alt="Company Logo"
-            width={32}
-            height={32}
-            className="rounded-sm"
-            data-ai-hint="company logo"
-          />
-          <span className={cn("group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            {companyName || "Smart Solution"} {/* Use companyName from context, fallback to default */}
+          {companyLogoUrl ? (
+             <Image
+                src={companyLogoUrl} 
+                alt="Company Logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain"
+                data-ai-hint="company logo"
+              />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted text-muted-foreground">
+              <ImageIcon className="h-5 w-5" />
+            </div>
+          )}
+          <span className={cn(
+            "group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            )}
+          >
+            {companyName || "Smart Solution"}
           </span>
         </Link>
       </SidebarHeader>
@@ -248,7 +255,6 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
             {settingsNavItems.map((item) => {
-              // Role-based rendering for settings
               const canView = !item.roles || (userRole && item.roles.includes(userRole));
               if (!canView) return null;
 
@@ -300,7 +306,6 @@ type NavItem = {
   icon: React.ElementType;
 };
 
-// Extending NavItem for settings to include roles
 type NavItemWithRoles = NavItem & {
   roles?: UserRole[];
 };

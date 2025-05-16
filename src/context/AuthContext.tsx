@@ -6,15 +6,22 @@ import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, sig
 import { useRouter } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { auth } from '@/lib/firebase/config';
+import { auth, firestore } from '@/lib/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import type { UserRole } from '@/types';
+import type { UserRole, CompanyProfile } from '@/types';
 
-const SIMULATED_SUPER_ADMIN_EMAIL = 'superadmin@example.com';
-const SIMULATED_ADMIN_EMAIL = 'admin@example.com';
+const SIMULATED_SUPER_ADMIN_EMAIL = 'YOUR_LOGIN_EMAIL_HERE'; // TODO: Replace with your actual super admin email for testing
+const SIMULATED_ADMIN_EMAIL = 'admin@example.com'; // TODO: Replace with an admin email for testing
+
+const COMPANY_PROFILE_DOC_ID = 'main_profile';
+const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
+const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
+const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +31,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   companyName: string;
-  updateCompanyName: (newName: string) => void;
+  companyLogoUrl: string;
+  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,13 +44,42 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [companyName, setCompanyName] = useState<string>(DEFAULT_COMPANY_NAME);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const router = useRouter();
 
-  useEffect(() => {
-    const storedCompanyName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
-    if (storedCompanyName) {
-      setCompanyName(storedCompanyName);
+  const fetchCompanyProfile = useCallback(async () => {
+    try {
+      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      const profileDocSnap = await getDoc(profileDocRef);
+      if (profileDocSnap.exists()) {
+        const profileData = profileDocSnap.data() as CompanyProfile;
+        if (profileData.companyName) {
+          setCompanyName(profileData.companyName);
+          localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profileData.companyName);
+        }
+        if (profileData.companyLogoUrl) {
+          setCompanyLogoUrl(profileData.companyLogoUrl);
+          localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profileData.companyLogoUrl);
+        }
+      } else {
+        // Fallback to localStorage if Firestore doc doesn't exist
+        const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
+        if (storedName) setCompanyName(storedName);
+        const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
+        if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl);
+      }
+    } catch (error) {
+      console.error("Error fetching company profile from Firestore:", error);
+      // Fallback to localStorage on error
+      const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
+      if (storedName) setCompanyName(storedName);
+      const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
+      if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchCompanyProfile();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -60,7 +97,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [fetchCompanyProfile]);
 
   const logout = useCallback(async () => {
     setLoading(true);
@@ -68,6 +105,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       await firebaseSignOut(auth);
       setUser(null);
       setUserRole(null);
+      // Optionally clear company info from localStorage on logout if desired
+      // localStorage.removeItem(COMPANY_NAME_STORAGE_KEY);
+      // localStorage.removeItem(COMPANY_LOGO_URL_STORAGE_KEY);
+      // setCompanyName(DEFAULT_COMPANY_NAME);
+      // setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
       Swal.fire({
         title: "Logged Out",
         text: "You have been successfully logged out.",
@@ -93,7 +135,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
-      // Role setting for Google users would typically come from custom claims
+      
       if (result.user.email === SIMULATED_SUPER_ADMIN_EMAIL) {
         setUserRole("Super Admin");
       } else if (result.user.email === SIMULATED_ADMIN_EMAIL) {
@@ -128,9 +170,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyName = useCallback((newName: string) => {
-    setCompanyName(newName);
-    localStorage.setItem(COMPANY_NAME_STORAGE_KEY, newName);
+  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
+    if (profile.companyName !== undefined) {
+      setCompanyName(profile.companyName);
+      localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profile.companyName);
+    }
+    if (profile.companyLogoUrl !== undefined) {
+      setCompanyLogoUrl(profile.companyLogoUrl);
+      localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profile.companyLogoUrl);
+    }
   }, []);
   
   if (loading && !user && typeof window !== 'undefined' && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
@@ -142,7 +190,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }
   
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, logout, signInWithGoogle, setUser, companyName, updateCompanyName }}>
+    <AuthContext.Provider value={{ user, loading, userRole, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );
