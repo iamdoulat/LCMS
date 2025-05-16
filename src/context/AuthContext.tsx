@@ -12,8 +12,8 @@ import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import type { UserRole, CompanyProfile } from '@/types';
 
-const SIMULATED_SUPER_ADMIN_EMAIL = 'mddoulat@gmail.com'; // Updated to user's email
-const SIMULATED_ADMIN_EMAIL = 'admin@example.com'; 
+const SIMULATED_SUPER_ADMIN_EMAIL = 'mddoulat@gmail.com';
+const SIMULATED_ADMIN_EMAIL = 'commercial@smartsolution-bd.com'; 
 
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
@@ -56,10 +56,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         if (profileData.companyName) {
           setCompanyName(profileData.companyName);
           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profileData.companyName);
+        } else {
+           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
+           setCompanyName(DEFAULT_COMPANY_NAME);
         }
         if (profileData.companyLogoUrl) {
           setCompanyLogoUrl(profileData.companyLogoUrl);
           localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profileData.companyLogoUrl);
+        } else {
+            localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+            setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
         }
       } else {
         // Fallback to localStorage if Firestore doc doesn't exist

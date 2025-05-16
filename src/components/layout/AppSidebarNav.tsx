@@ -38,13 +38,13 @@ import {
   Building,
   FileText,
   FileEdit,
-  ImageIcon // Changed from Image to avoid conflict with next/image
+  ImageIcon 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext'; 
 import Image from 'next/image'; 
 import type { UserRole } from '@/types';
-import React from 'react'; // Ensure React is imported for console.log
+import React from 'react'; 
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
@@ -88,9 +88,9 @@ const managementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItemWithRoles[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
 ];
 
 
@@ -98,7 +98,6 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth(); 
 
-  // For debugging role-based visibility
   React.useEffect(() => {
     console.log("Current User Role in Sidebar:", userRole);
   }, [userRole]);
@@ -189,7 +188,6 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           {companyLogoUrl ? (
              <Image
@@ -202,7 +200,7 @@ export function AppSidebarNav() {
               />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-              <ImageIcon className="h-5 w-5" /> {/* Using Lucide's ImageIcon for placeholder */}
+              <ImageIcon className="h-5 w-5" />
             </div>
           )}
           <span className={cn(

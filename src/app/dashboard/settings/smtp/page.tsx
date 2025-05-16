@@ -1,9 +1,41 @@
 
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings as SettingsIcon, Info } from 'lucide-react'; // Renamed to avoid conflict with component name
+import { Settings as SettingsIcon, Info, Loader2 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+import Swal from 'sweetalert2';
 
 export default function SmtpSettingsPage() {
+  const { userRole, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && userRole !== "Super Admin") {
+      Swal.fire({
+        title: 'Access Denied',
+        text: 'You are not permitted to view/edit settings.',
+        icon: 'error',
+        timer: 2000,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push('/dashboard');
+      });
+    }
+  }, [userRole, authLoading, router]);
+
+  if (authLoading || userRole !== "Super Admin") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Loading or verifying access...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-lg">
