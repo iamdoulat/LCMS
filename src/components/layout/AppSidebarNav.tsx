@@ -38,12 +38,13 @@ import {
   Building,
   FileText,
   FileEdit,
-  Image as ImageIcon
+  ImageIcon // Changed from Image to avoid conflict with next/image
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext'; 
 import Image from 'next/image'; 
 import type { UserRole } from '@/types';
+import React from 'react'; // Ensure React is imported for console.log
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 
@@ -97,16 +98,21 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth(); 
 
+  // For debugging role-based visibility
+  React.useEffect(() => {
+    console.log("Current User Role in Sidebar:", userRole);
+  }, [userRole]);
+
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href !== '/dashboard' && pathname.startsWith(href)) {
+        // More specific checks for parent routes that shouldn't be active if a child is
         if (
-          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/')) ||
-          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/')) ||
-          (href === '/dashboard/shipments/recent-draft-lcs' && pathname !== '/dashboard/shipments/recent-draft-lcs') || 
-          (href === '/dashboard/settings/company-setup' && pathname !== '/dashboard/settings/company-setup') ||
-          (href === '/dashboard/settings/users' && pathname !== '/dashboard/settings/users') ||
-          (href === '/dashboard/settings/smtp' && pathname !== '/dashboard/settings/smtp')
+          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/add')) ||
+          (href === '/dashboard/suppliers' && pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')) ||
+          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/add')) ||
+          (href === '/dashboard/customers' && pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')) ||
+          (href === '/dashboard/total-lc' && pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit'))
         ) {
           return pathname === href; 
         }
@@ -116,7 +122,7 @@ export function AppSidebarNav() {
   };
   
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
-    return subLinks.some(sub => pathname.startsWith(sub.href));
+    return subLinks.some(sub => isActive(sub.href));
   };
 
   const combinedNavGroups = [...lcManagementNavItems, ...managementNavItems];
@@ -158,7 +164,7 @@ export function AppSidebarNav() {
                 <Link href={subLink.href} passHref legacyBehavior>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === subLink.href}
+                    isActive={pathname === subLink.href} // Exact match for sub-items
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                       "h-8 text-xs" 
@@ -183,6 +189,7 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           {companyLogoUrl ? (
              <Image
@@ -195,14 +202,14 @@ export function AppSidebarNav() {
               />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-              <ImageIcon className="h-5 w-5" />
+              <ImageIcon className="h-5 w-5" /> {/* Using Lucide's ImageIcon for placeholder */}
             </div>
           )}
           <span className={cn(
-            "group-data-[collapsible=icon]:hidden text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            "group-data-[collapsible=icon]:hidden font-bold text-lg bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
-            {companyName || "Smart Solution"}
+            {companyName || "Smart Solution"} 
           </span>
         </Link>
       </SidebarHeader>
