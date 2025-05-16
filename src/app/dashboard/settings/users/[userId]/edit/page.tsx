@@ -15,15 +15,22 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserRole } from '@/types';
 
-// Interface for simulated user data stored in localStorage
-interface SimulatedUser {
+
+// Placeholder structure for demonstrating table
+interface PlaceholderUser {
   id: string;
   displayName?: string;
   email?: string;
-  contactNumber?: string;
+  contactNumber?: string; 
   role?: UserRole;
 }
-const SIMULATED_USERS_STORAGE_KEY = 'simulatedUsersList';
+
+// This would typically be fetched from a backend or come from route state if listing real users
+const initialPlaceholderUsers: PlaceholderUser[] = [
+  { id: 'sim_user_1', displayName: 'Demo User One', email: 'user1@example.com', contactNumber: '123-456-7890', role: 'User' },
+  { id: 'sim_user_2', displayName: 'Demo Admin User', email: 'admin.test@example.com', contactNumber: '987-654-3210', role: 'Admin' },
+  { id: 'sim_user_3', displayName: 'Another User', email: 'user2@example.com', role: 'User' },
+];
 
 
 export default function EditUserPage() {
@@ -33,7 +40,7 @@ export default function EditUserPage() {
   const { userRole: adminUserRole, loading: authLoading } = useAuth(); 
   
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
-  const [userData, setUserData] = useState<SimulatedUser | null>(null);
+  const [userData, setUserData] = useState<PlaceholderUser | null>(null);
   
   // Form state simulation for edit
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -55,24 +62,16 @@ export default function EditUserPage() {
       });
     } else if (userId) {
       setIsLoadingUserData(true);
-      try {
-        const storedUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
-        const existingUsers: SimulatedUser[] = storedUsersString ? JSON.parse(storedUsersString) : [];
-        const foundUser = existingUsers.find(u => u.id === userId);
-        
-        if (foundUser) {
-          setUserData(foundUser);
-          setEditDisplayName(foundUser.displayName || '');
-          setEditEmail(foundUser.email || '');
-          setEditContactNumber(foundUser.contactNumber || '');
-          setEditRole(foundUser.role || 'User');
-        } else {
-          Swal.fire("Error", `User with ID ${userId} not found in local simulated list.`, "error");
-          setUserData(null);
-        }
-      } catch (e) {
-        console.error("Error loading simulated user from localStorage for edit:", e);
-        Swal.fire("Error", "Could not load user from local simulation. Check console.", "error");
+      // Simulate fetching user data. In a real app, this would be an API call to your backend.
+      const foundUser = initialPlaceholderUsers.find(u => u.id === userId);
+      if (foundUser) {
+        setUserData(foundUser);
+        setEditDisplayName(foundUser.displayName || '');
+        setEditEmail(foundUser.email || '');
+        setEditContactNumber(foundUser.contactNumber || '');
+        setEditRole(foundUser.role || 'User');
+      } else {
+        Swal.fire("Error", `User with ID ${userId} not found in placeholder list.`, "error");
         setUserData(null);
       }
       setIsLoadingUserData(false);
@@ -95,7 +94,7 @@ export default function EditUserPage() {
   if (!userData) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <p className="text-muted-foreground mb-4">User data could not be loaded or user not found in local list.</p>
+        <p className="text-muted-foreground mb-4">User data could not be loaded or user not found.</p>
         <Link href="/dashboard/settings/users" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -107,7 +106,7 @@ export default function EditUserPage() {
   }
 
   const handleSaveChanges = () => {
-    const updatedUserData: SimulatedUser = {
+    const updatedUserDataSim = {
       id: userId,
       displayName: editDisplayName,
       email: editEmail,
@@ -115,38 +114,16 @@ export default function EditUserPage() {
       role: editRole,
     };
 
-    try {
-      const storedUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
-      let existingUsers: SimulatedUser[] = storedUsersString ? JSON.parse(storedUsersString) : [];
-      const userIndex = existingUsers.findIndex(u => u.id === userId);
-
-      if (userIndex > -1) {
-        existingUsers[userIndex] = updatedUserData;
-        localStorage.setItem(SIMULATED_USERS_STORAGE_KEY, JSON.stringify(existingUsers));
-        Swal.fire({
-          title: 'User Updated (Locally Simulated)',
-          text: `User ${editDisplayName}'s details have been updated in the local simulated list.`,
-          icon: 'success',
-          timer: 2500,
-          showConfirmButton: false,
-        }).then(() => {
-            router.push('/dashboard/settings/users');
-        });
-      } else {
-        Swal.fire("Error", "Could not find user in local list to update.", "error");
-      }
-    } catch (e) {
-        console.error("Error updating simulated user in localStorage:", e);
-        Swal.fire("Error", "Could not update user in local simulation. Check console.", "error");
-    }
-
-    console.log(`EditUserPage: Would call backend function to update user ${userId}. New Data:`, updatedUserData);
+    console.log(`Simulating save for user ${userId}. New Data:`, updatedUserDataSim);
     Swal.fire({
-        title: 'Backend Required for Actual Update',
+        title: 'Changes Simulated (Backend Required)',
         html: `Updating user (ID: ${userId}) details in Firebase Authentication (Display Name, Email, Password, Role/Custom Claims) requires a secure backend function using the Firebase Admin SDK.
-               <br/><br/>The changes have been saved to the <strong>local simulated list</strong>.
-               <br/><br/>Data to send to backend for actual update: <pre class="text-left text-xs bg-muted p-2 rounded">${JSON.stringify(updatedUserData, null, 2)}</pre>`,
+               <br/><br/>The changes have <strong>not</strong> been saved to Firebase Auth. This is a UI simulation.
+               <br/><br/>Data that would be sent to backend: <pre class="text-left text-xs bg-muted p-2 rounded">${JSON.stringify(updatedUserDataSim, null, 2)}</pre>`,
         icon: 'info',
+        confirmButtonText: "OK",
+    }).then(() => {
+        // router.push('/dashboard/settings/users'); // Optional: redirect after simulation
     });
   };
 
@@ -164,10 +141,10 @@ export default function EditUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserCog className="h-7 w-7 text-primary" />
-            Edit User (Simulated Local Edit)
+            Edit User (Simulated)
           </CardTitle>
           <CardDescription>
-            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Changes are saved to the local simulated list.
+            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Changes are simulated.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +152,7 @@ export default function EditUserPage() {
             <ShieldAlert className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-700 font-semibold">Backend Required for Full Functionality</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              Editing other users' details (like email, password, display name, or role/custom claims) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page simulates the UI for such an operation, saving changes to a <strong>local list</strong>.
+              Editing other users' details (like email, password, display name, or role/custom claims) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page simulates the UI for such an operation.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
@@ -203,7 +180,7 @@ export default function EditUserPage() {
                <p className="mt-1 text-xs text-muted-foreground">Note: Actually changing a user's email in Firebase Auth has implications (e.g., verification status) and requires Admin SDK.</p>
             </div>
              <div>
-              <label htmlFor="contactNumber" className="block text-sm font-medium text-muted-foreground">Contact Number</label>
+              <label htmlFor="contactNumber" className="block text-sm font-medium text-muted-foreground">Contact Number (from Profile)</label>
               <Input
                 type="tel"
                 id="contactNumber"
@@ -214,7 +191,7 @@ export default function EditUserPage() {
               />
             </div>
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (Simulated)</label>
+              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (from Claims - Simulated)</label>
               <Select 
                 value={editRole} 
                 onValueChange={(value) => setEditRole(value as UserRole)}
@@ -232,7 +209,7 @@ export default function EditUserPage() {
               <p className="mt-1 text-xs text-muted-foreground">Actual role changes are managed by setting custom claims on the user via Firebase Admin SDK.</p>
             </div>
             <div className="pt-4">
-                <Button onClick={handleSaveChanges} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>Save Changes (to Local List)</Button>
+                <Button onClick={handleSaveChanges} disabled={adminUserRole !== "Super Admin" && adminUserRole !== "Admin"}>Save Changes (Simulated)</Button>
             </div>
           </div>
         </CardContent>

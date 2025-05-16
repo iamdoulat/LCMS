@@ -33,17 +33,6 @@ const addUserSchema = z.object({
 
 type AddUserFormValues = z.infer<typeof addUserSchema>;
 
-// Interface for simulated user data stored in localStorage
-interface SimulatedUser {
-  id: string;
-  displayName: string;
-  email: string;
-  contactNumber?: string;
-  role: UserRole;
-}
-
-const SIMULATED_USERS_STORAGE_KEY = 'simulatedUsersList';
-
 export default function AddUserPage() {
   const { userRole: adminUserRole, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -78,39 +67,21 @@ export default function AddUserPage() {
   const onSubmit = async (data: AddUserFormValues) => {
     setIsSubmitting(true);
     
-    // Simulate saving to localStorage
-    try {
-      const existingUsersString = localStorage.getItem(SIMULATED_USERS_STORAGE_KEY);
-      const existingUsers: SimulatedUser[] = existingUsersString ? JSON.parse(existingUsersString) : [];
-      
-      const newUser: SimulatedUser = {
-        id: `sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, // Simple unique ID for simulation
-        displayName: data.displayName,
-        email: data.email,
-        contactNumber: data.contactNumber,
-        role: data.role as UserRole,
-      };
-      
-      existingUsers.push(newUser);
-      localStorage.setItem(SIMULATED_USERS_STORAGE_KEY, JSON.stringify(existingUsers));
+    // Simulate backend call
+    console.log("Simulating backend user creation with data:", data);
 
-      Swal.fire({
-        title: "User Added (Locally Simulated)",
-        html: `User <b>${data.displayName}</b> (${data.email}) has been added to the local simulated list.
-               <br/><br/><strong>Note:</strong> Actual user creation in Firebase Authentication requires a secure backend function (e.g., Firebase Cloud Function) using the Firebase Admin SDK.
-               <br/>This also applies to setting roles/custom claims. The admin performing this action remains logged in.`,
-        icon: "success",
-        confirmButtonText: "OK",
-      }).then(() => {
-        form.reset();
-        router.push('/dashboard/settings/users'); 
-      });
-
-    } catch (e) {
-        console.error("Error saving simulated user to localStorage:", e);
-        Swal.fire("Error", "Could not save user to local simulation. Check console.", "error");
-    }
-
+    Swal.fire({
+      title: "User Creation (Simulated Backend Call)",
+      html: `A request to create user <b>${data.displayName}</b> (${data.email}) with role <b>${data.role}</b> would be sent to the backend.
+             <br/><br/><strong>Note:</strong> Actual user creation in Firebase Authentication, password hashing, and role assignment (custom claims) must be performed by a secure backend function (e.g., Firebase Cloud Function) using the Firebase Admin SDK.
+             <br/>The admin performing this action remains logged in.`,
+      icon: "info",
+      confirmButtonText: "OK",
+    }).then(() => {
+      form.reset();
+      // Optionally, navigate back to user list or stay on page
+      // router.push('/dashboard/settings/users'); 
+    });
 
     setIsSubmitting(false);
   };
@@ -141,17 +112,15 @@ export default function AddUserPage() {
             Add New User
           </CardTitle>
           <CardDescription>
-            Fill in the details below. User is added to a local simulated list. Actual Firebase user creation requires backend.
+            Fill in the details below. Actual user creation requires backend integration.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="default" className="mb-6 bg-amber-500/10 border-amber-500/30">
             <ShieldAlert className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-700 font-semibold">Backend Operation Required for Full Functionality</AlertTitle>
+            <AlertTitle className="text-amber-700 font-semibold">Backend Operation Required</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              - Creating a user with a password in Firebase Authentication, assigning roles (via custom claims), and storing additional details (like contact number in Firestore) must be performed by a secure backend function using the Firebase Admin SDK.
-              - This form collects information and adds the user to a <strong>local simulated list</strong> for demonstration.
-              - The admin performing this action will remain logged in.
+              Creating a user with a password in Firebase Authentication, assigning roles (via custom claims), and storing additional details (like contact number in Firestore) must be performed by a secure backend function using the Firebase Admin SDK. This form simulates the data collection.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -215,10 +184,10 @@ export default function AddUserPage() {
                   <FormItem>
                     <FormLabel>Contact Number (Optional)</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                      <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormDescription>
-                      Contact number is stored in the local simulated list.
+                      Contact number is typically stored in a user profile database (e.g., Firestore), not directly in Firebase Auth.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -242,7 +211,7 @@ export default function AddUserPage() {
                         <SelectItem value="User">User</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>This role is for local simulation. Actual Firebase roles require custom claims set by a backend.</FormDescription>
+                    <FormDescription>Actual Firebase roles require custom claims set by a backend.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -252,12 +221,12 @@ export default function AddUserPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding User to Local List...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Add User (Simulated Backend)
+                    Create User (Simulated Backend Call)
                   </>
                 )}
               </Button>
