@@ -121,7 +121,7 @@ export default function AddUserPage() {
             <ShieldAlert className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-700 font-semibold">Backend Required</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              This form simulates user creation. Actual user creation in Firebase Authentication needs to be handled by a secure backend function (e.g., Firebase Cloud Function) using the Firebase Admin SDK.
+              Actual user creation in Firebase Authentication must be handled by a secure backend function (e.g., Firebase Cloud Function) using the Firebase Admin SDK. This form simulates the UI for this process.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -214,3 +214,4 @@ export default function AddUserPage() {
     </div>
   );
 }
+
