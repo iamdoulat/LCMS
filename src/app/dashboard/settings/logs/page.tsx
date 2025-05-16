@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Added import
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface AppLog {
   id: string;
@@ -58,14 +58,20 @@ export default function LogsPage() {
         router.push('/dashboard');
       });
     } else if (!authLoading && userRole === "Super Admin") {
-      setAllLogs(generatePlaceholderLogs(100)); // Generate 100 placeholder logs
+      // Only generate logs if they haven't been cleared previously in this session
+      // or if the component mounts for the first time.
+      // This basic check doesn't persist across page reloads if logs are cleared.
+      // A more robust "cleared" state would require its own localStorage flag.
+      if (allLogs.length === 0) {
+        setAllLogs(generatePlaceholderLogs(100));
+      }
     }
-  }, [userRole, authLoading, router]);
+  }, [userRole, authLoading, router, allLogs.length]); // Added allLogs.length
 
   const handleClearCache = () => {
     Swal.fire({
       title: 'Clear Application Cache?',
-      html: "This will clear application-specific data from your browser's local storage, such as: <br/>- Notification states <br/>- Cached company profile <br/><br/> It <strong>will not</strong> clear your general browser history, cookies from other sites, or server-side data. You might be logged out if session persistence relies on local storage.",
+      html: "This will clear application-specific data from your browser's local storage (e.g., notification states, cached company profile) and clear the placeholder logs displayed on this page. <br/><br/> It <strong>will not</strong> clear your general browser history, cookies from other sites, or server-side data. You might be logged out if session persistence relies on local storage.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
@@ -80,15 +86,15 @@ export default function LogsPage() {
           localStorage.removeItem('appCompanyName');
           localStorage.removeItem('appCompanyLogoUrl');
           // Add any other app-specific keys you use in localStorage here
-          // localStorage.removeItem('usersList'); // If it was used
+
+          setAllLogs([]); // Clear the displayed placeholder logs
+          setCurrentPage(1); // Reset pagination
 
           Swal.fire(
-            'Cache Cleared!',
-            'Application-specific local storage has been cleared.',
+            'Cache & Logs Cleared!',
+            'Application-specific local storage and displayed placeholder logs have been cleared.',
             'success'
           );
-          // Optionally, trigger a hard refresh or redirect to re-initialize state
-          // window.location.reload();
         } catch (error) {
           console.error("Error clearing cache: ", error);
           Swal.fire("Error", "Could not clear cache. See console for details.", "error");
@@ -156,7 +162,7 @@ export default function LogsPage() {
             </div>
             <Button onClick={handleClearCache} variant="outline">
               <Trash2 className="mr-2 h-4 w-4" />
-              Clear App Cache (LocalStorage)
+              Clear App Cache & Displayed Logs
             </Button>
           </div>
         </CardHeader>
@@ -165,7 +171,7 @@ export default function LogsPage() {
             <ShieldAlert className="h-5 w-5 text-blue-600" />
             <AlertTitle className="text-blue-700 font-semibold">Placeholder Data</AlertTitle>
             <AlertDescription className="text-blue-700/90">
-              The logs displayed below are for demonstration purposes only. A comprehensive logging system would typically involve a backend service to record and retrieve actual application activities.
+              The logs displayed below are for demonstration purposes only. A comprehensive logging system would typically involve a backend service to record and retrieve actual application activities. Clearing logs here only affects this placeholder display.
             </AlertDescription>
           </Alert>
           <div className="rounded-md border">
@@ -247,3 +253,4 @@ export default function LogsPage() {
     </div>
   );
 }
+
