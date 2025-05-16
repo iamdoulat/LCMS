@@ -12,8 +12,8 @@ import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import type { UserRole, CompanyProfile } from '@/types';
 
-const SIMULATED_SUPER_ADMIN_EMAIL = 'YOUR_LOGIN_EMAIL_HERE'; // TODO: Replace with your actual super admin email for testing
-const SIMULATED_ADMIN_EMAIL = 'admin@example.com'; // TODO: Replace with an admin email for testing
+const SIMULATED_SUPER_ADMIN_EMAIL = 'mddoulat@gmail.com'; // Updated to user's email
+const SIMULATED_ADMIN_EMAIL = 'admin@example.com'; 
 
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const router = useRouter();
 
-  const fetchCompanyProfile = useCallback(async () => {
+  const fetchInitialCompanyProfile = useCallback(async () => {
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
@@ -64,22 +64,23 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       } else {
         // Fallback to localStorage if Firestore doc doesn't exist
         const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
-        if (storedName) setCompanyName(storedName);
+        if (storedName) setCompanyName(storedName); else localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
         const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
-        if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl);
+        if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
       }
     } catch (error) {
       console.error("Error fetching company profile from Firestore:", error);
       // Fallback to localStorage on error
       const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
-      if (storedName) setCompanyName(storedName);
+      if (storedName) setCompanyName(storedName); else localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
       const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
-      if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl);
+      if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
     }
   }, []);
 
+
   useEffect(() => {
-    fetchCompanyProfile();
+    fetchInitialCompanyProfile();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [fetchCompanyProfile]);
+  }, [fetchInitialCompanyProfile]);
 
   const logout = useCallback(async () => {
     setLoading(true);
@@ -105,11 +106,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       await firebaseSignOut(auth);
       setUser(null);
       setUserRole(null);
-      // Optionally clear company info from localStorage on logout if desired
-      // localStorage.removeItem(COMPANY_NAME_STORAGE_KEY);
-      // localStorage.removeItem(COMPANY_LOGO_URL_STORAGE_KEY);
-      // setCompanyName(DEFAULT_COMPANY_NAME);
-      // setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
       Swal.fire({
         title: "Logged Out",
         text: "You have been successfully logged out.",
