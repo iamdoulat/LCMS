@@ -64,6 +64,8 @@ interface EditProformaInvoiceFormProps {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
+const NONE_LC_VALUE = "__NONE_LC__"; // Special value for "None" option
+
 export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
@@ -275,9 +277,9 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       piNo: data.piNo,
       piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesPersonName: data.salesPersonName,
-      connectedLcId: data.connectedLcId || undefined,
-      connectedLcNumber: selectedLc?.label || undefined,
-      connectedLcIssueDate: selectedLc?.issueDate || undefined,
+      connectedLcId: data.connectedLcId === NONE_LC_VALUE ? undefined : data.connectedLcId || undefined,
+      connectedLcNumber: data.connectedLcId === NONE_LC_VALUE ? undefined : selectedLc?.label || undefined,
+      connectedLcIssueDate: data.connectedLcId === NONE_LC_VALUE ? undefined : selectedLc?.issueDate || undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
@@ -418,14 +420,18 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingDropdowns}>
+                <Select 
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)} 
+                  value={field.value === '' || field.value === undefined ? NONE_LC_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
                     {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -605,4 +611,3 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
-
