@@ -3,8 +3,9 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { Briefcase, Loader2, LogIn, MailQuestion } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react'; // Briefcase removed
 import Link from 'next/link';
+import Image from 'next/image'; // Added Image import
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -27,12 +28,14 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const logoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Keep local error for inline display
+  const [error, setError] = useState<string | null>(null); 
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -64,7 +67,7 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (err: any) {
       const errorMessage = err.message || "Failed to login. Please check your credentials.";
-      setError(errorMessage); // For inline error display
+      setError(errorMessage); 
       Swal.fire({
         title: "Login Failed",
         text: errorMessage,
@@ -80,9 +83,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithGoogle();
-      // Navigation and success toast are handled within signInWithGoogle context method
     } catch (err: any) {
-      // Error toast is handled within signInWithGoogle context method, but set local error too
       setError(err.message || "Google Sign-In failed.");
     } finally {
       setIsGoogleLoading(false);
@@ -102,7 +103,6 @@ export default function LoginPage() {
         if (!value) {
           return 'You need to write something!'
         }
-        // Basic email validation
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           return 'Please enter a valid email address.'
         }
@@ -110,7 +110,7 @@ export default function LoginPage() {
     });
 
     if (email) {
-      setIsEmailLoading(true); // Reuse loading state or create a new one
+      setIsEmailLoading(true); 
       setError(null);
       try {
         await sendPasswordResetEmail(auth, email);
@@ -151,8 +151,15 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Briefcase className="h-8 w-8" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+            <Image
+              src={logoUrl}
+              alt="LC Management System Logo"
+              width={56} // Adjusted for better fit within h-20 w-20 parent
+              height={56}
+              className="rounded-sm"
+              priority
+            />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">LC Management System Login</CardTitle>
           <CardDescription>Access your Letter of Credit Management Dashboard</CardDescription>
