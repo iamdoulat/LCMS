@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label'; // Added Label import
+import { Label } from '@/components/ui/label';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -67,62 +67,62 @@ export function CompanySetupForm() {
       try {
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
+        let initialProfileData: Partial<CompanySetupFormValues> = {
+          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
+          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          contactPerson: '',
+          cellNumber: '',
+          binNumber: '',
+          tinNumber: '',
+        };
+
         if (profileDocSnap.exists()) {
           const data = profileDocSnap.data() as CompanyProfile;
-          form.reset({
-            companyName: data.companyName || '',
-            address: data.address || '',
+          initialProfileData = {
+            companyName: data.companyName || DEFAULT_COMPANY_NAME,
+            address: data.address || DEFAULT_ADDRESS,
             contactPerson: data.contactPerson || '',
             cellNumber: data.cellNumber || '',
-            emailId: data.emailId || '',
+            emailId: data.emailId || DEFAULT_EMAIL,
             binNumber: data.binNumber || '',
             tinNumber: data.tinNumber || '',
-            companyLogoUrl: data.companyLogoUrl || '',
-          });
-          setCurrentLogoUrlForPreview(data.companyLogoUrl); // Initialize preview with fetched data
+            companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          };
           // Update context if Firestore has more recent data than localStorage might have initialized it with
-          if (data.companyName !== contextCompanyName || data.companyLogoUrl !== contextCompanyLogoUrl) {
+           if (data.companyName !== contextCompanyName || data.companyLogoUrl !== contextCompanyLogoUrl) {
              updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
           }
-
-        } else {
-          // If no data in Firestore, rely on context (which loads from localStorage or defaults)
-           form.reset({
-            companyName: contextCompanyName || 'Smart Solution',
-            address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230', // Default address
-            emailId: 'info@smartsolution-bd.com', // Default email
-            contactPerson: '',
-            cellNumber: '',
-            binNumber: '',
-            tinNumber: '',
-            companyLogoUrl: contextCompanyLogoUrl || '', // Default logo URL from context
-          });
-          setCurrentLogoUrlForPreview(contextCompanyLogoUrl); // Initialize preview with context/default
         }
+        
+        form.reset(initialProfileData);
+        setCurrentLogoUrlForPreview(initialProfileData.companyLogoUrl);
+
       } catch (error) {
         console.error("Error fetching company profile:", error);
         Swal.fire("Error", "Could not load company profile from Firestore. Using default or cached values.", "error");
-         // Fallback to context values if Firestore fetch fails
         form.reset({
-          companyName: contextCompanyName || 'Smart Solution',
-          address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
-          emailId: 'info@smartsolution-bd.com',
-          companyLogoUrl: contextCompanyLogoUrl || '',
+          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
+          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          contactPerson: '',
+          cellNumber: '',
+          binNumber: '',
+          tinNumber: '',
         });
-        setCurrentLogoUrlForPreview(contextCompanyLogoUrl);
+        setCurrentLogoUrlForPreview(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
       } finally {
         setIsLoadingData(false);
       }
     };
     fetchCompanyData();
-  }, [form, contextCompanyName, contextCompanyLogoUrl, updateCompanyProfile]); // updateCompanyProfile added to dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, updateCompanyProfile]); // Removed contextCompanyName and contextCompanyLogoUrl to avoid re-fetch loop
 
-  // Watch the companyLogoUrl field from the form to update the preview
-  const watchedLogoUrlField = form.watch("companyLogoUrl");
-  React.useEffect(() => {
-    setCurrentLogoUrlForPreview(watchedLogoUrlField);
-  }, [watchedLogoUrlField]);
 
+  // Removed useEffect that watched form.watch("companyLogoUrl") for real-time preview
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
@@ -153,6 +153,7 @@ export function CompanySetupForm() {
       
       // Update AuthContext and localStorage AFTER successful save
       updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
+      setCurrentLogoUrlForPreview(data.companyLogoUrl); // Update preview after successful save
 
       Swal.fire({
         title: "Company Information Saved!",
@@ -182,6 +183,12 @@ export function CompanySetupForm() {
       </div>
     );
   }
+  
+  const DEFAULT_COMPANY_NAME = 'Smart Solution';
+  const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
+  const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
+  const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 
   return (
     <Form {...form}>
@@ -227,7 +234,7 @@ export function CompanySetupForm() {
                 <Input 
                   type="url" 
                   placeholder="https://example.com/logo.png" 
-                  {...field} // Spread field props here
+                  {...field} 
                 />
               </FormControl>
               <FormDescription>
@@ -237,7 +244,7 @@ export function CompanySetupForm() {
             </FormItem>
           )}
         />
-        {currentLogoUrlForPreview && (
+        {currentLogoUrlForPreview && currentLogoUrlForPreview.startsWith('http') && ( // Only render if URL is non-empty and looks like a URL
           <div className="space-y-2">
             <Label>Logo Preview (32x32)</Label>
             <Image 
@@ -248,6 +255,7 @@ export function CompanySetupForm() {
               className="rounded-sm border object-contain"
               onError={() => {
                 console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
+                // Optionally set currentLogoUrlForPreview to "" or a placeholder error image URL here
               }}
               data-ai-hint="company logo"
             />
@@ -349,3 +357,4 @@ export function CompanySetupForm() {
     </Form>
   );
 }
+
