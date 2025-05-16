@@ -46,7 +46,7 @@ const proformaInvoiceSchema = z.object({
     }
     return true;
 }, {
-    message: "Freight Amount is required and must be non-negative if Freight Charge is 'Excluded'",
+    message: "Freight Amount is required and must be non-negative if 'Excluded'",
     path: ["freightChargeAmount"],
 });
 
@@ -62,7 +62,7 @@ interface EditProformaInvoiceFormProps {
   piId: string;
 }
 
-const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
 export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -80,6 +80,17 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
+    defaultValues: { // Explicitly define default values
+      beneficiaryId: '',
+      applicantId: '',
+      piNo: '',
+      piDate: new Date(),
+      salesPersonName: '',
+      connectedLcId: '',
+      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
+      freightChargeOption: "Freight Included",
+      freightChargeAmount: '', // Initialize as empty string
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -119,7 +130,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   }, []);
 
   React.useEffect(() => {
-    if (initialData && !isLoadingDropdowns) {
+    if (initialData && !isLoadingDropdowns) { // Ensure dropdowns are loaded before resetting
       form.reset({
         beneficiaryId: initialData.beneficiaryId || '',
         applicantId: initialData.applicantId || '',
@@ -137,10 +148,12 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         freightChargeOption: initialData.freightChargeOption || "Freight Included",
         freightChargeAmount: initialData.freightChargeAmount?.toString() || '',
       });
-      if (initialData.connectedLcId) {
+      if (initialData.connectedLcId && lcOptions.length > 0) { // Check lcOptions loaded
          const selectedLc = lcOptions.find(opt => opt.value === initialData.connectedLcId);
          if (selectedLc && selectedLc.issueDate) {
            setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
+         } else {
+           setSelectedLcIssueDate(null);
          }
       } else {
         setSelectedLcIssueDate(null);
@@ -150,14 +163,14 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const watchedConnectedLcId = form.watch("connectedLcId");
   React.useEffect(() => {
-    if (watchedConnectedLcId) {
+    if (watchedConnectedLcId && lcOptions.length > 0) { // Check lcOptions loaded
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
       if (selectedLc && selectedLc.issueDate) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
       } else {
         setSelectedLcIssueDate(null);
       }
-    } else {
+    } else if (!watchedConnectedLcId) {
       setSelectedLcIssueDate(null);
     }
   }, [watchedConnectedLcId, lcOptions]);
@@ -302,7 +315,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '' });
   };
 
-  if (isLoadingDropdowns) {
+  if (isLoadingDropdowns && !initialData) { // Show loading only if initialData isn't even there yet
     return (
       <div className="flex items-center justify-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -454,7 +467,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                       control={form.control}
                       name={`lineItems.${index}.slNo`}
                       render={({ field }) => (
-                        <Input placeholder="SL" {...field} className="h-9"/>
+                        <Input placeholder="SL" {...field} value={field.value ?? ''} className="h-9"/>
                       )}
                     />
                   </TableCell>
@@ -464,7 +477,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                       name={`lineItems.${index}.modelNo`}
                       render={({ field }) => (
                         <>
-                          <Input placeholder="Model No." {...field} className="h-9"/>
+                          <Input placeholder="Model No." {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.modelNo?.message}</FormMessage>
                         </>
                       )}
@@ -476,7 +489,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                       name={`lineItems.${index}.qty`}
                       render={({ field }) => (
                         <>
-                          <Input type="text" placeholder="Qty" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Qty" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
                         </>
                       )}
@@ -488,7 +501,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                       name={`lineItems.${index}.purchasePrice`}
                       render={({ field }) => (
                          <>
-                          <Input type="text" placeholder="Purchase Price" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Purchase Price" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.purchasePrice?.message}</FormMessage>
                         </>
                       )}
@@ -500,7 +513,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                       name={`lineItems.${index}.salesPrice`}
                       render={({ field }) => (
                         <>
-                          <Input type="text" placeholder="Sales Price" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Sales Price" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.salesPrice?.message}</FormMessage>
                         </>
                       )}
@@ -554,7 +567,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                     <FormItem>
                         <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Freight Amount</FormLabel>
                         <FormControl>
-                            <Input type="text" placeholder="Enter freight amount" {...field} />
+                            <Input type="text" placeholder="Enter freight amount" {...field} value={field.value ?? ''}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -592,3 +605,4 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
+
