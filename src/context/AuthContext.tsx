@@ -15,8 +15,8 @@ import type { UserRole, CompanyProfile } from '@/types';
 const SIMULATED_SUPER_ADMIN_EMAIL = 'mddoulat@gmail.com';
 const SIMULATED_ADMIN_EMAIL = 'commercial@smartsolution-bd.com'; 
 
-const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
+const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const router = useRouter();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
+    console.log("AuthContext: Attempting to fetch initial company profile. User UID:", auth.currentUser?.uid);
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
@@ -55,32 +56,30 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const profileData = profileDocSnap.data() as CompanyProfile;
         if (profileData.companyName) {
           setCompanyName(profileData.companyName);
-          localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profileData.companyName);
+          if (typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profileData.companyName);
         } else {
-           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
+           if (typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
            setCompanyName(DEFAULT_COMPANY_NAME);
         }
         if (profileData.companyLogoUrl) {
           setCompanyLogoUrl(profileData.companyLogoUrl);
-          localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profileData.companyLogoUrl);
+          if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profileData.companyLogoUrl);
         } else {
-            localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+            if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
             setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
         }
       } else {
-        // Fallback to localStorage if Firestore doc doesn't exist
-        const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
-        if (storedName) setCompanyName(storedName); else localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
-        const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
-        if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+        const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
+        if (storedName) setCompanyName(storedName); else if (typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
+        const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
+        if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
       }
     } catch (error) {
-      console.error("Error fetching company profile from Firestore:", error);
-      // Fallback to localStorage on error
-      const storedName = localStorage.getItem(COMPANY_NAME_STORAGE_KEY);
-      if (storedName) setCompanyName(storedName); else localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
-      const storedLogoUrl = localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY);
-      if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+      console.error("AuthContext: Error fetching company profile from Firestore:", error);
+      const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
+      if (storedName) setCompanyName(storedName); else if (typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
+      const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
+      if (storedLogoUrl) setCompanyLogoUrl(storedLogoUrl); else if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
     }
   }, []);
 
@@ -172,14 +171,17 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
+ const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
     if (profile.companyName !== undefined) {
       setCompanyName(profile.companyName);
-      localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profile.companyName);
+      if (typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, profile.companyName);
     }
     if (profile.companyLogoUrl !== undefined) {
       setCompanyLogoUrl(profile.companyLogoUrl);
-      localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profile.companyLogoUrl);
+      if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profile.companyLogoUrl);
+    } else if (profile.companyLogoUrl === null) { // Explicitly handle clearing the logo
+        setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL); // Revert to default or an empty string
+        if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
     }
   }, []);
   

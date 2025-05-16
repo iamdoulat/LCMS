@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Loader2, Save } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, auth } from '@/lib/firebase/config'; // Import auth
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Make sure Label is imported
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -39,38 +39,45 @@ const companySetupSchema = z.object({
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
 
+const DEFAULT_COMPANY_NAME = 'Smart Solution';
+const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
+const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
+const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
+
 export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile } = useAuth();
   
-  // Local state for previewing the logo URL from the input field
-  const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl);
+  const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
     defaultValues: {
-      companyName: '',
-      address: '',
+      companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
+      address: DEFAULT_ADDRESS,
       contactPerson: '',
       cellNumber: '',
-      emailId: '',
+      emailId: contextCompanyName || DEFAULT_EMAIL,
       binNumber: '',
       tinNumber: '',
-      companyLogoUrl: '',
+      companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
     },
   });
 
   React.useEffect(() => {
     const fetchCompanyData = async () => {
       setIsLoadingData(true);
+      console.log("CompanySetupForm: Attempting to fetch company profile. User UID:", auth.currentUser?.uid);
       try {
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
-        let initialProfileData: Partial<CompanySetupFormValues> = {
+        
+        let initialProfileData: CompanySetupFormValues = {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          address: DEFAULT_ADDRESS,
-          emailId: DEFAULT_EMAIL,
+          address: DEFAULT_ADDRESS, // Default if not found
+          emailId: DEFAULT_EMAIL, // Default if not found
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           contactPerson: '',
           cellNumber: '',
@@ -90,22 +97,21 @@ export function CompanySetupForm() {
             tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           };
-          // Update context if Firestore has more recent data than localStorage might have initialized it with
-           if (data.companyName !== contextCompanyName || data.companyLogoUrl !== contextCompanyLogoUrl) {
-             updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
-          }
+        } else {
+          console.log("Company profile document does not exist in Firestore. Using defaults/context values.");
         }
         
         form.reset(initialProfileData);
         setCurrentLogoUrlForPreview(initialProfileData.companyLogoUrl);
 
       } catch (error) {
-        console.error("Error fetching company profile:", error);
+        console.error("CompanySetupForm: Error fetching company profile from Firestore:", error);
         Swal.fire("Error", "Could not load company profile from Firestore. Using default or cached values.", "error");
+        // Fallback to context or defaults if Firestore fetch fails
         form.reset({
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           address: DEFAULT_ADDRESS,
-          emailId: DEFAULT_EMAIL,
+          emailId: contextCompanyName || DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           contactPerson: '',
           cellNumber: '',
@@ -117,12 +123,30 @@ export function CompanySetupForm() {
         setIsLoadingData(false);
       }
     };
-    fetchCompanyData();
+    if(auth.currentUser) { // Ensure user is loaded before fetching
+        fetchCompanyData();
+    } else {
+        // Handle case where user is not loaded, perhaps wait or use default
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            if (user) {
+                fetchCompanyData();
+                unsubscribe(); // Unsubscribe after first auth state change
+            } else if (!auth.currentUser && !isLoadingData) { // If still no user and not loading, probably unauth access
+                setIsLoadingData(false); // Stop loading
+                form.reset({ // Use defaults
+                    companyName: DEFAULT_COMPANY_NAME,
+                    address: DEFAULT_ADDRESS,
+                    emailId: DEFAULT_EMAIL,
+                    companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
+                    contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+                });
+                setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
+            }
+        });
+        return () => unsubscribe(); // Cleanup listener
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, updateCompanyProfile]); // Removed contextCompanyName and contextCompanyLogoUrl to avoid re-fetch loop
-
-
-  // Removed useEffect that watched form.watch("companyLogoUrl") for real-time preview
+  }, [form.reset, contextCompanyName, contextCompanyLogoUrl]); // Dependencies for re-fetch or re-init
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
@@ -135,25 +159,22 @@ export function CompanySetupForm() {
       emailId: data.emailId || undefined,
       binNumber: data.binNumber || undefined,
       tinNumber: data.tinNumber || undefined,
-      companyLogoUrl: data.companyLogoUrl || undefined,
+      companyLogoUrl: data.companyLogoUrl || undefined, // Save as undefined if empty
       updatedAt: serverTimestamp(),
     };
 
-    // Filter out undefined fields manually for good measure
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof CompanyProfile] === undefined) {
         delete dataToSave[key as keyof CompanyProfile];
       }
     });
 
-
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
-      // Update AuthContext and localStorage AFTER successful save
-      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl });
-      setCurrentLogoUrlForPreview(data.companyLogoUrl); // Update preview after successful save
+      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl || undefined });
+      setCurrentLogoUrlForPreview(data.companyLogoUrl || undefined);
 
       Swal.fire({
         title: "Company Information Saved!",
@@ -175,6 +196,15 @@ export function CompanySetupForm() {
     }
   }
 
+  // Watch the URL input to update the preview locally on the form
+  const watchedLogoUrl = form.watch("companyLogoUrl");
+  React.useEffect(() => {
+    if (watchedLogoUrl !== currentLogoUrlForPreview) {
+      setCurrentLogoUrlForPreview(watchedLogoUrl);
+    }
+  }, [watchedLogoUrl, currentLogoUrlForPreview]);
+
+
   if (isLoadingData) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -183,12 +213,6 @@ export function CompanySetupForm() {
       </div>
     );
   }
-  
-  const DEFAULT_COMPANY_NAME = 'Smart Solution';
-  const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
-  const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
-  const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-
 
   return (
     <Form {...form}>
@@ -235,6 +259,7 @@ export function CompanySetupForm() {
                   type="url" 
                   placeholder="https://example.com/logo.png" 
                   {...field} 
+                  value={field.value || ""} // Ensure controlled component by providing empty string for null/undefined
                 />
               </FormControl>
               <FormDescription>
@@ -244,7 +269,7 @@ export function CompanySetupForm() {
             </FormItem>
           )}
         />
-        {currentLogoUrlForPreview && currentLogoUrlForPreview.startsWith('http') && ( // Only render if URL is non-empty and looks like a URL
+         {currentLogoUrlForPreview && currentLogoUrlForPreview.trim() !== "" && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
           <div className="space-y-2">
             <Label>Logo Preview (32x32)</Label>
             <Image 
@@ -255,12 +280,12 @@ export function CompanySetupForm() {
               className="rounded-sm border object-contain"
               onError={() => {
                 console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
-                // Optionally set currentLogoUrlForPreview to "" or a placeholder error image URL here
               }}
               data-ai-hint="company logo"
             />
           </div>
         )}
+
 
         <Separator />
 
@@ -272,7 +297,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Contact Person</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter name of the primary contact" {...field} />
+                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -285,7 +310,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Cell Number</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -300,7 +325,7 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Email ID</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="contact@company.com" {...field} />
+                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -315,7 +340,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>BIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Business Identification Number" {...field} />
+                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -328,7 +353,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>TIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Taxpayer Identification Number" {...field} />
+                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -357,4 +382,3 @@ export function CompanySetupForm() {
     </Form>
   );
 }
-
