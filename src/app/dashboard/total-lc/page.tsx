@@ -67,8 +67,12 @@ const sortOptions = [
   { value: "latestShipmentDate", label: "Latest Shipment Date" },
   { value: "amount", label: "Amount" },
   { value: "status", label: "Status" },
+  { value: "year", label: "Year" },
 ];
 
+const yearFilterOptions = ["All Years", ...Array.from({ length: 11 }, (_, i) => (2020 + i).toString())]; // 2020 to 2030
+
+const ALL_YEARS_VALUE = "All Years";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
@@ -85,6 +89,7 @@ export default function TotalLCPage() {
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
+  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
@@ -169,6 +174,11 @@ export default function TotalLCPage() {
     if (filterStatus) {
       filtered = filtered.filter(lc => lc.status === filterStatus);
     }
+    if (filterYear && filterYear !== ALL_YEARS_VALUE) {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(lc => lc.year === yearNum);
+    }
+
 
     if (sortBy) {
       filtered.sort((a, b) => {
@@ -185,7 +195,7 @@ export default function TotalLCPage() {
           } catch { /* ignore parsing error, will compare as strings or fall through */ }
         }
         
-        if (sortBy === 'amount') {
+        if (sortBy === 'amount' || sortBy === 'year') { // Add 'year' here
             valA = Number(valA) || 0;
             valB = Number(valB) || 0;
         }
@@ -197,7 +207,7 @@ export default function TotalLCPage() {
     }
     setDisplayedLcEntries(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, sortBy, sortOrder]);
+  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
     if (!lcId) {
@@ -245,6 +255,7 @@ export default function TotalLCPage() {
     setFilterBeneficiaryId('');
     setFilterShipmentDate(null);
     setFilterStatus('');
+    setFilterYear(ALL_YEARS_VALUE);
     setSortBy('lcIssueDate');
     setSortOrder('desc');
     setCurrentPage(1);
@@ -270,15 +281,15 @@ export default function TotalLCPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; // Max number of page buttons to show (excluding Prev/Next and potential ellipsis)
+    const maxPagesToShow = 5; 
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { // Show all pages if total is small
+    if (totalPages <= maxPagesToShow + 2) { 
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); // Always show first page
+      pageNumbers.push(1); 
 
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
@@ -302,7 +313,7 @@ export default function TotalLCPage() {
         pageNumbers.push("...");
       }
 
-      pageNumbers.push(totalPages); // Always show last page
+      pageNumbers.push(totalPages); 
     }
     return pageNumbers;
   };
@@ -336,7 +347,7 @@ export default function TotalLCPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter & Sort Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1">
                   <label htmlFor="lcNumberFilter" className="text-sm font-medium">L/C Number</label>
                   <Input
@@ -375,6 +386,20 @@ export default function TotalLCPage() {
                     <SelectContent>
                       <SelectItem value={ALL_BENEFICIARIES_VALUE}>All Beneficiaries</SelectItem>
                       {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="space-y-1">
+                  <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
+                  <Select 
+                    value={filterYear} 
+                    onValueChange={(value) => setFilterYear(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Years" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -419,7 +444,7 @@ export default function TotalLCPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="pt-5">
+                 <div className="pt-5 xl:col-start-4">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -525,7 +550,7 @@ export default function TotalLCPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your Letters of Credit from Firestore. Filters are applied client-side. For very large datasets, server-side filtering would be more performant.
-                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -576,3 +601,4 @@ export default function TotalLCPage() {
     
 
     
+
