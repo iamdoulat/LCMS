@@ -60,23 +60,21 @@ export default function LogsPage() {
     } else if (!authLoading && userRole === "Super Admin") {
       // Only generate logs if they haven't been cleared previously in this session
       // or if the component mounts for the first time.
-      // This basic check doesn't persist across page reloads if logs are cleared.
-      // A more robust "cleared" state would require its own localStorage flag.
       if (allLogs.length === 0) {
         setAllLogs(generatePlaceholderLogs(100));
       }
     }
-  }, [userRole, authLoading, router, allLogs.length]); // Added allLogs.length
+  }, [userRole, authLoading, router, allLogs.length]); 
 
   const handleClearCache = () => {
     Swal.fire({
-      title: 'Clear Application Cache?',
-      html: "This will clear application-specific data from your browser's local storage (e.g., notification states, cached company profile) and clear the placeholder logs displayed on this page. <br/><br/> It <strong>will not</strong> clear your general browser history, cookies from other sites, or server-side data. You might be logged out if session persistence relies on local storage.",
+      title: 'Clear App Cache & Displayed Logs?',
+      html: "This will clear application-specific data from your browser's local storage (e.g., notification states, cached company profile) and clear the placeholder logs currently displayed on this page. <br/><br/> It <strong>will not</strong> clear your general browser history, cookies from other sites, or server-side data. You might be logged out if session persistence relies on local storage.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
       cancelButtonColor: 'hsl(var(--secondary))',
-      confirmButtonText: 'Yes, clear it!',
+      confirmButtonText: 'Yes, clear displayed logs & cache!',
       reverseButtons: true,
     }).then((result) => {
       if (result.isConfirmed) {
@@ -157,7 +155,7 @@ export default function LogsPage() {
                 Application Activity Logs
               </CardTitle>
               <CardDescription>
-                View placeholder activity logs. Actual logging requires backend integration.
+                View the latest 100 placeholder activity logs, sorted newest first. Actual logging requires backend integration.
               </CardDescription>
             </div>
             <Button onClick={handleClearCache} variant="outline">
