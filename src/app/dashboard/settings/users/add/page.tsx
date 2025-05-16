@@ -18,6 +18,9 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { UserRole } from '@/types';
+import { auth } from '@/lib/firebase/config'; // Import Firebase auth instance
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+
 
 const addUserSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
@@ -34,7 +37,7 @@ const addUserSchema = z.object({
 type AddUserFormValues = z.infer<typeof addUserSchema>;
 
 export default function AddUserPage() {
-  const { userRole: adminUserRole, loading: authLoading } = useAuth();
+  const { userRole: adminUserRole, loading: authLoading, user: adminUser } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -66,25 +69,47 @@ export default function AddUserPage() {
 
   const onSubmit = async (data: AddUserFormValues) => {
     setIsSubmitting(true);
-    
-    // Simulate backend call
-    console.log("Simulating backend user creation with data:", data);
+    try {
+      // Temporarily store admin's credentials if needed for re-authentication later
+      // This is complex and generally not recommended for client-side.
+      // The simpler flow is admin gets signed out.
+      const adminAuth = auth; // Use the global auth instance
 
-    Swal.fire({
-      title: "User Creation (Simulated Backend Call)",
-      html: `A request to create user <b>${data.displayName}</b> (${data.email}) with role <b>${data.role}</b> would be sent to the backend.
-             <br/><br/><strong>Note:</strong> Actual user creation in Firebase Authentication, password hashing, and role assignment (custom claims) must be performed by a secure backend function (e.g., Firebase Cloud Function) using the Firebase Admin SDK.
-             <br/>The admin performing this action remains logged in.`,
-      icon: "info",
-      confirmButtonText: "OK",
-    }).then(() => {
+      // Create the new user
+      const userCredential = await createUserWithEmailAndPassword(adminAuth, data.email, data.password);
+      const newUser = userCredential.user;
+
+      // Update the new user's profile with the display name
+      await updateProfile(newUser, { displayName: data.displayName });
+
+      // Sign out the newly created user (which also signs out the admin)
+      await signOut(adminAuth);
+      
+      Swal.fire({
+        title: "User Created in Firebase!",
+        html: `User <b>${data.displayName}</b> (${data.email}) has been created in Firebase Authentication.
+               <br/><br/><strong>IMPORTANT:</strong> You (the admin) have been signed out. Please log back in to continue.
+               <br/><br/>Role assignment (<b>${data.role}</b>) needs to be handled via backend custom claims.
+               <br/>Contact number is not stored in Firebase Auth.`,
+        icon: "success",
+        confirmButtonText: "OK, Re-login",
+      }).then(() => {
+        router.push('/login'); // Redirect admin to login page
+      });
       form.reset();
-      // Optionally, navigate back to user list or stay on page
-      // router.push('/dashboard/settings/users'); 
-    });
 
-    setIsSubmitting(false);
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      Swal.fire({
+        title: "User Creation Failed",
+        text: error.message || "Could not create user in Firebase Authentication.",
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   if (authLoading || (adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
     return (
@@ -112,15 +137,16 @@ export default function AddUserPage() {
             Add New User
           </CardTitle>
           <CardDescription>
-            Fill in the details below. Actual user creation requires backend integration.
+            Fill in the details below. This will create a new user in Firebase Authentication.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="default" className="mb-6 bg-amber-500/10 border-amber-500/30">
             <ShieldAlert className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-700 font-semibold">Backend Operation Required</AlertTitle>
+            <AlertTitle className="text-amber-700 font-semibold">Admin Sign-Out & Role Assignment</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              Creating a user with a password in Firebase Authentication, assigning roles (via custom claims), and storing additional details (like contact number in Firestore) must be performed by a secure backend function using the Firebase Admin SDK. This form simulates the data collection.
+              Creating a user here will sign you (the admin) out. You will need to log back in.
+              Assigning roles (e.g., "{form.getValues("role")}") requires backend logic using Firebase Admin SDK (Custom Claims). The contact number is not stored in Firebase Auth by this form.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -187,7 +213,7 @@ export default function AddUserPage() {
                       <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormDescription>
-                      Contact number is typically stored in a user profile database (e.g., Firestore), not directly in Firebase Auth.
+                      Contact number is not stored in Firebase Auth; it would require a separate database (e.g., Firestore) entry linked to the user.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -198,7 +224,7 @@ export default function AddUserPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign Role* (Simulated)</FormLabel>
+                    <FormLabel>Assign Role* (Note: Requires Backend)</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -226,7 +252,7 @@ export default function AddUserPage() {
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Create User (Simulated Backend Call)
+                    Create User in Firebase
                   </>
                 )}
               </Button>
