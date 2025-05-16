@@ -3,9 +3,9 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { Loader2, LogIn } from 'lucide-react'; // Briefcase removed
+import { Loader2, LogIn } from 'lucide-react'; 
 import Link from 'next/link';
-import Image from 'next/image'; // Added Image import
+import Image from 'next/image'; 
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { auth } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
@@ -155,13 +156,13 @@ export default function LoginPage() {
             <Image
               src={logoUrl}
               alt="LC Management System Logo"
-              width={56} // Adjusted for better fit within h-20 w-20 parent
+              width={56} 
               height={56}
               className="rounded-sm"
               priority
             />
           </div>
-          <CardTitle className="text-3xl font-bold text-primary">LC Management System Login</CardTitle>
+          <CardTitle className={cn("font-bold text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>LC Management System Login</CardTitle>
           <CardDescription>Access your Letter of Credit Management Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
