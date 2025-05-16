@@ -39,7 +39,7 @@ import {
   FileText,
   FileEdit,
   ImageIcon,
-  Package // Added Package icon
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -56,6 +56,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
     ],
   },
   {
@@ -92,8 +93,7 @@ const managementNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
       { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
-      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package }, // New Link
+      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
     ],
   },
 ];
@@ -335,5 +335,6 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
 
 
