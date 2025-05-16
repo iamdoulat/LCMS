@@ -12,7 +12,16 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Placeholder - In a real app, you'd fetch user data using userId
+// Placeholder data - actual user data requires backend implementation
+// In a real app, you'd fetch user data using userId via a backend Admin SDK call
+const initialPlaceholderUsers = [
+    { id: 'user1_abc', email: 'alice@example.com', displayName: 'Alice Wonderland', role: 'Admin' },
+    { id: 'user2_xyz', email: 'bob@example.com', displayName: 'Bob The Builder', role: 'Editor' },
+    { id: 'user3_123', email: 'carol@example.com', displayName: 'Carol Danvers', role: 'Viewer' },
+    { id: 'user4_mdd', email: 'mddoulat@gmail.com', displayName: 'Doulat (Super Admin)', role: 'Super Admin' },
+    { id: 'user5_css', email: 'commercial@smartsolution-bd.com', displayName: 'Commercial (Admin)', role: 'Admin' },
+  ];
+
 interface UserData {
   id: string;
   email?: string;
@@ -29,7 +38,7 @@ export default function EditUserPage() {
   const [userData, setUserData] = useState<UserData | null>(null); // Placeholder for fetched user data
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin") {
+    if (!authLoading && userRole !== "Super Admin") {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to edit users.',
@@ -40,12 +49,11 @@ export default function EditUserPage() {
         router.push('/dashboard/settings/users');
       });
     } else if (userId) {
-      // Simulate fetching user data
       setIsLoading(true);
       console.log(`Simulating fetch for user ID: ${userId}`);
+      // Simulate fetching user data from placeholder list
       setTimeout(() => {
-        // In a real app, fetch user data from Firebase Auth / Firestore using Admin SDK via backend
-        const foundUser = initialPlaceholderUsers.find(u => u.id === userId); // Using placeholder from users/page.tsx for demo
+        const foundUser = initialPlaceholderUsers.find(u => u.id === userId);
         if (foundUser) {
           setUserData(foundUser);
         } else {
@@ -62,7 +70,7 @@ export default function EditUserPage() {
   }, [userId, userRole, authLoading, router]);
 
 
-  if (authLoading || isLoading || (userRole !== "Super Admin" && userRole !== "Admin")) {
+  if (authLoading || isLoading || userRole !== "Super Admin") {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -70,16 +78,6 @@ export default function EditUserPage() {
       </div>
     );
   }
-
-  // Example placeholder data, in a real app, this might be fetched
-  const initialPlaceholderUsers = [
-    { id: 'user1_abc', email: 'alice@example.com', displayName: 'Alice Wonderland', role: 'Admin' },
-    { id: 'user2_xyz', email: 'bob@example.com', displayName: 'Bob The Builder', role: 'Editor' },
-    { id: 'user3_123', email: 'carol@example.com', displayName: 'Carol Danvers', role: 'Viewer' },
-    { id: 'user4_mdd', email: 'mddoulat@gmail.com', displayName: 'Doulat (Super Admin)', role: 'Super Admin' },
-    { id: 'user5_css', email: 'commercial@smartsolution-bd.com', displayName: 'Commercial (Admin)', role: 'Admin' },
-  ];
-
 
   if (!userData) {
     return (
@@ -95,8 +93,13 @@ export default function EditUserPage() {
     );
   }
 
-  // TODO: Implement a form here for editing user details (displayName, email, role via custom claims)
-  // This form would need a backend function using Firebase Admin SDK to update Firebase Auth.
+  const handleSaveChanges = () => {
+    Swal.fire({
+        title: 'Backend Required',
+        text: 'Updating another user\'s profile (Display Name, Email, Role/Custom Claims) requires a secure backend function using the Firebase Admin SDK. This action cannot be performed directly from the client-side.',
+        icon: 'info',
+    });
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -112,10 +115,10 @@ export default function EditUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserCog className="h-7 w-7 text-primary" />
-            Edit User Profile
+            Edit User Profile (Simulated)
           </CardTitle>
           <CardDescription>
-            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>.
+            Modify details for User ID: <span className="font-semibold text-foreground">{userId}</span>. Actual updates require backend.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,25 +126,45 @@ export default function EditUserPage() {
             <ShieldAlert className="h-5 w-5 text-amber-600" />
             <AlertTitle className="text-amber-700 font-semibold">Backend Required for Full Functionality</AlertTitle>
             <AlertDescription className="text-amber-700/90">
-              Editing user details (like email, password, or role) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page is a UI placeholder for such functionality.
+              Editing other users' details (like email, password, display name, or role) and saving them to Firebase Authentication requires secure backend operations using the Firebase Admin SDK. This page is a UI placeholder.
             </AlertDescription>
           </Alert>
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Display Name:</p>
-              <p className="text-lg text-foreground">{userData.displayName || 'N/A'}</p>
+              <label htmlFor="displayName" className="block text-sm font-medium text-muted-foreground">Display Name (Simulated)</label>
+              <input
+                type="text"
+                id="displayName"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-muted/50 cursor-not-allowed"
+                defaultValue={userData.displayName || ''}
+                disabled
+              />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Email:</p>
-              <p className="text-lg text-foreground">{userData.email || 'N/A'}</p>
+              <label htmlFor="email" className="block text-sm font-medium text-muted-foreground">Email (Simulated)</label>
+              <input
+                type="email"
+                id="email"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-muted/50 cursor-not-allowed"
+                defaultValue={userData.email || ''}
+                disabled
+              />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Simulated Role:</p>
-              <p className="text-lg text-foreground">{userData.role || 'N/A'}</p>
+              <label htmlFor="role" className="block text-sm font-medium text-muted-foreground">Role (Simulated)</label>
+              <select
+                id="role"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-muted/50 cursor-not-allowed"
+                defaultValue={userData.role || 'User'}
+                disabled
+              >
+                <option>Super Admin</option>
+                <option>Admin</option>
+                <option>User</option>
+              </select>
             </div>
-             {/* Placeholder for Edit Form */}
             <div className="pt-4">
-                <Button disabled>Save Changes (Backend Required)</Button>
+                <Button onClick={handleSaveChanges} disabled={userRole !== "Super Admin"}>Save Changes (Backend Required)</Button>
             </div>
           </div>
         </CardContent>
@@ -149,3 +172,5 @@ export default function EditUserPage() {
     </div>
   );
 }
+
+    

@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, Info, ShieldAlert, Loader2, UserPlus, FileEdit, Trash2, UserCog } from 'lucide-react';
+import { Users, Info, ShieldAlert, Loader2, UserPlus, FileEdit, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ export default function UserSettingsPage() {
   const [placeholderUsers, setPlaceholderUsers] = useState(initialPlaceholderUsers);
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin") {
+    if (!authLoading && userRole !== "Super Admin") { // Only Super Admins can see this page
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to manage users.',
@@ -44,9 +44,11 @@ export default function UserSettingsPage() {
 
   const handleEditUser = (userId: string) => {
     Swal.fire({
-      title: "Edit User (UI Placeholder)",
-      text: `Navigation to edit page for user ID ${userId} would occur here. Full implementation requires backend.`,
+      title: "Redirecting to Edit User (UI Placeholder)",
+      text: `Navigation to edit page for user ID ${userId} will occur. Full user data editing requires backend integration with Firebase Admin SDK.`,
       icon: "info",
+      timer: 2500,
+      showConfirmButton: false,
     });
     router.push(`/dashboard/settings/users/${userId}/edit`);
   };
@@ -54,7 +56,7 @@ export default function UserSettingsPage() {
   const handleDeleteUser = (userId: string, userName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the user "${userName || userId}". (This is a UI simulation - actual deletion requires backend).`,
+      text: `This action cannot be undone. This will permanently delete the user "${userName || userId}" from the list. (This is a UI simulation - actual deletion from Firebase Authentication requires backend).`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
@@ -67,21 +69,21 @@ export default function UserSettingsPage() {
         setPlaceholderUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
         Swal.fire(
           'Deleted (Simulated)!',
-          `User ${userName || userId} has been removed from this list. Actual deletion requires backend integration with Firebase Admin SDK.`,
+          `User ${userName || userId} has been removed from this list. Actual deletion from Firebase Authentication requires backend integration with Firebase Admin SDK.`,
           'success'
         );
         // TODO: Implement actual Firebase Admin SDK call via a backend function to delete user
         // try {
         //   // Example: await callBackendFunction('deleteUser', { userId });
         // } catch (error: any) {
-        //   Swal.fire("Error", `Could not delete user: ${error.message}`, "error");
+        //   Swal.fire("Error", `Could not delete user from Firebase: ${error.message}`, "error");
         // }
       }
     });
   };
 
 
-  if (authLoading || (userRole !== "Super Admin" && userRole !== "Admin")) {
+  if (authLoading || userRole !== "Super Admin") {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -98,7 +100,7 @@ export default function UserSettingsPage() {
             User Management
           </CardTitle>
           <CardDescription>
-            View and manage user accounts, roles, and permissions for LC Vision.
+            View and manage user accounts, roles, and permissions for LC Vision. (Limited functionality without backend).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -107,13 +109,13 @@ export default function UserSettingsPage() {
             <AlertTitle className="text-primary font-semibold">Important Security Note & Feature Scope</AlertTitle>
             <AlertDescription className="text-primary/90">
               Displaying a full list of users from Firebase Authentication, creating new users, editing roles, and deleting users are administrative actions that **require a secure backend (e.g., Firebase Cloud Functions with Admin SDK).**
-              The data and actions below are for UI demonstration purposes. User roles are currently simulated based on email.
+              The data and actions below are for UI demonstration purposes and use placeholder data. User roles are currently simulated based on email.
             </AlertDescription>
           </Alert>
 
           <div className="mb-4 flex justify-end">
             <Link href="/dashboard/settings/users/add" passHref>
-              <Button variant="default" disabled={userRole !== "Super Admin" && userRole !== "Admin"}>
+              <Button variant="default" disabled={userRole !== "Super Admin"}>
                  <UserPlus className="mr-2 h-4 w-4" /> Add New User
               </Button>
             </Link>
@@ -142,7 +144,7 @@ export default function UserSettingsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditUser(user.id)} disabled={userRole !== "Super Admin" && userRole !== "Admin"}>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditUser(user.id)} disabled={userRole !== "Super Admin"}>
                                 <FileEdit className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
@@ -150,7 +152,7 @@ export default function UserSettingsPage() {
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
-                               <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.displayName)} disabled={userRole !== "Super Admin" && userRole !== "Admin"}>
+                               <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.displayName)} disabled={userRole !== "Super Admin"}>
                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
@@ -178,3 +180,5 @@ export default function UserSettingsPage() {
     </div>
   );
 }
+
+    
