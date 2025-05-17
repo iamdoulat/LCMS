@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Banknote, BarChart3, CalendarDays, DollarSign, Loader2, Save, Store } from 'lucide-react';
+import { Banknote, BarChart3, CalendarDays, DollarSign, Loader2, Save, Store, Link as LinkIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
@@ -19,17 +19,22 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+
 
 const beneficiarySchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
   headOfficeAddress: z.string().min(1, "Head office address is required"),
+  bankInformation: z.string().optional(),
   contactPersonName: z.string().min(1, "Contact person name is required"),
   cellNumber: z.string().min(10, "Cell number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid cell number format"),
   emailId: z.string().email("Invalid email address"),
   website: z.string().url("Invalid URL format").optional().or(z.literal('')),
   brandName: z.string().min(1, "Brand name is required"),
-  bankInformation: z.string().optional(),
-  // brandLogoFile: z.instanceof(File).optional().nullable() // Omitted for edit simplicity
+  brandLogoUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Brand Logo" }).optional()
+  ),
 });
 
 type BeneficiaryEditFormValues = z.infer<typeof beneficiarySchema>;
@@ -48,18 +53,20 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
   const [selectedCommissionYear, setSelectedCommissionYear] = React.useState<string>(currentSystemYear.toString());
   const [totalYearlyCommission, setTotalYearlyCommission] = React.useState<number>(0);
   const [isLoadingCommission, setIsLoadingCommission] = React.useState<boolean>(false);
+  const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(initialData?.brandLogoUrl || undefined);
   
   const form = useForm<BeneficiaryEditFormValues>({
     resolver: zodResolver(beneficiarySchema),
     defaultValues: {
       beneficiaryName: initialData?.beneficiaryName || '',
       headOfficeAddress: initialData?.headOfficeAddress || '',
+      bankInformation: initialData?.bankInformation || '',
       contactPersonName: initialData?.contactPersonName || '',
       cellNumber: initialData?.cellNumber || '',
       emailId: initialData?.emailId || '',
       website: initialData?.website || '',
       brandName: initialData?.brandName || '',
-      bankInformation: initialData?.bankInformation || '',
+      brandLogoUrl: initialData?.brandLogoUrl || '',
     }
   });
 
@@ -68,15 +75,26 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
       form.reset({
         beneficiaryName: initialData.beneficiaryName || '',
         headOfficeAddress: initialData.headOfficeAddress || '',
+        bankInformation: initialData.bankInformation || '',
         contactPersonName: initialData.contactPersonName || '',
         cellNumber: initialData.cellNumber || '',
         emailId: initialData.emailId || '',
         website: initialData.website || '',
         brandName: initialData.brandName || '',
-        bankInformation: initialData.bankInformation || '',
+        brandLogoUrl: initialData.brandLogoUrl || '',
       });
+      setCurrentLogoUrlForPreview(initialData.brandLogoUrl || undefined);
     }
   }, [initialData, form]);
+
+  const watchedBrandLogoUrl = form.watch("brandLogoUrl");
+  React.useEffect(() => {
+    if (watchedBrandLogoUrl && (watchedBrandLogoUrl.startsWith('http://') || watchedBrandLogoUrl.startsWith('https://'))) {
+        setCurrentLogoUrlForPreview(watchedBrandLogoUrl);
+    } else if (!watchedBrandLogoUrl) {
+        setCurrentLogoUrlForPreview(undefined);
+    }
+  }, [watchedBrandLogoUrl]);
 
   React.useEffect(() => {
     const fetchCommissionData = async () => {
@@ -119,9 +137,10 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
   async function onSubmit(data: BeneficiaryEditFormValues) {
     setIsSubmitting(true);
 
-    const dataToUpdate: Partial<Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'>> & { updatedAt: any } = {
+    const dataToUpdate: Partial<Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: any } = {
       ...data,
       bankInformation: data.bankInformation || undefined,
+      brandLogoUrl: data.brandLogoUrl || undefined,
       updatedAt: serverTimestamp(),
     };
 
@@ -200,6 +219,23 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="bankInformation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center">
+                <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
+                Bank Information
+              </FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter beneficiary's bank details (name, account number, SWIFT, etc.)" {...field} rows={4} value={field.value ?? ''}/>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -250,7 +286,7 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
               <FormItem>
                 <FormLabel>Website URL</FormLabel>
                 <FormControl>
-                  <Input type="url" placeholder="https://www.beneficiary.com" {...field} />
+                  <Input type="url" placeholder="https://www.beneficiary.com" {...field} value={field.value ?? ''}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -258,39 +294,46 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
           />
         </div>
         
-        {initialData.brandLogoUrl && (
-            <FormItem>
-                <FormLabel>Current Brand Logo</FormLabel>
-                <div className="mt-2">
-                    <Image 
-                        src={initialData.brandLogoUrl} 
-                        alt={initialData.brandName || 'Brand Logo'} 
-                        className="h-20 w-auto rounded-md border object-contain" 
-                        width={100}
-                        height={80}
-                        data-ai-hint="brand logo"
-                    />
-                </div>
-                <FormDescription>Logo re-upload is not implemented in this form version.</FormDescription>
-            </FormItem>
-        )}
-
         <FormField
           control={form.control}
-          name="bankInformation"
+          name="brandLogoUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center">
-                <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
-                Bank Information
-              </FormLabel>
+              <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Brand Logo URL</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter beneficiary's bank details (name, account number, SWIFT, etc.)" {...field} rows={4}/>
+                <Input 
+                  type="url" 
+                  placeholder="https://example.com/logo.png" 
+                  {...field} 
+                  value={field.value || ""}
+                />
               </FormControl>
+              <FormDescription>
+                Enter the direct URL to the brand logo.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {currentLogoUrlForPreview && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
+          <div className="space-y-2">
+            <Label>Logo Preview (max height 80px)</Label>
+            <div className="mt-2">
+                <Image 
+                    src={currentLogoUrlForPreview} 
+                    alt={form.getValues("brandName") || 'Brand Logo Preview'} 
+                    className="h-20 w-auto rounded-md border object-contain" 
+                    width={100} // Provide a base width, height will be auto or constrained by h-20
+                    height={80}
+                    onError={() => {
+                        console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
+                    }}
+                    data-ai-hint="brand logo"
+                />
+            </div>
+          </div>
+        )}
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (

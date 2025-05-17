@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Banknote, Loader2, Store } from 'lucide-react';
+import { Banknote, Loader2, Store, Link as LinkIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -15,23 +15,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput'; // Assuming you have this component for file uploads
 
 const supplierSchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
   headOfficeAddress: z.string().min(1, "Head office address is required"),
+  bankInformation: z.string().optional(),
   contactPersonName: z.string().min(1, "Contact person name is required"),
   cellNumber: z.string().min(10, "Cell number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid cell number format"),
   emailId: z.string().email("Invalid email address"),
   website: z.string().url("Invalid URL format").optional().or(z.literal('')),
   brandName: z.string().min(1, "Brand name is required"),
-  brandLogoFile: z.instanceof(File).optional().nullable()
-    .refine(file => !file || file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`)
-    .refine(
-      file => !file || ["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(file.type),
-      ".jpg, .jpeg, .png, .webp and .svg files are accepted."
-    ),
-  bankInformation: z.string().optional(),
+  brandLogoUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Brand Logo" }).optional()
+  ),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -43,49 +40,32 @@ export function AddSupplierForm() {
     defaultValues: {
       beneficiaryName: '',
       headOfficeAddress: '',
+      bankInformation: '',
       contactPersonName: '',
       cellNumber: '',
       emailId: '',
       website: '',
       brandName: '',
-      brandLogoFile: null,
-      bankInformation: '',
+      brandLogoUrl: '',
     },
   });
 
   async function onSubmit(data: SupplierFormValues) {
     setIsSubmitting(true);
-
-    // Exclude brandLogoFile from dataToSave, handle file upload separately (TODO)
-    const { brandLogoFile, ...restOfData } = data;
-
-    const dataToSave: Omit<Supplier, 'id' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
-      ...restOfData,
-      bankInformation: data.bankInformation || undefined, // Ensure empty string becomes undefined
+    
+    const dataToSave: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+      ...data,
+      bankInformation: data.bankInformation || undefined,
+      brandLogoUrl: data.brandLogoUrl || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    // Filter out undefined or empty optional fields
     (Object.keys(dataToSave) as Array<keyof typeof dataToSave>).forEach(key => {
         if (dataToSave[key] === undefined || dataToSave[key] === '') {
             delete dataToSave[key];
         }
     });
-
-    if (brandLogoFile) {
-      console.log("Brand Logo File selected:", brandLogoFile.name, brandLogoFile.size, brandLogoFile.type);
-      // TODO: Implement Firebase Storage upload for brandLogoFile here
-      // After upload, get the downloadURL and add it to a new version of dataToSave as brandLogoUrl
-      // For now, brandLogoUrl will not be saved.
-      Swal.fire({
-        title: "Logo Note",
-        text: "Brand logo file was selected but actual upload to Firebase Storage is not yet implemented in this form. Only text data will be saved.",
-        icon: "info",
-        timer: 4000,
-        showConfirmButton: true,
-      });
-    }
 
     try {
       const docRef = await addDoc(collection(firestore, "suppliers"), dataToSave);
@@ -155,6 +135,23 @@ export function AddSupplierForm() {
             </FormItem>
           )}
         />
+        
+        <FormField
+          control={form.control}
+          name="bankInformation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center">
+                <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
+                Bank Information
+              </FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter beneficiary's bank details (name, account number, SWIFT, etc.)" {...field} rows={4} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -216,36 +213,21 @@ export function AddSupplierForm() {
 
         <FormField
           control={form.control}
-          name="brandLogoFile"
+          name="brandLogoUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Brand Logo</FormLabel>
+              <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Brand Logo URL</FormLabel>
               <FormControl>
-                <FileInput
-                  onFileChange={(file) => field.onChange(file)}
-                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                <Input 
+                  type="url" 
+                  placeholder="https://example.com/logo.png" 
+                  {...field} 
+                  value={field.value || ""}
                 />
               </FormControl>
               <FormDescription>
-                Upload the brand logo (max 5MB, JPG, PNG, WEBP, SVG). File upload to storage not yet implemented.
+                Enter the direct URL to the brand logo.
               </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="bankInformation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center">
-                <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
-                Bank Information
-              </FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter beneficiary's bank details (name, account number, SWIFT, etc.)" {...field} rows={4}/>
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}
