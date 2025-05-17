@@ -36,8 +36,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE__";
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), // This will store Applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // This will store Beneficiary ID
+  applicantId: z.string().min(1, "Applicant Name is required"), 
+  beneficiaryId: z.string().min(1, "Beneficiary Name is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -58,11 +58,11 @@ const lcEntrySchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
-  shippingDocumentsUrl: z.preprocess(
+  finalLcUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
-  finalLcUrl: z.preprocess(
+  shippingDocumentsUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -159,8 +159,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '', // Will store applicant ID
-      beneficiaryName: '', // Will store beneficiary ID
+      applicantId: '', 
+      beneficiaryId: '', 
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -252,13 +252,13 @@ export function NewLCEntryForm() {
     const lcIssueDateObj = data.lcIssueDate ? new Date(data.lcIssueDate) : new Date();
     const extractedYear = lcIssueDateObj.getFullYear();
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantName, 
+      applicantId: data.applicantId, 
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryName, 
+      beneficiaryId: data.beneficiaryId, 
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
       amount: data.amount,
@@ -321,7 +321,7 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
-    // Ensure optional fields that are empty strings become undefined
+    
     (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
       if (dataToSave[key] === '') {
         dataToSave[key] = undefined;
@@ -399,7 +399,7 @@ export function NewLCEntryForm() {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url); // Basic validation
+        new URL(url); 
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -409,7 +409,7 @@ export function NewLCEntryForm() {
     }
   };
 
-  const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+  const sectionHeadingClass = "font-semibold text-xl text-primary border-b pb-2 mb-4 flex items-center";
 
 
   return (
@@ -422,7 +422,7 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName" // Stores applicant ID
+            name="applicantId" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
@@ -442,7 +442,7 @@ export function NewLCEntryForm() {
           />
            <FormField
             control={form.control}
-            name="beneficiaryName" // Stores beneficiary ID
+            name="beneficiaryId" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
@@ -466,7 +466,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -503,7 +503,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -591,7 +591,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || "Draft"}>
+                <Select onValueChange={field.onChange} value={field.value ?? "Draft"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select L/C status" />
@@ -819,7 +819,7 @@ export function NewLCEntryForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed*</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "No"}>
+              <Select onValueChange={field.onChange} value={field.value ?? "No"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select option" />
@@ -954,7 +954,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />

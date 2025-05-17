@@ -378,7 +378,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>Dashboard Overview</h1>
+        <h1 className="font-bold text-2xl lg:text-3xl text-primary">Dashboard Overview</h1>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
@@ -408,7 +408,7 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="xl:col-span-3"
+          className="xl:col-span-2"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -440,7 +440,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -467,7 +467,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
                 <Search className="h-6 w-6 text-primary" />
                 Search L/C
               </CardTitle>
@@ -493,7 +493,7 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -535,7 +535,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -588,7 +588,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -643,5 +643,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-

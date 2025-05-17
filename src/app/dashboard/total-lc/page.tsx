@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
-import { lcStatusOptions, currencyOptions } from '@/types'; // Ensure lcStatusOptions is imported
+import { lcStatusOptions, currencyOptions } from '@/types'; 
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -27,7 +27,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': // Updated status name
+    case 'Shipment Pending': 
       return 'default';
     case 'Shipping going on':
       return 'default'; 
@@ -324,7 +324,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C Overview
               </CardTitle>
@@ -492,7 +492,7 @@ export default function TotalLCPage() {
                           className={
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' :
                             lc.status === 'Done' ? 'bg-green-600 text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black' : '' // Updated status name
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black' : '' 
                           }
                         >
                           {lc.status || 'N/A'}
@@ -514,9 +514,7 @@ export default function TotalLCPage() {
                                 <span className="sr-only">Edit L/C</span>
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit L/C</p>
-                            </TooltipContent>
+                            <TooltipContent><p>Edit L/C</p></TooltipContent>
                           </Tooltip>
                            <Tooltip>
                             <TooltipTrigger asChild>
@@ -531,9 +529,7 @@ export default function TotalLCPage() {
                                   <span className="sr-only">Delete L/C</span>
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete L/C</p>
-                            </TooltipContent>
+                            <TooltipContent><p>Delete L/C</p></TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
@@ -600,5 +596,3 @@ export default function TotalLCPage() {
     
 
     
-
-

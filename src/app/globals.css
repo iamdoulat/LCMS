@@ -12,96 +12,96 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 96%; /* Lighter grey */
-    --foreground: 220 15% 20%; /* Darker, less blue grey for text */
+    --background: 220 40% 10%; /* Dark Navy Blue */
+    --foreground: 0 0% 98%; /* Almost White */
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 20%;
+    --card: 220 40% 14%; /* Slightly Lighter Dark Navy */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 20%;
+    --popover: 220 40% 12%; /* Darker Popover Background */
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 190 70% 48%; /* Vibrant Teal */
+    --primary: 210 100% 60%; /* Vibrant Blue */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 210 20% 92%; /* Lighter grey for secondary elements */
-    --secondary-foreground: 220 10% 30%; /* Darker grey for secondary text */
+    --secondary: 220 30% 25%; /* Medium Dark Blue/Grey */
+    --secondary-foreground: 0 0% 90%; /* Light Grey */
 
-    --muted: 210 20% 88%; /* Muted grey */
-    --muted-foreground: 210 15% 45%;
+    --muted: 220 25% 20%; /* Darker Muted Blue/Grey */
+    --muted-foreground: 220 15% 55%; /* Medium Grey for Muted Text */
 
-    --accent: 250 65% 60%; /* Vibrant Purple */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 190 90% 55%; /* Bright Cyan/Teal */
+    --accent-foreground: 220 40% 8%; /* Dark text for contrast on Accent */
 
-    --destructive: 0 75% 55%; /* Slightly adjusted red */
+    --destructive: 0 75% 60%; /* Vivid Red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 210 15% 85%; /* Adjusted border color */
-    --input: 210 15% 85%;
-    --ring: 190 70% 48%; /* Teal for focus rings */
+    --border: 220 30% 25%; /* Medium Dark Blue/Grey Border */
+    --input: 220 30% 22%; /* Darker Input Background */
+    --ring: 210 100% 65%; /* Brighter Blue for Focus Rings */
 
-    --chart-1: 207 68% 53%; /* Blue */
-    --chart-2: 145 63% 49%; /* Green */
-    --chart-3: 35 85% 60%;  /* Orange */
-    --chart-4: 300 70% 65%; /* Pink/Magenta */
-    --chart-5: 55 75% 55%;  /* Yellow */
+    --chart-1: 210 90% 55%; /* Blue */
+    --chart-2: 150 80% 50%; /* Green */
+    --chart-3: 45 95% 55%;  /* Orange */
+    --chart-4: 280 85% 65%; /* Purple */
+    --chart-5: 60 90% 50%;  /* Yellow */
     --radius: 0.5rem;
 
-    /* Sidebar specific variables - Adjusted for new theme */
-    --sidebar-background: 220 12% 97%; 
-    --sidebar-foreground: 220 15% 25%; 
-    --sidebar-primary: 190 70% 48%; /* Teal */
+    /* Sidebar specific variables - Adjusted for new dark theme */
+    --sidebar-background: 220 40% 9%; 
+    --sidebar-foreground: 0 0% 95%; 
+    --sidebar-primary: 210 100% 60%; /* Vibrant Blue */
     --sidebar-primary-foreground: 0 0% 100%; 
-    --sidebar-accent: 210 20% 90%; 
-    --sidebar-accent-foreground: 220 10% 15%;
-    --sidebar-border: 210 15% 88%; 
-    --sidebar-ring: 190 70% 48%; 
+    --sidebar-accent: 220 30% 20%; 
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 30% 25%; 
+    --sidebar-ring: 210 100% 65%; 
   }
 
   .dark {
-    --background: 220 18% 10%; 
-    --foreground: 0 0% 96%; 
+    --background: 220 40% 10%; /* Dark Navy Blue */
+    --foreground: 0 0% 98%; /* Almost White */
 
-    --card: 220 18% 13%;
-    --card-foreground: 0 0% 96%;
+    --card: 220 40% 14%; /* Slightly Lighter Dark Navy */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 18% 13%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 220 40% 12%; /* Darker Popover Background */
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 190 65% 55%; /* Dark mode Teal */
-    --primary-foreground: 0 0% 100%; 
+    --primary: 210 100% 60%; /* Vibrant Blue */
+    --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 220 15% 20%; 
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 220 30% 25%; /* Medium Dark Blue/Grey */
+    --secondary-foreground: 0 0% 90%; /* Light Grey */
 
-    --muted: 220 15% 25%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 220 25% 20%; /* Darker Muted Blue/Grey */
+    --muted-foreground: 220 15% 55%; /* Medium Grey for Muted Text */
 
-    --accent: 250 60% 65%; /* Dark mode Purple */
-    --accent-foreground: 0 0% 100%;
+    --accent: 190 90% 55%; /* Bright Cyan/Teal */
+    --accent-foreground: 220 40% 8%; /* Dark text for contrast on Accent */
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 75% 60%; /* Vivid Red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 28%;
-    --input: 220 15% 28%;
-    --ring: 190 65% 55%; 
+    --border: 220 30% 25%; /* Medium Dark Blue/Grey Border */
+    --input: 220 30% 22%; /* Darker Input Background */
+    --ring: 210 100% 65%; /* Brighter Blue for Focus Rings */
     
-    --chart-1: 207 60% 60%;
-    --chart-2: 145 55% 55%;
-    --chart-3: 35 75% 65%;
-    --chart-4: 300 65% 70%;
-    --chart-5: 55 70% 60%;
+    --chart-1: 210 90% 55%;
+    --chart-2: 150 80% 50%;
+    --chart-3: 45 95% 55%;
+    --chart-4: 280 85% 65%;
+    --chart-5: 60 90% 50%;
 
     /* Sidebar specific variables for dark mode */
-    --sidebar-background: 220 15% 12%; 
-    --sidebar-foreground: 0 0% 90%; 
-    --sidebar-primary: 190 65% 55%; 
+    --sidebar-background: 220 40% 9%; 
+    --sidebar-foreground: 0 0% 95%; 
+    --sidebar-primary: 210 100% 60%; 
     --sidebar-primary-foreground: 0 0% 100%; 
-    --sidebar-accent: 220 15% 20%; 
-    --sidebar-accent-foreground: 0 0% 92%; 
-    --sidebar-border: 220 15% 22%; 
-    --sidebar-ring: 190 65% 55%; 
+    --sidebar-accent: 220 30% 20%; 
+    --sidebar-accent-foreground: 0 0% 95%; 
+    --sidebar-border: 220 30% 25%; 
+    --sidebar-ring: 210 100% 65%; 
   }
 }
 
@@ -178,7 +178,13 @@ body {
   }
 
   /* Override gradient text on titles for print */
-  .card-title.bg-gradient-to-r, /* Target specifically the gradient titles */
+  .card-title.text-primary, /* Target specifically the primary color titles */
+  h1.text-primary,
+  h2.text-primary,
+  h3.text-primary {
+    color: #000000 !important;
+  }
+  .card-title.bg-gradient-to-r, 
   h1.bg-gradient-to-r,
   h2.bg-gradient-to-r,
   h3.bg-gradient-to-r {
@@ -189,6 +195,7 @@ body {
     -webkit-text-fill-color: initial !important;
     text-fill-color: initial !important;
   }
+
 
   /* Ensure text in ShadCN badges is visible */
   .badge { /* General badge selector */

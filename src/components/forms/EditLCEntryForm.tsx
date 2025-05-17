@@ -33,10 +33,13 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 const NONE_COURIER_VALUE = "__NONE__";
+const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
+
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
+  applicantId: z.string().min(1, "Applicant Name is required"), 
+  beneficiaryId: z.string().min(1, "Beneficiary Name is required"), 
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -134,9 +137,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: { // Initialize all fields to prevent uncontrolled to controlled error
-      applicantName: '',
-      beneficiaryName: '',
+    defaultValues: { 
+      applicantId: '',
+      beneficiaryId: '',
       currency: 'USD',
       termsOfPay: '' as TermsOfPay,
       status: 'Draft',
@@ -208,16 +211,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("Fetched Applicant Options:", fetchedApplicants);
-
-
+        
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
           const data = doc.data() as SupplierDocument;
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
@@ -232,12 +232,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   React.useEffect(() => {
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("Initial L/C Data for Form:", initialData);
-      console.log("Setting Applicant ID in form:", initialData.applicantId || '');
-      console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId || '');
       form.reset({
-        applicantName: initialData.applicantId || '',
-        beneficiaryName: initialData.beneficiaryId || '',
+        applicantId: initialData.applicantId || '',
+        beneficiaryId: initialData.beneficiaryId || '',
         currency: initialData.currency || 'USD',
         termsOfPay: initialData.termsOfPay || '' as TermsOfPay,
         status: initialData.status || 'Draft',
@@ -316,13 +313,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   async function onSubmit(data: LCEditFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantName);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryName);
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
     const dataToUpdate: Partial<LCEntryDocument> = {
-      applicantId: data.applicantName,
+      applicantId: data.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
-      beneficiaryId: data.beneficiaryName,
+      beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       currency: data.currency,
       termsOfPay: data.termsOfPay,
@@ -385,7 +382,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    // Ensure optional fields that are empty strings become undefined
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
       if (dataToUpdate[key] === '') {
         delete dataToUpdate[key];
@@ -484,7 +480,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   };
 
-  const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+  const sectionHeadingClass = "font-semibold text-xl text-primary border-b pb-2 mb-4 flex items-center";
 
   return (
     <Form {...form}>
@@ -497,14 +493,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName" // Stores applicant ID
+            name="applicantId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
                  <Combobox
                   options={applicantOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value === '' ? PLACEHOLDER_APPLICANT_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
                   placeholder="Search Applicant..."
                   selectPlaceholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"}
                   emptyStateMessage="No applicant found."
@@ -517,14 +513,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
           <FormField
             control={form.control}
-            name="beneficiaryName" // Stores beneficiary ID
+            name="beneficiaryId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
                  <Combobox
                   options={beneficiaryOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value === '' ? PLACEHOLDER_BENEFICIARY_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                   placeholder="Search Beneficiary..."
                   selectPlaceholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"}
                   emptyStateMessage="No beneficiary found."
