@@ -18,7 +18,6 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-// Updated lcStatusOptions
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
@@ -33,10 +32,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantId: string; // Firestore ID of the customer
-  applicantName: string; // Name of the customer/applicant
-  beneficiaryId: string; // Firestore ID of the supplier
-  beneficiaryName: string; // Name of the supplier/beneficiary
+  applicantId: string;
+  applicantName: string;
+  beneficiaryId: string;
+  beneficiaryName: string;
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -71,7 +70,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // Changed from notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -137,7 +136,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // Changed from notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -190,7 +189,7 @@ export interface Supplier {
   website?: string;
   brandName: string;
   brandLogoUrl?: string;
-  bankInformation?: string;
+  bankInformation?: string; // Added field
   createdAt?: any;
   updatedAt?: any;
 }

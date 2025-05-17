@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Banknote, Loader2, Store } from 'lucide-react'; // Added Banknote
+import { Banknote, Loader2, Store } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileInput } from './FileInput';
+import { FileInput } from './FileInput'; // Assuming you have this component for file uploads
 
 const supplierSchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
@@ -59,8 +59,9 @@ export function AddSupplierForm() {
     // Exclude brandLogoFile from dataToSave, handle file upload separately (TODO)
     const { brandLogoFile, ...restOfData } = data;
 
-    const dataToSave: Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+    const dataToSave: Omit<Supplier, 'id' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       ...restOfData,
+      bankInformation: data.bankInformation || undefined, // Ensure empty string becomes undefined
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -77,14 +78,20 @@ export function AddSupplierForm() {
       // TODO: Implement Firebase Storage upload for brandLogoFile here
       // After upload, get the downloadURL and add it to a new version of dataToSave as brandLogoUrl
       // For now, brandLogoUrl will not be saved.
+      Swal.fire({
+        title: "Logo Note",
+        text: "Brand logo file was selected but actual upload to Firebase Storage is not yet implemented in this form. Only text data will be saved.",
+        icon: "info",
+        timer: 4000,
+        showConfirmButton: true,
+      });
     }
 
     try {
-      // The 'suppliers' collection will be created if it doesn't exist
       const docRef = await addDoc(collection(firestore, "suppliers"), dataToSave);
       Swal.fire({
         title: "Beneficiary Profile Saved!",
-        text: `Beneficiary data saved successfully to Firestore with ID: ${docRef.id}. Logo upload needs to be implemented.`,
+        text: `Beneficiary data saved successfully to Firestore with ID: ${docRef.id}.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
@@ -220,7 +227,7 @@ export function AddSupplierForm() {
                 />
               </FormControl>
               <FormDescription>
-                Upload the brand logo (max 5MB, JPG, PNG, WEBP, SVG).
+                Upload the brand logo (max 5MB, JPG, PNG, WEBP, SVG). File upload to storage not yet implemented.
               </FormDescription>
               <FormMessage />
             </FormItem>

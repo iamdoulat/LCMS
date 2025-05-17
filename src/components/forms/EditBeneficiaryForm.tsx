@@ -5,20 +5,20 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Banknote, BarChart3, CalendarDays, DollarSign, Loader2, Save, Store } from 'lucide-react'; // Added Banknote, BarChart3, CalendarDays, DollarSign
+import { Banknote, BarChart3, CalendarDays, DollarSign, Loader2, Save, Store } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
-import type { Supplier, SupplierDocument, ProformaInvoiceDocument } from '@/types'; // Added ProformaInvoiceDocument
+import type { Supplier, SupplierDocument, ProformaInvoiceDocument } from '@/types';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select components
-import { Separator } from '@/components/ui/separator'; // Added Separator
-import { cn } from '@/lib/utils'; // Added cn
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const beneficiarySchema = z.object({
   beneficiaryName: z.string().min(1, "Beneficiary name is required"),
@@ -29,7 +29,7 @@ const beneficiarySchema = z.object({
   website: z.string().url("Invalid URL format").optional().or(z.literal('')),
   brandName: z.string().min(1, "Brand name is required"),
   bankInformation: z.string().optional(),
-  // brandLogoFile: z.instanceof(File).optional().nullable() // Omitted for now to simplify edit
+  // brandLogoFile: z.instanceof(File).optional().nullable() // Omitted for edit simplicity
 });
 
 type BeneficiaryEditFormValues = z.infer<typeof beneficiarySchema>;
@@ -52,14 +52,14 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
   const form = useForm<BeneficiaryEditFormValues>({
     resolver: zodResolver(beneficiarySchema),
     defaultValues: {
-      beneficiaryName: '',
-      headOfficeAddress: '',
-      contactPersonName: '',
-      cellNumber: '',
-      emailId: '',
-      website: '',
-      brandName: '',
-      bankInformation: '',
+      beneficiaryName: initialData?.beneficiaryName || '',
+      headOfficeAddress: initialData?.headOfficeAddress || '',
+      contactPersonName: initialData?.contactPersonName || '',
+      cellNumber: initialData?.cellNumber || '',
+      emailId: initialData?.emailId || '',
+      website: initialData?.website || '',
+      brandName: initialData?.brandName || '',
+      bankInformation: initialData?.bankInformation || '',
     }
   });
 
@@ -94,7 +94,7 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
         const querySnapshot = await getDocs(q);
         let commissionSum = 0;
         querySnapshot.forEach((docSnap) => {
-          const pi = docSnap.data() as ProformaInvoiceDocument; // Ensure type assertion
+          const pi = docSnap.data() as ProformaInvoiceDocument;
           if (pi.piDate && new Date(pi.piDate).getFullYear() === parseInt(selectedCommissionYear)) {
             const purchasePrice = pi.totalPurchasePrice || 0;
             const salesPrice = pi.grandTotalSalesPrice || 0;
@@ -121,10 +121,10 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
 
     const dataToUpdate: Partial<Omit<Supplier, 'id' | 'brandLogoFile' | 'brandLogoUrl' | 'createdAt' | 'updatedAt'>> & { updatedAt: any } = {
       ...data,
+      bankInformation: data.bankInformation || undefined,
       updatedAt: serverTimestamp(),
     };
 
-    // Filter out undefined or empty optional fields so they are not stored in Firestore
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
         if (dataToUpdate[key] === undefined || dataToUpdate[key] === '') {
             delete dataToUpdate[key];
