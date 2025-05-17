@@ -60,7 +60,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
   },
   {
@@ -115,8 +115,8 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+    if (typeof window !== 'undefined' && userRole) {
+      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -206,9 +206,10 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrl || "https://placehold.co/32x32.png?text=LC"} 
+            src={companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e"} 
             alt="Company Logo"
             width={32}
             height={32}
