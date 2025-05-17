@@ -46,7 +46,7 @@ const proformaInvoiceSchema = z.object({
     }
     return true;
 }, {
-    message: "Freight Amount is required and must be non-negative if Freight Charge is 'Excluded'",
+    message: "Freight Amount is required and must be non-negative if 'Excluded'",
     path: ["freightChargeAmount"],
 });
 
@@ -59,6 +59,7 @@ interface DropdownOption {
 
 const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
+const NONE_LC_VALUE = "__NONE_LC__"; // Special value for "None" option
 
 export function AddProformaInvoiceForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -128,7 +129,7 @@ export function AddProformaInvoiceForm() {
 
   const watchedConnectedLcId = form.watch("connectedLcId");
   React.useEffect(() => {
-    if (watchedConnectedLcId) {
+    if (watchedConnectedLcId && watchedConnectedLcId !== NONE_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
       if (selectedLc && selectedLc.issueDate) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
@@ -187,7 +188,9 @@ export function AddProformaInvoiceForm() {
 
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    const selectedLc = lcOptions.find(opt => opt.value === data.connectedLcId);
+    const lcIdToSave = data.connectedLcId === NONE_LC_VALUE ? undefined : data.connectedLcId;
+    const selectedLc = lcIdToSave ? lcOptions.find(opt => opt.value === lcIdToSave) : undefined;
+
 
     const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
     if (data.freightChargeOption === "Freight Excluded" && (isNaN(freightAmountForDb!) || freightAmountForDb! < 0)) {
@@ -236,7 +239,7 @@ export function AddProformaInvoiceForm() {
       piNo: data.piNo,
       piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesPersonName: data.salesPersonName,
-      connectedLcId: data.connectedLcId || undefined,
+      connectedLcId: lcIdToSave,
       connectedLcNumber: selectedLc?.label || undefined,
       connectedLcIssueDate: selectedLc?.issueDate || undefined,
       lineItems: processedLineItems,
@@ -386,14 +389,18 @@ export function AddProformaInvoiceForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                <Select 
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)} 
+                  value={field.value === '' || field.value === undefined ? NONE_LC_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
                     {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -574,3 +581,4 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
+
