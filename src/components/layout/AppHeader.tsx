@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +17,15 @@ import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { User, LogOut, Settings, Loader2, Search, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
+  const router = useRouter();
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
 
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
@@ -35,7 +41,6 @@ export function AppHeader() {
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
 
-  // Check localStorage for notification status
   const checkNotificationStatus = () => {
     if (typeof window !== 'undefined') {
       const allRead = localStorage.getItem('appNotificationsAllRead');
@@ -44,17 +49,13 @@ export function AppHeader() {
   };
 
   useEffect(() => {
-    checkNotificationStatus(); // Initial check
-
-    // Listen for custom event from notifications page
+    checkNotificationStatus();
     const handleNotificationsUpdate = () => {
       checkNotificationStatus();
     };
-
     if (typeof window !== 'undefined') {
         window.addEventListener('notificationsUpdated', handleNotificationsUpdate);
     }
-
     return () => {
         if (typeof window !== 'undefined') {
             window.removeEventListener('notificationsUpdated', handleNotificationsUpdate);
@@ -62,6 +63,16 @@ export function AppHeader() {
     };
   }, []);
 
+  const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/dashboard/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/dashboard/search');
+    }
+    setSearchQuery('');
+    setIsSearchPopoverOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
@@ -69,17 +80,36 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         <Link
           href="/dashboard"
-          className="text-lg md:text-xl font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+          className="text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out whitespace-nowrap"
         >
           LC Management System
         </Link>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Search">
-          <Search className="h-5 w-5 text-muted-foreground" />
-          <span className="sr-only">Search</span>
-        </Button>
+        <Popover open={isSearchPopoverOpen} onOpenChange={setIsSearchPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Search">
+              <Search className="h-5 w-5 text-muted-foreground" />
+              <span className="sr-only">Search</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-2">
+            <form onSubmit={handleSearchSubmit} className="flex gap-2">
+              <Input
+                type="search"
+                placeholder="Search L/C, PI, Applicant..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 h-9"
+                autoFocus
+              />
+              <Button type="submit" size="sm" className="h-9">
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+          </PopoverContent>
+        </Popover>
 
         <Link href="/dashboard/notifications" passHref>
           <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
@@ -122,10 +152,6 @@ export function AppHeader() {
                   <span>Account Details</span>
                 </DropdownMenuItem>
               </Link>
-              {/* <DropdownMenuItem> // Future settings link
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem> */}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />

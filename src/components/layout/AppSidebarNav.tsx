@@ -40,7 +40,8 @@ import {
   FileEdit,
   ImageIcon,
   Package,
-  History // Added History icon
+  History,
+  Search // Added Search icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -49,6 +50,8 @@ import type { UserRole } from '@/types';
 import React from 'react';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
+const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search };
+
 
 const coreModulesNavItems: NavItemGroup[] = [
  {
@@ -103,7 +106,7 @@ const settingsNavItems: NavItemWithRoles[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] }, // Added Logs
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
 
@@ -114,12 +117,15 @@ export function AppSidebarNav() {
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       // console.log("AppSidebarNav: Current User Role from AuthContext:", userRole);
+      // console.log("AppSidebarNav: Company Name from AuthContext:", companyName);
+      // console.log("AppSidebarNav: Company Logo URL from AuthContext:", companyLogoUrl);
     }
-  }, [userRole]);
+  }, [userRole, companyName, companyLogoUrl]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href !== '/dashboard' && pathname.startsWith(href)) {
+    if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; // For global search
+    if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -204,7 +210,7 @@ export function AppSidebarNav() {
       <SidebarHeader className="border-b">
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrl || "https://placehold.co/32x32.png"} 
+            src={companyLogoUrl || "https://placehold.co/32x32.png?text=LC"} 
             alt="Company Logo"
             width={32}
             height={32}
@@ -221,21 +227,24 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-            <SidebarMenuItem key={mainDashboardLink.href!}>
-              <Link href={mainDashboardLink.href!} passHref legacyBehavior>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive(mainDashboardLink.href!)}
-                  className={cn(isActive(mainDashboardLink.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                  tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}
-                >
-                  <a>
-                    <mainDashboardLink.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{mainDashboardLink.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
+            {[mainDashboardLink, globalSearchLink].map((item) => (
+              item.href &&
+              <SidebarMenuItem key={item.href}>
+                <Link href={item.href} passHref legacyBehavior>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                    tooltip={{children: item.label!, side: "right", className: "ml-2"}}
+                  >
+                    <a>
+                      {item.icon && <item.icon className="h-5 w-5" />}
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            ))}
         </SidebarMenu>
 
         <SidebarSeparator />
@@ -333,4 +342,3 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
-
