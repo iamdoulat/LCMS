@@ -19,6 +19,7 @@ import { User, LogOut, Settings, Loader2, Search, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; // Added import
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
@@ -80,7 +81,7 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         <Link
           href="/dashboard"
-          className="text-lg font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out whitespace-nowrap"
+          className="text-lg md:text-xl font-bold text-primary whitespace-nowrap"
         >
           LC Management System
         </Link>
@@ -111,6 +112,8 @@ export function AppHeader() {
           </PopoverContent>
         </Popover>
 
+        <ThemeToggleButton /> 
+
         <Link href="/dashboard/notifications" passHref>
           <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
             <Bell className="h-5 w-5 text-muted-foreground" />
@@ -131,7 +134,7 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png?text=${getInitials(displayName)}`} alt={displayName} data-ai-hint="profile avatar" />
+                  <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png?text=${getInitials(displayName)}`} alt={displayName} data-ai-hint="profile avatar"/>
                   <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
                 </Avatar>
               </Button>

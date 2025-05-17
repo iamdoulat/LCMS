@@ -1,5 +1,4 @@
 
-/* Import SweetAlert2 styles */
 @import 'sweetalert2/dist/sweetalert2.min.css';
 
 @tailwind base;
@@ -12,53 +11,56 @@ body {
 
 @layer base {
   :root {
-    --background: 220 40% 10%; /* Dark Navy Blue */
-    --foreground: 0 0% 98%; /* Almost White */
+    /* Light Theme (Default) */
+    --background: 0 0% 95%; /* Light Grey #f2f2f2 */
+    --foreground: 240 10% 3.9%; /* Dark Grey for text */
 
-    --card: 220 40% 14%; /* Slightly Lighter Dark Navy */
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 220 40% 12%; /* Darker Popover Background */
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 210 100% 60%; /* Vibrant Blue */
+    --primary: 207 68% 53%; /* Blue #3498db */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 220 30% 25%; /* Medium Dark Blue/Grey */
-    --secondary-foreground: 0 0% 90%; /* Light Grey */
+    --secondary: 240 4.8% 95.9%; /* Lighter grey for secondary elements */
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 220 25% 20%; /* Darker Muted Blue/Grey */
-    --muted-foreground: 220 15% 55%; /* Medium Grey for Muted Text */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%; /* Lighter muted text */
 
-    --accent: 190 90% 55%; /* Bright Cyan/Teal */
-    --accent-foreground: 220 40% 8%; /* Dark text for contrast on Accent */
+    --accent: 145 63% 49%; /* Green #2ecc71 */
+    --accent-foreground: 0 0% 100%; /* White text for contrast on green */
 
-    --destructive: 0 75% 60%; /* Vivid Red */
+    --destructive: 0 84.2% 60.2%; /* Standard red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 30% 25%; /* Medium Dark Blue/Grey Border */
-    --input: 220 30% 22%; /* Darker Input Background */
-    --ring: 210 100% 65%; /* Brighter Blue for Focus Rings */
+    --border: 240 5.9% 90%; /* Light border */
+    --input: 240 5.9% 90%; /* Light input background */
+    --ring: 207 68% 53%; /* Blue for focus rings */
 
-    --chart-1: 210 90% 55%; /* Blue */
-    --chart-2: 150 80% 50%; /* Green */
-    --chart-3: 45 95% 55%;  /* Orange */
-    --chart-4: 280 85% 65%; /* Purple */
-    --chart-5: 60 90% 50%;  /* Yellow */
+    --chart-1: 207 68% 53%; /* Blue */
+    --chart-2: 145 63% 49%; /* Green */
+    --chart-3: 35 92% 60%;  /* Orange */
+    --chart-4: 262 75% 55%; /* Purple */
+    --chart-5: 50 95% 55%;  /* Yellow */
+    
     --radius: 0.5rem;
 
-    /* Sidebar specific variables - Adjusted for new dark theme */
-    --sidebar-background: 220 40% 9%; 
-    --sidebar-foreground: 0 0% 95%; 
-    --sidebar-primary: 210 100% 60%; /* Vibrant Blue */
-    --sidebar-primary-foreground: 0 0% 100%; 
-    --sidebar-accent: 220 30% 20%; 
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 30% 25%; 
-    --sidebar-ring: 210 100% 65%; 
+    /* Sidebar specific variables - Light Theme */
+    --sidebar-background: 0 0% 98%; /* Very light, slightly off-white */
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 207 68% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 93%; /* Slightly darker accent for hover */
+    --sidebar-accent-foreground: 240 10% 3.9%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 207 68% 53%;
   }
 
   .dark {
+    /* Dark Theme */
     --background: 220 40% 10%; /* Dark Navy Blue */
     --foreground: 0 0% 98%; /* Almost White */
 
@@ -178,22 +180,17 @@ body {
   }
 
   /* Override gradient text on titles for print */
-  .card-title.text-primary, /* Target specifically the primary color titles */
+  .card-title.text-primary, 
   h1.text-primary,
   h2.text-primary,
   h3.text-primary {
     color: #000000 !important;
-  }
-  .card-title.bg-gradient-to-r, 
-  h1.bg-gradient-to-r,
-  h2.bg-gradient-to-r,
-  h3.bg-gradient-to-r {
-    color: #000000 !important;
+    /* Remove gradient specific styles */
     background-image: none !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
-    -webkit-text-fill-color: initial !important;
-    text-fill-color: initial !important;
+    -webkit-text-fill-color: initial !important; /* For Webkit browsers */
+    text-fill-color: initial !important; /* Standard */
   }
 
 
@@ -217,3 +214,4 @@ body {
     -webkit-text-fill-color: #000000 !important; /* For Safari */
   }
 }
+
