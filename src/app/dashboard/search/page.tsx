@@ -11,10 +11,9 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { LCEntryDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
@@ -71,7 +70,7 @@ function SearchPageContent() {
       setBeneficiaryResults([]);
 
       try {
-        // --- L/C Search ---
+        // --- L/C Search (Exact Match) ---
         const lcEntriesRef = collection(firestore, "lc_entries");
         const lcQuery = query(lcEntriesRef, where("documentaryCreditNumber", "==", trimmedQuery));
         const lcQuerySnapshot = await getDocs(lcQuery);
@@ -82,16 +81,21 @@ function SearchPageContent() {
         setLcResults(fetchedLcs);
       } catch (error: any) {
         console.error("Error searching L/Cs:", error);
-        setLcSearchError(`Failed to search L/Cs: ${error.message}.`);
+        setLcSearchError(`Failed to search L/Cs: ${error.message}. Ensure necessary Firestore indexes exist.`);
       } finally {
         setIsLoadingLcSearch(false);
       }
 
       try {
-        // --- Applicant Search ---
+        // --- Applicant Search (Starts With, Case-Sensitive) ---
         const customersRef = collection(firestore, "customers");
-        const applicantQuery = query(customersRef, where("applicantName", "==", trimmedQuery));
-        const applicantQuerySnapshot = await getDocs(applicantQuery);
+        const applicantNameQuery = query(
+          customersRef,
+          where("applicantName", ">=", trimmedQuery),
+          where("applicantName", "<=", trimmedQuery + "\uf8ff"),
+          limit(10) // Limit results for performance
+        );
+        const applicantQuerySnapshot = await getDocs(applicantNameQuery);
         const fetchedApplicants: CustomerDocument[] = [];
         applicantQuerySnapshot.forEach((doc) => {
           fetchedApplicants.push({ id: doc.id, ...doc.data() } as CustomerDocument);
@@ -99,16 +103,21 @@ function SearchPageContent() {
         setApplicantResults(fetchedApplicants);
       } catch (error: any) {
         console.error("Error searching Applicants:", error);
-        setApplicantSearchError(`Failed to search Applicants: ${error.message}.`);
+        setApplicantSearchError(`Failed to search Applicants: ${error.message}. Ensure necessary Firestore indexes exist.`);
       } finally {
         setIsLoadingApplicantSearch(false);
       }
 
       try {
-        // --- Beneficiary Search ---
+        // --- Beneficiary Search (Starts With, Case-Sensitive) ---
         const suppliersRef = collection(firestore, "suppliers");
-        const beneficiaryQuery = query(suppliersRef, where("beneficiaryName", "==", trimmedQuery));
-        const beneficiaryQuerySnapshot = await getDocs(beneficiaryQuery);
+        const beneficiaryNameQuery = query(
+          suppliersRef,
+          where("beneficiaryName", ">=", trimmedQuery),
+          where("beneficiaryName", "<=", trimmedQuery + "\uf8ff"),
+          limit(10) // Limit results for performance
+        );
+        const beneficiaryQuerySnapshot = await getDocs(beneficiaryNameQuery);
         const fetchedBeneficiaries: SupplierDocument[] = [];
         beneficiaryQuerySnapshot.forEach((doc) => {
           fetchedBeneficiaries.push({ id: doc.id, ...doc.data() } as SupplierDocument);
@@ -116,7 +125,7 @@ function SearchPageContent() {
         setBeneficiaryResults(fetchedBeneficiaries);
       } catch (error: any) {
         console.error("Error searching Beneficiaries:", error);
-        setBeneficiarySearchError(`Failed to search Beneficiaries: ${error.message}.`);
+        setBeneficiarySearchError(`Failed to search Beneficiaries: ${error.message}. Ensure necessary Firestore indexes exist.`);
       } finally {
         setIsLoadingBeneficiarySearch(false);
       }
@@ -166,7 +175,7 @@ function SearchPageContent() {
         </ul>
       );
     }
-    return <p className="text-muted-foreground">No L/C entries found matching "{displayedQuery}".</p>;
+    return <p className="text-muted-foreground text-sm">No L/C entries found matching "{displayedQuery}" (exact match).</p>;
   };
 
   const renderApplicantResults = () => {
@@ -189,7 +198,7 @@ function SearchPageContent() {
         </ul>
       );
     }
-    return <p className="text-muted-foreground">No Applicants found matching "{displayedQuery}" (exact match required).</p>;
+    return <p className="text-muted-foreground text-sm">No Applicants found starting with "{displayedQuery}" (case-sensitive).</p>;
   };
 
   const renderBeneficiaryResults = () => {
@@ -212,7 +221,7 @@ function SearchPageContent() {
         </ul>
       );
     }
-    return <p className="text-muted-foreground">No Beneficiaries found matching "{displayedQuery}" (exact match required).</p>;
+    return <p className="text-muted-foreground text-sm">No Beneficiaries found starting with "{displayedQuery}" (case-sensitive).</p>;
   };
 
   return (
@@ -224,7 +233,7 @@ function SearchPageContent() {
             Global Search
           </CardTitle>
           <CardDescription>
-            Enter a search term. Current search supports exact matches for L/C Number, Applicant Name, and Beneficiary Name.
+            Enter a search term. L/C Number uses exact match. Applicant and Beneficiary names use "starts with" (case-sensitive) matching.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -267,7 +276,7 @@ function SearchPageContent() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Applicants Matching "{displayedQuery}"</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Applicants Starting With "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {renderApplicantResults()}
@@ -276,7 +285,7 @@ function SearchPageContent() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Beneficiaries Matching "{displayedQuery}"</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Beneficiaries Starting With "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
                    {renderBeneficiaryResults()}
@@ -288,7 +297,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary"/>Proforma Invoices Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Proforma Invoice search by name/number not yet implemented for this query.</p>
+                  <p className="text-muted-foreground text-sm">Proforma Invoice search is not yet implemented for this query type.</p>
                 </CardContent>
               </Card>
 
@@ -297,7 +306,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Entries by Year Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Year-based search not yet fully implemented for this general query term.</p>
+                  <p className="text-muted-foreground text-sm">Year-based search for this query term is not yet implemented.</p>
                 </CardContent>
               </Card>
             </div>
