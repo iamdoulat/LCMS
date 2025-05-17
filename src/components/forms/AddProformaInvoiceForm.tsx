@@ -27,6 +27,11 @@ const lineItemFormSchema = z.object({
   qty: z.string().min(1, "Qty is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
   purchasePrice: z.string().min(1, "Purchase Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Purchase Price must be > 0" }),
   salesPrice: z.string().min(1, "Sales Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Sales Price must be > 0" }),
+  netCommissionPercentage: z.string().optional().refine(
+    (val) => val === '' || val === undefined ||
+             (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100),
+    { message: "Net Com.% must be 0-100 or blank" }
+  ),
 });
 
 const proformaInvoiceSchema = z.object({
@@ -75,9 +80,10 @@ export function AddProformaInvoiceForm() {
 
   const [totalQty, setTotalQty] = React.useState(0);
   const [totalPurchasePriceAmount, setTotalPurchasePriceAmount] = React.useState(0);
-  const [totalSalesPriceAmount, setTotalSalesPriceAmount] = React.useState(0);
+  const [totalSalesPriceFromLineItems, setTotalSalesPriceFromLineItems] = React.useState(0);
+  const [totalExtraNetCommission, setTotalExtraNetCommission] = React.useState(0);
   const [grandTotalSalesPrice, setGrandTotalSalesPrice] = React.useState(0);
-  const [grandTotalCommissionUSD, setGrandTotalCommissionUSD] = React.useState(0); // New state
+  const [grandTotalCommissionUSD, setGrandTotalCommissionUSD] = React.useState(0);
   const [totalCommissionPercentage, setTotalCommissionPercentage] = React.useState(0);
 
   const form = useForm<ProformaInvoiceFormValues>({
@@ -89,7 +95,7 @@ export function AddProformaInvoiceForm() {
       piDate: new Date(),
       salesPersonName: '',
       connectedLcId: '',
-      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
+      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
       freightChargeOption: "Freight Included",
       freightChargeAmount: '',
     },
@@ -109,7 +115,7 @@ export function AddProformaInvoiceForm() {
           getDocs(collection(firestore, "suppliers")),
           getDocs(collection(firestore, "lc_entries"))
         ]);
-        
+
         setApplicantOptions(
           customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
         );
@@ -153,34 +159,41 @@ export function AddProformaInvoiceForm() {
   React.useEffect(() => {
     let newTotalQty = 0;
     let newTotalPurchase = 0;
-    let newTotalSales = 0;
+    let newTotalSalesLineItems = 0;
+    let newTotalExtraNetComm = 0;
 
     watchedLineItems.forEach(item => {
       const qty = parseFloat(item.qty) || 0;
       const purchaseP = parseFloat(item.purchasePrice) || 0;
       const salesP = parseFloat(item.salesPrice) || 0;
-      
+      const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
+
       if (qty > 0) {
         newTotalQty += qty;
-        if (purchaseP > 0) newTotalPurchase += qty * purchaseP;
-        if (salesP > 0) newTotalSales += qty * salesP;
+        if (purchaseP > 0) {
+          newTotalPurchase += qty * purchaseP;
+          if (netCommP > 0 && netCommP <=100) {
+            newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
+          }
+        }
+        if (salesP > 0) newTotalSalesLineItems += qty * salesP;
       }
     });
 
     setTotalQty(newTotalQty);
     setTotalPurchasePriceAmount(newTotalPurchase);
-    setTotalSalesPriceAmount(newTotalSales);
+    setTotalSalesPriceFromLineItems(newTotalSalesLineItems);
+    setTotalExtraNetCommission(newTotalExtraNetComm);
 
-    let currentGrandTotalSalesPrice = newTotalSales;
-    if (watchedFreightOption === "Freight Excluded") {
-      const freightAmountNum = parseFloat(watchedFreightAmountString || '0');
-      if (!isNaN(freightAmountNum) && freightAmountNum >= 0) {
-        currentGrandTotalSalesPrice += freightAmountNum;
-      }
+    let currentGrandTotalSalesPrice = newTotalSalesLineItems;
+    const freightAmountNum = parseFloat(watchedFreightAmountString || '0') || 0;
+    if (watchedFreightOption === "Freight Excluded" && freightAmountNum >= 0) {
+      currentGrandTotalSalesPrice += freightAmountNum;
     }
     setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
-    const newGrandTotalCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
+    const baseCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
+    const newGrandTotalCommissionUSD = baseCommissionUSD + newTotalExtraNetComm;
     setGrandTotalCommissionUSD(newGrandTotalCommissionUSD);
 
     if (newTotalPurchase > 0) {
@@ -197,7 +210,7 @@ export function AddProformaInvoiceForm() {
     const finalApplicantId = data.applicantId === PLACEHOLDER_APPLICANT_VALUE ? '' : data.applicantId;
     const finalBeneficiaryId = data.beneficiaryId === PLACEHOLDER_BENEFICIARY_VALUE ? '' : data.beneficiaryId;
     const finalConnectedLcId = (data.connectedLcId === NONE_LC_VALUE || data.connectedLcId === PLACEHOLDER_LC_VALUE) ? '' : data.connectedLcId;
-    
+
     if (!finalApplicantId) {
         form.setError("applicantId", {type: "manual", message: "Applicant is required."});
         setIsSubmitting(false);
@@ -213,43 +226,49 @@ export function AddProformaInvoiceForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
     const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
 
-
-    const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
-    if (data.freightChargeOption === "Freight Excluded" && (isNaN(freightAmountForDb!) || freightAmountForDb! < 0)) {
+    const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : undefined;
+    if (data.freightChargeOption === "Freight Excluded" && (freightAmountForDb === undefined || freightAmountForDb < 0)) {
         form.setError("freightChargeAmount", { type: "manual", message: "Freight Amount must be a valid non-negative number if 'Excluded'." });
         setIsSubmitting(false);
         return;
     }
-    
+
     let calculatedTotalQty = 0;
     let calculatedTotalPurchasePrice = 0;
-    let calculatedTotalSalesPrice = 0;
+    let calculatedTotalSalesPriceLineItems = 0;
+    let calculatedTotalExtraNetCommission = 0;
 
     const processedLineItems = data.lineItems.map(item => {
       const qty = parseFloat(item.qty);
       const purchasePrice = parseFloat(item.purchasePrice);
       const salesPrice = parseFloat(item.salesPrice);
+      const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
 
       calculatedTotalQty += qty;
       calculatedTotalPurchasePrice += qty * purchasePrice;
-      calculatedTotalSalesPrice += qty * salesPrice;
-      
+      calculatedTotalSalesPriceLineItems += qty * salesPrice;
+      if (netCommP > 0 && netCommP <= 100) {
+          calculatedTotalExtraNetCommission += (qty * purchasePrice * netCommP) / 100;
+      }
+
       return {
         slNo: item.slNo,
         modelNo: item.modelNo,
         qty: qty,
         purchasePrice: purchasePrice,
         salesPrice: salesPrice,
+        netCommissionPercentage: netCommP > 0 ? netCommP : undefined,
       };
     });
 
-    let calculatedGrandTotalSalesPrice = calculatedTotalSalesPrice;
+    let calculatedGrandTotalSalesPrice = calculatedTotalSalesPriceLineItems;
     if (data.freightChargeOption === "Freight Excluded" && freightAmountForDb !== undefined) {
       calculatedGrandTotalSalesPrice += freightAmountForDb;
     }
 
-    const calculatedGrandTotalCommissionUSD = calculatedGrandTotalSalesPrice - calculatedTotalPurchasePrice;
-    
+    const baseCommission = calculatedGrandTotalSalesPrice - calculatedTotalPurchasePrice;
+    const calculatedGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
+
     let calculatedTotalCommissionPercentage = 0;
     if (calculatedTotalPurchasePrice > 0) {
       calculatedTotalCommissionPercentage = parseFloat(((calculatedGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
@@ -271,7 +290,8 @@ export function AddProformaInvoiceForm() {
       freightChargeAmount: freightAmountForDb,
       totalQty: calculatedTotalQty,
       totalPurchasePrice: calculatedTotalPurchasePrice,
-      totalSalesPrice: calculatedTotalSalesPrice,
+      totalSalesPrice: calculatedTotalSalesPriceLineItems, // Storing sum of line item sales prices
+      totalExtraNetCommission: calculatedTotalExtraNetCommission,
       grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
       grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
       totalCommissionPercentage: calculatedTotalCommissionPercentage,
@@ -299,7 +319,7 @@ export function AddProformaInvoiceForm() {
         piDate: new Date(),
         salesPersonName: '',
         connectedLcId: '',
-        lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
+        lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
         freightChargeOption: "Freight Included",
         freightChargeAmount: '',
       });
@@ -317,13 +337,13 @@ export function AddProformaInvoiceForm() {
   }
 
   const handleAddLineItem = () => {
-    append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '' });
+    append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' });
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -436,8 +456,8 @@ export function AddProformaInvoiceForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE || value === PLACEHOLDER_LC_VALUE ? '' : value)} 
+                <Select
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE || value === PLACEHOLDER_LC_VALUE ? '' : value)}
                   value={field.value === '' || field.value === undefined ? PLACEHOLDER_LC_VALUE : (lcOptions.find(opt => opt.value === field.value) ? field.value : PLACEHOLDER_LC_VALUE) }
                   disabled={isLoadingDropdowns}
                 >
@@ -470,21 +490,21 @@ export function AddProformaInvoiceForm() {
           )}
         </div>
 
-
         <Separator />
         <h3 className={cn(sectionHeadingClass, "text-lg")}>
            <DollarSign className="mr-2 h-5 w-5 text-primary" /> Line Items
         </h3>
-        
+
         <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[80px]">SL No.</TableHead>
                 <TableHead>Model No.*</TableHead>
-                <TableHead className="w-[120px]">Qty*</TableHead>
+                <TableHead className="w-[100px]">Qty*</TableHead>
                 <TableHead className="w-[150px]">Purchase Price*</TableHead>
                 <TableHead className="w-[150px]">Sales Price*</TableHead>
+                <TableHead className="w-[120px]">Net Com.%</TableHead>
                 <TableHead className="w-[80px] text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -548,6 +568,18 @@ export function AddProformaInvoiceForm() {
                       )}
                     />
                   </TableCell>
+                  <TableCell>
+                     <FormField
+                      control={form.control}
+                      name={`lineItems.${index}.netCommissionPercentage`}
+                      render={({ field }) => (
+                        <>
+                          <Input type="text" placeholder="e.g., 5" {...field} className="h-9"/>
+                          <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.netCommissionPercentage?.message}</FormMessage>
+                        </>
+                      )}
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item">
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -564,7 +596,6 @@ export function AddProformaInvoiceForm() {
         <Button type="button" variant="outline" onClick={handleAddLineItem} className="mt-2">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
         </Button>
-        
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -611,13 +642,13 @@ export function AddProformaInvoiceForm() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                 <p><strong className="text-muted-foreground">Total Qty:</strong> <span className="font-semibold text-foreground">{totalQty}</span></p>
                 <p><strong className="text-muted-foreground">Total Purchase Price:</strong> <span className="font-semibold text-foreground">{totalPurchasePriceAmount.toFixed(2)}</span></p>
-                <p><strong className="text-muted-foreground">Total Sales Price:</strong> <span className="font-semibold text-foreground">{totalSalesPriceAmount.toFixed(2)}</span></p>
+                <p><strong className="text-muted-foreground">Total Sales (Line Items):</strong> <span className="font-semibold text-foreground">{totalSalesPriceFromLineItems.toFixed(2)}</span></p>
+                <p><strong className="text-muted-foreground">Total Extra Net Comm.:</strong> <span className="font-semibold text-foreground">{totalExtraNetCommission.toFixed(2)}</span></p>
                 <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
                 <p className="font-semibold text-green-700 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700">{grandTotalCommissionUSD.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
+                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage.toFixed(2)}%</span></p>
             </div>
         </div>
-
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
           {isSubmitting ? (
@@ -636,4 +667,3 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
-

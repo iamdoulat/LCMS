@@ -32,10 +32,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantId: string;
-  applicantName: string; // This will store the selected applicant's ID from the dropdown
-  beneficiaryId: string;
-  beneficiaryName: string; // This will store the selected beneficiary's ID from the dropdown
+  applicantId: string; // Stores the ID of the selected applicant
+  applicantName: string; // Stores the name for display/denormalization
+  beneficiaryId: string; // Stores the ID of the selected beneficiary
+  beneficiaryName: string; // Stores the name for display/denormalization
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -99,9 +99,9 @@ export interface LCEntryDocument {
   id: string;
   year: number;
   applicantId: string;
-  applicantName: string; // Stores the actual name
+  applicantName: string;
   beneficiaryId: string;
-  beneficiaryName: string; // Stores the actual name
+  beneficiaryName: string;
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
@@ -226,18 +226,19 @@ export interface UserDocumentForAdmin {
   email: string;
   contactNumber?: string;
   role: UserRole;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
-  photoURL?: string; // Optional photo URL
+  createdAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any; // Firestore ServerTimestamp
+  photoURL?: string;
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
+  qty: number | ''; // Allow string for form input, convert to number on save
+  purchasePrice: number | ''; // Allow string for form input, convert to number on save
+  salesPrice: number | ''; // Allow string for form input, convert to number on save
+  netCommissionPercentage?: number | ''; // New field for Net Commission % per line item
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -260,10 +261,11 @@ export interface ProformaInvoice {
   freightChargeAmount?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
-  grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number; // New field for the commission amount
-  totalCommissionPercentage: number;
+  totalSalesPrice: number; // Total Sales Price from line items
+  totalExtraNetCommission?: number; // New: Sum of (Purchase Price * Net Com %)
+  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded)
+  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
+  totalCommissionPercentage: number; // (grandTotalCommissionUSD / totalPurchasePrice) * 100
   createdAt?: any;
   updatedAt?: any;
 }
@@ -271,13 +273,15 @@ export interface ProformaInvoice {
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount'> & {
   id: string; // Ensure ID is part of the document type
   piDate: string; // Stored as ISO String
-  lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice'> & {
+  lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
     salesPrice: number;
+    netCommissionPercentage?: number; // Saved as number
   }>;
   freightChargeAmount?: number;
-  grandTotalCommissionUSD?: number; // New field
+  totalExtraNetCommission?: number; // Saved to DB
+  grandTotalCommissionUSD?: number;
   createdAt: any;
   updatedAt: any;
 };
@@ -288,4 +292,3 @@ export interface LcOption {
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // L/C Issue Date (ISO string)
 }
-
