@@ -25,7 +25,7 @@ const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
   { 
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-    ssr: false // Typically, charts are client-side only
+    ssr: false 
   }
 );
 
@@ -127,7 +127,19 @@ export default function DashboardPage() {
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [searchLcNumber, setSearchLcNumber] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [greeting, setGreeting] = useState('');
 
+
+  useEffect(() => {
+    const currentHour = new Date().getHours();
+    if (currentHour < 12) {
+      setGreeting('Good morning');
+    } else if (currentHour < 18) {
+      setGreeting('Good afternoon');
+    } else {
+      setGreeting('Good evening');
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
     if (!authUser) {
@@ -337,12 +349,7 @@ export default function DashboardPage() {
     if (!authLoading && authUser) { 
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
-      console.log("Dashboard: User not authenticated. Clearing dashboard data.");
-      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
-      setSupplierPieData([]);
-      setRecentlyCompletedLCs([]);
-      setDraftLCs([]);
-      setUpcomingEtdShipments([]);
+      console.log("Dashboard: User not authenticated, not fetching dashboard data.");
       setIsLoading(false); 
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
@@ -380,28 +387,30 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || (isLoading && authUser)) { 
+  if (authLoading || (!authUser && !authLoading)) { 
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
-      </div>
-    );
-  }
-  
-  if (!authUser && !authLoading) { 
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
-        <p className="text-muted-foreground">Please log in to view the dashboard.</p>
+        <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
       </div>
     );
   }
 
+  const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className={cn("font-bold text-2xl lg:text-3xl","text-primary")}>Dashboard Overview</h1>
+        <div>
+           {greeting && authUser && (
+            <h2 className="text-xl font-semibold text-foreground mb-1">
+              {greeting}, <span className="text-primary">{userDisplayName}</span>!
+            </h2>
+          )}
+          <h1 className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            Dashboard Overview
+          </h1>
+        </div>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
@@ -418,7 +427,13 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-
+      { isLoading && !authLoading ? (
+         <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
+          </div>
+      ) : (
+        <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Total L/Cs Opened"
@@ -463,7 +478,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -490,7 +505,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Search className="h-6 w-6 text-primary" />
                 Search L/C
               </CardTitle>
@@ -516,7 +531,7 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -558,7 +573,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -611,7 +626,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -662,7 +677,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
+      </>
+      )}
     </div>
   );
 }
