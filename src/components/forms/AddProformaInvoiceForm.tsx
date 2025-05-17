@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const lineItemFormSchema = z.object({
@@ -61,6 +62,8 @@ type ProformaInvoiceFormValues = z.infer<typeof proformaInvoiceSchema>;
 
 const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
+const PLACEHOLDER_BENEFICIARY_VALUE = "__PI_ADD_BENEFICIARY_PLACEHOLDER__";
+const PLACEHOLDER_APPLICANT_VALUE = "__PI_ADD_APPLICANT_PLACEHOLDER__";
 const NONE_LC_VALUE = "__NONE_LC_PI_ADD__";
 
 
@@ -120,7 +123,7 @@ export function AddProformaInvoiceForm() {
         
         const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None" }];
         lcsSnap.forEach(doc => {
-          const data = doc.data() as ProformaInvoiceDocument; // Assuming LCEntryDocument structure
+          const data = doc.data() as ProformaInvoiceDocument;
           fetchedLcOptions.push({ value: doc.id, label: data.documentaryCreditNumber || 'Unnamed L/C', issueDate: data.lcIssueDate });
         });
         setLcOptions(fetchedLcOptions);
@@ -171,7 +174,7 @@ export function AddProformaInvoiceForm() {
             newTotalQty += qty;
             if (purchaseP >= 0) { 
               newTotalPurchase += qty * purchaseP;
-              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) { // Ensure purchaseP > 0 for commission calc
+              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) {
                  newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
               }
             }
@@ -216,7 +219,6 @@ export function AddProformaInvoiceForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
     const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
 
-    const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : undefined;
     const miscellaneousExpensesForDb = parseFloat(data.miscellaneousExpenses || '0') || 0;
 
 
@@ -430,8 +432,8 @@ export function AddProformaInvoiceForm() {
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
                 <Combobox
                   options={lcOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value === '' ? NONE_LC_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)}
                   placeholder="Search L/C Number..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"}
                   emptyStateMessage="No L/C found."
