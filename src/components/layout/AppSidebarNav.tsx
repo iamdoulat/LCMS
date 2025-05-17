@@ -67,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     groupLabel: 'Commission Management',
     icon: Briefcase, 
     subLinks: [
-      { href: '/dashboard/commission-management/add-pi', label: 'Add new PI', icon: FilePlus2 },
+      { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
     ],
   },
@@ -206,7 +206,6 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
             src={companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e"} 
@@ -339,4 +338,5 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
 
