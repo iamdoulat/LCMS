@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption } from '@/types';
+import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption, LCEntryDocument } from '@/types';
 import { freightChargeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ const proformaInvoiceSchema = z.object({
   connectedLcId: z.string().optional(),
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
-  freightChargeAmount: z.string().optional(),
+  freightChargeAmount: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Freight Amount must be a non-negative number if provided." }),
 }).refine(data => {
     if (data.freightChargeOption === "Freight Excluded") {
         const amount = parseFloat(data.freightChargeAmount || '');
@@ -77,6 +77,7 @@ export function AddProformaInvoiceForm() {
   const [totalPurchasePriceAmount, setTotalPurchasePriceAmount] = React.useState(0);
   const [totalSalesPriceAmount, setTotalSalesPriceAmount] = React.useState(0);
   const [grandTotalSalesPrice, setGrandTotalSalesPrice] = React.useState(0);
+  const [grandTotalCommissionUSD, setGrandTotalCommissionUSD] = React.useState(0); // New state
   const [totalCommissionPercentage, setTotalCommissionPercentage] = React.useState(0);
 
   const form = useForm<ProformaInvoiceFormValues>({
@@ -170,18 +171,21 @@ export function AddProformaInvoiceForm() {
     setTotalPurchasePriceAmount(newTotalPurchase);
     setTotalSalesPriceAmount(newTotalSales);
 
-    let currentGrandTotal = newTotalSales;
+    let currentGrandTotalSalesPrice = newTotalSales;
     if (watchedFreightOption === "Freight Excluded") {
-      const freightAmountNum = parseFloat(watchedFreightAmountString || '');
+      const freightAmountNum = parseFloat(watchedFreightAmountString || '0');
       if (!isNaN(freightAmountNum) && freightAmountNum >= 0) {
-        currentGrandTotal += freightAmountNum;
+        currentGrandTotalSalesPrice += freightAmountNum;
       }
     }
-    setGrandTotalSalesPrice(currentGrandTotal);
+    setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
-    if (newTotalPurchase > 0 && currentGrandTotal > newTotalPurchase) {
-      const commission = ((currentGrandTotal - newTotalPurchase) / newTotalPurchase) * 100;
-      setTotalCommissionPercentage(parseFloat(commission.toFixed(2)));
+    const newGrandTotalCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
+    setGrandTotalCommissionUSD(newGrandTotalCommissionUSD);
+
+    if (newTotalPurchase > 0) {
+      const commissionPercentage = (newGrandTotalCommissionUSD / newTotalPurchase) * 100;
+      setTotalCommissionPercentage(parseFloat(commissionPercentage.toFixed(2)));
     } else {
       setTotalCommissionPercentage(0);
     }
@@ -217,18 +221,18 @@ export function AddProformaInvoiceForm() {
         return;
     }
     
-    let finalTotalQty = 0;
-    let finalTotalPurchasePrice = 0;
-    let finalTotalSalesPrice = 0;
+    let calculatedTotalQty = 0;
+    let calculatedTotalPurchasePrice = 0;
+    let calculatedTotalSalesPrice = 0;
 
     const processedLineItems = data.lineItems.map(item => {
       const qty = parseFloat(item.qty);
       const purchasePrice = parseFloat(item.purchasePrice);
       const salesPrice = parseFloat(item.salesPrice);
 
-      finalTotalQty += qty;
-      finalTotalPurchasePrice += qty * purchasePrice;
-      finalTotalSalesPrice += qty * salesPrice;
+      calculatedTotalQty += qty;
+      calculatedTotalPurchasePrice += qty * purchasePrice;
+      calculatedTotalSalesPrice += qty * salesPrice;
       
       return {
         slNo: item.slNo,
@@ -239,14 +243,16 @@ export function AddProformaInvoiceForm() {
       };
     });
 
-    let finalGrandTotalSalesPrice = finalTotalSalesPrice;
+    let calculatedGrandTotalSalesPrice = calculatedTotalSalesPrice;
     if (data.freightChargeOption === "Freight Excluded" && freightAmountForDb !== undefined) {
-      finalGrandTotalSalesPrice += freightAmountForDb;
+      calculatedGrandTotalSalesPrice += freightAmountForDb;
     }
 
-    let finalTotalCommissionPercentage = 0;
-    if (finalTotalPurchasePrice > 0 && finalGrandTotalSalesPrice > finalTotalPurchasePrice) {
-      finalTotalCommissionPercentage = parseFloat((((finalGrandTotalSalesPrice - finalTotalPurchasePrice) / finalTotalPurchasePrice) * 100).toFixed(2));
+    const calculatedGrandTotalCommissionUSD = calculatedGrandTotalSalesPrice - calculatedTotalPurchasePrice;
+    
+    let calculatedTotalCommissionPercentage = 0;
+    if (calculatedTotalPurchasePrice > 0) {
+      calculatedTotalCommissionPercentage = parseFloat(((calculatedGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
     }
 
     const dataToSave: Omit<ProformaInvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -263,11 +269,12 @@ export function AddProformaInvoiceForm() {
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
-      totalQty: finalTotalQty,
-      totalPurchasePrice: finalTotalPurchasePrice,
-      totalSalesPrice: finalTotalSalesPrice,
-      grandTotalSalesPrice: finalGrandTotalSalesPrice,
-      totalCommissionPercentage: finalTotalCommissionPercentage,
+      totalQty: calculatedTotalQty,
+      totalPurchasePrice: calculatedTotalPurchasePrice,
+      totalSalesPrice: calculatedTotalSalesPrice,
+      grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
+      grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
+      totalCommissionPercentage: calculatedTotalCommissionPercentage,
     };
 
     try {
@@ -599,14 +606,15 @@ export function AddProformaInvoiceForm() {
         </div>
 
         <Separator />
-        <div className="space-y-2 text-sm p-4 border rounded-md shadow-sm bg-muted/30">
+         <div className="space-y-2 text-sm p-4 border rounded-md shadow-sm bg-muted/30">
             <h4 className="font-medium text-lg text-foreground">Calculated Totals:</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                 <p><strong className="text-muted-foreground">Total Qty:</strong> <span className="font-semibold text-foreground">{totalQty}</span></p>
                 <p><strong className="text-muted-foreground">Total Purchase Price:</strong> <span className="font-semibold text-foreground">{totalPurchasePriceAmount.toFixed(2)}</span></p>
                 <p><strong className="text-muted-foreground">Total Sales Price:</strong> <span className="font-semibold text-foreground">{totalSalesPriceAmount.toFixed(2)}</span></p>
                 <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-600 md:col-span-2 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
+                <p className="font-semibold text-green-700 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700">{grandTotalCommissionUSD.toFixed(2)}</span></p>
+                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
             </div>
         </div>
 

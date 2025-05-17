@@ -38,7 +38,7 @@ const proformaInvoiceSchema = z.object({
   connectedLcId: z.string().optional(),
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
-  freightChargeAmount: z.string().optional(),
+  freightChargeAmount: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Freight Amount must be a non-negative number if provided." }),
 }).refine(data => {
     if (data.freightChargeOption === "Freight Excluded") {
         const amount = parseFloat(data.freightChargeAmount || '');
@@ -81,6 +81,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   const [totalPurchasePriceAmount, setTotalPurchasePriceAmount] = React.useState(0);
   const [totalSalesPriceAmount, setTotalSalesPriceAmount] = React.useState(0);
   const [grandTotalSalesPrice, setGrandTotalSalesPrice] = React.useState(0);
+  const [grandTotalCommissionUSD, setGrandTotalCommissionUSD] = React.useState(0); // New state
   const [totalCommissionPercentage, setTotalCommissionPercentage] = React.useState(0);
 
   const form = useForm<ProformaInvoiceFormValues>({
@@ -214,18 +215,21 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     setTotalPurchasePriceAmount(newTotalPurchase);
     setTotalSalesPriceAmount(newTotalSales);
 
-    let currentGrandTotal = newTotalSales;
+    let currentGrandTotalSalesPrice = newTotalSales;
     if (watchedFreightOption === "Freight Excluded") {
-      const freightAmountNum = parseFloat(watchedFreightAmountString || '');
+      const freightAmountNum = parseFloat(watchedFreightAmountString || '0');
       if (!isNaN(freightAmountNum) && freightAmountNum >= 0) {
-        currentGrandTotal += freightAmountNum;
+        currentGrandTotalSalesPrice += freightAmountNum;
       }
     }
-    setGrandTotalSalesPrice(currentGrandTotal);
+    setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
-    if (newTotalPurchase > 0 && currentGrandTotal > newTotalPurchase) {
-      const commission = ((currentGrandTotal - newTotalPurchase) / newTotalPurchase) * 100;
-      setTotalCommissionPercentage(parseFloat(commission.toFixed(2)));
+    const newGrandTotalCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
+    setGrandTotalCommissionUSD(newGrandTotalCommissionUSD);
+
+    if (newTotalPurchase > 0) {
+      const commissionPercentage = (newGrandTotalCommissionUSD / newTotalPurchase) * 100;
+      setTotalCommissionPercentage(parseFloat(commissionPercentage.toFixed(2)));
     } else {
       setTotalCommissionPercentage(0);
     }
@@ -261,18 +265,18 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         return;
     }
 
-    let finalTotalQty = 0;
-    let finalTotalPurchasePrice = 0;
-    let finalTotalSalesPrice = 0;
+    let calculatedTotalQty = 0;
+    let calculatedTotalPurchasePrice = 0;
+    let calculatedTotalSalesPrice = 0;
 
     const processedLineItems = data.lineItems.map(item => {
       const qty = parseFloat(item.qty);
       const purchasePrice = parseFloat(item.purchasePrice);
       const salesPrice = parseFloat(item.salesPrice);
 
-      finalTotalQty += qty;
-      finalTotalPurchasePrice += qty * purchasePrice;
-      finalTotalSalesPrice += qty * salesPrice;
+      calculatedTotalQty += qty;
+      calculatedTotalPurchasePrice += qty * purchasePrice;
+      calculatedTotalSalesPrice += qty * salesPrice;
       
       return {
         slNo: item.slNo || undefined,
@@ -283,14 +287,16 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       };
     });
 
-    let finalGrandTotalSalesPrice = finalTotalSalesPrice;
+    let calculatedGrandTotalSalesPrice = calculatedTotalSalesPrice;
     if (data.freightChargeOption === "Freight Excluded" && freightAmountForDb !== undefined) {
-      finalGrandTotalSalesPrice += freightAmountForDb;
+      calculatedGrandTotalSalesPrice += freightAmountForDb;
     }
 
-    let finalTotalCommissionPercentage = 0;
-    if (finalTotalPurchasePrice > 0 && finalGrandTotalSalesPrice > finalTotalPurchasePrice) {
-      finalTotalCommissionPercentage = parseFloat((((finalGrandTotalSalesPrice - finalTotalPurchasePrice) / finalTotalPurchasePrice) * 100).toFixed(2));
+    const calculatedGrandTotalCommissionUSD = calculatedGrandTotalSalesPrice - calculatedTotalPurchasePrice;
+    
+    let calculatedTotalCommissionPercentage = 0;
+    if (calculatedTotalPurchasePrice > 0) {
+      calculatedTotalCommissionPercentage = parseFloat(((calculatedGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
     }
     
     const dataToUpdate: Partial<Omit<ProformaInvoiceDocument, 'id' | 'createdAt'>> = {
@@ -307,11 +313,12 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
-      totalQty: finalTotalQty,
-      totalPurchasePrice: finalTotalPurchasePrice,
-      totalSalesPrice: finalTotalSalesPrice,
-      grandTotalSalesPrice: finalGrandTotalSalesPrice,
-      totalCommissionPercentage: finalTotalCommissionPercentage,
+      totalQty: calculatedTotalQty,
+      totalPurchasePrice: calculatedTotalPurchasePrice,
+      totalSalesPrice: calculatedTotalSalesPrice,
+      grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
+      grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
+      totalCommissionPercentage: calculatedTotalCommissionPercentage,
       updatedAt: serverTimestamp(),
     };
 
@@ -643,7 +650,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <p><strong className="text-muted-foreground">Total Purchase Price:</strong> <span className="font-semibold text-foreground">{totalPurchasePriceAmount.toFixed(2)}</span></p>
                 <p><strong className="text-muted-foreground">Total Sales Price:</strong> <span className="font-semibold text-foreground">{totalSalesPriceAmount.toFixed(2)}</span></p>
                 <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-600 md:col-span-2 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
+                <p className="font-semibold text-green-700 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700">{grandTotalCommissionUSD.toFixed(2)}</span></p>
+                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage}%</span></p>
             </div>
         </div>
 

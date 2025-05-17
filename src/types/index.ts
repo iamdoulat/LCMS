@@ -33,15 +33,15 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 export interface LCEntry {
   id?: string;
   applicantId: string;
-  applicantName: string;
+  applicantName: string; // This will store the selected applicant's ID from the dropdown
   beneficiaryId: string;
-  beneficiaryName: string;
+  beneficiaryName: string; // This will store the selected beneficiary's ID from the dropdown
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: Date;
+  invoiceDate?: Date | null;
   totalMachineQty: number | '';
   lcIssueDate?: Date;
   expireDate?: Date;
@@ -51,8 +51,8 @@ export interface LCEntry {
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: Date;
-  eta?: Date;
+  etd?: Date | null;
+  eta?: Date | null;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -70,7 +70,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // Changed from notifyPartyContactDetails
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -99,9 +99,9 @@ export interface LCEntryDocument {
   id: string;
   year: number;
   applicantId: string;
-  applicantName: string;
+  applicantName: string; // Stores the actual name
   beneficiaryId: string;
-  beneficiaryName: string;
+  beneficiaryName: string; // Stores the actual name
   currency: Currency;
   amount: number;
   termsOfPay: TermsOfPay;
@@ -136,7 +136,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // Changed from notifyPartyContactDetails
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -189,7 +189,7 @@ export interface Supplier {
   website?: string;
   brandName: string;
   brandLogoUrl?: string;
-  bankInformation?: string; // Added field
+  bankInformation?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -262,6 +262,7 @@ export interface ProformaInvoice {
   totalPurchasePrice: number;
   totalSalesPrice: number;
   grandTotalSalesPrice: number;
+  grandTotalCommissionUSD?: number; // New field for the commission amount
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -276,6 +277,7 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
     salesPrice: number;
   }>;
   freightChargeAmount?: number;
+  grandTotalCommissionUSD?: number; // New field
   createdAt: any;
   updatedAt: any;
 };
@@ -286,3 +288,4 @@ export interface LcOption {
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // L/C Issue Date (ISO string)
 }
+
