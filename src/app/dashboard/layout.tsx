@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset className="flex flex-col min-h-screen"> {/* Ensure SidebarInset takes full height */}
           <AppHeader />
-          <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
+          <main className="flex-1 overflow-y-auto pt-4 px-6 pb-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
             {children}
           </main>
           <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card">
@@ -37,3 +37,5 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
     </AuthGuard>
   );
 }
+
+    
