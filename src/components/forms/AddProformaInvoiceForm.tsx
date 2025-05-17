@@ -140,9 +140,9 @@ export function AddProformaInvoiceForm() {
 
   const watchedConnectedLcId = form.watch("connectedLcId");
   React.useEffect(() => {
-    if (watchedConnectedLcId && watchedConnectedLcId !== NONE_LC_VALUE && watchedConnectedLcId !== PLACEHOLDER_LC_VALUE) {
+    if (watchedConnectedLcId && lcOptions.length > 0 && watchedConnectedLcId !== NONE_LC_VALUE && watchedConnectedLcId !== PLACEHOLDER_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
-      if (selectedLc && selectedLc.issueDate) {
+      if (selectedLc && selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate))) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
       } else {
         setSelectedLcIssueDate(null);
@@ -162,23 +162,25 @@ export function AddProformaInvoiceForm() {
     let newTotalSalesLineItems = 0;
     let newTotalExtraNetComm = 0;
 
-    watchedLineItems.forEach(item => {
-      const qty = parseFloat(item.qty) || 0;
-      const purchaseP = parseFloat(item.purchasePrice) || 0;
-      const salesP = parseFloat(item.salesPrice) || 0;
-      const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
+    if (Array.isArray(watchedLineItems)) {
+        watchedLineItems.forEach(item => {
+          const qty = parseFloat(String(item.qty)) || 0;
+          const purchaseP = parseFloat(String(item.purchasePrice)) || 0;
+          const salesP = parseFloat(String(item.salesPrice)) || 0;
+          const netCommP = parseFloat(String(item.netCommissionPercentage || '0')) || 0;
 
-      if (qty > 0) {
-        newTotalQty += qty;
-        if (purchaseP > 0) {
-          newTotalPurchase += qty * purchaseP;
-          if (netCommP > 0 && netCommP <=100) {
-            newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
+          if (qty > 0) {
+            newTotalQty += qty;
+            if (purchaseP > 0) {
+              newTotalPurchase += qty * purchaseP;
+              if (netCommP > 0 && netCommP <= 100) {
+                 newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
+              }
+            }
+            if (salesP > 0) newTotalSalesLineItems += qty * salesP;
           }
-        }
-        if (salesP > 0) newTotalSalesLineItems += qty * salesP;
-      }
-    });
+        });
+    }
 
     setTotalQty(newTotalQty);
     setTotalPurchasePriceAmount(newTotalPurchase);
@@ -186,7 +188,8 @@ export function AddProformaInvoiceForm() {
     setTotalExtraNetCommission(newTotalExtraNetComm);
 
     let currentGrandTotalSalesPrice = newTotalSalesLineItems;
-    const freightAmountNum = parseFloat(watchedFreightAmountString || '0') || 0;
+    const freightAmountNum = parseFloat(String(watchedFreightAmountString || '0')) || 0;
+
     if (watchedFreightOption === "Freight Excluded" && freightAmountNum >= 0) {
       currentGrandTotalSalesPrice += freightAmountNum;
     }
@@ -239,10 +242,10 @@ export function AddProformaInvoiceForm() {
     let calculatedTotalExtraNetCommission = 0;
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(item.qty);
-      const purchasePrice = parseFloat(item.purchasePrice);
-      const salesPrice = parseFloat(item.salesPrice);
-      const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
+      const qty = parseFloat(String(item.qty));
+      const purchasePrice = parseFloat(String(item.purchasePrice));
+      const salesPrice = parseFloat(String(item.salesPrice));
+      const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
 
       calculatedTotalQty += qty;
       calculatedTotalPurchasePrice += qty * purchasePrice;
@@ -252,7 +255,7 @@ export function AddProformaInvoiceForm() {
       }
 
       return {
-        slNo: item.slNo,
+        slNo: item.slNo || undefined, // Store undefined if empty
         modelNo: item.modelNo,
         qty: qty,
         purchasePrice: purchasePrice,
@@ -284,14 +287,14 @@ export function AddProformaInvoiceForm() {
       salesPersonName: data.salesPersonName,
       connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label || undefined,
-      connectedLcIssueDate: selectedLc?.issueDate || undefined,
+      connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
       totalQty: calculatedTotalQty,
       totalPurchasePrice: calculatedTotalPurchasePrice,
-      totalSalesPrice: calculatedTotalSalesPriceLineItems, // Storing sum of line item sales prices
-      totalExtraNetCommission: calculatedTotalExtraNetCommission,
+      totalSalesPrice: calculatedTotalSalesPriceLineItems,
+      totalExtraNetCommission: calculatedTotalExtraNetCommission > 0 ? calculatedTotalExtraNetCommission : undefined,
       grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
       grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
       totalCommissionPercentage: calculatedTotalCommissionPercentage,
@@ -303,6 +306,13 @@ export function AddProformaInvoiceForm() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+
+      // Remove undefined fields from the final object to save
+      Object.keys(docToSaveInFirestore).forEach(key => {
+        if (docToSaveInFirestore[key as keyof typeof docToSaveInFirestore] === undefined) {
+          delete docToSaveInFirestore[key as keyof typeof docToSaveInFirestore];
+        }
+      });
 
       await addDoc(collection(firestore, "proforma_invoices"), docToSaveInFirestore);
       Swal.fire({
@@ -364,6 +374,8 @@ export function AddProformaInvoiceForm() {
                   <SelectContent>
                     {isLoadingDropdowns ? (
                       <SelectItem value="loading_beneficiaries" disabled>Loading...</SelectItem>
+                    ) : beneficiaryOptions.length === 0 ? (
+                      <SelectItem value="no_beneficiaries" disabled>No beneficiaries found</SelectItem>
                     ) : (
                       <>
                         <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
@@ -395,6 +407,8 @@ export function AddProformaInvoiceForm() {
                   <SelectContent>
                      {isLoadingDropdowns ? (
                       <SelectItem value="loading_applicants" disabled>Loading...</SelectItem>
+                    ) : applicantOptions.length === 0 ? (
+                      <SelectItem value="no_applicants" disabled>No applicants found</SelectItem>
                     ) : (
                       <>
                         <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
@@ -469,6 +483,8 @@ export function AddProformaInvoiceForm() {
                   <SelectContent>
                     {isLoadingDropdowns ? (
                         <SelectItem value="loading_lcs" disabled>Loading L/Cs...</SelectItem>
+                    ) : lcOptions.length === 0 ? (
+                        <SelectItem value="no_lcs" disabled>No L/Cs found</SelectItem>
                     ) : (
                     <>
                         <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
@@ -667,3 +683,5 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
+
+    

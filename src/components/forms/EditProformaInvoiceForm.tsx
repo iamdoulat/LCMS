@@ -92,7 +92,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
-    defaultValues: { // These will be overridden by form.reset in useEffect
+    defaultValues: {
       beneficiaryId: '',
       applicantId: '',
       piNo: '',
@@ -163,7 +163,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       });
       if (initialData.connectedLcId && lcOptions.length > 0) {
          const selectedLc = lcOptions.find(opt => opt.value === initialData.connectedLcId);
-         if (selectedLc && selectedLc.issueDate) {
+         if (selectedLc && selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate))) {
            setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
          } else {
            setSelectedLcIssueDate(null);
@@ -178,7 +178,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   React.useEffect(() => {
     if (watchedConnectedLcId && lcOptions.length > 0 && watchedConnectedLcId !== NONE_LC_VALUE && watchedConnectedLcId !== PLACEHOLDER_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
-      if (selectedLc && selectedLc.issueDate) {
+      if (selectedLc && selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate))) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
       } else {
         setSelectedLcIssueDate(null);
@@ -200,10 +200,10 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
     if (Array.isArray(watchedLineItems)) {
         watchedLineItems.forEach(item => {
-          const qty = parseFloat(item.qty) || 0;
-          const purchaseP = parseFloat(item.purchasePrice) || 0;
-          const salesP = parseFloat(item.salesPrice) || 0;
-          const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
+          const qty = parseFloat(String(item.qty)) || 0;
+          const purchaseP = parseFloat(String(item.purchasePrice)) || 0;
+          const salesP = parseFloat(String(item.salesPrice)) || 0;
+          const netCommP = parseFloat(String(item.netCommissionPercentage || '0')) || 0;
 
           if (qty > 0) {
             newTotalQty += qty;
@@ -224,7 +224,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     setTotalExtraNetCommission(newTotalExtraNetComm);
 
     let currentGrandTotalSalesPrice = newTotalSalesLineItems;
-    const freightAmountNum = parseFloat(watchedFreightAmountString || '0') || 0;
+    const freightAmountNum = parseFloat(String(watchedFreightAmountString || '0')) || 0;
+
     if (watchedFreightOption === "Freight Excluded" && freightAmountNum >= 0) {
       currentGrandTotalSalesPrice += freightAmountNum;
     }
@@ -277,10 +278,10 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     let calculatedTotalExtraNetCommission = 0;
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(item.qty);
-      const purchasePrice = parseFloat(item.purchasePrice);
-      const salesPrice = parseFloat(item.salesPrice);
-      const netCommP = parseFloat(item.netCommissionPercentage || '0') || 0;
+      const qty = parseFloat(String(item.qty));
+      const purchasePrice = parseFloat(String(item.purchasePrice));
+      const salesPrice = parseFloat(String(item.salesPrice));
+      const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
 
       calculatedTotalQty += qty;
       calculatedTotalPurchasePrice += qty * purchasePrice;
@@ -322,19 +323,26 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       salesPersonName: data.salesPersonName,
       connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label || undefined,
-      connectedLcIssueDate: selectedLc?.issueDate || undefined,
+      connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
       totalQty: calculatedTotalQty,
       totalPurchasePrice: calculatedTotalPurchasePrice,
       totalSalesPrice: calculatedTotalSalesPriceLineItems,
-      totalExtraNetCommission: calculatedTotalExtraNetCommission,
+      totalExtraNetCommission: calculatedTotalExtraNetCommission > 0 ? calculatedTotalExtraNetCommission : undefined,
       grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
       grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
       totalCommissionPercentage: calculatedTotalCommissionPercentage,
       updatedAt: serverTimestamp(),
     };
+
+    // Remove undefined fields from the final object to save
+    Object.keys(dataToUpdate).forEach(key => {
+        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
+            delete dataToUpdate[key as keyof typeof dataToUpdate];
+        }
+    });
 
     try {
       const piDocRef = doc(firestore, "proforma_invoices", piId);
@@ -395,7 +403,9 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                   <SelectContent>
                      {isLoadingDropdowns ? (
                       <SelectItem value="loading_beneficiaries_edit" disabled>Loading...</SelectItem>
-                    ) : (
+                    ) : beneficiaryOptions.length === 0 ? (
+                        <SelectItem value="no_beneficiaries_edit" disabled>No beneficiaries found</SelectItem>
+                    ): (
                       <>
                         <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
                         {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
@@ -426,6 +436,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                   <SelectContent>
                     {isLoadingDropdowns ? (
                       <SelectItem value="loading_applicants_edit" disabled>Loading...</SelectItem>
+                    ) : applicantOptions.length === 0 ? (
+                        <SelectItem value="no_applicants_edit" disabled>No applicants found</SelectItem>
                     ) : (
                       <>
                         <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
@@ -500,6 +512,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                   <SelectContent>
                      {isLoadingDropdowns ? (
                         <SelectItem value="loading_lcs_edit" disabled>Loading L/Cs...</SelectItem>
+                    ) : lcOptions.length === 0 ? (
+                         <SelectItem value="no_lcs_edit" disabled>No L/Cs found</SelectItem>
                     ) : (
                     <>
                         <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
@@ -698,3 +712,5 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
+
+    
