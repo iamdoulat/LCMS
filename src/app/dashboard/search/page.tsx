@@ -21,11 +21,6 @@ function SearchPageContent() {
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
     setDisplayedQuery(queryFromUrl);
-    // In a real app, you would trigger a search API call here if queryFromUrl is not empty.
-    if (queryFromUrl) {
-      console.log(`Simulating search for: ${queryFromUrl}`);
-      // Placeholder for actual search logic
-    }
   }, [searchParams]);
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,29 +33,37 @@ function SearchPageContent() {
     }
   };
 
-  // Placeholder data for illustrative links
-  const placeholderResults = {
-    lcs: [
-      { id: 'lc123', number: 'LC-2024-001', applicant: 'Global Trade Co.' },
-      { id: 'lc456', number: 'LC-XYZ-789', applicant: 'Imports Inc.' },
-    ],
-    applicants: [
-      { id: 'cust001', name: 'Global Trade Co.' },
-      { id: 'cust002', name: 'Mega Corp Appliances' },
-    ],
-    beneficiaries: [
-      { id: 'sup001', name: 'Overseas Electronics Ltd.' },
-      { id: 'sup002', name: 'General Goods Exporters' },
-    ],
-    pis: [
-      { id: 'pi777', number: 'PI-2024-A05', applicant: 'Global Trade Co.' },
-      { id: 'pi888', number: 'PI-INTL-012', applicant: 'Imports Inc.' },
-    ],
-    byYear: [
-      { year: '2024', description: 'Entries from 2024 matching query' },
-      { year: '2023', description: 'Entries from 2023 matching query' },
-    ]
+  // Placeholder data for illustrative links, now more dynamic
+  const generatePlaceholderResults = (query: string) => {
+    const sanitizedQuery = query.replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 10); // Sanitize for use in IDs/names
+    return {
+      lcs: [
+        { id: `lc_match_${sanitizedQuery}_1`, number: `LC-${sanitizedQuery}-001`, applicant: `Applicant for ${sanitizedQuery}` },
+        { id: `lc_match_${sanitizedQuery}_2`, number: `LC-${sanitizedQuery}-002`, applicant: `Another Applicant for ${sanitizedQuery}` },
+      ],
+      applicants: [
+        { id: `app_match_${sanitizedQuery}_A`, name: `Applicant matching '${query}' - Alpha` },
+        { id: `app_match_${sanitizedQuery}_B`, name: `Applicant matching '${query}' - Beta` },
+      ],
+      beneficiaries: [
+        { id: `ben_match_${sanitizedQuery}_X`, name: `Beneficiary matching '${query}' - Xylia` },
+        { id: `ben_match_${sanitizedQuery}_Y`, name: `Beneficiary matching '${query}' - Yarrow` },
+      ],
+      pis: [
+        { id: `pi_match_${sanitizedQuery}_001`, number: `PI-${sanitizedQuery}-A05`, applicant: `Applicant for ${sanitizedQuery}` },
+        { id: `pi_match_${sanitizedQuery}_002`, number: `PI-${sanitizedQuery}-B12`, applicant: `Another Applicant for ${sanitizedQuery}` },
+      ],
+      byYear: query.match(/^\d{4}$/) // Check if query looks like a year
+        ? [{ year: query, description: `Entries from ${query} matching query` }]
+        : [
+            { year: '2024', description: `Entries from 2024 matching '${query}'` },
+            { year: '2023', description: `Entries from 2023 matching '${query}'` },
+          ]
+    };
   };
+  
+  const placeholderResults = displayedQuery ? generatePlaceholderResults(displayedQuery) : null;
+
 
   return (
     <div className="container mx-auto py-8">
@@ -88,7 +91,7 @@ function SearchPageContent() {
             </Button>
           </form>
 
-          {displayedQuery && (
+          {displayedQuery && placeholderResults && (
             <div className="mb-6 text-center">
               <p className="text-lg">Showing illustrative results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
               <p className="text-xs text-muted-foreground">(Actual search results would be dynamically fetched from the database)</p>
@@ -102,7 +105,7 @@ function SearchPageContent() {
             </div>
           )}
 
-          {displayedQuery && (
+          {displayedQuery && placeholderResults && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -119,7 +122,7 @@ function SearchPageContent() {
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="text-muted-foreground">No L/C entries found matching your query. (Illustrative)</p>}
+                  ) : <p className="text-muted-foreground">No L/C entries found matching "{displayedQuery}". (Illustrative)</p>}
                 </CardContent>
               </Card>
 
@@ -138,7 +141,7 @@ function SearchPageContent() {
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="text-muted-foreground">No Applicants found matching your query. (Illustrative)</p>}
+                  ) : <p className="text-muted-foreground">No Applicants found matching "{displayedQuery}". (Illustrative)</p>}
                 </CardContent>
               </Card>
 
@@ -157,7 +160,7 @@ function SearchPageContent() {
                         </li>
                       ))}
                     </ul>
-                  ): <p className="text-muted-foreground">No Beneficiaries found matching your query. (Illustrative)</p>}
+                  ): <p className="text-muted-foreground">No Beneficiaries found matching "{displayedQuery}". (Illustrative)</p>}
                 </CardContent>
               </Card>
 
@@ -176,7 +179,7 @@ function SearchPageContent() {
                         </li>
                       ))}
                     </ul>
-                  ): <p className="text-muted-foreground">No Proforma Invoices found matching your query. (Illustrative)</p>}
+                  ): <p className="text-muted-foreground">No Proforma Invoices found matching "{displayedQuery}". (Illustrative)</p>}
                 </CardContent>
               </Card>
                <Card>
@@ -184,11 +187,10 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Entries by Year "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {placeholderResults.byYear.length > 0 ? (
+                  {placeholderResults.byYear.length > 0 && placeholderResults.byYear[0].year === displayedQuery ? ( // Only show if query is a year
                      <ul className="space-y-2">
                       {placeholderResults.byYear.map(item => (
                         <li key={item.year} className="text-sm hover:bg-muted/50 p-2 rounded-md">
-                          {/* This link would ideally go to a filtered view, e.g., L/C list filtered by this year */}
                           <Link href={`/dashboard/total-lc?year=${item.year}`} className="text-primary hover:underline flex items-center gap-1">
                             <LinkIcon className="h-3 w-3" /> View L/Cs from {item.year}
                           </Link>
@@ -196,7 +198,7 @@ function SearchPageContent() {
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="text-muted-foreground">No entries found for year "{displayedQuery}". (Illustrative)</p>}
+                  ) : <p className="text-muted-foreground">No entries found for year "{displayedQuery}", or your search term is not a specific year. (Illustrative)</p>}
                 </CardContent>
               </Card>
             </div>
