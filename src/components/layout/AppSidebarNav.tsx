@@ -54,11 +54,11 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 
 
 const coreModulesNavItems: NavItemGroup[] = [
- {
+  {
     groupLabel: 'L/C Management',
     icon: Briefcase,
     subLinks: [
-      { href: '/dashboard/total-lc', label: 'Total L/C', icon: ListChecks },
+      { href: '/dashboard/total-lc', label: 'Total L/C list', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
     ],
@@ -116,9 +116,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      // console.log("AppSidebarNav: Current User Role from AuthContext:", userRole);
-      // console.log("AppSidebarNav: Company Name from AuthContext:", companyName);
-      // console.log("AppSidebarNav: Company Logo URL from AuthContext:", companyLogoUrl);
+      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole, companyName, companyLogoUrl]);
 
@@ -248,15 +246,13 @@ export function AppSidebarNav() {
         </SidebarMenu>
 
         <SidebarSeparator />
-
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Core Modules
-          </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+        </SidebarGroupLabel>
+        <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
             {coreModulesNavItems.map(renderNavGroup)}
-          </Accordion>
-        </SidebarGroup>
+        </Accordion>
+        
 
         <SidebarSeparator />
 

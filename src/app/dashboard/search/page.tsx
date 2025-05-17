@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, AlertTriangle, FileText, Users, Building } from 'lucide-react';
+import { Search as SearchIcon, FileText, Users, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
@@ -18,14 +18,11 @@ function SearchPageContent() {
   const [displayedQuery, setDisplayedQuery] = useState(initialQuery);
 
   useEffect(() => {
-    // Update searchTerm if the URL query changes (e.g., browser back/forward)
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
     setDisplayedQuery(queryFromUrl);
     if (queryFromUrl) {
-      // Here you would typically trigger actual search logic
       console.log(`Searching for: ${queryFromUrl}`);
-      // For now, we just update the displayed query.
     }
   }, [searchParams]);
 
@@ -35,9 +32,8 @@ function SearchPageContent() {
     if (trimmedSearchTerm) {
       router.push(`/dashboard/search?q=${encodeURIComponent(trimmedSearchTerm)}`);
     } else {
-      router.push('/dashboard/search'); // Navigate to search page without query if input is empty
+      router.push('/dashboard/search'); 
     }
-    // The useEffect above will handle updating displayedQuery based on the new URL
   };
 
   return (
@@ -86,8 +82,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>L/C Entries Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(Backend search logic for L/C entries is pending implementation.)</p>
-                  {/* Placeholder for L/C results */}
+                  <p className="text-muted-foreground">L/C entries matching your query would appear here as links. (Backend search logic pending implementation.)</p>
                 </CardContent>
               </Card>
 
@@ -96,8 +91,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Applicants Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(Backend search logic for Applicants is pending implementation.)</p>
-                  {/* Placeholder for Applicant results */}
+                  <p className="text-muted-foreground">Applicants matching your query would appear here as links. (Backend search logic pending implementation.)</p>
                 </CardContent>
               </Card>
 
@@ -106,8 +100,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Beneficiaries Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(Backend search logic for Beneficiaries is pending implementation.)</p>
-                  {/* Placeholder for Beneficiary results */}
+                  <p className="text-muted-foreground">Beneficiaries matching your query would appear here as links. (Backend search logic pending implementation.)</p>
                 </CardContent>
               </Card>
 
@@ -116,8 +109,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Proforma Invoices Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(Backend search logic for Proforma Invoices is pending implementation.)</p>
-                  {/* Placeholder for PI results */}
+                  <p className="text-muted-foreground">Proforma Invoices matching your query would appear here as links. (Backend search logic pending implementation.)</p>
                 </CardContent>
               </Card>
                <Card>
@@ -125,8 +117,7 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><SearchIcon className="h-5 w-5 text-primary"/>Entries by Year "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">(Backend search logic for yearly entries is pending implementation. This search would be most effective if "{displayedQuery}" is a year.)</p>
-                  {/* Placeholder for Yearly results */}
+                  <p className="text-muted-foreground">Entries matching the year "{displayedQuery}" would appear here as links. (Backend search logic pending implementation.)</p>
                 </CardContent>
               </Card>
             </div>
@@ -137,7 +128,6 @@ function SearchPageContent() {
   );
 }
 
-// Wrap the component with Suspense to handle useSearchParams on initial render
 export default function SearchPage() {
   return (
     <Suspense fallback={<div>Loading search...</div>}>
