@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption, LCEntryDocument } from '@/types';
+import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption } from '@/types';
 import { freightChargeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,11 @@ interface DropdownOption {
 
 const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
-const NONE_LC_VALUE = "__NONE_LC__"; // Special value for "None" option
+const PLACEHOLDER_BENEFICIARY_VALUE = "__SELECT_BENEFICIARY_PI_ADD__";
+const PLACEHOLDER_APPLICANT_VALUE = "__SELECT_APPLICANT_PI_ADD__";
+const NONE_LC_VALUE = "__NONE_LC_PI_ADD__";
+const PLACEHOLDER_LC_VALUE = "__SELECT_LC_PI_ADD__";
+
 
 export function AddProformaInvoiceForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -129,7 +133,7 @@ export function AddProformaInvoiceForm() {
 
   const watchedConnectedLcId = form.watch("connectedLcId");
   React.useEffect(() => {
-    if (watchedConnectedLcId && watchedConnectedLcId !== NONE_LC_VALUE) {
+    if (watchedConnectedLcId && watchedConnectedLcId !== NONE_LC_VALUE && watchedConnectedLcId !== PLACEHOLDER_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
       if (selectedLc && selectedLc.issueDate) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
@@ -186,10 +190,24 @@ export function AddProformaInvoiceForm() {
   async function onSubmit(data: ProformaInvoiceFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    const lcIdToSave = data.connectedLcId === NONE_LC_VALUE ? undefined : data.connectedLcId;
-    const selectedLc = lcIdToSave ? lcOptions.find(opt => opt.value === lcIdToSave) : undefined;
+    const finalApplicantId = data.applicantId === PLACEHOLDER_APPLICANT_VALUE ? '' : data.applicantId;
+    const finalBeneficiaryId = data.beneficiaryId === PLACEHOLDER_BENEFICIARY_VALUE ? '' : data.beneficiaryId;
+    const finalConnectedLcId = (data.connectedLcId === NONE_LC_VALUE || data.connectedLcId === PLACEHOLDER_LC_VALUE) ? '' : data.connectedLcId;
+    
+    if (!finalApplicantId) {
+        form.setError("applicantId", {type: "manual", message: "Applicant is required."});
+        setIsSubmitting(false);
+        return;
+    }
+    if (!finalBeneficiaryId) {
+        form.setError("beneficiaryId", {type: "manual", message: "Beneficiary is required."});
+        setIsSubmitting(false);
+        return;
+    }
+
+    const selectedApplicant = applicantOptions.find(opt => opt.value === finalApplicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
+    const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
 
 
     const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
@@ -232,14 +250,14 @@ export function AddProformaInvoiceForm() {
     }
 
     const dataToSave: Omit<ProformaInvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> = {
-      beneficiaryId: data.beneficiaryId,
+      beneficiaryId: finalBeneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
-      applicantId: data.applicantId,
+      applicantId: finalApplicantId,
       applicantName: selectedApplicant?.label || 'N/A',
       piNo: data.piNo,
       piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesPersonName: data.salesPersonName,
-      connectedLcId: lcIdToSave,
+      connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label || undefined,
       connectedLcIssueDate: selectedLc?.issueDate || undefined,
       lineItems: processedLineItems,
@@ -306,14 +324,25 @@ export function AddProformaInvoiceForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                <Select
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_BENEFICIARY_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading..." : "Select Beneficiary"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    {isLoadingDropdowns ? (
+                      <SelectItem value="loading_beneficiaries" disabled>Loading...</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
+                        {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -326,14 +355,25 @@ export function AddProformaInvoiceForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                <Select
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_APPLICANT_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading..." : "Select Applicant"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                     {isLoadingDropdowns ? (
+                      <SelectItem value="loading_applicants" disabled>Loading...</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
+                        {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -390,8 +430,8 @@ export function AddProformaInvoiceForm() {
               <FormItem>
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
                 <Select 
-                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)} 
-                  value={field.value === '' || field.value === undefined ? NONE_LC_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE || value === PLACEHOLDER_LC_VALUE ? '' : value)} 
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_LC_VALUE : (lcOptions.find(opt => opt.value === field.value) ? field.value : PLACEHOLDER_LC_VALUE) }
                   disabled={isLoadingDropdowns}
                 >
                   <FormControl>
@@ -400,8 +440,15 @@ export function AddProformaInvoiceForm() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
-                    {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    {isLoadingDropdowns ? (
+                        <SelectItem value="loading_lcs" disabled>Loading L/Cs...</SelectItem>
+                    ) : (
+                    <>
+                        <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
+                        <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
+                        {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />

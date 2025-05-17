@@ -64,7 +64,10 @@ interface EditProformaInvoiceFormProps {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
-const NONE_LC_VALUE = "__NONE_LC__"; // Special value for "None" option
+const PLACEHOLDER_BENEFICIARY_VALUE = "__SELECT_BENEFICIARY_PI_EDIT__";
+const PLACEHOLDER_APPLICANT_VALUE = "__SELECT_APPLICANT_PI_EDIT__";
+const NONE_LC_VALUE = "__NONE_LC_PI_EDIT__";
+const PLACEHOLDER_LC_VALUE = "__SELECT_LC_PI_EDIT__";
 
 export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -82,16 +85,22 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
-    defaultValues: { // Explicitly define default values
-      beneficiaryId: '',
-      applicantId: '',
-      piNo: '',
-      piDate: new Date(),
-      salesPersonName: '',
-      connectedLcId: '',
-      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
-      freightChargeOption: "Freight Included",
-      freightChargeAmount: '', // Initialize as empty string
+    defaultValues: {
+      beneficiaryId: initialData?.beneficiaryId || '',
+      applicantId: initialData?.applicantId || '',
+      piNo: initialData?.piNo || '',
+      piDate: initialData?.piDate && isValid(parseISO(initialData.piDate)) ? parseISO(initialData.piDate) : new Date(),
+      salesPersonName: initialData?.salesPersonName || '',
+      connectedLcId: initialData?.connectedLcId || '',
+      lineItems: initialData?.lineItems?.map(item => ({
+        slNo: item.slNo || '',
+        modelNo: item.modelNo || '',
+        qty: item.qty?.toString() || '',
+        purchasePrice: item.purchasePrice?.toString() || '',
+        salesPrice: item.salesPrice?.toString() || '',
+      })) || [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '' }],
+      freightChargeOption: initialData?.freightChargeOption || "Freight Included",
+      freightChargeAmount: initialData?.freightChargeAmount?.toString() || '', 
     },
   });
 
@@ -132,7 +141,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   }, []);
 
   React.useEffect(() => {
-    if (initialData && !isLoadingDropdowns) { // Ensure dropdowns are loaded before resetting
+    if (initialData && !isLoadingDropdowns) { 
       form.reset({
         beneficiaryId: initialData.beneficiaryId || '',
         applicantId: initialData.applicantId || '',
@@ -150,7 +159,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         freightChargeOption: initialData.freightChargeOption || "Freight Included",
         freightChargeAmount: initialData.freightChargeAmount?.toString() || '',
       });
-      if (initialData.connectedLcId && lcOptions.length > 0) { // Check lcOptions loaded
+      if (initialData.connectedLcId && lcOptions.length > 0) {
          const selectedLc = lcOptions.find(opt => opt.value === initialData.connectedLcId);
          if (selectedLc && selectedLc.issueDate) {
            setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
@@ -165,14 +174,14 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const watchedConnectedLcId = form.watch("connectedLcId");
   React.useEffect(() => {
-    if (watchedConnectedLcId && lcOptions.length > 0) { // Check lcOptions loaded
+    if (watchedConnectedLcId && lcOptions.length > 0 && watchedConnectedLcId !== NONE_LC_VALUE && watchedConnectedLcId !== PLACEHOLDER_LC_VALUE) { 
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
       if (selectedLc && selectedLc.issueDate) {
         setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
       } else {
         setSelectedLcIssueDate(null);
       }
-    } else if (!watchedConnectedLcId) {
+    } else if (!watchedConnectedLcId || watchedConnectedLcId === NONE_LC_VALUE || watchedConnectedLcId === PLACEHOLDER_LC_VALUE) {
       setSelectedLcIssueDate(null);
     }
   }, [watchedConnectedLcId, lcOptions]);
@@ -225,9 +234,24 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   async function onSubmit(data: ProformaInvoiceFormValues) {
     setIsSubmitting(true);
 
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    const selectedLc = lcOptions.find(opt => opt.value === data.connectedLcId);
+    const finalApplicantId = data.applicantId === PLACEHOLDER_APPLICANT_VALUE ? '' : data.applicantId;
+    const finalBeneficiaryId = data.beneficiaryId === PLACEHOLDER_BENEFICIARY_VALUE ? '' : data.beneficiaryId;
+    const finalConnectedLcId = (data.connectedLcId === NONE_LC_VALUE || data.connectedLcId === PLACEHOLDER_LC_VALUE) ? '' : data.connectedLcId;
+
+    if (!finalApplicantId) {
+        form.setError("applicantId", {type: "manual", message: "Applicant is required."});
+        setIsSubmitting(false);
+        return;
+    }
+    if (!finalBeneficiaryId) {
+        form.setError("beneficiaryId", {type: "manual", message: "Beneficiary is required."});
+        setIsSubmitting(false);
+        return;
+    }
+    
+    const selectedApplicant = applicantOptions.find(opt => opt.value === finalApplicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
+    const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
 
 
     const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? parseFloat(data.freightChargeAmount || '0') : undefined;
@@ -270,16 +294,16 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     }
     
     const dataToUpdate: Partial<Omit<ProformaInvoiceDocument, 'id' | 'createdAt'>> = {
-      beneficiaryId: data.beneficiaryId,
+      beneficiaryId: finalBeneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || initialData.beneficiaryName,
-      applicantId: data.applicantId,
+      applicantId: finalApplicantId,
       applicantName: selectedApplicant?.label || initialData.applicantName,
       piNo: data.piNo,
       piDate: format(data.piDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesPersonName: data.salesPersonName,
-      connectedLcId: data.connectedLcId === NONE_LC_VALUE ? undefined : data.connectedLcId || undefined,
-      connectedLcNumber: data.connectedLcId === NONE_LC_VALUE ? undefined : selectedLc?.label || undefined,
-      connectedLcIssueDate: data.connectedLcId === NONE_LC_VALUE ? undefined : selectedLc?.issueDate || undefined,
+      connectedLcId: finalConnectedLcId || undefined,
+      connectedLcNumber: selectedLc?.label || undefined,
+      connectedLcIssueDate: selectedLc?.issueDate || undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: freightAmountForDb,
@@ -317,7 +341,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '' });
   };
 
-  if (isLoadingDropdowns && !initialData) { // Show loading only if initialData isn't even there yet
+  if (isLoadingDropdowns && !initialData) { 
     return (
       <div className="flex items-center justify-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -337,14 +361,25 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                <Select
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_BENEFICIARY_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading..." : "Select Beneficiary"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                     {isLoadingDropdowns ? (
+                      <SelectItem value="loading_beneficiaries_edit" disabled>Loading...</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
+                        {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -357,14 +392,25 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDropdowns}>
+                <Select
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_APPLICANT_VALUE : field.value}
+                  disabled={isLoadingDropdowns}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDropdowns ? "Loading..." : "Select Applicant"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    {isLoadingDropdowns ? (
+                      <SelectItem value="loading_applicants_edit" disabled>Loading...</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
+                        {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -421,8 +467,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
               <FormItem>
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
                 <Select 
-                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)} 
-                  value={field.value === '' || field.value === undefined ? NONE_LC_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE || value === PLACEHOLDER_LC_VALUE ? '' : value)} 
+                  value={field.value === '' || field.value === undefined ? PLACEHOLDER_LC_VALUE : (lcOptions.find(opt => opt.value === field.value) ? field.value : PLACEHOLDER_LC_VALUE) }
                   disabled={isLoadingDropdowns}
                 >
                   <FormControl>
@@ -431,8 +477,15 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
-                    {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                     {isLoadingDropdowns ? (
+                        <SelectItem value="loading_lcs_edit" disabled>Loading L/Cs...</SelectItem>
+                    ) : (
+                    <>
+                        <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
+                        <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
+                        {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -611,3 +664,4 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
+
