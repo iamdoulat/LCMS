@@ -5,16 +5,19 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, UserCog } from 'lucide-react';
+import { Loader2, Save, UserCog, CalendarDays, DollarSign, BarChart3 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { Customer, CustomerDocument } from '@/types';
+import { doc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import type { Customer, CustomerDocument, LCEntryDocument } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const applicantSchema = z.object({
   applicantName: z.string().min(1, "Applicant name is required"),
@@ -35,11 +38,28 @@ interface EditApplicantFormProps {
   applicantId: string;
 }
 
+const currentSystemYear = new Date().getFullYear();
+const lcYearOptions = Array.from({ length: (currentSystemYear - 2020 + 6) }, (_, i) => (2020 + i).toString()); // 2020 to currentYear + 5
+
 export function EditApplicantForm({ initialData, applicantId }: EditApplicantFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedLcYear, setSelectedLcYear] = React.useState<string>(currentSystemYear.toString());
+  const [totalLcValueForYear, setTotalLcValueForYear] = React.useState<number>(0);
+  const [isLoadingLcStats, setIsLoadingLcStats] = React.useState<boolean>(false);
+
   const form = useForm<ApplicantEditFormValues>({
     resolver: zodResolver(applicantSchema),
-    // Default values are set by form.reset in useEffect
+    defaultValues: { // Default values will be overridden by useEffect with initialData
+      applicantName: '',
+      email: '',
+      phone: '',
+      address: '',
+      contactPerson: '',
+      binNo: '',
+      tinNo: '',
+      newIrcNo: '',
+      oldIrcNo: '',
+    }
   });
 
   React.useEffect(() => {
@@ -58,19 +78,60 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
     }
   }, [initialData, form]);
 
+  React.useEffect(() => {
+    const fetchLcStats = async () => {
+      if (!applicantId || !selectedLcYear) {
+        setTotalLcValueForYear(0);
+        return;
+      }
+      setIsLoadingLcStats(true);
+      try {
+        const lcEntriesRef = collection(firestore, "lc_entries");
+        const q = query(
+          lcEntriesRef,
+          where("applicantId", "==", applicantId),
+          where("year", "==", parseInt(selectedLcYear))
+        );
+        const querySnapshot = await getDocs(q);
+        let totalValue = 0;
+        querySnapshot.forEach((docSnap) => {
+          const lc = docSnap.data() as LCEntryDocument;
+          totalValue += lc.amount || 0; // Sum amounts, assuming all are in a comparable currency
+        });
+        setTotalLcValueForYear(totalValue);
+      } catch (error) {
+        console.error("Error fetching L/C statistics for applicant:", error);
+        setTotalLcValueForYear(0);
+        // Optionally show a user-friendly error message
+        // Swal.fire("Error", "Could not load L/C statistics for this applicant.", "error");
+      } finally {
+        setIsLoadingLcStats(false);
+      }
+    };
+
+    fetchLcStats();
+  }, [applicantId, selectedLcYear]);
+
   async function onSubmit(data: ApplicantEditFormValues) {
     setIsSubmitting(true);
 
     const dataToUpdate: Partial<Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: any } = {
-      ...data,
+      ...data, // Spread all form data
+      // Ensure optional fields that are empty strings become undefined for Firestore
+      phone: data.phone || undefined,
+      contactPerson: data.contactPerson || undefined,
+      binNo: data.binNo || undefined,
+      tinNo: data.tinNo || undefined,
+      newIrcNo: data.newIrcNo || undefined,
+      oldIrcNo: data.oldIrcNo || undefined,
       updatedAt: serverTimestamp(),
     };
 
-    // Filter out undefined or empty optional fields
+    // Clean up any explicit undefined fields if necessary, though Firestore handles it.
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
-        if (dataToUpdate[key] === undefined || dataToUpdate[key] === '') {
-            delete dataToUpdate[key];
-        }
+      if (dataToUpdate[key] === undefined) {
+        delete dataToUpdate[key];
+      }
     });
 
     try {
@@ -134,7 +195,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -163,7 +224,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
             <FormItem>
               <FormLabel>Contact Person</FormLabel>
               <FormControl>
-                <Input placeholder="Enter name of the primary contact person" {...field} />
+                <Input placeholder="Enter name of the primary contact person" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -178,7 +239,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormItem>
                 <FormLabel>BIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter BIN number" {...field} />
+                  <Input placeholder="Enter BIN number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -191,7 +252,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormItem>
                 <FormLabel>TIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter TIN number" {...field} />
+                  <Input placeholder="Enter TIN number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -207,7 +268,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormItem>
                 <FormLabel>New IRC No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter New IRC number" {...field} />
+                  <Input placeholder="Enter New IRC number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -220,7 +281,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormItem>
                 <FormLabel>Old IRC No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Old IRC number" {...field} />
+                  <Input placeholder="Enter Old IRC number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -242,6 +303,52 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
           )}
         </Button>
       </form>
+
+      <Separator className="my-10" />
+
+      <div>
+        <h3 className={cn("flex items-center gap-2 mb-4", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <BarChart3 className="h-6 w-6 text-primary" />
+            Applicant LC Statistics
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end mb-4 p-4 border rounded-md shadow-sm">
+            <FormItem>
+                <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />L/C Year</FormLabel>
+                <Select value={selectedLcYear} onValueChange={setSelectedLcYear}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {lcYearOptions.map(year => (
+                            <SelectItem key={year} value={year}>{year}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </FormItem>
+            <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Value</FormLabel>
+                {isLoadingLcStats ? (
+                     <div className="flex items-center justify-center h-10 rounded-md border bg-muted/50">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                     </div>
+                ) : (
+                    <Input
+                        type="text"
+                        value={totalLcValueForYear.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        readOnly
+                        disabled
+                        className="bg-muted/50 cursor-not-allowed font-semibold text-foreground"
+                    />
+                )}
+            </FormItem>
+        </div>
+        <p className="text-xs text-muted-foreground">
+            Total value of L/Cs for this applicant in the selected year. Values are summed directly; currency conversion is not applied if multiple currencies exist.
+        </p>
+      </div>
+
     </Form>
   );
 }
+
+    
