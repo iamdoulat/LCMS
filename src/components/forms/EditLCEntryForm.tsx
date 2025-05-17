@@ -19,6 +19,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, Layers, FileIcon, Box, Weight, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -34,8 +35,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE__";
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"),
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
+  applicantName: z.string().min(1, "Applicant Name is required"), // Stores Applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // Stores Beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
@@ -84,15 +85,15 @@ const lcEntrySchema = z.object({
   ),
   finalPIUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Final PI" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   finalLcUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Final LC" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -116,11 +117,6 @@ const lcEntrySchema = z.object({
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
 
-interface DropdownOption {
-  value: string;
-  label: string;
-}
-
 interface EditLCEntryFormProps {
   initialData: LCEntryDocument;
   lcId: string;
@@ -128,8 +124,8 @@ interface EditLCEntryFormProps {
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
 
@@ -138,66 +134,66 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: {
-      applicantName: initialData?.applicantId || '',
-      beneficiaryName: initialData?.beneficiaryId || '',
-      currency: initialData?.currency || 'USD',
-      termsOfPay: initialData?.termsOfPay || '' as TermsOfPay,
-      status: initialData?.status || 'Draft',
-      shipmentMode: initialData?.shipmentMode || '' as ShipmentMode,
-      trackingCourier: initialData?.trackingCourier || '',
-      amount: initialData?.amount ?? undefined,
-      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
-      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
-      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-      totalMachineQty: initialData?.totalMachineQty ?? undefined,
-      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
-      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
-      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
-      trackingNumber: initialData?.trackingNumber || '',
-      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
-      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-      itemDescriptions: initialData?.itemDescriptions || '',
-      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
-      bankBin: initialData?.bankBin || '',
-      bankTin: initialData?.bankTin || '',
-      vesselOrFlightName: initialData?.vesselOrFlightName || '',
-      vesselImoNumber: initialData?.vesselImoNumber || '',
-      totalPackageQty: initialData?.totalPackageQty ?? undefined,
-      totalNetWeight: initialData?.totalNetWeight ?? undefined,
-      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
-      totalCbm: initialData?.totalCbm ?? undefined,
-      partialShipments: initialData?.partialShipments || '',
-      portOfLoading: initialData?.portOfLoading || '',
-      portOfDischarge: initialData?.portOfDischarge || '',
-      shippingMarks: initialData?.shippingMarks || '',
-      certificateOfOrigin: initialData?.certificateOfOrigin || [],
-      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '',
-      notifyPartyCell: initialData?.notifyPartyCell || '',
-      notifyPartyEmail: initialData?.notifyPartyEmail || '',
-      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
-      finalPIUrl: initialData?.finalPIUrl || '',
-      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
-      finalLcUrl: initialData?.finalLcUrl || '',
-      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
-      firstPartialQty: initialData?.firstPartialQty ?? undefined,
-      secondPartialQty: initialData?.secondPartialQty ?? undefined,
-      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
-      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
-      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
-      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
-      originalBlQty: initialData?.originalBlQty ?? undefined,
-      copyBlQty: initialData?.copyBlQty ?? undefined,
-      originalCooQty: initialData?.originalCooQty ?? undefined,
-      copyCooQty: initialData?.copyCooQty ?? undefined,
-      invoiceQty: initialData?.invoiceQty ?? undefined,
-      packingListQty: initialData?.packingListQty ?? undefined,
-      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? undefined,
-      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? undefined,
-      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? undefined,
-      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? undefined,
-      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? undefined,
+    defaultValues: { // Initialize all fields to prevent uncontrolled to controlled error
+      applicantName: '',
+      beneficiaryName: '',
+      currency: 'USD',
+      termsOfPay: '' as TermsOfPay,
+      status: 'Draft',
+      shipmentMode: '' as ShipmentMode,
+      trackingCourier: '',
+      amount: undefined,
+      documentaryCreditNumber: '',
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      totalMachineQty: undefined,
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
+      itemDescriptions: '',
+      consigneeBankNameAddress: '',
+      bankBin: '',
+      bankTin: '',
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shippingMarks: '',
+      certificateOfOrigin: [],
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
+      numberOfAmendments: undefined,
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
+      finalLcUrl: '',
+      partialShipmentAllowed: 'No',
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
+      originalBlQty: undefined,
+      copyBlQty: undefined,
+      originalCooQty: undefined,
+      copyCooQty: undefined,
+      invoiceQty: undefined,
+      packingListQty: undefined,
+      beneficiaryCertificateQty: undefined,
+      brandNewCertificateQty: undefined,
+      beneficiaryWarrantyCertificateQty: undefined,
+      beneficiaryComplianceCertificateQty: undefined,
+      shipmentAdviceQty: undefined,
     },
   });
 
@@ -212,6 +208,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("Fetched Applicant Options:", fetchedApplicants);
+
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -219,10 +217,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
+        console.log("Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
-        Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console.", "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
@@ -233,6 +232,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   React.useEffect(() => {
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
+      console.log("Initial L/C Data for Form:", initialData);
+      console.log("Setting Applicant ID in form:", initialData.applicantId || '');
+      console.log("Setting Beneficiary ID in form:", initialData.beneficiaryId || '');
       form.reset({
         applicantName: initialData.applicantId || '',
         beneficiaryName: initialData.beneficiaryId || '',
@@ -383,8 +385,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
+    // Ensure optional fields that are empty strings become undefined
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
-      if (dataToUpdate[key] === undefined) {
+      if (dataToUpdate[key] === '') {
         delete dataToUpdate[key];
       }
     });
@@ -494,31 +497,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName"
+            name="applicantName" // Stores applicant ID
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select
+                 <Combobox
+                  options={applicantOptions}
+                  value={field.value}
                   onValueChange={field.onChange}
-                  value={field.value || ""}
+                  placeholder="Search Applicant..."
+                  selectPlaceholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"}
+                  emptyStateMessage="No applicant found."
                   disabled={isLoadingApplicants}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {!isLoadingApplicants && applicantOptions.length === 0 && (
-                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
-                    )}
-                    {applicantOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 <FormMessage />
               </FormItem>
             )}
@@ -526,31 +517,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
           <FormField
             control={form.control}
-            name="beneficiaryName"
+            name="beneficiaryName" // Stores beneficiary ID
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                 <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    disabled={isLoadingBeneficiaries}
-                  >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
-                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
-                    )}
-                    {beneficiaryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                 <Combobox
+                  options={beneficiaryOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search Beneficiary..."
+                  selectPlaceholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"}
+                  emptyStateMessage="No beneficiary found."
+                  disabled={isLoadingBeneficiaries}
+                />
                 <FormMessage />
               </FormItem>
             )}
@@ -730,6 +709,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormControl>
                   <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''}/>
                 </FormControl>
+                <FormDescription>As per L/C document clause 43P.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -1173,7 +1153,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-
          <div className="mt-6">
             <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -1570,6 +1549,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
-
-    

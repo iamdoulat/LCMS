@@ -17,8 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, Library, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -35,8 +36,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE__";
 
 const lcEntrySchema = z.object({
-  applicantName: z.string().min(1, "Applicant Name is required"),
-  beneficiaryName: z.string().min(1, "Beneficiary Name is required"),
+  applicantName: z.string().min(1, "Applicant Name is required"), // This will store Applicant ID
+  beneficiaryName: z.string().min(1, "Beneficiary Name is required"), // This will store Beneficiary ID
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -55,15 +56,15 @@ const lcEntrySchema = z.object({
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   finalPIUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Final PI" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Shipping Documents" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   finalLcUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Final LC" }).optional()
+    z.string().url({ message: "Invalid URL format" }).optional()
   ),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
@@ -115,15 +116,10 @@ const lcEntrySchema = z.object({
 });
 
 
-interface DropdownOption {
-  value: string;
-  label: string;
-}
-
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [applicantOptions, setApplicantOptions] = React.useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<DropdownOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number | string>(0);
@@ -151,7 +147,7 @@ export function NewLCEntryForm() {
         );
       } catch (error) {
         console.error("Error fetching dropdown data: ", error);
-        Swal.fire("Error", "Could not fetch applicant/beneficiary data for dropdowns. See console for details.", "error");
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
@@ -163,8 +159,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantName: '',
-      beneficiaryName: '',
+      applicantName: '', // Will store applicant ID
+      beneficiaryName: '', // Will store beneficiary ID
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -325,9 +321,10 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
+    // Ensure optional fields that are empty strings become undefined
     (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
-      if (dataToSave[key] === undefined) {
-        delete dataToSave[key];
+      if (dataToSave[key] === '') {
+        dataToSave[key] = undefined;
       }
     });
 
@@ -335,7 +332,7 @@ export function NewLCEntryForm() {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
       Swal.fire({
         title: "L/C Entry Saved!",
-        text: `L/C entry has been successfully saved to Firestore with ID: ${docRef.id}.`,
+        text: `L/C entry has been successfully saved with ID: ${docRef.id}.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
@@ -402,7 +399,7 @@ export function NewLCEntryForm() {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url);
+        new URL(url); // Basic validation
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -425,27 +422,19 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantName"
+            name="applicantName" // Stores applicant ID
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingApplicants}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {!isLoadingApplicants && applicantOptions.length === 0 && (
-                      <SelectItem value="no-applicants" disabled>No applicants found</SelectItem>
-                    )}
-                    {applicantOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={applicantOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search Applicant..."
+                  selectPlaceholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"}
+                  emptyStateMessage="No applicant found."
+                  disabled={isLoadingApplicants}
+                />
                 <FormDescription>Select from your list of customers/applicants.</FormDescription>
                 <FormMessage />
               </FormItem>
@@ -453,27 +442,19 @@ export function NewLCEntryForm() {
           />
            <FormField
             control={form.control}
-            name="beneficiaryName"
+            name="beneficiaryName" // Stores beneficiary ID
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingBeneficiaries}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                     {!isLoadingBeneficiaries && beneficiaryOptions.length === 0 && (
-                      <SelectItem value="no-beneficiaries" disabled>No beneficiaries found</SelectItem>
-                    )}
-                    {beneficiaryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                 <Combobox
+                  options={beneficiaryOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search Beneficiary..."
+                  selectPlaceholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"}
+                  emptyStateMessage="No beneficiary found."
+                  disabled={isLoadingBeneficiaries}
+                />
                 <FormDescription>Select from your list of suppliers/beneficiaries.</FormDescription>
                 <FormMessage />
               </FormItem>
@@ -1484,7 +1465,7 @@ export function NewLCEntryForm() {
             </>
           ) : (
             <>
-              <Library className="mr-2 h-4 w-4" />
+              <FileText className="mr-2 h-4 w-4" />
               Submit L/C Entry
             </>
           )}
@@ -1493,4 +1474,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-

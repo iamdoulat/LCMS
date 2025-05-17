@@ -1,4 +1,5 @@
 
+
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -259,7 +260,7 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | ''; // New field
+  miscellaneousExpenses?: number | ''; 
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number; 
@@ -281,7 +282,7 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
     netCommissionPercentage?: number; 
   }>;
   freightChargeAmount?: number;
-  miscellaneousExpenses?: number; // New field
+  miscellaneousExpenses?: number; 
   totalExtraNetCommission?: number; 
   grandTotalCommissionUSD?: number;
   createdAt: any;
