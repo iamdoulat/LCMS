@@ -21,9 +21,9 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
             {children}
           </main>
           <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card">
-            © 2025, Design and develop by{' '}
+            Designed and Developed by{' '}
             <a
-              href="https://fb.me/mddoulat2" // Updated hyperlink
+              href="https://fb.me/mddoulat2"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium hover:text-primary hover:underline"
