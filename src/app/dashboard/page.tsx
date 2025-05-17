@@ -183,7 +183,10 @@ export default function DashboardPage() {
           try {
             const issueDate = parseISO(lc.lcIssueDate);
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
-          } catch (e) { return false; }
+          } catch (e) { 
+            console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
+            return false; 
+          }
         }).length;
       }
 
@@ -439,7 +442,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className={cn("flex items-center gap-2 text-xl", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
-              Beneficiary L/C Value Distribution
+              Beneficiary L/Cs Value Distribution
             </CardTitle>
             <CardDescription>
               Breakdown of L/C value by beneficiary for {selectedYear}.
@@ -640,4 +643,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
