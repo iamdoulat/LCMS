@@ -34,10 +34,13 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 const NONE_COURIER_VALUE = "__NONE__";
+const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
+
 
 const lcEntrySchema = z.object({
-  applicantId: z.string().min(1, "Applicant Name is required"), 
-  beneficiaryId: z.string().min(1, "Beneficiary Name is required"), 
+  applicantId: z.string().min(1, "Applicant Name is required"),
+  beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -58,7 +61,7 @@ const lcEntrySchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
-  finalLcUrl: z.preprocess(
+   finalLcUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -115,6 +118,8 @@ const lcEntrySchema = z.object({
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
 });
 
+const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -159,8 +164,8 @@ export function NewLCEntryForm() {
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: '', 
-      beneficiaryId: '', 
+      applicantId: '',
+      beneficiaryId: '',
       currency: 'USD' as Currency,
       amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
@@ -256,15 +261,15 @@ export function NewLCEntryForm() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
-      applicantId: data.applicantId, 
+      applicantId: data.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: data.beneficiaryId, 
+      beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
       currency: data.currency,
       amount: data.amount,
       termsOfPay: data.termsOfPay,
       documentaryCreditNumber: data.documentaryCreditNumber,
-      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
       invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: data.totalMachineQty,
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -274,29 +279,29 @@ export function NewLCEntryForm() {
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
       trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
-      trackingNumber: data.trackingNumber,
+      trackingNumber: data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      itemDescriptions: data.itemDescriptions,
-      consigneeBankNameAddress: data.consigneeBankNameAddress,
-      bankBin: data.bankBin,
-      bankTin: data.bankTin,
+      itemDescriptions: data.itemDescriptions || undefined,
+      consigneeBankNameAddress: data.consigneeBankNameAddress || undefined,
+      bankBin: data.bankBin || undefined,
+      bankTin: data.bankTin || undefined,
       shipmentMode: data.shipmentMode,
-      vesselOrFlightName: data.vesselOrFlightName,
-      vesselImoNumber: data.vesselImoNumber,
+      vesselOrFlightName: data.vesselOrFlightName || undefined,
+      vesselImoNumber: data.vesselImoNumber || undefined,
       totalPackageQty: data.totalPackageQty,
       totalNetWeight: data.totalNetWeight,
       totalGrossWeight: data.totalGrossWeight,
       totalCbm: data.totalCbm,
-      partialShipments: data.partialShipments,
-      portOfLoading: data.portOfLoading,
-      portOfDischarge: data.portOfDischarge,
-      shippingMarks: data.shippingMarks,
+      partialShipments: data.partialShipments || undefined,
+      portOfLoading: data.portOfLoading || undefined,
+      portOfDischarge: data.portOfDischarge || undefined,
+      shippingMarks: data.shippingMarks || undefined,
       certificateOfOrigin: data.certificateOfOrigin,
-      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
-      notifyPartyName: data.notifyPartyName,
-      notifyPartyCell: data.notifyPartyCell,
-      notifyPartyEmail: data.notifyPartyEmail,
+      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress || undefined,
+      notifyPartyName: data.notifyPartyName || undefined,
+      notifyPartyCell: data.notifyPartyCell || undefined,
+      notifyPartyEmail: data.notifyPartyEmail || undefined,
       numberOfAmendments: data.numberOfAmendments,
       status: data.status || 'Draft',
       partialShipmentAllowed: data.partialShipmentAllowed,
@@ -321,7 +326,7 @@ export function NewLCEntryForm() {
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
     };
-    
+
     (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
       if (dataToSave[key] === '') {
         dataToSave[key] = undefined;
@@ -399,7 +404,7 @@ export function NewLCEntryForm() {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url); 
+        new URL(url);
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -408,8 +413,6 @@ export function NewLCEntryForm() {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
   };
-
-  const sectionHeadingClass = "font-semibold text-xl text-primary border-b pb-2 mb-4 flex items-center";
 
 
   return (
@@ -422,7 +425,7 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="applicantId" 
+            name="applicantId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
@@ -442,7 +445,7 @@ export function NewLCEntryForm() {
           />
            <FormField
             control={form.control}
-            name="beneficiaryId" 
+            name="beneficiaryId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
@@ -1079,7 +1082,7 @@ export function NewLCEntryForm() {
         </div>
 
          <div className="mt-6">
-            <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
+            <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
@@ -1316,7 +1319,7 @@ export function NewLCEntryForm() {
           name="certificateOfOrigin"
           render={() => (
             <FormItem>
-              <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
+              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
                  <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
               </FormLabel>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
