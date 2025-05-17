@@ -19,7 +19,8 @@ import { User, LogOut, Settings, Loader2, Search, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; // Added import
+import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; 
+import { cn } from '@/lib/utils';
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
@@ -81,7 +82,10 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         <Link
           href="/dashboard"
-          className="text-lg md:text-xl font-bold text-primary whitespace-nowrap"
+          className={cn(
+            "text-lg md:text-xl whitespace-nowrap",
+            "font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+          )}
         >
           LC Management System
         </Link>
