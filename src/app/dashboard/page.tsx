@@ -82,7 +82,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': // Updated status name
+    case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
       return 'default';
@@ -395,17 +395,17 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          title="Total L/Cs"
+          title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
         />
         <StatCard
-          title="Total L/C Value"
+          title="Total L/Cs Values"
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-2 xl:col-span-3"
+          className="xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -420,14 +420,14 @@ export default function DashboardPage() {
           description={`Unique in L/Cs for ${selectedYear}`}
         />
         <StatCard
-          title="This Month's L/C Qty"
+          title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
           className="lg:col-start-1"
         />
          <StatCard
-          title={`PIs Linked to LCs (${selectedYear})`}
+          title={`PI's Linked with to L/Cs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
           icon={<Layers className="h-7 w-7 text-primary" />}
           description={`Proforma Invoices connected to LCs issued in ${selectedYear}`}
