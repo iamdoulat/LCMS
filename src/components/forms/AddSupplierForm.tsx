@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Store } from 'lucide-react';
+import { Banknote, Loader2, Store } from 'lucide-react'; // Added Banknote
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -31,6 +31,7 @@ const supplierSchema = z.object({
       file => !file || ["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(file.type),
       ".jpg, .jpeg, .png, .webp and .svg files are accepted."
     ),
+  bankInformation: z.string().optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -48,6 +49,7 @@ export function AddSupplierForm() {
       website: '',
       brandName: '',
       brandLogoFile: null,
+      bankInformation: '',
     },
   });
 
@@ -220,6 +222,23 @@ export function AddSupplierForm() {
               <FormDescription>
                 Upload the brand logo (max 5MB, JPG, PNG, WEBP, SVG).
               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="bankInformation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center">
+                <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
+                Bank Information
+              </FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter beneficiary's bank details (name, account number, SWIFT, etc.)" {...field} rows={4}/>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

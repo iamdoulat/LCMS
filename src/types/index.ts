@@ -33,10 +33,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantId: string;
-  applicantName: string;
-  beneficiaryId: string;
-  beneficiaryName: string;
+  applicantId: string; // Firestore ID of the customer
+  applicantName: string; // Name of the customer/applicant
+  beneficiaryId: string; // Firestore ID of the supplier
+  beneficiaryName: string; // Name of the supplier/beneficiary
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -190,10 +190,11 @@ export interface Supplier {
   website?: string;
   brandName: string;
   brandLogoUrl?: string;
+  bankInformation?: string;
   createdAt?: any;
   updatedAt?: any;
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any, brandLogoUrl?: string };
+export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any, brandLogoUrl?: string, bankInformation?: string };
 
 
 export interface AppNotification {
@@ -268,7 +269,8 @@ export interface ProformaInvoice {
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount'> & {
-  piDate: string;
+  id: string; // Ensure ID is part of the document type
+  piDate: string; // Stored as ISO String
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice'> & {
     qty: number;
     purchasePrice: number;
