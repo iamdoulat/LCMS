@@ -122,8 +122,9 @@ export function AppSidebarNav() {
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; // For global search
+    if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; 
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
+        // Special handling for pages that are functionally under a main link
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -131,9 +132,13 @@ export function AppSidebarNav() {
           (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
           (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
-          return pathname === href; 
+          // For these specific parent routes, only mark active if it's an exact match to avoid
+          // highlighting the parent when on a child add/edit page if you want distinct active states.
+          // Or, if you want the parent to stay active, then the current logic is fine.
+          // For now, we keep the broader `pathname.startsWith(href)` for parent highlighting.
+          return true;
         }
-        return true;
+        return true; // General case for other routes
     }
     return false;
   };
@@ -164,7 +169,7 @@ export function AppSidebarNav() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="h-5 w-5 text-primary" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </div>
                 </AccordionTrigger>
@@ -236,7 +241,7 @@ export function AppSidebarNav() {
                     tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                   >
                     <a>
-                      {item.icon && <item.icon className="h-5 w-5" />}
+                      {item.icon && <item.icon className="h-5 w-5 text-primary" />}
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </a>
                   </SidebarMenuButton>
@@ -287,7 +292,7 @@ export function AppSidebarNav() {
                       tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                     >
                       <a>
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-5 w-5 text-primary" />
                         <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </a>
                     </SidebarMenuButton>
@@ -338,5 +343,3 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
-
-

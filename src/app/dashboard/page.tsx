@@ -3,13 +3,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
 import { SupplierPieChart } from '@/components/dashboard/SupplierPieChart';
-import { Separator } from '@/components/ui/separator';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
@@ -121,8 +120,8 @@ export default function DashboardPage() {
 
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!auth.currentUser) {
-      console.log("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
+    if (!authUser) {
+      console.log("Dashboard: User not authenticated. Clearing dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -133,6 +132,17 @@ export default function DashboardPage() {
     }
     console.log("Dashboard: Fetching data for year", year);
     console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
+    if (!auth.currentUser) {
+      console.log("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
+      // Potentially set an error state or return early
+      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
+      setSupplierPieData([]);
+      setRecentlyCompletedLCs([]);
+      setDraftLCs([]);
+      setUpcomingEtdShipments([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const yearNumber = parseInt(year);
@@ -212,8 +222,10 @@ export default function DashboardPage() {
             if (typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
               updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
             } else if (typeof lc.updatedAt === 'string') {
-              const parsed = parseISO(lc.updatedAt);
-              if (isValid(parsed)) updatedAtDate = parsed;
+              try {
+                const parsed = parseISO(lc.updatedAt);
+                if (isValid(parsed)) updatedAtDate = parsed;
+              } catch (e) { console.warn("Error parsing updatedAt for completed L/C:", lc.id, lc.updatedAt); }
             }
           }
           return {
@@ -235,8 +247,10 @@ export default function DashboardPage() {
             if (typeof (lc.createdAt as unknown as Timestamp)?.toDate === 'function') {
               createdAtDate = (lc.createdAt as unknown as Timestamp).toDate();
             } else if (typeof lc.createdAt === 'string') {
-              const parsed = parseISO(lc.createdAt);
-              if (isValid(parsed)) createdAtDate = parsed;
+              try {
+                const parsed = parseISO(lc.createdAt);
+                if (isValid(parsed)) createdAtDate = parsed;
+              } catch (e) { console.warn("Error parsing createdAt for draft L/C:", lc.id, lc.createdAt); }
             }
           }
           return {
@@ -308,7 +322,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUser]);
 
   useEffect(() => {
     if (!authLoading && authUser) { 
@@ -378,7 +392,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="font-bold text-2xl lg:text-3xl text-primary">Dashboard Overview</h1>
+        <h1 className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>Dashboard Overview</h1>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
@@ -440,7 +454,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -467,7 +481,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Search className="h-6 w-6 text-primary" />
                 Search L/C
               </CardTitle>
@@ -493,7 +507,7 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -535,7 +549,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -560,7 +574,7 @@ export default function DashboardPage() {
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
-                              lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300' : ''
+                              lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                             }
                           >
                             {lc.status || 'N/A'}
@@ -588,7 +602,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -613,7 +627,7 @@ export default function DashboardPage() {
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
-                              lc.status === 'Done' ? 'bg-green-600 text-white' : ''
+                              lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''
                             }
                           >
                             {lc.status || 'N/A'}

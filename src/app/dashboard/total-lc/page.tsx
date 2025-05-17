@@ -324,7 +324,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C Overview
               </CardTitle>
@@ -490,9 +490,10 @@ export default function TotalLCPage() {
                         <Badge
                           variant={getStatusBadgeVariant(lc.status)}
                           className={
-                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' :
-                            lc.status === 'Done' ? 'bg-green-600 text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black' : '' 
+                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
+                            lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
+                            lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                           }
                         >
                           {lc.status || 'N/A'}

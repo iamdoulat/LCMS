@@ -26,7 +26,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': // Updated
+    case 'Shipment Pending': 
       return 'default';
     case 'Shipping going on':
       return 'default';
@@ -155,7 +155,7 @@ export default function RecentDraftLCsPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FileEdit className="h-7 w-7 text-primary" />
-            Recent Draft LCs
+            Recent Draft L/Cs
           </CardTitle>
           <CardDescription>
             List of Letters of Credit currently in "Draft" status, sorted by most recent creation date. 
@@ -194,7 +194,7 @@ export default function RecentDraftLCsPage() {
                     </Link>
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300' : ''}
+                      className={lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
@@ -266,4 +266,3 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
-

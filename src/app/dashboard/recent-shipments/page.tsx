@@ -162,7 +162,7 @@ export default function RecentShipmentsPage() {
                     </Link>
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Done' ? 'bg-green-600 text-white' : ''}
+                      className={lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
@@ -200,5 +200,3 @@ export default function RecentShipmentsPage() {
     </div>
   );
 }
-
-

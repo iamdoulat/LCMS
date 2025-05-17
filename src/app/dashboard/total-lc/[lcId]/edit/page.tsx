@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { FileEdit as FileEditIcon, ArrowLeft, Loader2, AlertTriangle, Printer } from 'lucide-react';
@@ -23,9 +23,9 @@ export default function EditLCPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDirectPrint = () => {
+  const handleDirectPrint = useCallback(() => {
     window.print();
-  };
+  }, []);
 
   useEffect(() => {
     if (lcId) {
@@ -72,7 +72,7 @@ export default function EditLCPage() {
     return () => {
       window.removeEventListener('keydown', handlePageKeyDown);
     };
-  }, []);
+  }, [handleDirectPrint]);
 
   if (isLoading) {
     return (

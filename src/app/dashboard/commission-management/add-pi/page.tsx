@@ -9,7 +9,7 @@ export default function AddNewPIPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FilePlus2 className="h-7 w-7 text-primary" />
             Add New Proforma Invoice (PI)
           </CardTitle>

@@ -209,7 +209,7 @@ export default function ShipmentOnTheWayPage() {
                     </Link>
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' : ''}
+                      className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
