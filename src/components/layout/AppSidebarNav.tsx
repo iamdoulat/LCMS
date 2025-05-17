@@ -41,7 +41,7 @@ import {
   ImageIcon,
   Package,
   History,
-  Search // Added Search icon
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -58,7 +58,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     groupLabel: 'L/C Management',
     icon: Briefcase,
     subLinks: [
-      { href: '/dashboard/total-lc', label: 'Total L/C list', icon: ListChecks },
+      { href: '/dashboard/total-lc', label: 'Total L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft LCs', icon: FileEdit },
     ],
@@ -116,9 +116,9 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
-  }, [userRole, companyName, companyLogoUrl]);
+  }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -338,3 +338,4 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+
