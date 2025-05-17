@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Save, Link2 } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Save, Link2, MinusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -25,8 +25,8 @@ const lineItemFormSchema = z.object({
   slNo: z.string().optional(),
   modelNo: z.string().min(1, "Model No. is required"),
   qty: z.string().min(1, "Qty is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
-  purchasePrice: z.string().min(1, "Purchase Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Purchase Price must be > 0" }),
-  salesPrice: z.string().min(1, "Sales Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Sales Price must be > 0" }),
+  purchasePrice: z.string().min(1, "Purchase Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Purchase Price must be >= 0" }),
+  salesPrice: z.string().min(1, "Sales Price is required").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Sales Price must be >= 0" }),
   netCommissionPercentage: z.string().optional().refine(
     (val) => val === '' || val === undefined ||
              (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100),
@@ -44,6 +44,7 @@ const proformaInvoiceSchema = z.object({
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
   freightChargeAmount: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Freight Amount must be a non-negative number if provided." }),
+  miscellaneousExpenses: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Misc. Expenses must be non-negative if provided."}),
 }).refine(data => {
     if (data.freightChargeOption === "Freight Excluded") {
         const amount = parseFloat(data.freightChargeAmount || '');
@@ -102,6 +103,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
       freightChargeOption: "Freight Included",
       freightChargeAmount: '',
+      miscellaneousExpenses: '',
     },
   });
 
@@ -160,6 +162,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         })),
         freightChargeOption: initialData.freightChargeOption || "Freight Included",
         freightChargeAmount: initialData.freightChargeAmount?.toString() || '',
+        miscellaneousExpenses: initialData.miscellaneousExpenses?.toString() || '',
       });
       if (initialData.connectedLcId && lcOptions.length > 0) {
          const selectedLc = lcOptions.find(opt => opt.value === initialData.connectedLcId);
@@ -191,6 +194,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   const watchedLineItems = form.watch("lineItems");
   const watchedFreightOption = form.watch("freightChargeOption");
   const watchedFreightAmountString = form.watch("freightChargeAmount");
+  const watchedMiscellaneousExpensesString = form.watch("miscellaneousExpenses");
 
   React.useEffect(() => {
     let newTotalQty = 0;
@@ -207,13 +211,13 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
           if (qty > 0) {
             newTotalQty += qty;
-            if (purchaseP > 0) {
+            if (purchaseP >= 0) { // Allow 0 purchase price
               newTotalPurchase += qty * purchaseP;
               if (netCommP > 0 && netCommP <= 100) {
                  newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
               }
             }
-            if (salesP > 0) newTotalSalesLineItems += qty * salesP;
+            if (salesP >= 0) newTotalSalesLineItems += qty * salesP; // Allow 0 sales price
           }
         });
     }
@@ -223,12 +227,11 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     setTotalSalesPriceFromLineItems(newTotalSalesLineItems);
     setTotalExtraNetCommission(newTotalExtraNetComm);
 
-    let currentGrandTotalSalesPrice = newTotalSalesLineItems;
-    const freightAmountNum = parseFloat(String(watchedFreightAmountString || '0')) || 0;
+    const freightAmountNum = watchedFreightOption === "Freight Excluded" ? (parseFloat(String(watchedFreightAmountString || '0')) || 0) : 0;
+    const miscellaneousExpensesNum = parseFloat(String(watchedMiscellaneousExpensesString || '0')) || 0;
 
-    if (watchedFreightOption === "Freight Excluded" && freightAmountNum >= 0) {
-      currentGrandTotalSalesPrice += freightAmountNum;
-    }
+    const grossSalesPriceBeforeDeductions = newTotalSalesLineItems + freightAmountNum;
+    const currentGrandTotalSalesPrice = grossSalesPriceBeforeDeductions - miscellaneousExpensesNum;
     setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
     const baseCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
@@ -241,7 +244,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     } else {
       setTotalCommissionPercentage(0);
     }
-  }, [watchedLineItems, watchedFreightOption, watchedFreightAmountString]);
+  }, [watchedLineItems, watchedFreightOption, watchedFreightAmountString, watchedMiscellaneousExpensesString]);
 
   async function onSubmit(data: ProformaInvoiceFormValues) {
     setIsSubmitting(true);
@@ -271,6 +274,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         setIsSubmitting(false);
         return;
     }
+    const miscellaneousExpensesForDb = parseFloat(data.miscellaneousExpenses || '0') || 0;
+
 
     let calculatedTotalQty = 0;
     let calculatedTotalPurchasePrice = 0;
@@ -286,7 +291,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       calculatedTotalQty += qty;
       calculatedTotalPurchasePrice += qty * purchasePrice;
       calculatedTotalSalesPriceLineItems += qty * salesPrice;
-       if (netCommP > 0 && netCommP <= 100) {
+      if (netCommP > 0 && netCommP <= 100 && purchasePrice > 0) {
           calculatedTotalExtraNetCommission += (qty * purchasePrice * netCommP) / 100;
       }
 
@@ -300,17 +305,18 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       };
     });
 
-    let calculatedGrandTotalSalesPrice = calculatedTotalSalesPriceLineItems;
-    if (data.freightChargeOption === "Freight Excluded" && freightAmountForDb !== undefined) {
-      calculatedGrandTotalSalesPrice += freightAmountForDb;
-    }
+    const finalFreightAmount = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : 0;
+    const finalMiscExpenses = parseFloat(data.miscellaneousExpenses || '0') || 0;
 
-    const baseCommission = calculatedGrandTotalSalesPrice - calculatedTotalPurchasePrice;
-    const calculatedGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
+    const grossSalesBeforeDeductions = calculatedTotalSalesPriceLineItems + finalFreightAmount;
+    const finalGrandTotalSalesPrice = grossSalesBeforeDeductions - finalMiscExpenses;
+    
+    const baseCommission = finalGrandTotalSalesPrice - calculatedTotalPurchasePrice;
+    const finalGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
 
-    let calculatedTotalCommissionPercentage = 0;
+    let finalTotalCommissionPercentage = 0;
     if (calculatedTotalPurchasePrice > 0) {
-      calculatedTotalCommissionPercentage = parseFloat(((calculatedGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
+      finalTotalCommissionPercentage = parseFloat(((finalGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
     }
 
     const dataToUpdate: Partial<Omit<ProformaInvoiceDocument, 'id' | 'createdAt'>> = {
@@ -326,18 +332,19 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
-      freightChargeAmount: freightAmountForDb,
+      freightChargeAmount: finalFreightAmount > 0 || data.freightChargeOption === "Freight Excluded" ? finalFreightAmount : undefined,
+      miscellaneousExpenses: finalMiscExpenses > 0 ? finalMiscExpenses : undefined,
       totalQty: calculatedTotalQty,
       totalPurchasePrice: calculatedTotalPurchasePrice,
       totalSalesPrice: calculatedTotalSalesPriceLineItems,
       totalExtraNetCommission: calculatedTotalExtraNetCommission > 0 ? calculatedTotalExtraNetCommission : undefined,
-      grandTotalSalesPrice: calculatedGrandTotalSalesPrice,
-      grandTotalCommissionUSD: calculatedGrandTotalCommissionUSD,
-      totalCommissionPercentage: calculatedTotalCommissionPercentage,
+      grandTotalSalesPrice: finalGrandTotalSalesPrice,
+      grandTotalCommissionUSD: finalGrandTotalCommissionUSD,
+      totalCommissionPercentage: finalTotalCommissionPercentage,
       updatedAt: serverTimestamp(),
     };
 
-    // Remove undefined fields from the final object to save
+    
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -401,15 +408,13 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                     <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
                      {isLoadingDropdowns ? (
                       <SelectItem value="loading_beneficiaries_edit" disabled>Loading...</SelectItem>
                     ) : beneficiaryOptions.length === 0 ? (
                         <SelectItem value="no_beneficiaries_edit" disabled>No beneficiaries found</SelectItem>
                     ): (
-                      <>
-                        <SelectItem value={PLACEHOLDER_BENEFICIARY_VALUE} disabled>Select Beneficiary</SelectItem>
-                        {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                      </>
+                        beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
                     )}
                   </SelectContent>
                 </Select>
@@ -434,15 +439,13 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
                     {isLoadingDropdowns ? (
                       <SelectItem value="loading_applicants_edit" disabled>Loading...</SelectItem>
                     ) : applicantOptions.length === 0 ? (
                         <SelectItem value="no_applicants_edit" disabled>No applicants found</SelectItem>
                     ) : (
-                      <>
-                        <SelectItem value={PLACEHOLDER_APPLICANT_VALUE} disabled>Select Applicant</SelectItem>
-                        {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                      </>
+                        applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
                     )}
                   </SelectContent>
                 </Select>
@@ -510,16 +513,14 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                     <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
+                     <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
                      {isLoadingDropdowns ? (
                         <SelectItem value="loading_lcs_edit" disabled>Loading L/Cs...</SelectItem>
                     ) : lcOptions.length === 0 ? (
                          <SelectItem value="no_lcs_edit" disabled>No L/Cs found</SelectItem>
                     ) : (
-                    <>
-                        <SelectItem value={PLACEHOLDER_LC_VALUE} disabled>Select L/C (Optional)</SelectItem>
-                        <SelectItem value={NONE_LC_VALUE}>None</SelectItem>
-                        {lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </>
+                        lcOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)
                     )}
                   </SelectContent>
                 </Select>
@@ -681,6 +682,21 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             )}
         </div>
 
+         <FormField
+            control={form.control}
+            name="miscellaneousExpenses"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel className="flex items-center"><MinusCircle className="mr-2 h-4 w-4 text-muted-foreground" />Miscellaneous Expenses</FormLabel>
+                <FormControl>
+                    <Input type="text" placeholder="Enter misc. expenses" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormDescription>This amount will be deducted from the Grand Total Sales.</FormDescription>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+
         <Separator />
         <div className="space-y-2 text-sm p-4 border rounded-md shadow-sm bg-muted/30">
             <h4 className="font-medium text-lg text-foreground">Calculated Totals:</h4>
@@ -712,5 +728,3 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
-
-    
