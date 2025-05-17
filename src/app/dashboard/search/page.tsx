@@ -6,9 +6,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, FileText, Users, Building } from 'lucide-react';
+import { Search as SearchIcon, FileText, Users, Building, Layers, CalendarDays, Link as LinkIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
@@ -21,8 +21,10 @@ function SearchPageContent() {
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
     setDisplayedQuery(queryFromUrl);
+    // In a real app, you would trigger a search API call here if queryFromUrl is not empty.
     if (queryFromUrl) {
-      console.log(`Searching for: ${queryFromUrl}`);
+      console.log(`Simulating search for: ${queryFromUrl}`);
+      // Placeholder for actual search logic
     }
   }, [searchParams]);
 
@@ -32,8 +34,32 @@ function SearchPageContent() {
     if (trimmedSearchTerm) {
       router.push(`/dashboard/search?q=${encodeURIComponent(trimmedSearchTerm)}`);
     } else {
-      router.push('/dashboard/search'); 
+      router.push('/dashboard/search');
     }
+  };
+
+  // Placeholder data for illustrative links
+  const placeholderResults = {
+    lcs: [
+      { id: 'lc123', number: 'LC-2024-001', applicant: 'Global Trade Co.' },
+      { id: 'lc456', number: 'LC-XYZ-789', applicant: 'Imports Inc.' },
+    ],
+    applicants: [
+      { id: 'cust001', name: 'Global Trade Co.' },
+      { id: 'cust002', name: 'Mega Corp Appliances' },
+    ],
+    beneficiaries: [
+      { id: 'sup001', name: 'Overseas Electronics Ltd.' },
+      { id: 'sup002', name: 'General Goods Exporters' },
+    ],
+    pis: [
+      { id: 'pi777', number: 'PI-2024-A05', applicant: 'Global Trade Co.' },
+      { id: 'pi888', number: 'PI-INTL-012', applicant: 'Imports Inc.' },
+    ],
+    byYear: [
+      { year: '2024', description: 'Entries from 2024 matching query' },
+      { year: '2023', description: 'Entries from 2023 matching query' },
+    ]
   };
 
   return (
@@ -45,7 +71,7 @@ function SearchPageContent() {
             Global Search
           </CardTitle>
           <CardDescription>
-            Search across L/Cs, Proforma Invoices, Applicants, and Beneficiaries.
+            Search across L/Cs, Proforma Invoices, Applicants, and Beneficiaries. (Full search logic requires backend implementation)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,7 +90,8 @@ function SearchPageContent() {
 
           {displayedQuery && (
             <div className="mb-6 text-center">
-              <p className="text-lg">Search Results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
+              <p className="text-lg">Showing illustrative results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
+              <p className="text-xs text-muted-foreground">(Actual search results would be dynamically fetched from the database)</p>
             </div>
           )}
 
@@ -82,7 +109,17 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>L/C Entries Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">L/C entries matching your query would appear here as links. (Backend search logic pending implementation.)</p>
+                  {placeholderResults.lcs.length > 0 ? (
+                    <ul className="space-y-2">
+                      {placeholderResults.lcs.map(lc => (
+                        <li key={lc.id} className="text-sm hover:bg-muted/50 p-2 rounded-md">
+                          <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-primary hover:underline flex items-center gap-1">
+                            <LinkIcon className="h-3 w-3" /> {lc.number} (Applicant: {lc.applicant})
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-muted-foreground">No L/C entries found matching your query. (Illustrative)</p>}
                 </CardContent>
               </Card>
 
@@ -91,7 +128,17 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Applicants Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Applicants matching your query would appear here as links. (Backend search logic pending implementation.)</p>
+                   {placeholderResults.applicants.length > 0 ? (
+                    <ul className="space-y-2">
+                      {placeholderResults.applicants.map(app => (
+                        <li key={app.id} className="text-sm hover:bg-muted/50 p-2 rounded-md">
+                          <Link href={`/dashboard/customers/${app.id}/edit`} className="text-primary hover:underline flex items-center gap-1">
+                             <LinkIcon className="h-3 w-3" /> {app.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-muted-foreground">No Applicants found matching your query. (Illustrative)</p>}
                 </CardContent>
               </Card>
 
@@ -100,24 +147,56 @@ function SearchPageContent() {
                   <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Beneficiaries Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Beneficiaries matching your query would appear here as links. (Backend search logic pending implementation.)</p>
+                  {placeholderResults.beneficiaries.length > 0 ? (
+                    <ul className="space-y-2">
+                      {placeholderResults.beneficiaries.map(ben => (
+                        <li key={ben.id} className="text-sm hover:bg-muted/50 p-2 rounded-md">
+                          <Link href={`/dashboard/suppliers/${ben.id}/edit`} className="text-primary hover:underline flex items-center gap-1">
+                            <LinkIcon className="h-3 w-3" /> {ben.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ): <p className="text-muted-foreground">No Beneficiaries found matching your query. (Illustrative)</p>}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Proforma Invoices Matching "{displayedQuery}"</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary"/>Proforma Invoices Matching "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Proforma Invoices matching your query would appear here as links. (Backend search logic pending implementation.)</p>
+                  {placeholderResults.pis.length > 0 ? (
+                    <ul className="space-y-2">
+                      {placeholderResults.pis.map(pi => (
+                        <li key={pi.id} className="text-sm hover:bg-muted/50 p-2 rounded-md">
+                          <Link href={`/dashboard/commission-management/edit-pi/${pi.id}`} className="text-primary hover:underline flex items-center gap-1">
+                            <LinkIcon className="h-3 w-3" /> {pi.number} (Applicant: {pi.applicant})
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ): <p className="text-muted-foreground">No Proforma Invoices found matching your query. (Illustrative)</p>}
                 </CardContent>
               </Card>
                <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><SearchIcon className="h-5 w-5 text-primary"/>Entries by Year "{displayedQuery}"</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Entries by Year "{displayedQuery}"</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Entries matching the year "{displayedQuery}" would appear here as links. (Backend search logic pending implementation.)</p>
+                  {placeholderResults.byYear.length > 0 ? (
+                     <ul className="space-y-2">
+                      {placeholderResults.byYear.map(item => (
+                        <li key={item.year} className="text-sm hover:bg-muted/50 p-2 rounded-md">
+                          {/* This link would ideally go to a filtered view, e.g., L/C list filtered by this year */}
+                          <Link href={`/dashboard/total-lc?year=${item.year}`} className="text-primary hover:underline flex items-center gap-1">
+                            <LinkIcon className="h-3 w-3" /> View L/Cs from {item.year}
+                          </Link>
+                           <p className="text-xs text-muted-foreground ml-4">{item.description}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-muted-foreground">No entries found for year "{displayedQuery}". (Illustrative)</p>}
                 </CardContent>
               </Card>
             </div>
@@ -130,8 +209,10 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
+    // Suspense is crucial for useSearchParams to work correctly during client-side navigation
     <Suspense fallback={<div>Loading search...</div>}>
       <SearchPageContent />
     </Suspense>
   );
 }
+
