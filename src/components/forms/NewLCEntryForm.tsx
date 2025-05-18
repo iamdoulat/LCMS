@@ -70,6 +70,7 @@ const lcEntrySchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
   totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
   totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
@@ -162,6 +163,7 @@ export function NewLCEntryForm() {
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
       vesselImoNumber: '',
+      flightNumber: '',
       totalPackageQty: 0,
       totalNetWeight: 0,
       totalGrossWeight: 0,
@@ -302,7 +304,10 @@ export function NewLCEntryForm() {
         "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
-        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
+        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
+        "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
+        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
       ] as const;
 
       fieldsToInitializeZero.forEach(fieldName => {
@@ -398,6 +403,7 @@ export function NewLCEntryForm() {
       shipmentMode: finalData.shipmentMode,
       vesselOrFlightName: finalData.vesselOrFlightName || undefined,
       vesselImoNumber: finalData.vesselImoNumber || undefined,
+      flightNumber: finalData.flightNumber || undefined,
       totalPackageQty: finalData.totalPackageQty,
       totalNetWeight: finalData.totalNetWeight,
       totalGrossWeight: finalData.totalGrossWeight,
@@ -988,7 +994,7 @@ export function NewLCEntryForm() {
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1138,6 +1144,41 @@ export function NewLCEntryForm() {
                     Track Vessel
                 </Button>
             </div>
+        )}
+        {watchedShipmentMode === 'Air' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+            <FormField
+              control={form.control}
+              name="flightNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Flight Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                const flightNum = form.getValues("flightNumber");
+                if (flightNum && flightNum.trim() !== "") {
+                  window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
+                } else {
+                  Swal.fire("Info", "Please enter a flight number to track.", "info");
+                }
+              }}
+              disabled={!form.watch("flightNumber") || isSubmitting}
+              className="md:col-span-1"
+              title="Track Flight on FlightRadar24"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Track Flight
+            </Button>
+          </div>
         )}
 
          <div className="mt-6">

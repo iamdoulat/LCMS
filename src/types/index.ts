@@ -60,6 +60,7 @@ export interface LCEntry {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
+  flightNumber?: string; // New field
   totalPackageQty?: number | '';
   totalNetWeight?: number | '';
   totalGrossWeight?: number | '';
@@ -138,6 +139,7 @@ export interface LCEntryDocument {
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
+  flightNumber?: string; // New field
   totalPackageQty?: number;
   totalNetWeight?: number;
   totalGrossWeight?: number;

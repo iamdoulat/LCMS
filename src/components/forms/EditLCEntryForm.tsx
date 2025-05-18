@@ -66,6 +66,7 @@ const lcEntrySchema = z.object({
   bankBin: z.string().optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
   totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
   totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
@@ -141,77 +142,78 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: '',
-      beneficiaryId: '',
-      currency: 'USD',
-      termsOfPay: '' as TermsOfPay,
-      status: 'Draft',
-      shipmentMode: '' as ShipmentMode,
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      totalPackageQty: 0,
-      totalNetWeight: 0,
-      totalGrossWeight: 0,
-      totalCbm: 0,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '',
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      purchaseOrderUrl: '',
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      partialShipmentAllowed: 'No',
-      firstPartialQty: 0,
-      secondPartialQty: 0,
-      thirdPartialQty: 0,
-      firstPartialAmount: 0,
-      secondPartialAmount: 0,
-      thirdPartialAmount: 0,
-      firstPartialPkgs: 0,
-      firstPartialNetWeight: 0,
-      firstPartialGrossWeight: 0,
-      firstPartialCbm: 0,
-      secondPartialPkgs: 0,
-      secondPartialNetWeight: 0,
-      secondPartialGrossWeight: 0,
-      secondPartialCbm: 0,
-      thirdPartialPkgs: 0,
-      thirdPartialNetWeight: 0,
-      thirdPartialGrossWeight: 0,
-      thirdPartialCbm: 0,
-      originalBlQty: 0,
-      copyBlQty: 0,
-      originalCooQty: 0,
-      copyCooQty: 0,
-      invoiceQty: 0,
-      packingListQty: 0,
-      beneficiaryCertificateQty: 0,
-      brandNewCertificateQty: 0,
-      beneficiaryWarrantyCertificateQty: 0,
-      beneficiaryComplianceCertificateQty: 0,
-      shipmentAdviceQty: 0,
+      applicantId: initialData?.applicantId || '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      currency: initialData?.currency || 'USD',
+      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
+      status: initialData?.status || 'Draft',
+      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount ?? undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty ?? undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      flightNumber: initialData?.flightNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? 0,
+      totalNetWeight: initialData?.totalNetWeight ?? 0,
+      totalGrossWeight: initialData?.totalGrossWeight ?? 0,
+      totalCbm: initialData?.totalCbm ?? 0,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
+      firstPartialQty: initialData?.firstPartialQty ?? 0,
+      secondPartialQty: initialData?.secondPartialQty ?? 0,
+      thirdPartialQty: initialData?.thirdPartialQty ?? 0,
+      firstPartialAmount: initialData?.firstPartialAmount ?? 0,
+      secondPartialAmount: initialData?.secondPartialAmount ?? 0,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? 0,
+      firstPartialPkgs: initialData?.firstPartialPkgs ?? 0,
+      firstPartialNetWeight: initialData?.firstPartialNetWeight ?? 0,
+      firstPartialGrossWeight: initialData?.firstPartialGrossWeight ?? 0,
+      firstPartialCbm: initialData?.firstPartialCbm ?? 0,
+      secondPartialPkgs: initialData?.secondPartialPkgs ?? 0,
+      secondPartialNetWeight: initialData?.secondPartialNetWeight ?? 0,
+      secondPartialGrossWeight: initialData?.secondPartialGrossWeight ?? 0,
+      secondPartialCbm: initialData?.secondPartialCbm ?? 0,
+      thirdPartialPkgs: initialData?.thirdPartialPkgs ?? 0,
+      thirdPartialNetWeight: initialData?.thirdPartialNetWeight ?? 0,
+      thirdPartialGrossWeight: initialData?.thirdPartialGrossWeight ?? 0,
+      thirdPartialCbm: initialData?.thirdPartialCbm ?? 0,
+      originalBlQty: initialData?.originalBlQty ?? 0,
+      copyBlQty: initialData?.copyBlQty ?? 0,
+      originalCooQty: initialData?.originalCooQty ?? 0,
+      copyCooQty: initialData?.copyCooQty ?? 0,
+      invoiceQty: initialData?.invoiceQty ?? 0,
+      packingListQty: initialData?.packingListQty ?? 0,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? 0,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? 0,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
     },
   });
   
@@ -285,6 +287,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         bankBin: initialData.bankBin || '',
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
+        flightNumber: initialData.flightNumber || '',
         totalPackageQty: initialData.totalPackageQty ?? 0,
         totalNetWeight: initialData.totalNetWeight ?? 0,
         totalGrossWeight: initialData.totalGrossWeight ?? 0,
@@ -335,10 +338,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? 0,
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, form.reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
+  }, [initialData, form, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
 
   const watchedApplicantId = watch("applicantId");
+  const { setValue: formSetValue } = form; // Destructure for stable reference
 
   React.useEffect(() => {
     console.log("EditLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
@@ -346,17 +349,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
       console.log("EditLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
-        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        formSetValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
         console.log("EditLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
-        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        formSetValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
         console.log("EditLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
-        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        formSetValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
         console.log("EditLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
-        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        formSetValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
         console.log("EditLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
-  }, [watchedApplicantId, applicantOptions, setValue]);
+  }, [watchedApplicantId, applicantOptions, formSetValue]);
 
   const watchedShipmentMode = watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
@@ -390,20 +393,23 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
-        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
+        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
+        "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
+        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
       ] as const;
 
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName); 
         if (currentValue === undefined || currentValue === null || String(currentValue).trim() === '') {
-          setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
+          formSetValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
         }
       });
     } else {
         setTotalCalculatedPartialQty(0);
         setTotalCalculatedPartialAmount(0);
     }
-  }, [watchedPartialShipmentAllowed, setValue, getValues]);
+  }, [watchedPartialShipmentAllowed, formSetValue, getValues]);
 
   React.useEffect(() => {
     const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q) || 0);
@@ -418,13 +424,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
       const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
 
-      setValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+      formSetValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+      formSetValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+      formSetValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+      formSetValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
+  }, [watchedPartialShipmentAllowed, formSetValue, getValues, ...watchedPartialValues]);
 
 
   async function onSubmit(data: LCEditFormValues) {
@@ -480,6 +486,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       bankBin: finalData.bankBin || undefined,
       vesselOrFlightName: finalData.vesselOrFlightName || undefined,
       vesselImoNumber: finalData.vesselImoNumber || undefined,
+      flightNumber: finalData.flightNumber || undefined,
       totalPackageQty: finalData.totalPackageQty,
       totalNetWeight: finalData.totalNetWeight,
       totalGrossWeight: finalData.totalGrossWeight,
@@ -1110,7 +1117,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1124,7 +1131,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1138,7 +1145,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                     <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1148,12 +1155,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormControl>
                 <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                 </FormControl>
+                 {watchedPartialShipmentAllowed === 'No' && <FormDescription>Sum of partial Qty (when enabled).</FormDescription>}
             </FormItem>
             <FormItem>
                 <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
                 <FormControl>
                 <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                 </FormControl>
+                 {watchedPartialShipmentAllowed === 'No' && <FormDescription>Sum of partial amounts (when enabled).</FormDescription>}
             </FormItem>
         </div>
 
@@ -1236,6 +1245,41 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     Track Vessel
                 </Button>
             </div>
+        )}
+         {watchedShipmentMode === 'Air' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+            <FormField
+              control={form.control}
+              name="flightNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Flight Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                const flightNum = form.getValues("flightNumber");
+                if (flightNum && flightNum.trim() !== "") {
+                  window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
+                } else {
+                  Swal.fire("Info", "Please enter a flight number to track.", "info");
+                }
+              }}
+              disabled={!form.watch("flightNumber") || isSubmitting}
+              className="md:col-span-1"
+              title="Track Flight on FlightRadar24"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Track Flight
+            </Button>
+          </div>
         )}
 
          <div className="mt-6">
