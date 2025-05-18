@@ -153,81 +153,81 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: '',
-      beneficiaryId: '',
-      currency: 'USD',
-      termsOfPay: "" as TermsOfPay,
-      status: 'Draft',
-      shipmentMode: "" as ShipmentMode,
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      totalPackageQty: 0,
-      totalNetWeight: 0,
-      totalGrossWeight: 0,
-      totalCbm: 0,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '',
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      purchaseOrderUrl: '',
-      partialShipmentAllowed: 'No',
-      firstPartialQty: 0,
-      secondPartialQty: 0,
-      thirdPartialQty: 0,
-      firstPartialAmount: 0,
-      secondPartialAmount: 0,
-      thirdPartialAmount: 0,
-      firstPartialPkgs: 0,
-      firstPartialNetWeight: 0,
-      firstPartialGrossWeight: 0,
-      firstPartialCbm: 0,
-      secondPartialPkgs: 0,
-      secondPartialNetWeight: 0,
-      secondPartialGrossWeight: 0,
-      secondPartialCbm: 0,
-      thirdPartialPkgs: 0,
-      thirdPartialNetWeight: 0,
-      thirdPartialGrossWeight: 0,
-      thirdPartialCbm: 0,
-      originalBlQty: 0,
-      copyBlQty: 0,
-      originalCooQty: 0,
-      copyCooQty: 0,
-      invoiceQty: 0,
-      packingListQty: 0,
-      beneficiaryCertificateQty: 0,
-      brandNewCertificateQty: 0,
-      beneficiaryWarrantyCertificateQty: 0,
-      beneficiaryComplianceCertificateQty: 0,
-      shipmentAdviceQty: 0,
+      applicantId: initialData?.applicantId || '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      currency: initialData?.currency || 'USD',
+      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
+      status: initialData?.status || 'Draft',
+      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount ?? undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty ?? undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? 0,
+      totalNetWeight: initialData?.totalNetWeight ?? 0,
+      totalGrossWeight: initialData?.totalGrossWeight ?? 0,
+      totalCbm: initialData?.totalCbm ?? 0,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
+      firstPartialQty: initialData?.firstPartialQty ?? 0,
+      secondPartialQty: initialData?.secondPartialQty ?? 0,
+      thirdPartialQty: initialData?.thirdPartialQty ?? 0,
+      firstPartialAmount: initialData?.firstPartialAmount ?? 0,
+      secondPartialAmount: initialData?.secondPartialAmount ?? 0,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? 0,
+      firstPartialPkgs: initialData?.firstPartialPkgs ?? 0,
+      firstPartialNetWeight: initialData?.firstPartialNetWeight ?? 0,
+      firstPartialGrossWeight: initialData?.firstPartialGrossWeight ?? 0,
+      firstPartialCbm: initialData?.firstPartialCbm ?? 0,
+      secondPartialPkgs: initialData?.secondPartialPkgs ?? 0,
+      secondPartialNetWeight: initialData?.secondPartialNetWeight ?? 0,
+      secondPartialGrossWeight: initialData?.secondPartialGrossWeight ?? 0,
+      secondPartialCbm: initialData?.secondPartialCbm ?? 0,
+      thirdPartialPkgs: initialData?.thirdPartialPkgs ?? 0,
+      thirdPartialNetWeight: initialData?.thirdPartialNetWeight ?? 0,
+      thirdPartialGrossWeight: initialData?.thirdPartialGrossWeight ?? 0,
+      thirdPartialCbm: initialData?.thirdPartialCbm ?? 0,
+      originalBlQty: initialData?.originalBlQty ?? 0,
+      copyBlQty: initialData?.copyBlQty ?? 0,
+      originalCooQty: initialData?.originalCooQty ?? 0,
+      copyCooQty: initialData?.copyCooQty ?? 0,
+      invoiceQty: initialData?.invoiceQty ?? 0,
+      packingListQty: initialData?.packingListQty ?? 0,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? 0,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? 0,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
     },
   });
   
-  const { control, setValue, watch, getValues } = form;
+  const { control, setValue, watch, getValues, formState: { errors } } = form;
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -281,11 +281,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         status: initialData.status || 'Draft',
         shipmentMode: initialData.shipmentMode || ('' as ShipmentMode),
         trackingCourier: initialData.trackingCourier || '',
-        amount: initialData.amount !== undefined ? initialData.amount : undefined,
+        amount: initialData.amount ?? undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
         proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
         invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-        totalMachineQty: initialData.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
+        totalMachineQty: initialData.totalMachineQty ?? undefined,
         lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
         expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
         latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
@@ -310,7 +310,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         notifyPartyName: initialData.notifyPartyName || '',
         notifyPartyCell: initialData.notifyPartyCell || '',
         notifyPartyEmail: initialData.notifyPartyEmail || '',
-        numberOfAmendments: initialData.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+        numberOfAmendments: initialData.numberOfAmendments ?? undefined,
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
         finalLcUrl: initialData.finalLcUrl || '',
@@ -401,7 +401,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
       let shouldRecalculate = false;
       fieldsToInitializeZero.forEach(fieldName => {
-        const currentValue = getValues(fieldName); // Use getValues for immediate state
+        const currentValue = getValues(fieldName); 
         if (currentValue === undefined || currentValue === null || String(currentValue).trim() === '') {
           setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
           shouldRecalculate = true;
@@ -426,7 +426,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
       setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, setValue, getValues]);
 
 
@@ -449,7 +448,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       fieldsToNullify.forEach(field => {
         (finalData as any)[field] = undefined;
       });
-    } else { // If "Yes", ensure derived totals are based on calculations
+    } else { 
         finalData.totalPackageQty = [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
         finalData.totalNetWeight = [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
         finalData.totalGrossWeight = [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
@@ -466,7 +465,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
-      trackingCourier: finalData.trackingCourier === "" ? undefined : finalData.trackingCourier,
+      trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
       proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
@@ -475,7 +474,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       lcIssueDate: finalData.lcIssueDate ? format(finalData.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: finalData.expireDate ? format(finalData.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: finalData.latestShipmentDate ? format(finalData.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
+      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(finalData.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: finalData.eta ? format(finalData.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       itemDescriptions: finalData.itemDescriptions || undefined,
@@ -536,15 +535,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     };
 
     // Clean up undefined fields before sending to Firestore
-    Object.keys(dataToUpdate).forEach(key => {
-        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-            delete dataToUpdate[key as keyof typeof dataToUpdate];
-        }
-    });
+    const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key as keyof typeof acc] = value;
+      }
+      return acc;
+    }, {} as Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> & {updatedAt: any});
+
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
-      await updateDoc(lcDocRef, dataToUpdate);
+      await updateDoc(lcDocRef, cleanedDataToUpdate);
       Swal.fire({
         title: "L/C Entry Updated!",
         text: `L/C entry (ID: ${lcId}) has been successfully updated.`,
@@ -985,6 +986,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
+
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -1032,7 +1034,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed*</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || "No"}>
+              <Select onValueChange={field.onChange} value={field.value ?? "No"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select option" />
@@ -1105,87 +1107,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormDescription>
           </div>
         )}
-
-        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-            <Workflow className="mr-2 h-5 w-5 text-primary" />
-            Shipping Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField
-                control={form.control}
-                name="shipmentMode"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select shipment mode" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {shipmentModeOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                                {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
-                                {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
-                                {option}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="vesselOrFlightName"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>{viaLabelDisplay}</FormLabel>
-                    <FormControl>
-                    <Input
-                        placeholder={watchedShipmentModeForLabel ? `Enter ${watchedShipmentModeForLabel === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
-                        {...field}
-                        disabled={!watchedShipmentModeForLabel}
-                        value={field.value ?? ''}
-                    />
-                    </FormControl>
-                    {!watchedShipmentModeForLabel && <FormDescription>Select shipment mode first.</FormDescription>}
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
-        {watchedShipmentModeForLabel === 'Sea' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-                <FormField
-                    control={form.control}
-                    name="vesselImoNumber"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                            <FormLabel>Vessel IMO Number</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleTrackVessel}
-                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
-                    className="md:col-span-1"
-                    title="Track Vessel via IMO Number"
-                >
-                    <Search className="mr-2 h-4 w-4" />
-                    Track Vessel
-                </Button>
-            </div>
-        )}
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
           <FormField
             control={form.control}
@@ -1241,6 +1163,86 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+            <Workflow className="mr-2 h-5 w-5 text-primary" />
+            Shipping Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <FormField
+                control={form.control}
+                name="shipmentMode"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select shipment mode" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {shipmentModeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                            {option}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="vesselOrFlightName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormControl>
+                    <Input
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        {...field}
+                        disabled={!watchedShipmentMode}
+                        value={field.value ?? ''}
+                    />
+                    </FormControl>
+                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+        {watchedShipmentMode === 'Sea' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                    control={form.control}
+                    name="vesselImoNumber"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                            <FormLabel>Vessel IMO Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleTrackVessel}
+                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
+                    className="md:col-span-1"
+                    title="Track Vessel via IMO Number"
+                >
+                    <Search className="mr-2 h-4 w-4" />
+                    Track Vessel
+                </Button>
+            </div>
+        )}
+
          <div className="mt-6">
             <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -1279,7 +1281,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormItem className="md:col-span-1">
                         <FormLabel>Tracking Number</FormLabel>
                         <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier")} value={field.value ?? ''}/>
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''}/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -1289,7 +1291,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     type="button"
                     variant="default"
                     onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || isSubmitting}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
                     className="md:col-span-1 mt-4 md:mt-0"
                     title="Track Original Document"
                 >
@@ -1649,12 +1651,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Submitting...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-             Save Changes
+              <FileText className="mr-2 h-4 w-4" />
+              Submit L/C Entry
             </>
           )}
         </Button>
@@ -1662,3 +1664,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
