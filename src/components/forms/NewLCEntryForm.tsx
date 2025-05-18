@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -224,6 +225,8 @@ export function NewLCEntryForm() {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("NewLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
+
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
@@ -244,14 +247,19 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = form.watch("applicantId");
-  // Auto-populate Notify Party details based on selected Applicant
   React.useEffect(() => {
+    console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
+        console.log("NewLCEntryForm: Setting Notify Party Name and Address to:", selectedApplicant.address);
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting Notify Party Contact Person to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting Notify Party Cell to:", selectedApplicant.phone);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting Notify Party Email to:", selectedApplicant.email);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
       }
     }
@@ -359,7 +367,6 @@ export function NewLCEntryForm() {
       updatedAt: serverTimestamp() as any,
     };
 
-    // Clean up undefined fields before saving
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
         acc[key as keyof typeof acc] = value;
@@ -1523,6 +1530,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-
-    
