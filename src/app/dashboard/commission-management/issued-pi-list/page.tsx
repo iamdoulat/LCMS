@@ -19,6 +19,8 @@ import { format, parseISO, isValid, getMonth, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -30,8 +32,6 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-// Assuming a default currency if not specified in ProformaInvoiceDocument
-// For better accuracy, currency should be part of the PI document.
 const formatCurrencyValue = (amount?: number, currencySymbol: string = '$') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
   return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -40,11 +40,6 @@ const formatCurrencyValue = (amount?: number, currencySymbol: string = '$') => {
 const formatPercentage = (percentage?: number) => {
     if (typeof percentage !== 'number' || isNaN(percentage)) return 'N/A %';
     return `${percentage.toFixed(2)}%`;
-}
-
-interface DropdownOption {
-  value: string;
-  label: string;
 }
 
 const piSortOptions = [
@@ -67,8 +62,8 @@ const monthOptions = [
 
 const ALL_YEARS_VALUE = "All Years";
 const ALL_MONTHS_VALUE = "All Months";
-const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_PI__";
-const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_PI__";
+const PLACEHOLDER_APPLICANT_VALUE = "__PI_LIST_APPLICANT_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__PI_LIST_BENEFICIARY_PLACEHOLDER__";
 const PI_ITEMS_PER_PAGE = 10;
 
 export default function IssuedPIListPage() {
@@ -83,8 +78,8 @@ export default function IssuedPIListPage() {
   const [filterMonth, setFilterMonth] = useState<string>(ALL_MONTHS_VALUE);
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
 
-  const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
 
@@ -301,7 +296,7 @@ export default function IssuedPIListPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary")}>
                 <ListChecks className="h-7 w-7 text-primary" />
                 Issued Proforma Invoice (PI) List
               </CardTitle>
@@ -335,35 +330,27 @@ export default function IssuedPIListPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilterPi" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Select 
-                    value={filterApplicantId === '' ? ALL_APPLICANTS_VALUE : filterApplicantId} 
-                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)} 
+                   <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
                     disabled={isLoadingApplicants}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingApplicants ? "Loading..." : "All Applicants"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_APPLICANTS_VALUE}>All Applicants</SelectItem>
-                      {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilterPi" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Select 
-                    value={filterBeneficiaryId === '' ? ALL_BENEFICIARIES_VALUE : filterBeneficiaryId} 
-                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)} 
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingBeneficiaries}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_BENEFICIARIES_VALUE}>All Beneficiaries</SelectItem>
-                      {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="yearFilterPi" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
@@ -421,20 +408,20 @@ export default function IssuedPIListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PI No.</TableHead>
-                  <TableHead>PI Date</TableHead>
-                  <TableHead>Applicant</TableHead>
-                  <TableHead>Beneficiary</TableHead>
-                  <TableHead>Grand Total</TableHead>
-                  <TableHead>Commission %</TableHead>
-                  <TableHead>Sales Person</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="px-2 sm:px-4">PI No.</TableHead>
+                  <TableHead className="px-2 sm:px-4">PI Date</TableHead>
+                  <TableHead className="px-2 sm:px-4">Applicant</TableHead>
+                  <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
+                  <TableHead className="px-2 sm:px-4">Grand Total</TableHead>
+                  <TableHead className="px-2 sm:px-4">Commission %</TableHead>
+                  <TableHead className="px-2 sm:px-4">Sales Person</TableHead>
+                  <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                  {isLoading ? (
                    <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4">
                        <div className="flex justify-center items-center">
                          <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading PIs...
                        </div>
@@ -443,14 +430,14 @@ export default function IssuedPIListPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((pi) => (
                     <TableRow key={pi.id}>
-                      <TableCell className="font-medium">{pi.piNo || 'N/A'}</TableCell>
-                      <TableCell>{formatDisplayDate(pi.piDate)}</TableCell>
-                      <TableCell>{pi.applicantName || 'N/A'}</TableCell>
-                      <TableCell>{pi.beneficiaryName || 'N/A'}</TableCell>
-                      <TableCell>{formatCurrencyValue(pi.grandTotalSalesPrice)}</TableCell>
-                      <TableCell>{formatPercentage(pi.totalCommissionPercentage)}</TableCell>
-                      <TableCell>{pi.salesPersonName || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-1">
+                      <TableCell className="font-medium p-2 sm:p-4">{pi.piNo || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(pi.piDate)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{pi.applicantName || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{pi.beneficiaryName || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatCurrencyValue(pi.grandTotalSalesPrice)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatPercentage(pi.totalCommissionPercentage)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{pi.salesPersonName || 'N/A'}</TableCell>
+                      <TableCell className="text-right space-x-1 p-2 sm:p-4">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -490,7 +477,7 @@ export default function IssuedPIListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4">
                        No Proforma Invoices found matching your criteria. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
@@ -546,3 +533,4 @@ export default function IssuedPIListPage() {
     </div>
   );
 }
+
