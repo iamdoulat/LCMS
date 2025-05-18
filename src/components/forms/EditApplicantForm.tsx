@@ -30,6 +30,7 @@ const applicantSchema = z.object({
   newIrcNo: z.string().optional(),
   oldIrcNo: z.string().optional(),
   applicantBondNo: z.string().optional(),
+  groupName: z.string().optional(), // Added groupName
 });
 
 type ApplicantEditFormValues = z.infer<typeof applicantSchema>;
@@ -52,15 +53,16 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
     resolver: zodResolver(applicantSchema),
     defaultValues: { 
       applicantName: '',
+      address: '',
       email: '',
       phone: '',
-      address: '',
       contactPerson: '',
       binNo: '',
       tinNo: '',
       newIrcNo: '',
       oldIrcNo: '',
       applicantBondNo: '',
+      groupName: '', // Added groupName
     }
   });
 
@@ -68,15 +70,16 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
     if (initialData) {
       form.reset({
         applicantName: initialData.applicantName || '',
+        address: initialData.address || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
-        address: initialData.address || '',
         contactPerson: initialData.contactPerson || '',
         binNo: initialData.binNo || '',
         tinNo: initialData.tinNo || '',
         newIrcNo: initialData.newIrcNo || '',
         oldIrcNo: initialData.oldIrcNo || '',
         applicantBondNo: initialData.applicantBondNo || '',
+        groupName: initialData.groupName || '', // Added groupName
       });
     }
   }, [initialData, form]);
@@ -125,6 +128,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       newIrcNo: data.newIrcNo || undefined,
       oldIrcNo: data.oldIrcNo || undefined,
       applicantBondNo: data.applicantBondNo || undefined,
+      groupName: data.groupName || undefined, // Added groupName
       updatedAt: serverTimestamp(),
     };
 
@@ -289,19 +293,34 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="applicantBondNo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter Applicant's Bond Number" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="applicantBondNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Applicant's Bond Number" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="groupName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Group name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter group name" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (

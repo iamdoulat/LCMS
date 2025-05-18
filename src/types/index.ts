@@ -174,7 +174,8 @@ export interface Customer {
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
-  applicantBondNo?: string; // Added new field
+  applicantBondNo?: string;
+  groupName?: string; // Added new field
   createdAt?: any;
   updatedAt?: any;
 }
@@ -267,7 +268,7 @@ export interface ProformaInvoice {
   totalSalesPrice: number; // Sum of (Qty * Sales Price) from line items
   totalExtraNetCommission?: number;
   grandTotalSalesPrice: number; // totalSalesPrice + freightCharge (if excluded) - miscellaneousExpenses
-  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
+  grandTotalCommissionUSD?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;

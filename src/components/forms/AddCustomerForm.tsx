@@ -27,6 +27,7 @@ const customerSchema = z.object({
   newIrcNo: z.string().optional(),
   oldIrcNo: z.string().optional(),
   applicantBondNo: z.string().optional(),
+  groupName: z.string().optional(), // Added groupName
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -37,15 +38,16 @@ export function AddCustomerForm() {
     resolver: zodResolver(customerSchema),
     defaultValues: {
       applicantName: '',
+      address: '',
       email: '',
       phone: '',
-      address: '',
       contactPerson: '',
       binNo: '',
       tinNo: '',
       newIrcNo: '',
       oldIrcNo: '',
       applicantBondNo: '',
+      groupName: '', // Added groupName
     },
   });
 
@@ -105,7 +107,7 @@ export function AddCustomerForm() {
             </FormItem>
           )}
         />
-
+        
         <FormField
           control={form.control}
           name="address"
@@ -221,19 +223,34 @@ export function AddCustomerForm() {
           />
         </div>
         
-        <FormField
-          control={form.control}
-          name="applicantBondNo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter Applicant's Bond Number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="applicantBondNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Applicant's Bond Number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="groupName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Group name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter group name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (
