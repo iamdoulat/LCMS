@@ -21,11 +21,11 @@ import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the SupplierPieChart
-const SupplierPieChart = dynamic(() => 
+const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
-  { 
+  {
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-    ssr: false 
+    ssr: false
   }
 );
 
@@ -73,7 +73,10 @@ interface UpcomingEtdShipment {
   id: string;
   documentaryCreditNumber?: string;
   beneficiaryName?: string;
+  applicantName?: string;
   etdDate: Date;
+  currency?: Currency;
+  amount?: number;
 }
 
 
@@ -174,13 +177,19 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-        lcEntriesForTheYear.push({
-            id: doc.id,
-            ...data,
-          } as LCEntryDocument);
+        // Basic check for essential fields to avoid processing incomplete data
+        if (data.amount !== undefined && data.applicantId && data.beneficiaryId) {
+          lcEntriesForTheYear.push({
+              id: doc.id,
+              ...data,
+            } as LCEntryDocument);
+        } else {
+          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields:", doc.id, data);
+        }
       });
 
-      if (lcEntriesForTheYear.length === 0 && querySnapshot.empty) {
+
+      if (lcEntriesForTheYear.length === 0) {
         setDashboardStats({
           totalLCs: 0,
           totalLCValue: 0,
@@ -196,7 +205,7 @@ export default function DashboardPage() {
         setIsLoading(false);
         return;
       }
-      
+
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (lc.amount || 0), 0);
       const uniqueBeneficiaryIds = new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => id));
       const activeSuppliers = uniqueBeneficiaryIds.size;
@@ -214,9 +223,9 @@ export default function DashboardPage() {
           try {
             const issueDate = parseISO(lc.lcIssueDate);
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
-          } catch (e) { 
+          } catch (e) {
             console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
-            return false; 
+            return false;
           }
         }).length;
       }
@@ -296,9 +305,13 @@ export default function DashboardPage() {
             } catch (e) { return false; }
         })
         .map(lc => ({
-            id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
+            id: lc.id,
+            documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
+            applicantName: lc.applicantName,
             etdDate: parseISO(lc.etd!),
+            currency: lc.currency,
+            amount: lc.amount,
         }))
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
         .slice(0, 10);
@@ -312,7 +325,7 @@ export default function DashboardPage() {
         allProformaInvoices.push({ id: doc.id, ...doc.data() } as ProformaInvoiceDocument);
       });
 
-      const linkedPIsForTheYear = allProformaInvoices.filter(pi => 
+      const linkedPIsForTheYear = allProformaInvoices.filter(pi =>
         pi.connectedLcId && lcIdsForTheYear.has(pi.connectedLcId)
       );
       const totalLinkedPIsCount = linkedPIsForTheYear.length;
@@ -346,11 +359,16 @@ export default function DashboardPage() {
   }, [authUser]);
 
   useEffect(() => {
-    if (!authLoading && authUser) { 
+    if (!authLoading && authUser) {
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       console.log("Dashboard: User not authenticated, not fetching dashboard data.");
-      setIsLoading(false); 
+      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
+      setSupplierPieData([]);
+      setRecentlyCompletedLCs([]);
+      setDraftLCs([]);
+      setUpcomingEtdShipments([]);
+      setIsLoading(false);
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
@@ -387,13 +405,24 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || (!authUser && !authLoading)) { 
+  if (authLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
       </div>
     );
+  }
+
+  if (!authUser && !authLoading) {
+     // This case might be hit if auth context initializes faster than dashboard page,
+     // or if user gets logged out. AuthGuard should ideally handle redirection.
+     // If this UI shows briefly, it's fine.
+     return (
+        <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+          <p className="text-muted-foreground">Please log in to view the dashboard.</p>
+        </div>
+      );
   }
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
@@ -407,7 +436,7 @@ export default function DashboardPage() {
               {greeting}, <span className="text-primary">{userDisplayName}</span>!
             </h2>
           )}
-          <h1 className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <h1 className={cn("font-bold text-3xl lg:text-4xl", "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             Dashboard Overview
           </h1>
         </div>
@@ -446,7 +475,6 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-           className="xl:col-span-2"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -459,13 +487,13 @@ export default function DashboardPage() {
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Users className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
+          className="lg:col-start-1 xl:col-start-auto"
         />
         <StatCard
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-1"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
@@ -478,7 +506,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -489,7 +517,7 @@ export default function DashboardPage() {
           <CardContent className="h-[350px] w-full">
             {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" /> 
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">Loading chart data...</p>
                 </div>
             ) : supplierPieData.length > 0 ? (
@@ -505,7 +533,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Search className="h-6 w-6 text-primary" />
                 Search L/C
               </CardTitle>
@@ -531,7 +559,7 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -548,17 +576,17 @@ export default function DashboardPage() {
                  <ul className="space-y-3">
                   {upcomingEtdShipments.map((shipment) => (
                      <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-4 items-center">
-                         <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate">
+                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
                            {shipment.documentaryCreditNumber || 'N/A'}
-                         </Link>
-                         <span className="font-semibold text-foreground mt-1 sm:mt-0 sm:text-right">
-                           {format(shipment.etdDate, 'PPP')}
-                         </span>
+                        </Link>
+                       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                           <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
+                           <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
+                           <p className="truncate sm:col-span-1">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
+                           <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left">
+                             ETD: {format(shipment.etdDate, 'PPP')}
+                           </p>
                        </div>
-                       <p className="text-xs text-muted-foreground break-all truncate mt-0.5">
-                           Beneficiary: {shipment.beneficiaryName || 'N/A'}
-                       </p>
                      </li>
                   ))}
                 </ul>
@@ -569,11 +597,11 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -626,7 +654,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -682,5 +710,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
