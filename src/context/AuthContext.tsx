@@ -12,8 +12,8 @@ import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import type { UserRole, CompanyProfile, UserDocumentForAdmin } from '@/types';
 
-const SIMULATED_SUPER_ADMIN_EMAILS_STRING = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "";
-const SIMULATED_SUPER_ADMIN_EMAILS = SIMULATED_SUPER_ADMIN_EMAILS_STRING ? SIMULATED_SUPER_ADMIN_EMAILS_STRING.split(',').map(email => email.trim()) : [];
+// Hardcoded emails for simulated roles
+const SIMULATED_SUPER_ADMIN_EMAILS = ['mddoulat@gmail.com'];
 const SIMULATED_ADMIN_EMAIL = 'commercial@smartsolution-bd.com';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
@@ -33,7 +33,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   register: (displayName: string, email: string, pass: string) => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>; // Keep for direct manipulation if needed elsewhere
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   companyName: string;
   companyLogoUrl: string;
   updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => void;
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const router = useRouter();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
-    console.log("AuthContext: Attempting to fetch initial company profile.");
+    console.log("AuthContext: Attempting to fetch initial company profile. User UID:", auth.currentUser?.uid);
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
@@ -74,6 +74,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
             setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
         }
       } else {
+        console.log("AuthContext: Company profile document does not exist in Firestore. Using defaults/localStorage.");
         const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : DEFAULT_COMPANY_NAME;
         setCompanyName(storedName || DEFAULT_COMPANY_NAME);
         if (!storedName && typeof window !== 'undefined') localStorage.setItem(COMPANY_NAME_STORAGE_KEY, DEFAULT_COMPANY_NAME);
@@ -84,7 +85,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
     } catch (error: any) {
       console.error("AuthContext: Error fetching company profile from Firestore:", error.message, error.code);
-      // Fallback to localStorage or defaults if Firestore fetch fails
       const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : DEFAULT_COMPANY_NAME;
       setCompanyName(storedName || DEFAULT_COMPANY_NAME);
       const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : DEFAULT_COMPANY_LOGO_URL;
@@ -100,24 +100,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setUser(currentUser);
       if (currentUser) {
         try {
-          // Fetch user profile from Firestore
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userProfileData = userDocSnap.data() as UserDocumentForAdmin;
             setFirestoreUser(userProfileData);
-            setUserRole(userProfileData.role || "User"); // Default to 'User' if role isn't set
-            // Override with simulated super admin/admin for testing if needed
+            
             if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
               setUserRole("Super Admin");
             } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
               setUserRole("Admin");
+            } else {
+              setUserRole(userProfileData.role || "User");
             }
           } else {
-            // No Firestore profile, could be a new Firebase Auth user or an issue
             console.warn(`AuthContext: No Firestore profile found for user UID: ${currentUser.uid}. Defaulting role.`);
             setFirestoreUser(null);
-            // Basic role determination if no Firestore profile
             if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
               setUserRole("Super Admin");
             } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
@@ -129,7 +127,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         } catch (error) {
           console.error("AuthContext: Error fetching Firestore user profile:", error);
           setFirestoreUser(null);
-          setUserRole("User"); // Fallback role
+          if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
+            setUserRole("Super Admin");
+          } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
+            setUserRole("Admin");
+          } else {
+            setUserRole("User"); 
+          }
         }
       } else {
         setFirestoreUser(null);
@@ -145,33 +149,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
-      // setUser(firebaseUser); // onAuthStateChanged will handle this
+      // onAuthStateChanged will handle setting user, firestoreUser, and userRole
 
-      // Fetch profile from Firestore after successful Firebase Auth
-      const userDocRef = doc(firestore, "users", firebaseUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        const userProfileData = userDocSnap.data() as UserDocumentForAdmin;
-        setFirestoreUser(userProfileData);
-        // Determine role based on Firestore profile or simulated emails
-        if (SIMULATED_SUPER_ADMIN_EMAILS.includes(email)) {
-          setUserRole("Super Admin");
-        } else if (email === SIMULATED_ADMIN_EMAIL) {
-          setUserRole("Admin");
-        } else {
-          setUserRole(userProfileData.role || "User");
-        }
-      } else {
-        console.warn(`Login: No Firestore profile for UID: ${firebaseUser.uid}. Defaulting role.`);
-        // Determine role if no Firestore profile exists
-        if (SIMULATED_SUPER_ADMIN_EMAILS.includes(email)) {
-          setUserRole("Super Admin");
-        } else if (email === SIMULATED_ADMIN_EMAIL) {
-          setUserRole("Admin");
-        } else {
-          setUserRole("User");
-        }
-      }
       Swal.fire({
         title: "Login Successful",
         text: `Welcome back, ${firebaseUser.displayName || email}!`,
@@ -187,14 +166,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = "Invalid email or password.";
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = "Too many login attempts. Please try again later.";
-      } else if (error.code === 'permission-denied' || error.message.includes('permission')) {
-        errorMessage = "Missing or insufficient permissions to access user data.";
+      } else if (error.code === 'permission-denied' || (error.message && error.message.includes('permission'))) {
+        errorMessage = "Missing or insufficient permissions. Please check Firestore rules.";
       }
       Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      setLoading(false); // Ensure loading is set to false on error
-      throw error; // Re-throw for the form to catch if needed
-    } finally {
-      // setLoading(false); // Already handled by onAuthStateChanged
+      setLoading(false); 
+      throw error; 
     }
   }, [router]);
 
@@ -205,12 +182,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       const firebaseUser = userCredential.user;
       await firebaseUpdateProfile(firebaseUser, { displayName });
 
-      // Create a profile in Firestore 'users' collection
+      let assignedRole: UserRole = "User";
+      if (SIMULATED_SUPER_ADMIN_EMAILS.includes(email)) {
+        assignedRole = "Super Admin";
+      } else if (email === SIMULATED_ADMIN_EMAIL) {
+        assignedRole = "Admin";
+      }
+
       const userProfileData: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
         uid: firebaseUser.uid,
         displayName: displayName,
         email: email,
-        role: "User", // Default role for new registrations
+        role: assignedRole, 
       };
       await setDoc(doc(firestore, "users", firebaseUser.uid), {
         ...userProfileData,
@@ -218,9 +201,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         updatedAt: serverTimestamp(),
       });
       
-      // setUser(firebaseUser); // onAuthStateChanged will handle this
-      // setFirestoreUser({ ...userProfileData, id: firebaseUser.uid }); // Optimistic update
-      // setUserRole("User");
+      // onAuthStateChanged will handle setting states
 
       Swal.fire({
         title: "Registration Successful",
@@ -239,8 +220,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       });
       setLoading(false);
       throw error;
-    } finally {
-      // setLoading(false); // onAuthStateChanged will handle
     }
   }, [router]);
 
@@ -275,9 +254,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
-      // setUser(firebaseUser); // onAuthStateChanged will handle this
-
-      // Check if a Firestore profile exists, create if not
+      
       const userDocRef = doc(firestore, "users", firebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       let assignedRole: UserRole = "User";
@@ -301,12 +278,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        // setFirestoreUser({ ...userProfileData, id: firebaseUser.uid });
-        // setUserRole(assignedRole);
-      } else {
-        // User profile exists, potentially update role based on simulated emails if needed
-        // or rely on Firestore role primarily. For now, onAuthStateChanged handles role setting.
       }
+      // onAuthStateChanged will handle setting states
       
       Swal.fire({
         title: "Login Successful",
@@ -325,8 +298,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = "Google Sign-In was cancelled.";
       }
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
-    } finally {
-      // setLoading(false); // onAuthStateChanged will handle
     }
   }, [router]);
 
@@ -338,13 +309,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     if (profile.companyLogoUrl !== undefined) {
       setCompanyLogoUrl(profile.companyLogoUrl);
       if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profile.companyLogoUrl);
-    } else if (profile.companyLogoUrl === null) {
+    } else if (profile.companyLogoUrl === null) { // Explicitly handle null to reset to default
         setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
         if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
     }
   }, []);
-  
-  // REMOVED the problematic conditional rendering block for the global loader
   
   return (
     <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, logout, signInWithGoogle, register, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
