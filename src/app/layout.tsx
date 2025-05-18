@@ -9,7 +9,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
   description: 'Modern Letter of Credit Management Software',
-  manifest: '/manifest.json', // Added manifest link here
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -30,12 +30,10 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#3498db" />
 
-        <link rel="apple-touch-icon" href="https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/playstore.png?alt=media&token=9d432d10-f694-4737-ac61-a55a7662d1ad" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* 
           For a better PWA experience, consider adding more Apple touch icons for different sizes:
-          <link rel="apple-touch-icon" sizes="152x152" href="/icons/touch-icon-ipad.png" />
-          <link rel="apple-touch-icon" sizes="180x180" href="/icons/touch-icon-iphone-retina.png" />
-          <link rel="apple-touch-icon" sizes="167x167" href="/icons/touch-icon-ipad-retina.png" />
+          e.g., <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-touch-icon-152x152.png" />
         */}
       </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
