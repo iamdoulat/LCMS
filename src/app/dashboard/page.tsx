@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react'; // Renamed CalendarIcon to CalendarIconLucide
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
@@ -20,7 +20,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 
-// Dynamically import the SupplierPieChart
 const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
   {
@@ -177,14 +176,23 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-        // Basic check for essential fields to avoid processing incomplete data
-        if (data.amount !== undefined && data.applicantId && data.beneficiaryId) {
+        
+        let lcIssueDateValid = false;
+        if (data.lcIssueDate) {
+          try {
+            if (isValid(parseISO(data.lcIssueDate))) {
+              lcIssueDateValid = true;
+            }
+          } catch (e) { /* ignore, lcIssueDateValid remains false */ }
+        }
+
+        if (data.amount !== undefined && data.applicantId && data.beneficiaryId && lcIssueDateValid) {
           lcEntriesForTheYear.push({
               id: doc.id,
               ...data,
             } as LCEntryDocument);
         } else {
-          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields:", doc.id, data);
+          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields or invalid lcIssueDate:", doc.id, data);
         }
       });
 
@@ -342,7 +350,7 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error("Dashboard: Detailed error fetching dashboard data: ", error);
       let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
-       if (error.message && (error.message.toLowerCase().includes("permission") || error.message.toLowerCase().includes("missing or insufficient"))) {
+       if (error.code && (error.message?.toLowerCase().includes("permission") || error.message?.toLowerCase().includes("missing or insufficient"))) {
          errorMessage = `Could not fetch dashboard data. This is often due to Firestore security rules. Please ensure your rules allow read access to the 'lc_entries' collection for authenticated users (e.g., by having 'allow read: if request.auth != null;' for the '/lc_entries/{lcEntryId}' path). Original Firebase error: ${error.message} (Code: ${error.code || 'N/A'})`;
        } else if (error.message) {
          errorMessage = `Could not fetch dashboard data: ${error.message} (Code: ${error.code || 'N/A'})`;
@@ -405,7 +413,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (!authUser && !authLoading)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -414,33 +422,30 @@ export default function DashboardPage() {
     );
   }
 
-  if (!authUser && !authLoading) {
-     return (
-        <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
-          <p className="text-muted-foreground">Please log in to view the dashboard.</p>
-        </div>
-      );
-  }
-
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>
            {greeting && authUser && (
             <h2 className="text-base font-semibold text-foreground mb-1">
               {greeting}, <span className="text-primary">{userDisplayName}</span>!
             </h2>
           )}
-          <h1 className={cn("font-bold text-2xl lg:text-3xl", "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <h1
+            className={cn(
+              "font-bold text-2xl lg:text-3xl",
+              "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            )}
+          >
             Dashboard Overview
           </h1>
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-[180px] bg-card shadow-sm">
-              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <CalendarIconLucide className="mr-2 h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent>
@@ -577,11 +582,11 @@ export default function DashboardPage() {
                         <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
                            {shipment.documentaryCreditNumber || 'N/A'}
                         </Link>
-                       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                            <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
                            <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
-                           <p className="truncate sm:col-span-1">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
-                           <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left">
+                           <p className="truncate sm:col-span-2 md:col-span-1 lg:col-span-2">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
+                           <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left sm:col-span-2 md:col-span-1 lg:col-span-2">
                              ETD: {format(shipment.etdDate, 'PPP')}
                            </p>
                        </div>
