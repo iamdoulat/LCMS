@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const lineItemFormSchema = z.object({
   slNo: z.string().optional(),
@@ -66,6 +67,9 @@ interface EditProformaInvoiceFormProps {
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
 const NONE_LC_VALUE = "__NONE_LC_PI_EDIT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__PI_EDIT_BENEFICIARY_PLACEHOLDER__";
+const PLACEHOLDER_APPLICANT_VALUE = "__PI_EDIT_APPLICANT_PLACEHOLDER__";
+
 
 export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -384,8 +388,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
                  <Combobox
                   options={beneficiaryOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                   placeholder="Search Beneficiary..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select Beneficiary"}
                   emptyStateMessage="No beneficiary found."
@@ -403,8 +407,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
                 <Combobox
                   options={applicantOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_APPLICANT_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
                   placeholder="Search Applicant..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select Applicant"}
                   emptyStateMessage="No applicant found."
@@ -465,8 +469,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
                 <Combobox
                   options={lcOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value === '' ? NONE_LC_VALUE : field.value}
+                  onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)}
                   placeholder="Search L/C Number..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"}
                   emptyStateMessage="No L/C found."
