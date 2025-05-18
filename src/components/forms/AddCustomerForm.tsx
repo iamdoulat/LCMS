@@ -106,6 +106,20 @@ export function AddCustomerForm() {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address*</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter applicant's full address" {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -134,20 +148,6 @@ export function AddCustomerForm() {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address*</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter applicant's full address" {...field} rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
