@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -70,7 +70,9 @@ const sortOptions = [
   { value: "year", label: "Year" },
 ];
 
-const yearFilterOptions = ["All Years", ...Array.from({ length: 11 }, (_, i) => (2020 + i).toString())]; // 2020 to 2030
+const currentSystemYear = new Date().getFullYear();
+const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
+
 
 const ALL_YEARS_VALUE = "All Years";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
@@ -90,6 +92,7 @@ export default function TotalLCPage() {
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
@@ -456,21 +459,21 @@ export default function TotalLCPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>L/C Number</TableHead>
-                  <TableHead>Applicant</TableHead>
-                  <TableHead>Beneficiary</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Issue Date</TableHead>
-                  <TableHead>Latest Shipment Date</TableHead>
-                  <TableHead>Expire Date*</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="px-2 sm:px-4">L/C Number</TableHead>
+                  <TableHead className="px-2 sm:px-4">Applicant</TableHead>
+                  <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
+                  <TableHead className="px-2 sm:px-4">Amount</TableHead>
+                  <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
+                  <TableHead className="px-2 sm:px-4">Latest Shipment Date</TableHead>
+                  <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
+                  <TableHead className="px-2 sm:px-4">Status</TableHead>
+                  <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                  {isLoading ? (
                    <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
                        <div className="flex justify-center items-center">
                          <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
                        </div>
@@ -479,14 +482,14 @@ export default function TotalLCPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((lc) => (
                     <TableRow key={lc.id}>
-                      <TableCell className="font-medium">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
-                      <TableCell>{lc.applicantName || 'N/A'}</TableCell>
-                      <TableCell>{lc.beneficiaryName || 'N/A'}</TableCell>
-                      <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
-                      <TableCell>{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                      <TableCell>{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
-                      <TableCell>{formatDisplayDate(lc.expireDate)}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium p-2 sm:p-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{lc.applicantName || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{lc.beneficiaryName || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.expireDate)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">
                         <Badge
                           variant={getStatusBadgeVariant(lc.status)}
                           className={
@@ -499,7 +502,7 @@ export default function TotalLCPage() {
                           {lc.status || 'N/A'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
+                      <TableCell className="text-right space-x-1 p-2 sm:p-4">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -525,6 +528,7 @@ export default function TotalLCPage() {
                                   onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
                                   className="hover:bg-destructive/10 hover:text-destructive"
                                   disabled={!lc.id}
+                                  title="Delete L/C"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                   <span className="sr-only">Delete L/C</span>
@@ -538,7 +542,7 @@ export default function TotalLCPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
                        No L/C entries found matching your criteria. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
@@ -597,3 +601,4 @@ export default function TotalLCPage() {
     
 
     
+
