@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Save, Link2, MinusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Save, Link2, MinusCircle, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,6 +42,10 @@ const proformaInvoiceSchema = z.object({
   piDate: z.date({ required_error: "PI Date is required" }),
   salesPersonName: z.string().min(1, "Sales Person Name is required"),
   connectedLcId: z.string().optional(),
+  purchaseOrderUrl: z.preprocess( // Added
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format" }).optional()
+  ),
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
   freightChargeAmount: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Freight Amount must be a non-negative number if provided." }),
@@ -90,23 +94,17 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
     defaultValues: {
-      beneficiaryId: initialData?.beneficiaryId || '',
-      applicantId: initialData?.applicantId || '',
-      piNo: initialData?.piNo || '',
-      piDate: initialData?.piDate && isValid(parseISO(initialData.piDate)) ? parseISO(initialData.piDate) : new Date(),
-      salesPersonName: initialData?.salesPersonName || '',
-      connectedLcId: initialData?.connectedLcId || '',
-      lineItems: initialData?.lineItems?.map(item => ({
-        slNo: item.slNo || '',
-        modelNo: item.modelNo || '',
-        qty: item.qty?.toString() || '',
-        purchasePrice: item.purchasePrice?.toString() || '',
-        salesPrice: item.salesPrice?.toString() || '',
-        netCommissionPercentage: item.netCommissionPercentage?.toString() || '',
-      })) || [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
-      freightChargeOption: initialData?.freightChargeOption || "Freight Included",
-      freightChargeAmount: initialData?.freightChargeAmount?.toString() || '',
-      miscellaneousExpenses: initialData?.miscellaneousExpenses?.toString() || '',
+      beneficiaryId: '',
+      applicantId: '',
+      piNo: '',
+      piDate: new Date(),
+      salesPersonName: '',
+      connectedLcId: '',
+      purchaseOrderUrl: '', // Added
+      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
+      freightChargeOption: "Freight Included",
+      freightChargeAmount: '',
+      miscellaneousExpenses: '',
     },
   });
 
@@ -157,6 +155,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         piDate: initialData.piDate && isValid(parseISO(initialData.piDate)) ? parseISO(initialData.piDate) : new Date(),
         salesPersonName: initialData.salesPersonName || '',
         connectedLcId: initialData.connectedLcId || '',
+        purchaseOrderUrl: initialData.purchaseOrderUrl || '', // Added
         lineItems: initialData.lineItems?.map(item => ({
           slNo: item.slNo || '',
           modelNo: item.modelNo || '',
@@ -216,13 +215,13 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
           if (qty > 0) {
             newTotalQty += qty;
-            if (purchaseP >= 0) { 
+            if (purchaseP >= 0) {
               newTotalPurchase += qty * purchaseP;
-              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) { 
+              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) {
                  newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
               }
             }
-            if (salesP >= 0) newTotalSalesLineItems += qty * salesP; 
+            if (salesP >= 0) newTotalSalesLineItems += qty * salesP;
           }
         });
     }
@@ -262,10 +261,6 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
     const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
 
-    const freightAmountForDb = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : undefined;
-    const miscellaneousExpensesForDb = parseFloat(data.miscellaneousExpenses || '0') || 0;
-
-
     let calculatedTotalQty = 0;
     let calculatedTotalPurchasePrice = 0;
     let calculatedTotalSalesPriceLineItems = 0;
@@ -299,7 +294,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
     const grossSalesBeforeDeductions = calculatedTotalSalesPriceLineItems + finalFreightAmount;
     const finalGrandTotalSalesPrice = grossSalesBeforeDeductions - finalMiscExpenses;
-    
+
     const baseCommission = finalGrandTotalSalesPrice - calculatedTotalPurchasePrice;
     const finalGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
 
@@ -319,6 +314,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label === "None" ? undefined : selectedLc?.label,
       connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: finalFreightAmount > 0 || data.freightChargeOption === "Freight Excluded" ? finalFreightAmount : undefined,
@@ -333,7 +329,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       updatedAt: serverTimestamp(),
     };
 
-    
+
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -364,6 +360,19 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
 
   const handleAddLineItem = () => {
     append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' });
+  };
+
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
   };
 
   if (isLoadingDropdowns && !initialData) {
@@ -487,6 +496,31 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             </div>
           )}
         </div>
+        <FormField
+          control={form.control}
+          name="purchaseOrderUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Purchase Order URL</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl className="flex-grow">
+                  <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon"
+                  onClick={() => handleViewUrl(field.value)}
+                  disabled={!field.value}
+                  title="View Purchase Order"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Separator />
         <h3 className={cn(sectionHeadingClass, "text-lg")}>
@@ -658,8 +692,8 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <p><strong className="text-muted-foreground">Total Sales (Line Items):</strong> <span className="font-semibold text-foreground">{totalSalesPriceFromLineItems.toFixed(2)}</span></p>
                 <p><strong className="text-muted-foreground">Total Extra Net Comm.:</strong> <span className="font-semibold text-foreground">{totalExtraNetCommission.toFixed(2)}</span></p>
                 <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-700 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700">{grandTotalCommissionUSD.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage.toFixed(2)}%</span></p>
+                <p className="font-semibold text-green-700 dark:text-green-400 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700 dark:text-green-400">{grandTotalCommissionUSD.toFixed(2)}</span></p>
+                <p className="font-semibold text-green-600 dark:text-green-500 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600 dark:text-green-500">{totalCommissionPercentage.toFixed(2)}%</span></p>
             </div>
         </div>
 

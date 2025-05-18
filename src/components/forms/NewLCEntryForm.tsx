@@ -8,7 +8,7 @@ import { z } from 'zod';
 import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
-import { isValid, parseISO, format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -66,6 +66,10 @@ const lcEntrySchema = z.object({
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format" }).optional()
+  ),
+  purchaseOrderUrl: z.preprocess( // Added
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -179,6 +183,7 @@ export function NewLCEntryForm() {
       finalPIUrl: '',
       shippingDocumentsUrl: '',
       finalLcUrl: '',
+      purchaseOrderUrl: '', // Added
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
@@ -278,6 +283,7 @@ export function NewLCEntryForm() {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
       trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
       trackingNumber: data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -431,8 +437,8 @@ export function NewLCEntryForm() {
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
                 <Combobox
                   options={applicantOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_APPLICANT_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
                   placeholder="Search Applicant..."
                   selectPlaceholder={isLoadingApplicants ? "Loading applicants..." : "Select applicant"}
                   emptyStateMessage="No applicant found."
@@ -451,8 +457,8 @@ export function NewLCEntryForm() {
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
                  <Combobox
                   options={beneficiaryOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                   placeholder="Search Beneficiary..."
                   selectPlaceholder={isLoadingBeneficiaries ? "Loading beneficiaries..." : "Select beneficiary"}
                   emptyStateMessage="No beneficiary found."
@@ -1385,10 +1391,35 @@ export function NewLCEntryForm() {
         <div className="space-y-6">
           <FormField
             control={form.control}
+            name="purchaseOrderUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Purchase Order URL</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Purchase Order"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="finalPIUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Final PI URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Final PI URL</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl className="flex-grow">
                     <Input type="url" placeholder="https://example.com/pi.pdf" {...field} value={field.value ?? ""} />
@@ -1413,7 +1444,7 @@ export function NewLCEntryForm() {
             name="shippingDocumentsUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Shipping Documents URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipping Documents URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
@@ -1438,7 +1469,7 @@ export function NewLCEntryForm() {
             name="finalLcUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Final LC URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Final LC URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
@@ -1460,7 +1491,7 @@ export function NewLCEntryForm() {
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

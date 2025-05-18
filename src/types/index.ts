@@ -1,5 +1,4 @@
 
-
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -33,10 +32,10 @@ export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[num
 
 export interface LCEntry {
   id?: string;
-  applicantId: string; 
-  applicantName: string; 
-  beneficiaryId: string; 
-  beneficiaryName: string; 
+  applicantId: string;
+  applicantName: string;
+  beneficiaryId: string;
+  beneficiaryName: string;
   currency: Currency;
   amount: number | '';
   termsOfPay: TermsOfPay;
@@ -50,6 +49,7 @@ export interface LCEntry {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
+  purchaseOrderUrl?: string; // Added
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null;
@@ -108,18 +108,19 @@ export interface LCEntryDocument {
   termsOfPay: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string; 
+  invoiceDate?: string;
   totalMachineQty: number;
-  lcIssueDate?: string; 
-  expireDate?: string; 
-  latestShipmentDate?: string; 
+  lcIssueDate?: string;
+  expireDate?: string;
+  latestShipmentDate?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
+  purchaseOrderUrl?: string; // Added
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string; 
-  eta?: string; 
+  etd?: string;
+  eta?: string;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
@@ -142,8 +143,8 @@ export interface LCEntryDocument {
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
   status: LCStatus;
-  createdAt: any; 
-  updatedAt: any; 
+  createdAt: any;
+  updatedAt: any;
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -217,18 +218,18 @@ export interface CompanyProfile {
   binNumber?: string;
   tinNumber?: string;
   companyLogoUrl?: string;
-  updatedAt?: any; 
+  updatedAt?: any;
 }
 
 export interface UserDocumentForAdmin {
-  id: string; 
-  uid?: string; 
+  id: string;
+  uid?: string;
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
-  createdAt?: any; 
-  updatedAt?: any; 
+  createdAt?: any;
+  updatedAt?: any;
   photoURL?: string;
 }
 
@@ -236,10 +237,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; 
-  purchasePrice: number | ''; 
-  salesPrice: number | ''; 
-  netCommissionPercentage?: number | ''; 
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -254,36 +255,37 @@ export interface ProformaInvoice {
   piNo: string;
   piDate: Date;
   salesPersonName: string;
-  connectedLcId?: string; 
+  connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string; 
+  connectedLcIssueDate?: string;
+  purchaseOrderUrl?: string; // Added
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | ''; 
+  miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; 
-  totalExtraNetCommission?: number; 
-  grandTotalSalesPrice: number; 
-  grandTotalCommissionUSD?: number; 
-  totalCommissionPercentage: number; 
+  totalSalesPrice: number;
+  totalExtraNetCommission?: number;
+  grandTotalSalesPrice: number;
+  grandTotalCommissionUSD?: number;
+  totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses'> & {
-  id: string; 
-  piDate: string; 
+  id: string;
+  piDate: string;
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
     salesPrice: number;
-    netCommissionPercentage?: number; 
+    netCommissionPercentage?: number;
   }>;
   freightChargeAmount?: number;
-  miscellaneousExpenses?: number; 
-  totalExtraNetCommission?: number; 
+  miscellaneousExpenses?: number;
+  totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
   createdAt: any;
   updatedAt: any;
@@ -291,7 +293,7 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
 
 // Option type for L/C dropdown in PI form
 export interface LcOption {
-  value: string; 
-  label: string; 
-  issueDate?: string; 
+  value: string;
+  label: string;
+  issueDate?: string;
 }

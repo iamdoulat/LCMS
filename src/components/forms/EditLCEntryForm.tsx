@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -98,6 +98,10 @@ const lcEntrySchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
+  purchaseOrderUrl: z.preprocess( // Added
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format" }).optional()
+  ),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -140,65 +144,66 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: initialData?.applicantId || '',
-      beneficiaryId: initialData?.beneficiaryId || '',
-      currency: initialData?.currency || 'USD',
-      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
-      status: initialData?.status || 'Draft',
-      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
-      trackingCourier: initialData?.trackingCourier || '',
-      amount: initialData?.amount !== undefined ? initialData.amount : undefined,
-      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
-      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
-      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-      totalMachineQty: initialData?.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
-      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
-      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
-      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
-      trackingNumber: initialData?.trackingNumber || '',
-      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
-      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-      itemDescriptions: initialData?.itemDescriptions || '',
-      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
-      bankBin: initialData?.bankBin || '',
-      bankTin: initialData?.bankTin || '',
-      vesselOrFlightName: initialData?.vesselOrFlightName || '',
-      vesselImoNumber: initialData?.vesselImoNumber || '',
-      totalPackageQty: initialData?.totalPackageQty ?? undefined,
-      totalNetWeight: initialData?.totalNetWeight ?? undefined,
-      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
-      totalCbm: initialData?.totalCbm ?? undefined,
-      partialShipments: initialData?.partialShipments || '',
-      portOfLoading: initialData?.portOfLoading || '',
-      portOfDischarge: initialData?.portOfDischarge || '',
-      shippingMarks: initialData?.shippingMarks || '',
-      certificateOfOrigin: initialData?.certificateOfOrigin || [],
-      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '',
-      notifyPartyCell: initialData?.notifyPartyCell || '',
-      notifyPartyEmail: initialData?.notifyPartyEmail || '',
-      numberOfAmendments: initialData?.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
-      finalPIUrl: initialData?.finalPIUrl || '',
-      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
-      finalLcUrl: initialData?.finalLcUrl || '',
-      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
-      firstPartialQty: initialData?.firstPartialQty ?? undefined,
-      secondPartialQty: initialData?.secondPartialQty ?? undefined,
-      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
-      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
-      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
-      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
-      originalBlQty: initialData?.originalBlQty ?? undefined,
-      copyBlQty: initialData?.copyBlQty ?? undefined,
-      originalCooQty: initialData?.originalCooQty ?? undefined,
-      copyCooQty: initialData?.copyCooQty ?? undefined,
-      invoiceQty: initialData?.invoiceQty ?? undefined,
-      packingListQty: initialData?.packingListQty ?? undefined,
-      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? undefined,
-      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? undefined,
-      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? undefined,
-      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? undefined,
-      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? undefined,
+      applicantId: '',
+      beneficiaryId: '',
+      currency: 'USD',
+      termsOfPay: '' as TermsOfPay,
+      status: 'Draft',
+      shipmentMode: '' as ShipmentMode,
+      trackingCourier: '',
+      amount: undefined,
+      documentaryCreditNumber: '',
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      totalMachineQty: undefined,
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
+      itemDescriptions: '',
+      consigneeBankNameAddress: '',
+      bankBin: '',
+      bankTin: '',
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shippingMarks: '',
+      certificateOfOrigin: [],
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
+      numberOfAmendments: undefined,
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
+      finalLcUrl: '',
+      purchaseOrderUrl: '', // Added
+      partialShipmentAllowed: 'No',
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
+      originalBlQty: undefined,
+      copyBlQty: undefined,
+      originalCooQty: undefined,
+      copyCooQty: undefined,
+      invoiceQty: undefined,
+      packingListQty: undefined,
+      beneficiaryCertificateQty: undefined,
+      brandNewCertificateQty: undefined,
+      beneficiaryWarrantyCertificateQty: undefined,
+      beneficiaryComplianceCertificateQty: undefined,
+      shipmentAdviceQty: undefined,
     },
   });
 
@@ -282,6 +287,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
         finalLcUrl: initialData.finalLcUrl || '',
+        purchaseOrderUrl: initialData.purchaseOrderUrl || '', // Added
         partialShipmentAllowed: initialData.partialShipmentAllowed || 'No',
         firstPartialQty: initialData.firstPartialQty ?? undefined,
         secondPartialQty: initialData.secondPartialQty ?? undefined,
@@ -368,6 +374,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
       secondPartialQty: data.secondPartialQty,
@@ -1459,10 +1466,35 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         <div className="space-y-6">
           <FormField
             control={form.control}
+            name="purchaseOrderUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Purchase Order URL</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Purchase Order"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
             name="finalPIUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Final PI URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Final PI URL</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl className="flex-grow">
                     <Input type="url" placeholder="https://example.com/pi.pdf" {...field} value={field.value ?? ""} />
@@ -1487,7 +1519,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="shippingDocumentsUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Shipping Documents URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipping Documents URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
@@ -1512,7 +1544,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="finalLcUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Final LC URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Final LC URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
@@ -1534,7 +1566,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingApplicants || isLoadingBeneficiaries}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1542,7 +1574,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
+              <Save className="mr-2 h-4 w-4" />
               Submit L/C Entry
             </>
           )}
