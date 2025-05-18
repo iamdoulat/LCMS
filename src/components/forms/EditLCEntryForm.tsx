@@ -19,7 +19,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox } from '@/components/ui/combobox';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -82,7 +82,7 @@ const lcEntrySchema = z.object({
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(), 
+  notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
@@ -134,7 +134,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
-  const [lcOptions, setLcOptions] = React.useState<LcOption[]>([]); // For Proforma Invoice's connected LC
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
 
@@ -143,79 +142,79 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: { 
-      applicantId: '',
-      beneficiaryId: '',
-      currency: currencyOptions[0],
-      termsOfPay: termsOfPayOptions[0],
-      status: lcStatusOptions[0], // Default to 'Draft'
-      shipmentMode: shipmentModeOptions[0],
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      purchaseOrderUrl: '',
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      flightNumber: '',
-      totalPackageQty: undefined,
-      totalNetWeight: undefined,
-      totalGrossWeight: undefined,
-      totalCbm: undefined,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '', 
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      partialShipmentAllowed: 'No',
-      firstPartialQty: undefined,
-      secondPartialQty: undefined,
-      thirdPartialQty: undefined,
-      firstPartialAmount: undefined,
-      secondPartialAmount: undefined,
-      thirdPartialAmount: undefined,
-      firstPartialPkgs: undefined,
-      firstPartialNetWeight: undefined,
-      firstPartialGrossWeight: undefined,
-      firstPartialCbm: undefined,
-      secondPartialPkgs: undefined,
-      secondPartialNetWeight: undefined,
-      secondPartialGrossWeight: undefined,
-      secondPartialCbm: undefined,
-      thirdPartialPkgs: undefined,
-      thirdPartialNetWeight: undefined,
-      thirdPartialGrossWeight: undefined,
-      thirdPartialCbm: undefined,
-      originalBlQty: undefined,
-      copyBlQty: undefined,
-      originalCooQty: undefined,
-      copyCooQty: undefined,
-      invoiceQty: undefined,
-      packingListQty: undefined,
-      beneficiaryCertificateQty: undefined,
-      brandNewCertificateQty: undefined,
-      beneficiaryWarrantyCertificateQty: undefined,
-      beneficiaryComplianceCertificateQty: undefined,
-      shipmentAdviceQty: undefined,
+    defaultValues: {
+      applicantId: initialData?.applicantId || '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      currency: initialData?.currency && currencyOptions.includes(initialData.currency as Currency) ? initialData.currency : currencyOptions[0],
+      termsOfPay: initialData?.termsOfPay && termsOfPayOptions.includes(initialData.termsOfPay as TermsOfPay) ? initialData.termsOfPay : termsOfPayOptions[0],
+      status: initialData?.status && lcStatusOptions.includes(initialData.status as LCStatus) ? initialData.status : lcStatusOptions[0],
+      shipmentMode: initialData?.shipmentMode && shipmentModeOptions.includes(initialData.shipmentMode as ShipmentMode) ? initialData.shipmentMode : shipmentModeOptions[0],
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount ?? undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty ?? undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      flightNumber: initialData?.flightNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? undefined,
+      totalNetWeight: initialData?.totalNetWeight ?? undefined,
+      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
+      totalCbm: initialData?.totalCbm ?? undefined,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
+      partialShipmentAllowed: initialData?.partialShipmentAllowed && formPartialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : formPartialShipmentAllowedOptions[1], // 'No'
+      firstPartialQty: initialData?.firstPartialQty ?? undefined,
+      secondPartialQty: initialData?.secondPartialQty ?? undefined,
+      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
+      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
+      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
+      firstPartialPkgs: initialData?.firstPartialPkgs ?? undefined,
+      firstPartialNetWeight: initialData?.firstPartialNetWeight ?? undefined,
+      firstPartialGrossWeight: initialData?.firstPartialGrossWeight ?? undefined,
+      firstPartialCbm: initialData?.firstPartialCbm ?? undefined,
+      secondPartialPkgs: initialData?.secondPartialPkgs ?? undefined,
+      secondPartialNetWeight: initialData?.secondPartialNetWeight ?? undefined,
+      secondPartialGrossWeight: initialData?.secondPartialGrossWeight ?? undefined,
+      secondPartialCbm: initialData?.secondPartialCbm ?? undefined,
+      thirdPartialPkgs: initialData?.thirdPartialPkgs ?? undefined,
+      thirdPartialNetWeight: initialData?.thirdPartialNetWeight ?? undefined,
+      thirdPartialGrossWeight: initialData?.thirdPartialGrossWeight ?? undefined,
+      thirdPartialCbm: initialData?.thirdPartialCbm ?? undefined,
+      originalBlQty: initialData?.originalBlQty ?? 0,
+      copyBlQty: initialData?.copyBlQty ?? 0,
+      originalCooQty: initialData?.originalCooQty ?? 0,
+      copyCooQty: initialData?.copyCooQty ?? 0,
+      invoiceQty: initialData?.invoiceQty ?? 0,
+      packingListQty: initialData?.packingListQty ?? 0,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? 0,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? 0,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
     },
   });
   
@@ -239,7 +238,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("EditLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
         
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -247,7 +245,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("EditLCEntryForm: Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit L/C Form: ", error);
@@ -261,18 +258,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, []);
 
   React.useEffect(() => {
+    console.log("EditLCEntryForm: initialData changed or dropdowns loaded", initialData, applicantOptions.length, beneficiaryOptions.length);
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("EditLCEntryForm: Initial L/C Data for Form:", JSON.parse(JSON.stringify(initialData)));
-      console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId);
-      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId);
-      
+      console.log("EditLCEntryForm: Resetting form with initialData", JSON.parse(JSON.stringify(initialData)));
       form.reset({
         applicantId: initialData.applicantId || '',
         beneficiaryId: initialData.beneficiaryId || '',
-        currency: initialData.currency || currencyOptions[0],
-        termsOfPay: initialData.termsOfPay || termsOfPayOptions[0],
-        status: initialData.status || lcStatusOptions[0],
-        shipmentMode: initialData.shipmentMode || shipmentModeOptions[0],
+        currency: initialData.currency && currencyOptions.includes(initialData.currency as Currency) ? initialData.currency : currencyOptions[0],
+        termsOfPay: initialData.termsOfPay && termsOfPayOptions.includes(initialData.termsOfPay as TermsOfPay) ? initialData.termsOfPay : termsOfPayOptions[0],
+        status: initialData.status && lcStatusOptions.includes(initialData.status as LCStatus) ? initialData.status : lcStatusOptions[0],
+        shipmentMode: initialData.shipmentMode && shipmentModeOptions.includes(initialData.shipmentMode as ShipmentMode) ? initialData.shipmentMode : shipmentModeOptions[0],
         trackingCourier: initialData.trackingCourier || '',
         amount: initialData.amount ?? undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
@@ -309,7 +304,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         notifyPartyCell: initialData.notifyPartyCell || '',
         notifyPartyEmail: initialData.notifyPartyEmail || '',
         numberOfAmendments: initialData.numberOfAmendments ?? undefined,
-        partialShipmentAllowed: initialData.partialShipmentAllowed || formPartialShipmentAllowedOptions[1], // Default to 'No'
+        partialShipmentAllowed: initialData.partialShipmentAllowed && formPartialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : formPartialShipmentAllowedOptions[1], // 'No'
         firstPartialQty: initialData.firstPartialQty ?? undefined,
         secondPartialQty: initialData.secondPartialQty ?? undefined,
         thirdPartialQty: initialData.thirdPartialQty ?? undefined,
@@ -328,17 +323,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         thirdPartialNetWeight: initialData.thirdPartialNetWeight ?? undefined,
         thirdPartialGrossWeight: initialData.thirdPartialGrossWeight ?? undefined,
         thirdPartialCbm: initialData.thirdPartialCbm ?? undefined,
-        originalBlQty: initialData.originalBlQty ?? undefined,
-        copyBlQty: initialData.copyBlQty ?? undefined,
-        originalCooQty: initialData.originalCooQty ?? undefined,
-        copyCooQty: initialData.copyCooQty ?? undefined,
-        invoiceQty: initialData.invoiceQty ?? undefined,
-        packingListQty: initialData.packingListQty ?? undefined,
-        beneficiaryCertificateQty: initialData.beneficiaryCertificateQty ?? undefined,
-        brandNewCertificateQty: initialData.brandNewCertificateQty ?? undefined,
-        beneficiaryWarrantyCertificateQty: initialData.beneficiaryWarrantyCertificateQty ?? undefined,
-        beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? undefined,
-        shipmentAdviceQty: initialData.shipmentAdviceQty ?? undefined,
+        originalBlQty: initialData.originalBlQty ?? 0,
+        copyBlQty: initialData.copyBlQty ?? 0,
+        originalCooQty: initialData.originalCooQty ?? 0,
+        copyCooQty: initialData.copyCooQty ?? 0,
+        invoiceQty: initialData.invoiceQty ?? 0,
+        packingListQty: initialData.packingListQty ?? 0,
+        beneficiaryCertificateQty: initialData.beneficiaryCertificateQty ?? 0,
+        brandNewCertificateQty: initialData.brandNewCertificateQty ?? 0,
+        beneficiaryWarrantyCertificateQty: initialData.beneficiaryWarrantyCertificateQty ?? 0,
+        beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? 0,
+        shipmentAdviceQty: initialData.shipmentAdviceQty ?? 0,
       });
     }
   }, [initialData, form, applicantOptions, beneficiaryOptions]);
@@ -352,13 +347,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("EditLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -407,8 +398,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
         }
       });
-    } else {
-        // No automatic clearing when switching to 'No', user might want to preserve previous totals
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues]);
   
@@ -431,7 +420,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
       setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
 
@@ -741,7 +729,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value}>
+                 <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -1067,33 +1058,33 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               Partial Shipment Breakdown
             </h4>
             {/* 1st Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 2nd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 3rd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W.</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
           </div>
         )}
@@ -1155,8 +1146,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
                 )}
             />
-           {watchedPartialShipmentAllowed === "Yes" && (
-             <>
+            {watchedPartialShipmentAllowed === "Yes" && (
+              <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
                     <FormControl>
@@ -1169,8 +1160,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                     </FormControl>
                 </FormItem>
-             </>
-           )}
+              </>
+            )}
         </div>
 
 
@@ -1291,7 +1282,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
          <div className="mt-6">
             <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Courier Mode
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
                 <FormField
@@ -1302,7 +1293,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         <FormLabel>Courier</FormLabel>
                         <Select
                             onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
+                            value={field.value && trackingCourierOptions.includes(field.value as TrackingCourier) ? field.value : NONE_COURIER_VALUE}
                         >
                         <FormControl>
                             <SelectTrigger>
