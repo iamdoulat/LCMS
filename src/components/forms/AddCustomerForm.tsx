@@ -163,20 +163,6 @@ export function AddCustomerForm() {
           )}
         />
         
-        <FormField
-          control={form.control}
-          name="applicantBondNo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter Applicant's Bond Number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -234,6 +220,20 @@ export function AddCustomerForm() {
             )}
           />
         </div>
+        
+        <FormField
+          control={form.control}
+          name="applicantBondNo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter Applicant's Bond Number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (
