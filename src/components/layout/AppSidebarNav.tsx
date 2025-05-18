@@ -103,10 +103,10 @@ const managementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItemWithRoles[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
 
 
@@ -124,7 +124,6 @@ export function AppSidebarNav() {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; 
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
-        // Special handling for pages that are functionally under a main link
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -132,13 +131,9 @@ export function AppSidebarNav() {
           (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
           (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
-          // For these specific parent routes, only mark active if it's an exact match to avoid
-          // highlighting the parent when on a child add/edit page if you want distinct active states.
-          // Or, if you want the parent to stay active, then the current logic is fine.
-          // For now, we keep the broader `pathname.startsWith(href)` for parent highlighting.
           return true;
         }
-        return true; // General case for other routes
+        return true; 
     }
     return false;
   };
@@ -278,9 +273,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
             {settingsNavItems.map((item) => {
-              const canView = !item.roles || (userRole && item.roles.includes(userRole));
-              if (!canView) return null;
-
+              // Always render settings items now, roles check removed for visibility
               return (
                 item.href &&
                 <SidebarMenuItem key={item.href}>
@@ -330,7 +323,7 @@ type NavItem = {
 };
 
 type NavItemWithRoles = NavItem & {
-  roles?: UserRole[];
+  roles?: UserRole[]; // Roles property is now optional and not used for filtering visibility here
 };
 
 
