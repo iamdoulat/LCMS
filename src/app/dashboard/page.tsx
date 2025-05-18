@@ -415,9 +415,6 @@ export default function DashboardPage() {
   }
 
   if (!authUser && !authLoading) {
-     // This case might be hit if auth context initializes faster than dashboard page,
-     // or if user gets logged out. AuthGuard should ideally handle redirection.
-     // If this UI shows briefly, it's fine.
      return (
         <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
           <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -436,7 +433,7 @@ export default function DashboardPage() {
               {greeting}, <span className="text-primary">{userDisplayName}</span>!
             </h2>
           )}
-          <h1 className={cn("font-bold text-3xl lg:text-4xl", "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <h1 className={cn("font-bold text-2xl lg:text-3xl", "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             Dashboard Overview
           </h1>
         </div>
@@ -475,6 +472,7 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
+          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -487,13 +485,13 @@ export default function DashboardPage() {
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Users className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
-          className="lg:col-start-1 xl:col-start-auto"
         />
         <StatCard
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
+          className="lg:col-start-1"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
