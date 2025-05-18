@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
@@ -126,43 +126,12 @@ const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number | string>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number | string>(0);
-
-  React.useEffect(() => {
-    const fetchDropdownData = async () => {
-      setIsLoadingApplicants(true);
-      setIsLoadingBeneficiaries(true);
-      try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(
-          customersSnapshot.docs.map(doc => {
-            const data = doc.data() as CustomerDocument;
-            return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
-          })
-        );
-
-        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-        setBeneficiaryOptions(
-          suppliersSnapshot.docs.map(doc => {
-            const data = doc.data() as SupplierDocument;
-            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
-          })
-        );
-      } catch (error) {
-        console.error("Error fetching dropdown data: ", error);
-        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
-      } finally {
-        setIsLoadingApplicants(false);
-        setIsLoadingBeneficiaries(false);
-      }
-    };
-    fetchDropdownData();
-  }, []);
 
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
@@ -228,6 +197,70 @@ export function NewLCEntryForm() {
       shipmentAdviceQty: undefined,
     },
   });
+  
+  const { setValue } = form;
+
+  React.useEffect(() => {
+    const fetchDropdownData = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(doc => {
+            const data = doc.data() as CustomerDocument;
+            return { 
+              value: doc.id, 
+              label: data.applicantName || 'Unnamed Applicant',
+              address: data.address,
+              contactPersonName: data.contactPerson, // Assuming contactPerson is the name for Notify contact
+              email: data.email,
+              phone: data.phone,
+            };
+          })
+        );
+
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(doc => {
+            const data = doc.data() as SupplierDocument;
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching dropdown data: ", error);
+        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+    fetchDropdownData();
+  }, []);
+
+  const watchedApplicantId = form.watch("applicantId");
+  React.useEffect(() => {
+    console.log("Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
+    console.log("Available Applicant Options:", applicantOptions);
+    if (watchedApplicantId && applicantOptions.length > 0) {
+      const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("Selected Applicant for auto-fill:", selectedApplicant);
+      if (selectedApplicant) {
+        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
+        
+        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyName to:", selectedApplicant.contactPersonName);
+
+        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyCell to:", selectedApplicant.phone);
+
+        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyEmail to:", selectedApplicant.email);
+      }
+    }
+  }, [watchedApplicantId, applicantOptions, setValue]);
+
 
   const watchedShipmentMode = form.watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
@@ -282,7 +315,7 @@ export function NewLCEntryForm() {
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
       purchaseOrderUrl: data.purchaseOrderUrl || undefined,
-      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
+      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? undefined : data.trackingCourier || undefined,
       trackingNumber: data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -300,7 +333,7 @@ export function NewLCEntryForm() {
       portOfLoading: data.portOfLoading || undefined,
       portOfDischarge: data.portOfDischarge || undefined,
       shippingMarks: data.shippingMarks || undefined,
-      certificateOfOrigin: data.certificateOfOrigin,
+      certificateOfOrigin: data.certificateOfOrigin && data.certificateOfOrigin.length > 0 ? data.certificateOfOrigin : undefined,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress || undefined,
       notifyPartyName: data.notifyPartyName || undefined,
       notifyPartyCell: data.notifyPartyCell || undefined,
@@ -330,11 +363,13 @@ export function NewLCEntryForm() {
       updatedAt: serverTimestamp() as any,
     };
 
-    (Object.keys(dataToSave) as Array<keyof Omit<LCEntryDocument, 'id'>>).forEach(key => {
+    Object.keys(dataToSave).forEach(keyStr => {
+      const key = keyStr as keyof typeof dataToSave;
       if (dataToSave[key] === '') {
-        dataToSave[key] = undefined;
+        delete dataToSave[key];
       }
     });
+
 
     try {
       const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
@@ -421,7 +456,7 @@ export function NewLCEntryForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
         </h3>
@@ -672,7 +707,7 @@ export function NewLCEntryForm() {
           />
         </div>
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
         </h3>
@@ -703,7 +738,7 @@ export function NewLCEntryForm() {
             )}
         />
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
@@ -725,7 +760,7 @@ export function NewLCEntryForm() {
             name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party contact person Name</FormLabel>
+                <FormLabel>Notify Party Contact Person:</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
                 </FormControl>
@@ -763,7 +798,7 @@ export function NewLCEntryForm() {
         </div>
 
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
         </h3>
@@ -934,7 +969,7 @@ export function NewLCEntryForm() {
           </div>
         )}
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Workflow className="mr-2 h-5 w-5 text-primary" />
             Shipping Information
         </h3>
@@ -1152,7 +1187,7 @@ export function NewLCEntryForm() {
               />
         </div>
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
@@ -1348,7 +1383,7 @@ export function NewLCEntryForm() {
           )}
         />
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
@@ -1367,7 +1402,7 @@ export function NewLCEntryForm() {
         />
 
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
         <div className="space-y-6">

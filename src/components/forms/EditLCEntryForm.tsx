@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -132,7 +132,7 @@ const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
@@ -143,67 +143,69 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: '',
-      beneficiaryId: '',
-      currency: 'USD',
-      termsOfPay: '' as TermsOfPay,
-      status: 'Draft',
-      shipmentMode: '' as ShipmentMode,
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      totalPackageQty: undefined,
-      totalNetWeight: undefined,
-      totalGrossWeight: undefined,
-      totalCbm: undefined,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '',
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      purchaseOrderUrl: '',
-      partialShipmentAllowed: 'No',
-      firstPartialQty: undefined,
-      secondPartialQty: undefined,
-      thirdPartialQty: undefined,
-      firstPartialAmount: undefined,
-      secondPartialAmount: undefined,
-      thirdPartialAmount: undefined,
-      originalBlQty: undefined,
-      copyBlQty: undefined,
-      originalCooQty: undefined,
-      copyCooQty: undefined,
-      invoiceQty: undefined,
-      packingListQty: undefined,
-      beneficiaryCertificateQty: undefined,
-      brandNewCertificateQty: undefined,
-      beneficiaryWarrantyCertificateQty: undefined,
-      beneficiaryComplianceCertificateQty: undefined,
-      shipmentAdviceQty: undefined,
+      applicantId: initialData?.applicantId || '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      currency: initialData?.currency || 'USD',
+      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
+      status: initialData?.status || 'Draft',
+      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount !== undefined ? initialData.amount : undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? undefined,
+      totalNetWeight: initialData?.totalNetWeight ?? undefined,
+      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
+      totalCbm: initialData?.totalCbm ?? undefined,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
+      firstPartialQty: initialData?.firstPartialQty ?? undefined,
+      secondPartialQty: initialData?.secondPartialQty ?? undefined,
+      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
+      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
+      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
+      originalBlQty: initialData?.originalBlQty ?? undefined,
+      copyBlQty: initialData?.copyBlQty ?? undefined,
+      originalCooQty: initialData?.originalCooQty ?? undefined,
+      copyCooQty: initialData?.copyCooQty ?? undefined,
+      invoiceQty: initialData?.invoiceQty ?? undefined,
+      packingListQty: initialData?.packingListQty ?? undefined,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? undefined,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? undefined,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? undefined,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? undefined,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? undefined,
     },
   });
+  
+  const { setValue } = form;
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -213,9 +215,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
         const fetchedApplicants = customersSnapshot.docs.map(doc => {
           const data = doc.data() as CustomerDocument;
-          return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+          return { 
+            value: doc.id, 
+            label: data.applicantName || 'Unnamed Applicant',
+            address: data.address,
+            contactPersonName: data.contactPerson,
+            email: data.email,
+            phone: data.phone,
+           };
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("EditLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -223,6 +233,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
+        console.log("EditLCEntryForm: Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
@@ -238,8 +249,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
       console.log("EditLCEntryForm: Initial L/C Data for Form:", JSON.stringify(initialData, null, 2));
-      console.log("EditLCEntryForm: Fetched Applicant Options:", applicantOptions);
-      console.log("EditLCEntryForm: Fetched Beneficiary Options:", beneficiaryOptions);
       console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId);
       console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId);
 
@@ -307,6 +316,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }, [initialData, form, applicantOptions, beneficiaryOptions]);
 
+  const watchedApplicantId = form.watch("applicantId");
+  React.useEffect(() => {
+    console.log("Auto-populate effect triggered for Edit Form. Watched Applicant ID:", watchedApplicantId);
+    console.log("Available Applicant Options in Edit Form:", applicantOptions);
+    if (watchedApplicantId && applicantOptions.length > 0) {
+      const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("Selected Applicant for auto-fill in Edit Form:", selectedApplicant);
+      if (selectedApplicant) {
+        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyNameAndAddress in Edit Form to:", selectedApplicant.address);
+
+        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyName in Edit Form to:", selectedApplicant.contactPersonName);
+        
+        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyCell in Edit Form to:", selectedApplicant.phone);
+
+        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        console.log("Setting notifyPartyEmail in Edit Form to:", selectedApplicant.email);
+      }
+    }
+  }, [watchedApplicantId, applicantOptions, setValue]);
+
+
   const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
   const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
   const watchedPartialAmounts = [form.watch("firstPartialAmount"), form.watch("secondPartialAmount"), form.watch("thirdPartialAmount")];
@@ -361,7 +394,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       portOfLoading: data.portOfLoading || undefined,
       portOfDischarge: data.portOfDischarge || undefined,
       shippingMarks: data.shippingMarks || undefined,
-      certificateOfOrigin: data.certificateOfOrigin,
+      certificateOfOrigin: data.certificateOfOrigin && data.certificateOfOrigin.length > 0 ? data.certificateOfOrigin : undefined,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress || undefined,
       notifyPartyName: data.notifyPartyName || undefined,
       notifyPartyCell: data.notifyPartyCell || undefined,
@@ -403,7 +436,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         timer: 2500,
         showConfirmButton: true,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating L/C document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       Swal.fire({
@@ -489,7 +522,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
         </h3>
@@ -509,6 +542,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                   emptyStateMessage="No applicant found."
                   disabled={isLoadingApplicants}
                 />
+                <FormDescription>Select from your list of customers/applicants.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -529,6 +563,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                   emptyStateMessage="No beneficiary found."
                   disabled={isLoadingBeneficiaries}
                 />
+                <FormDescription>Select from your list of suppliers/beneficiaries.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -741,7 +776,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
         </h3>
@@ -772,7 +807,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
         />
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
@@ -794,7 +829,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Notify Party contact person Name</FormLabel>
+                <FormLabel>Notify Party Contact Person:</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
                 </FormControl>
@@ -831,7 +866,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
         </h3>
@@ -1002,7 +1037,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </div>
         )}
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Workflow className="mr-2 h-5 w-5 text-primary" />
             Shipping Information
         </h3>
@@ -1220,7 +1255,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               />
         </div>
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
@@ -1416,7 +1451,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           )}
         />
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
             47A: Additional Conditions
         </h3>
@@ -1435,7 +1470,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
 
 
-        <h3 className={sectionHeadingClass}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
         <div className="space-y-6">
