@@ -69,7 +69,7 @@ const lcEntrySchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
-  purchaseOrderUrl: z.preprocess( // Added
+  purchaseOrderUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -80,7 +80,6 @@ const lcEntrySchema = z.object({
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
   bankBin: z.string().optional(),
-  bankTin: z.string().optional(),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
@@ -181,9 +180,9 @@ export function NewLCEntryForm() {
       expireDate: undefined,
       latestShipmentDate: undefined,
       finalPIUrl: '',
-      shippingDocumentsUrl: '',
       finalLcUrl: '',
-      purchaseOrderUrl: '', // Added
+      shippingDocumentsUrl: '',
+      purchaseOrderUrl: '',
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
@@ -191,7 +190,6 @@ export function NewLCEntryForm() {
       itemDescriptions: '',
       consigneeBankNameAddress: '',
       bankBin: '',
-      bankTin: '',
       shipmentMode: "" as ShipmentMode,
       vesselOrFlightName: '',
       vesselImoNumber: '',
@@ -283,7 +281,7 @@ export function NewLCEntryForm() {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
-      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
       trackingNumber: data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -291,7 +289,6 @@ export function NewLCEntryForm() {
       itemDescriptions: data.itemDescriptions || undefined,
       consigneeBankNameAddress: data.consigneeBankNameAddress || undefined,
       bankBin: data.bankBin || undefined,
-      bankTin: data.bankTin || undefined,
       shipmentMode: data.shipmentMode,
       vesselOrFlightName: data.vesselOrFlightName || undefined,
       vesselImoNumber: data.vesselImoNumber || undefined,
@@ -692,34 +689,19 @@ export function NewLCEntryForm() {
             </FormItem>
             )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={form.control}
-                name="bankBin"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Bank BIN</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="bankTin"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Bank TIN</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
+        <FormField
+            control={form.control}
+            name="bankBin"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Bank BIN</FormLabel>
+                <FormControl>
+                <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
         <h3 className={sectionHeadingClass}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />

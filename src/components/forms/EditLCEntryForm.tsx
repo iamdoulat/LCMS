@@ -66,7 +66,6 @@ const lcEntrySchema = z.object({
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
   bankBin: z.string().optional(),
-  bankTin: z.string().optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
@@ -98,7 +97,7 @@ const lcEntrySchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
-  purchaseOrderUrl: z.preprocess( // Added
+  purchaseOrderUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -165,7 +164,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       itemDescriptions: '',
       consigneeBankNameAddress: '',
       bankBin: '',
-      bankTin: '',
       vesselOrFlightName: '',
       vesselImoNumber: '',
       totalPackageQty: undefined,
@@ -185,7 +183,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       finalPIUrl: '',
       shippingDocumentsUrl: '',
       finalLcUrl: '',
-      purchaseOrderUrl: '', // Added
+      purchaseOrderUrl: '',
       partialShipmentAllowed: 'No',
       firstPartialQty: undefined,
       secondPartialQty: undefined,
@@ -267,7 +265,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         itemDescriptions: initialData.itemDescriptions || '',
         consigneeBankNameAddress: initialData.consigneeBankNameAddress || '',
         bankBin: initialData.bankBin || '',
-        bankTin: initialData.bankTin || '',
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
         totalPackageQty: initialData.totalPackageQty ?? undefined,
@@ -287,7 +284,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         finalPIUrl: initialData.finalPIUrl || '',
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || '',
         finalLcUrl: initialData.finalLcUrl || '',
-        purchaseOrderUrl: initialData.purchaseOrderUrl || '', // Added
+        purchaseOrderUrl: initialData.purchaseOrderUrl || '',
         partialShipmentAllowed: initialData.partialShipmentAllowed || 'No',
         firstPartialQty: initialData.firstPartialQty ?? undefined,
         secondPartialQty: initialData.secondPartialQty ?? undefined,
@@ -354,7 +351,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       itemDescriptions: data.itemDescriptions || undefined,
       consigneeBankNameAddress: data.consigneeBankNameAddress || undefined,
       bankBin: data.bankBin || undefined,
-      bankTin: data.bankTin || undefined,
       vesselOrFlightName: data.vesselOrFlightName || undefined,
       vesselImoNumber: data.vesselImoNumber || undefined,
       totalPackageQty: data.totalPackageQty,
@@ -374,7 +370,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
-      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       partialShipmentAllowed: data.partialShipmentAllowed,
       firstPartialQty: data.firstPartialQty,
       secondPartialQty: data.secondPartialQty,
@@ -396,12 +392,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
-
-    (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
-      if (dataToUpdate[key] === '') {
-        dataToUpdate[key] = undefined; // Ensure empty strings become undefined for Firestore
-      }
-    });
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -768,34 +758,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormItem>
             )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={form.control}
-                name="bankBin"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Bank BIN</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="bankTin"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Bank TIN</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
+        <FormField
+            control={form.control}
+            name="bankBin"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Bank BIN</FormLabel>
+                <FormControl>
+                <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
         <h3 className={sectionHeadingClass}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -1574,7 +1549,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
+              <FileText className="mr-2 h-4 w-4" />
               Submit L/C Entry
             </>
           )}

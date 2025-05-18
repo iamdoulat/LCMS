@@ -49,7 +49,7 @@ export interface LCEntry {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  purchaseOrderUrl?: string; // Added
+  purchaseOrderUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null;
@@ -57,7 +57,6 @@ export interface LCEntry {
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
-  bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -116,7 +115,7 @@ export interface LCEntryDocument {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  purchaseOrderUrl?: string; // Added
+  purchaseOrderUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string;
@@ -124,7 +123,6 @@ export interface LCEntryDocument {
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   bankBin?: string;
-  bankTin?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -222,14 +220,14 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string;
-  uid?: string;
+  id: string; // Firestore document ID
+  uid?: string; // Firebase Auth UID (if linked)
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any; // Firestore ServerTimestamp
   photoURL?: string;
 }
 
@@ -258,7 +256,7 @@ export interface ProformaInvoice {
   connectedLcId?: string;
   connectedLcNumber?: string;
   connectedLcIssueDate?: string;
-  purchaseOrderUrl?: string; // Added
+  purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
@@ -276,7 +274,7 @@ export interface ProformaInvoice {
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses'> & {
   id: string;
-  piDate: string;
+  piDate: string; // ISO string
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -287,8 +285,8 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   miscellaneousExpenses?: number;
   totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 };
 
 // Option type for L/C dropdown in PI form
