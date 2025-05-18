@@ -20,6 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Standard Favicon */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        {/* PNG Favicons (optional, but good for quality) */}
+        <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16" />
+        
+        {/* PWA and Apple Specific Meta Tags */}
         <meta name="application-name" content="LC Vision" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
