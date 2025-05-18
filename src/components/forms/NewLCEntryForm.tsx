@@ -254,19 +254,13 @@ export function NewLCEntryForm() {
   const watchedApplicantId = watch("applicantId");
 
   React.useEffect(() => {
-    console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
-      console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -313,7 +307,7 @@ export function NewLCEntryForm() {
           setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
         }
       });
-      // Also ensure 46A fields default to 0 if not already set
+      
       const docQtyFieldsToInitializeZero = [
         "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
         "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
@@ -974,7 +968,7 @@ export function NewLCEntryForm() {
               Partial Shipment Breakdown
             </h4>
             {/* 1st Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -984,7 +978,7 @@ export function NewLCEntryForm() {
             </div>
             <Separator />
             {/* 2nd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -994,7 +988,7 @@ export function NewLCEntryForm() {
             </div>
             <Separator />
             {/* 3rd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1005,7 +999,7 @@ export function NewLCEntryForm() {
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1062,7 +1056,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === 'Yes' && (
+            {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1198,7 +1192,7 @@ export function NewLCEntryForm() {
 
          <div className="mt-6">
             <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Courier Mode
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
                 <FormField
@@ -1206,7 +1200,7 @@ export function NewLCEntryForm() {
                     name="trackingCourier"
                     render={({ field }) => (
                     <FormItem className="md:col-span-1">
-                        <FormLabel>Courier</FormLabel>
+                        <FormLabel>Courier By</FormLabel>
                         <Select
                             onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
                             value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
@@ -1550,31 +1544,6 @@ export function NewLCEntryForm() {
           />
           <FormField
             control={form.control}
-            name="shippingDocumentsUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipping Documents URL</FormLabel>
-                 <div className="flex items-center gap-2">
-                    <FormControl className="flex-grow">
-                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                     <Button
-                        type="button"
-                        variant="default"
-                        size="icon"
-                        onClick={() => handleViewUrl(field.value)}
-                        disabled={!field.value}
-                        title="View Shipping Documents"
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                    </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
             name="finalLcUrl"
             render={({ field }) => (
               <FormItem>
@@ -1590,6 +1559,31 @@ export function NewLCEntryForm() {
                         onClick={() => handleViewUrl(field.value)}
                         disabled={!field.value}
                         title="View Final LC"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="shippingDocumentsUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipping Documents URL</FormLabel>
+                 <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                     <Button
+                        type="button"
+                        variant="default"
+                        size="icon"
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Shipping Documents"
                     >
                         <ExternalLink className="h-4 w-4" />
                     </Button>
@@ -1617,3 +1611,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
