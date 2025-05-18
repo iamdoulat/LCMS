@@ -92,7 +92,7 @@ const lcEntrySchema = z.object({
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(), // This field maps to "Notify Party Contact Person:"
+  notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
@@ -325,8 +325,8 @@ export function NewLCEntryForm() {
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
-      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? undefined : data.trackingCourier || undefined,
-      trackingNumber: data.trackingNumber || undefined,
+      trackingCourier: data.trackingCourier === "" ? undefined : data.trackingCourier,
+      trackingNumber: (data.trackingCourier === "" || !data.trackingCourier) ? undefined : data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       itemDescriptions: data.itemDescriptions || undefined,
@@ -391,7 +391,6 @@ export function NewLCEntryForm() {
         showConfirmButton: true,
       });
       form.reset();
-       // Reset calculated totals as well
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
     } catch (error) {
@@ -756,7 +755,7 @@ export function NewLCEntryForm() {
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
-        <FormField
+         <FormField
             control={form.control}
             name="notifyPartyNameAndAddress"
             render={({ field }) => (
@@ -771,7 +770,7 @@ export function NewLCEntryForm() {
         />
          <FormField
             control={form.control}
-            name="notifyPartyName" // This field maps to "Notify Party Contact Person:"
+            name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
                 <FormLabel>Notify Party Contact Person:</FormLabel>
@@ -1539,3 +1538,5 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+    

@@ -76,7 +76,7 @@ const lcEntrySchema = z.object({
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(), // This field maps to "Notify Party Contact Person:"
+  notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
@@ -141,65 +141,65 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: '',
-      beneficiaryId: '',
-      currency: 'USD' as Currency,
-      termsOfPay: "" as TermsOfPay,
-      status: 'Draft' as LCStatus,
-      shipmentMode: "" as ShipmentMode,
-      trackingCourier: '',
-      amount: undefined,
-      documentaryCreditNumber: '',
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
-      itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      bankBin: '',
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      totalPackageQty: undefined,
-      totalNetWeight: undefined,
-      totalGrossWeight: undefined,
-      totalCbm: undefined,
-      partialShipments: '',
-      portOfLoading: '',
-      portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
-      notifyPartyNameAndAddress: '',
-      notifyPartyName: '',
-      notifyPartyCell: '',
-      notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      finalPIUrl: '',
-      shippingDocumentsUrl: '',
-      finalLcUrl: '',
-      purchaseOrderUrl: '',
-      partialShipmentAllowed: 'No',
-      firstPartialQty: 0,
-      secondPartialQty: 0,
-      thirdPartialQty: 0,
-      firstPartialAmount: 0,
-      secondPartialAmount: 0,
-      thirdPartialAmount: 0,
-      originalBlQty: 0,
-      copyBlQty: 0,
-      originalCooQty: 0,
-      copyCooQty: 0,
-      invoiceQty: 0,
-      packingListQty: 0,
-      beneficiaryCertificateQty: 0,
-      brandNewCertificateQty: 0,
-      beneficiaryWarrantyCertificateQty: 0,
-      beneficiaryComplianceCertificateQty: 0,
-      shipmentAdviceQty: 0,
+      applicantId: initialData?.applicantId || '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      currency: initialData?.currency || 'USD',
+      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
+      status: initialData?.status || 'Draft',
+      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
+      trackingCourier: initialData?.trackingCourier || '',
+      amount: initialData?.amount !== undefined ? initialData.amount : undefined,
+      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
+      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
+      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+      totalMachineQty: initialData?.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
+      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
+      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
+      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
+      trackingNumber: initialData?.trackingNumber || '',
+      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
+      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
+      itemDescriptions: initialData?.itemDescriptions || '',
+      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
+      bankBin: initialData?.bankBin || '',
+      vesselOrFlightName: initialData?.vesselOrFlightName || '',
+      vesselImoNumber: initialData?.vesselImoNumber || '',
+      totalPackageQty: initialData?.totalPackageQty ?? undefined,
+      totalNetWeight: initialData?.totalNetWeight ?? undefined,
+      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
+      totalCbm: initialData?.totalCbm ?? undefined,
+      partialShipments: initialData?.partialShipments || '',
+      portOfLoading: initialData?.portOfLoading || '',
+      portOfDischarge: initialData?.portOfDischarge || '',
+      shippingMarks: initialData?.shippingMarks || '',
+      certificateOfOrigin: initialData?.certificateOfOrigin || [],
+      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
+      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyCell: initialData?.notifyPartyCell || '',
+      notifyPartyEmail: initialData?.notifyPartyEmail || '',
+      numberOfAmendments: initialData?.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
+      finalPIUrl: initialData?.finalPIUrl || '',
+      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
+      finalLcUrl: initialData?.finalLcUrl || '',
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
+      firstPartialQty: initialData?.firstPartialQty ?? 0,
+      secondPartialQty: initialData?.secondPartialQty ?? 0,
+      thirdPartialQty: initialData?.thirdPartialQty ?? 0,
+      firstPartialAmount: initialData?.firstPartialAmount ?? 0,
+      secondPartialAmount: initialData?.secondPartialAmount ?? 0,
+      thirdPartialAmount: initialData?.thirdPartialAmount ?? 0,
+      originalBlQty: initialData?.originalBlQty ?? 0,
+      copyBlQty: initialData?.copyBlQty ?? 0,
+      originalCooQty: initialData?.originalCooQty ?? 0,
+      copyCooQty: initialData?.copyCooQty ?? 0,
+      invoiceQty: initialData?.invoiceQty ?? 0,
+      packingListQty: initialData?.packingListQty ?? 0,
+      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? 0,
+      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? 0,
+      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
+      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
+      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
     },
   });
   
@@ -273,10 +273,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         bankBin: initialData.bankBin || '',
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
-        totalPackageQty: initialData.totalPackageQty ?? 0,
-        totalNetWeight: initialData.totalNetWeight ?? 0,
-        totalGrossWeight: initialData.totalGrossWeight ?? 0,
-        totalCbm: initialData.totalCbm ?? 0,
+        totalPackageQty: initialData.totalPackageQty ?? undefined,
+        totalNetWeight: initialData.totalNetWeight ?? undefined,
+        totalGrossWeight: initialData.totalGrossWeight ?? undefined,
+        totalCbm: initialData.totalCbm ?? undefined,
         partialShipments: initialData.partialShipments || '',
         portOfLoading: initialData.portOfLoading || '',
         portOfDischarge: initialData.portOfDischarge || '',
@@ -341,8 +341,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         const currentSecondAmount = form.getValues("secondPartialAmount");
         const currentThirdAmount = form.getValues("thirdPartialAmount");
 
-        // Only set to 0 if the field is currently undefined or null (not just empty string, as that's handled by toNumberOrUndefined)
-        // This check is important for edit form to not override existing 0s if they were intentionally set
         if (currentFirstQty === undefined || currentFirstQty === null) setValue("firstPartialQty", 0, { shouldValidate: true, shouldDirty: true });
         if (currentSecondQty === undefined || currentSecondQty === null) setValue("secondPartialQty", 0, { shouldValidate: true, shouldDirty: true });
         if (currentThirdQty === undefined || currentThirdQty === null) setValue("thirdPartialQty", 0, { shouldValidate: true, shouldDirty: true });
@@ -378,7 +376,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: data.termsOfPay,
       status: data.status,
       shipmentMode: data.shipmentMode,
-      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier || undefined,
+      trackingCourier: data.trackingCourier === "" ? undefined : data.trackingCourier,
+      trackingNumber: (data.trackingCourier === "" || !data.trackingCourier) ? undefined : data.trackingNumber || undefined,
       amount: data.amount,
       documentaryCreditNumber: data.documentaryCreditNumber,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -405,7 +404,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       shippingMarks: data.shippingMarks || undefined,
       certificateOfOrigin: data.certificateOfOrigin && data.certificateOfOrigin.length > 0 ? data.certificateOfOrigin : undefined,
       notifyPartyNameAndAddress: data.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: data.notifyPartyName || undefined, // This field maps to "Notify Party Contact Person:"
+      notifyPartyName: data.notifyPartyName || undefined,
       notifyPartyCell: data.notifyPartyCell || undefined,
       notifyPartyEmail: data.notifyPartyEmail || undefined,
       numberOfAmendments: data.numberOfAmendments,
@@ -435,29 +434,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
 
-    // Remove undefined fields before sending to Firestore to avoid errors
-    // and to ensure only modified fields are updated (if using merge:true for update)
-    // However, for 'updateDoc', it's better to explicitly send empty strings for fields you want to clear
-    // and omit fields that weren't changed from initialData if you don't want to overwrite them.
-    // For simplicity here, we send all fields and let Firestore handle it.
-    // But to avoid "Unsupported field value: undefined" errors for fields that are not numbers or dates:
+    // Clean up undefined fields before sending to Firestore
     Object.keys(dataToUpdate).forEach(key => {
-      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined && 
-          !(key.toLowerCase().includes('date') || 
-            key.toLowerCase().includes('amount') || 
-            key.toLowerCase().includes('qty') ||
-            key.toLowerCase().includes('weight') ||
-            key.toLowerCase().includes('cbm') ||
-            key.toLowerCase().includes('amendments')
-            )
-         ) {
-        // For optional string fields, an empty string is fine if it's truly meant to be empty.
-        // If the intention is to remove the field, use deleteField() from Firebase.
-        // For now, we'll let empty strings be passed for non-numeric/non-date optional fields.
-        // The Zod schema should ensure that required fields are not undefined.
-      }
+        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
+            delete dataToUpdate[key as keyof typeof dataToUpdate];
+        }
     });
-
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -847,7 +829,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <BellRing className="mr-2 h-5 w-5 text-primary" />
             Notify Details
         </h3>
-        <FormField
+         <FormField
             control={form.control}
             name="notifyPartyNameAndAddress"
             render={({ field }) => (
@@ -862,7 +844,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
          <FormField
             control={form.control}
-            name="notifyPartyName" // This field maps to "Notify Party Contact Person:"
+            name="notifyPartyName"
             render={({ field }) => (
             <FormItem>
                 <FormLabel>Notify Party Contact Person:</FormLabel>
@@ -881,7 +863,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                   <FormLabel>Notify Party Cell</FormLabel>
                   <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''}/>
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -894,7 +876,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                   <FormLabel>Notify Party Email</FormLabel>
                   <FormControl>
-                  <Input type="email" placeholder="notify@example.com" {...field} value={field.value ?? ''}/>
+                  <Input type="email" placeholder="notify@example.com" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -1629,3 +1611,5 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+    
