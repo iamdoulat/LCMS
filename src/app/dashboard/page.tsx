@@ -429,7 +429,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
            {greeting && authUser && (
-            <h2 className="text-lg font-semibold text-foreground mb-1">
+            <h2 className="text-base font-semibold text-foreground mb-1">
               {greeting}, <span className="text-primary">{userDisplayName}</span>!
             </h2>
           )}
@@ -708,3 +708,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
