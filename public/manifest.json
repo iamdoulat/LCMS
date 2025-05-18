@@ -1,0 +1,29 @@
+{
+  "name": "LC Management System",
+  "short_name": "LC Vision",
+  "description": "Modern Letter of Credit Management Software",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000020",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/playstore.png?alt=media&token=9d432d10-f694-4737-ac61-a55a7662d1ad",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/playstore.png?alt=media&token=9d432d10-f694-4737-ac61-a55a7662d1ad",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/playstore.png?alt=media&token=9d432d10-f694-4737-ac61-a55a7662d1ad",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
