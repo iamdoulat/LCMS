@@ -31,6 +31,7 @@ const applicantSchema = z.object({
   oldIrcNo: z.string().optional(),
   applicantBondNo: z.string().optional(),
   groupName: z.string().optional(),
+  bidaRegNo: z.string().optional(),
 });
 
 type ApplicantEditFormValues = z.infer<typeof applicantSchema>;
@@ -63,6 +64,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       oldIrcNo: '',
       applicantBondNo: '',
       groupName: '',
+      bidaRegNo: '',
     }
   });
 
@@ -80,6 +82,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
         oldIrcNo: initialData.oldIrcNo || '',
         applicantBondNo: initialData.applicantBondNo || '',
         groupName: initialData.groupName || '',
+        bidaRegNo: initialData.bidaRegNo || '',
       });
     }
   }, [initialData, form]);
@@ -129,6 +132,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       oldIrcNo: data.oldIrcNo || undefined,
       applicantBondNo: data.applicantBondNo || undefined,
       groupName: data.groupName || undefined,
+      bidaRegNo: data.bidaRegNo || undefined,
       updatedAt: serverTimestamp(),
     };
 
@@ -321,6 +325,20 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="bidaRegNo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>BIDA Reg. No:</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter BIDA Registration Number" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (

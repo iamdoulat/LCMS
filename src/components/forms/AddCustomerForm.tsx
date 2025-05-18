@@ -28,6 +28,7 @@ const customerSchema = z.object({
   oldIrcNo: z.string().optional(),
   applicantBondNo: z.string().optional(),
   groupName: z.string().optional(),
+  bidaRegNo: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -48,6 +49,7 @@ export function AddCustomerForm() {
       oldIrcNo: '',
       applicantBondNo: '',
       groupName: '',
+      bidaRegNo: '',
     },
   });
 
@@ -251,6 +253,20 @@ export function AddCustomerForm() {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="bidaRegNo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>BIDA Reg. No:</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter BIDA Registration Number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
           {isSubmitting ? (
