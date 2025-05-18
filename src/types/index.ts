@@ -82,6 +82,18 @@ export interface LCEntry {
   firstPartialAmount?: number | '';
   secondPartialAmount?: number | '';
   thirdPartialAmount?: number | '';
+  firstPartialPkgs?: number | '';
+  firstPartialNetWeight?: number | '';
+  firstPartialGrossWeight?: number | '';
+  firstPartialCbm?: number | '';
+  secondPartialPkgs?: number | '';
+  secondPartialNetWeight?: number | '';
+  secondPartialGrossWeight?: number | '';
+  secondPartialCbm?: number | '';
+  thirdPartialPkgs?: number | '';
+  thirdPartialNetWeight?: number | '';
+  thirdPartialGrossWeight?: number | '';
+  thirdPartialCbm?: number | '';
   originalBlQty?: number | '';
   copyBlQty?: number | '';
   originalCooQty?: number | '';
@@ -150,6 +162,18 @@ export interface LCEntryDocument {
   firstPartialAmount?: number;
   secondPartialAmount?: number;
   thirdPartialAmount?: number;
+  firstPartialPkgs?: number;
+  firstPartialNetWeight?: number;
+  firstPartialGrossWeight?: number;
+  firstPartialCbm?: number;
+  secondPartialPkgs?: number;
+  secondPartialNetWeight?: number;
+  secondPartialGrossWeight?: number;
+  secondPartialCbm?: number;
+  thirdPartialPkgs?: number;
+  thirdPartialNetWeight?: number;
+  thirdPartialGrossWeight?: number;
+  thirdPartialCbm?: number;
   originalBlQty?: number;
   copyBlQty?: number;
   originalCooQty?: number;
@@ -182,6 +206,15 @@ export interface Customer {
   updatedAt?: any;
 }
 export type CustomerDocument = Customer & { id: string, createdAt: any, updatedAt: any };
+export interface ApplicantOption {
+  value: string; // Customer document ID
+  label: string; // Customer applicantName
+  address?: string;
+  contactPersonName?: string;
+  email?: string;
+  phone?: string;
+}
+
 
 export interface Supplier {
   id?: string;
@@ -276,7 +309,7 @@ export interface ProformaInvoice {
   updatedAt?: any;
 }
 
-export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'netCommissionPercentage'> & {
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'netCommissionPercentage' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
   piDate: string; // ISO string
   connectedLcIssueDate?: string; // ISO string
