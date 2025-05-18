@@ -1,7 +1,7 @@
 {
-  "name": "LC Vision - Letter of Credit Management",
-  "short_name": "LC Vision",
-  "description": "Modern Letter of Credit Management Software",
+  "name": "Smart Solution - LC Management System.",
+  "short_name": "LCMS",
+  "description": "LCMS Modern Letter of Credit Management Software",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f2f2f2",
