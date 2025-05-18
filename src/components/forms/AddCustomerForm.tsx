@@ -14,20 +14,20 @@ import type { Customer } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const customerSchema = z.object({
   applicantName: z.string().min(1, "Applicant name is required"),
+  address: z.string().min(1, "Address is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
-  address: z.string().min(1, "Address is required"),
   contactPerson: z.string().optional(),
   binNo: z.string().optional(),
   tinNo: z.string().optional(),
   newIrcNo: z.string().optional(),
   oldIrcNo: z.string().optional(),
   applicantBondNo: z.string().optional(),
-  groupName: z.string().optional(), // Added groupName
+  groupName: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -47,7 +47,7 @@ export function AddCustomerForm() {
       newIrcNo: '',
       oldIrcNo: '',
       applicantBondNo: '',
-      groupName: '', // Added groupName
+      groupName: '',
     },
   });
 
@@ -229,7 +229,7 @@ export function AddCustomerForm() {
             name="applicantBondNo"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+                <FormLabel>Applicant Bond No.:</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter Applicant's Bond Number" {...field} />
                 </FormControl>
@@ -242,7 +242,7 @@ export function AddCustomerForm() {
             name="groupName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Group name</FormLabel>
+                <FormLabel>Group Name:</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter group name" {...field} />
                 </FormControl>
