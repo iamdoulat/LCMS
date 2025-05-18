@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
@@ -18,12 +18,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
@@ -36,6 +34,13 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
+
+interface ApplicantOption extends ComboboxOption {
+  address?: string;
+  contactPersonName?: string;
+  email?: string;
+  phone?: string;
+}
 
 
 const lcEntrySchema = z.object({
@@ -57,6 +62,10 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
+  purchaseOrderUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format" }).optional()
+  ),
   finalPIUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
@@ -66,10 +75,6 @@ const lcEntrySchema = z.object({
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
   shippingDocumentsUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format" }).optional()
-  ),
-  purchaseOrderUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -130,6 +135,7 @@ export function NewLCEntryForm() {
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number | string>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number | string>(0);
 
@@ -139,19 +145,19 @@ export function NewLCEntryForm() {
       applicantId: '',
       beneficiaryId: '',
       currency: 'USD' as Currency,
-      amount: undefined,
+      amount: undefined, // Handled by toNumberOrUndefined
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
       totalMachineQty: undefined,
-      lcIssueDate: undefined,
-      expireDate: undefined,
-      latestShipmentDate: undefined,
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
+      purchaseOrderUrl: '',
       finalPIUrl: '',
       finalLcUrl: '',
       shippingDocumentsUrl: '',
-      purchaseOrderUrl: '',
       trackingCourier: '',
       trackingNumber: '',
       etd: undefined,
@@ -206,19 +212,18 @@ export function NewLCEntryForm() {
       setIsLoadingBeneficiaries(true);
       try {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(
-          customersSnapshot.docs.map(doc => {
-            const data = doc.data() as CustomerDocument;
-            return { 
-              value: doc.id, 
-              label: data.applicantName || 'Unnamed Applicant',
-              address: data.address,
-              contactPersonName: data.contactPerson, // Assuming contactPerson is the name for Notify contact
-              email: data.email,
-              phone: data.phone,
-            };
-          })
-        );
+        const fetchedApplicants = customersSnapshot.docs.map(doc => {
+          const data = doc.data() as CustomerDocument;
+          return { 
+            value: doc.id, 
+            label: data.applicantName || 'Unnamed Applicant',
+            address: data.address,
+            contactPersonName: data.contactPerson,
+            email: data.email,
+            phone: data.phone,
+           } as ApplicantOption;
+        });
+        setApplicantOptions(fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
@@ -239,24 +244,15 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = form.watch("applicantId");
+  // Auto-populate Notify Party details based on selected Applicant
   React.useEffect(() => {
-    console.log("Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
-    console.log("Available Applicant Options:", applicantOptions);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
-      console.log("Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
-        
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyName to:", selectedApplicant.contactPersonName);
-
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyCell to:", selectedApplicant.phone);
-
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -311,10 +307,10 @@ export function NewLCEntryForm() {
       lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       finalPIUrl: data.finalPIUrl || undefined,
       shippingDocumentsUrl: data.shippingDocumentsUrl || undefined,
       finalLcUrl: data.finalLcUrl || undefined,
-      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? undefined : data.trackingCourier || undefined,
       trackingNumber: data.trackingNumber || undefined,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -363,16 +359,17 @@ export function NewLCEntryForm() {
       updatedAt: serverTimestamp() as any,
     };
 
-    Object.keys(dataToSave).forEach(keyStr => {
-      const key = keyStr as keyof typeof dataToSave;
-      if (dataToSave[key] === '') {
-        delete dataToSave[key];
+    // Clean up undefined fields before saving
+    const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key as keyof typeof acc] = value;
       }
-    });
+      return acc;
+    }, {} as Partial<Omit<LCEntryDocument, 'id'>> & { createdAt: any, updatedAt: any });
 
 
     try {
-      const docRef = await addDoc(collection(firestore, "lc_entries"), dataToSave);
+      const docRef = await addDoc(collection(firestore, "lc_entries"), cleanedDataToSave);
       Swal.fire({
         title: "L/C Entry Saved!",
         text: `L/C entry has been successfully saved with ID: ${docRef.id}.`,
@@ -456,6 +453,7 @@ export function NewLCEntryForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
@@ -1525,3 +1523,6 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
+
+    

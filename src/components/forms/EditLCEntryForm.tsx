@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
@@ -35,6 +35,13 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE_LC_EDIT__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
+
+interface ApplicantOption extends ComboboxOption {
+  address?: string;
+  contactPersonName?: string;
+  email?: string;
+  phone?: string;
+}
 
 
 const lcEntrySchema = z.object({
@@ -143,65 +150,65 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: initialData?.applicantId || '',
-      beneficiaryId: initialData?.beneficiaryId || '',
-      currency: initialData?.currency || 'USD',
-      termsOfPay: initialData?.termsOfPay || ('' as TermsOfPay),
-      status: initialData?.status || 'Draft',
-      shipmentMode: initialData?.shipmentMode || ('' as ShipmentMode),
-      trackingCourier: initialData?.trackingCourier || '',
-      amount: initialData?.amount !== undefined ? initialData.amount : undefined,
-      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
-      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
-      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-      totalMachineQty: initialData?.totalMachineQty !== undefined ? initialData.totalMachineQty : undefined,
-      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
-      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
-      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
-      trackingNumber: initialData?.trackingNumber || '',
-      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
-      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-      itemDescriptions: initialData?.itemDescriptions || '',
-      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
-      bankBin: initialData?.bankBin || '',
-      vesselOrFlightName: initialData?.vesselOrFlightName || '',
-      vesselImoNumber: initialData?.vesselImoNumber || '',
-      totalPackageQty: initialData?.totalPackageQty ?? undefined,
-      totalNetWeight: initialData?.totalNetWeight ?? undefined,
-      totalGrossWeight: initialData?.totalGrossWeight ?? undefined,
-      totalCbm: initialData?.totalCbm ?? undefined,
-      partialShipments: initialData?.partialShipments || '',
-      portOfLoading: initialData?.portOfLoading || '',
-      portOfDischarge: initialData?.portOfDischarge || '',
-      shippingMarks: initialData?.shippingMarks || '',
-      certificateOfOrigin: initialData?.certificateOfOrigin || [],
-      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '',
-      notifyPartyCell: initialData?.notifyPartyCell || '',
-      notifyPartyEmail: initialData?.notifyPartyEmail || '',
-      numberOfAmendments: initialData?.numberOfAmendments !== undefined ? initialData.numberOfAmendments : undefined,
-      finalPIUrl: initialData?.finalPIUrl || '',
-      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
-      finalLcUrl: initialData?.finalLcUrl || '',
-      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
-      partialShipmentAllowed: initialData?.partialShipmentAllowed || 'No',
-      firstPartialQty: initialData?.firstPartialQty ?? undefined,
-      secondPartialQty: initialData?.secondPartialQty ?? undefined,
-      thirdPartialQty: initialData?.thirdPartialQty ?? undefined,
-      firstPartialAmount: initialData?.firstPartialAmount ?? undefined,
-      secondPartialAmount: initialData?.secondPartialAmount ?? undefined,
-      thirdPartialAmount: initialData?.thirdPartialAmount ?? undefined,
-      originalBlQty: initialData?.originalBlQty ?? undefined,
-      copyBlQty: initialData?.copyBlQty ?? undefined,
-      originalCooQty: initialData?.originalCooQty ?? undefined,
-      copyCooQty: initialData?.copyCooQty ?? undefined,
-      invoiceQty: initialData?.invoiceQty ?? undefined,
-      packingListQty: initialData?.packingListQty ?? undefined,
-      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? undefined,
-      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? undefined,
-      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? undefined,
-      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? undefined,
-      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? undefined,
+      applicantId: '',
+      beneficiaryId: '',
+      currency: 'USD' as Currency,
+      termsOfPay: "" as TermsOfPay,
+      status: 'Draft' as LCStatus,
+      shipmentMode: "" as ShipmentMode,
+      trackingCourier: '',
+      amount: undefined,
+      documentaryCreditNumber: '',
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      totalMachineQty: undefined,
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
+      itemDescriptions: '',
+      consigneeBankNameAddress: '',
+      bankBin: '',
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shippingMarks: '',
+      certificateOfOrigin: [],
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
+      numberOfAmendments: undefined,
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
+      finalLcUrl: '',
+      purchaseOrderUrl: '',
+      partialShipmentAllowed: 'No',
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
+      originalBlQty: undefined,
+      copyBlQty: undefined,
+      originalCooQty: undefined,
+      copyCooQty: undefined,
+      invoiceQty: undefined,
+      packingListQty: undefined,
+      beneficiaryCertificateQty: undefined,
+      brandNewCertificateQty: undefined,
+      beneficiaryWarrantyCertificateQty: undefined,
+      beneficiaryComplianceCertificateQty: undefined,
+      shipmentAdviceQty: undefined,
     },
   });
   
@@ -222,10 +229,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             contactPersonName: data.contactPerson,
             email: data.email,
             phone: data.phone,
-           };
+           } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("EditLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -233,8 +239,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("EditLCEntryForm: Fetched Beneficiary Options:", fetchedBeneficiaries);
-
       } catch (error) {
         console.error("Error fetching dropdown data for Edit Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console.", "error");
@@ -248,10 +252,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   React.useEffect(() => {
     if (initialData && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("EditLCEntryForm: Initial L/C Data for Form:", JSON.stringify(initialData, null, 2));
-      console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId);
-      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId);
-
       form.reset({
         applicantId: initialData.applicantId || '',
         beneficiaryId: initialData.beneficiaryId || '',
@@ -314,27 +314,18 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? undefined,
       });
     }
-  }, [initialData, form, applicantOptions, beneficiaryOptions]);
+  }, [initialData, form, applicantOptions, beneficiaryOptions, setValue]); // Added setValue to dependency array
 
   const watchedApplicantId = form.watch("applicantId");
+  // Auto-populate Notify Party details based on selected Applicant
   React.useEffect(() => {
-    console.log("Auto-populate effect triggered for Edit Form. Watched Applicant ID:", watchedApplicantId);
-    console.log("Available Applicant Options in Edit Form:", applicantOptions);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
-      console.log("Selected Applicant for auto-fill in Edit Form:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyNameAndAddress in Edit Form to:", selectedApplicant.address);
-
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyName in Edit Form to:", selectedApplicant.contactPersonName);
-        
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyCell in Edit Form to:", selectedApplicant.phone);
-
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("Setting notifyPartyEmail in Edit Form to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -360,7 +351,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
-    const dataToUpdate: Partial<LCEntryDocument> = {
+    const dataToUpdate: Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> = {
       applicantId: data.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
       beneficiaryId: data.beneficiaryId,
@@ -425,6 +416,24 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       updatedAt: serverTimestamp() as any,
       year: data.lcIssueDate ? new Date(data.lcIssueDate).getFullYear() : initialData.year,
     };
+
+    // Explicitly remove fields that are empty strings but should be undefined for Firestore update,
+    // or that are handled by toNumberOrUndefined and might still be empty strings.
+    // Note: This is more robust than the previous general loop.
+    (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
+      if (dataToUpdate[key] === "" && 
+          (key === "proformaInvoiceNumber" || key === "trackingNumber" || key === "itemDescriptions" || 
+           key === "consigneeBankNameAddress" || key === "bankBin" || key === "vesselOrFlightName" || 
+           key === "vesselImoNumber" || key === "partialShipments" || key === "portOfLoading" ||
+           key === "portOfDischarge" || key === "shippingMarks" || key === "notifyPartyNameAndAddress" ||
+           key === "notifyPartyName" || key === "notifyPartyCell" || key === "notifyPartyEmail" || 
+           key === "finalPIUrl" || key === "shippingDocumentsUrl" || key === "finalLcUrl" || key === "purchaseOrderUrl" ||
+           key === "trackingCourier" // special case from select mapping
+          )) {
+        delete dataToUpdate[key];
+      }
+    });
+
 
     try {
       const lcDocRef = doc(firestore, "lc_entries", lcId);
@@ -1181,26 +1190,26 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     control={form.control}
                     name="trackingCourier"
                     render={({ field }) => (
-                        <FormItem className="md:col-span-1">
-                            <FormLabel>Courier</FormLabel>
-                            <Select
-                                onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                                value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
-                            >
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Select Courier" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
-                                    {trackingCourierOptions.map(courier => (
-                                        <SelectItem key={courier} value={courier}>{courier}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Courier</FormLabel>
+                        <Select
+                            onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
+                        >
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select Courier" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                             <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
+                            {trackingCourierOptions.map(courier => (
+                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                     )}
                 />
                 <FormField
@@ -1593,3 +1602,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+
+    
