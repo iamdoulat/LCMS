@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, partialShipmentAllowedOptions as formPartialShipmentAllowedOptions } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -89,7 +89,7 @@ const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft"),
-  partialShipmentAllowed: z.enum(formPartialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -164,10 +164,10 @@ export function NewLCEntryForm() {
       vesselOrFlightName: '',
       vesselImoNumber: '',
       flightNumber: '',
-      totalPackageQty: undefined,
-      totalNetWeight: undefined,
-      totalGrossWeight: undefined,
-      totalCbm: undefined,
+      totalPackageQty: 0,
+      totalNetWeight: 0,
+      totalGrossWeight: 0,
+      totalCbm: 0,
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -180,24 +180,24 @@ export function NewLCEntryForm() {
       numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
-      firstPartialQty: undefined,
-      secondPartialQty: undefined,
-      thirdPartialQty: undefined,
-      firstPartialAmount: undefined,
-      secondPartialAmount: undefined,
-      thirdPartialAmount: undefined,
-      firstPartialPkgs: undefined,
-      firstPartialNetWeight: undefined,
-      firstPartialGrossWeight: undefined,
-      firstPartialCbm: undefined,
-      secondPartialPkgs: undefined,
-      secondPartialNetWeight: undefined,
-      secondPartialGrossWeight: undefined,
-      secondPartialCbm: undefined,
-      thirdPartialPkgs: undefined,
-      thirdPartialNetWeight: undefined,
-      thirdPartialGrossWeight: undefined,
-      thirdPartialCbm: undefined,
+      firstPartialQty: 0,
+      secondPartialQty: 0,
+      thirdPartialQty: 0,
+      firstPartialAmount: 0,
+      secondPartialAmount: 0,
+      thirdPartialAmount: 0,
+      firstPartialPkgs: 0,
+      secondPartialPkgs: 0,
+      thirdPartialPkgs: 0,
+      firstPartialNetWeight: 0,
+      secondPartialNetWeight: 0,
+      thirdPartialNetWeight: 0,
+      firstPartialGrossWeight: 0,
+      secondPartialGrossWeight: 0,
+      thirdPartialGrossWeight: 0,
+      firstPartialCbm: 0,
+      secondPartialCbm: 0,
+      thirdPartialCbm: 0,
       originalBlQty: 0,
       copyBlQty: 0,
       originalCooQty: 0,
@@ -232,6 +232,7 @@ export function NewLCEntryForm() {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("NewLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
@@ -240,6 +241,7 @@ export function NewLCEntryForm() {
             return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
           })
         );
+        console.log("NewLCEntryForm: Fetched Beneficiary Options:", beneficiaryOptions);
       } catch (error) {
         console.error("Error fetching dropdown data for New L/C Entry Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
@@ -249,18 +251,26 @@ export function NewLCEntryForm() {
       }
     };
     fetchDropdownData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const watchedApplicantId = watch("applicantId");
 
   React.useEffect(() => {
+    console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("NewLCEntryForm: Applicant Options for check:", applicantOptions);
+      console.log("NewLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -299,6 +309,9 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
+        "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
+        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
       ] as const;
   
       fieldsToInitializeZero.forEach(fieldName => {
@@ -307,22 +320,6 @@ export function NewLCEntryForm() {
           setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
         }
       });
-      
-      const docQtyFieldsToInitializeZero = [
-        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
-        "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
-        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
-      ] as const;
-      docQtyFieldsToInitializeZero.forEach(fieldName => {
-        const currentValue = getValues(fieldName);
-        if (currentValue === undefined || String(currentValue).trim() === '') {
-            setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
-        }
-      });
-
-    } else {
-        setTotalCalculatedPartialQty(0);
-        setTotalCalculatedPartialAmount(0);
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues]);
   
@@ -432,16 +429,16 @@ export function NewLCEntryForm() {
       secondPartialAmount: finalData.secondPartialAmount,
       thirdPartialAmount: finalData.thirdPartialAmount,
       firstPartialPkgs: finalData.firstPartialPkgs,
-      firstPartialNetWeight: finalData.firstPartialNetWeight,
-      firstPartialGrossWeight: finalData.firstPartialGrossWeight,
-      firstPartialCbm: finalData.firstPartialCbm,
       secondPartialPkgs: finalData.secondPartialPkgs,
-      secondPartialNetWeight: finalData.secondPartialNetWeight,
-      secondPartialGrossWeight: finalData.secondPartialGrossWeight,
-      secondPartialCbm: finalData.secondPartialCbm,
       thirdPartialPkgs: finalData.thirdPartialPkgs,
+      firstPartialNetWeight: finalData.firstPartialNetWeight,
+      secondPartialNetWeight: finalData.secondPartialNetWeight,
       thirdPartialNetWeight: finalData.thirdPartialNetWeight,
+      firstPartialGrossWeight: finalData.firstPartialGrossWeight,
+      secondPartialGrossWeight: finalData.secondPartialGrossWeight,
       thirdPartialGrossWeight: finalData.thirdPartialGrossWeight,
+      firstPartialCbm: finalData.firstPartialCbm,
+      secondPartialCbm: finalData.secondPartialCbm,
       thirdPartialCbm: finalData.thirdPartialCbm,
       originalBlQty: finalData.originalBlQty,
       copyBlQty: finalData.copyBlQty,
@@ -951,7 +948,7 @@ export function NewLCEntryForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {formPartialShipmentAllowedOptions.map(option => (
+                  {partialShipmentAllowedOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1009,7 +1006,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1023,7 +1020,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1037,7 +1034,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1051,23 +1048,23 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+             {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
                     <FormControl>
-                    <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                    <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
                 </FormItem>
                 <FormItem>
                     <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
                     <FormControl>
-                    <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                    <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
                 </FormItem>
               </>
@@ -1192,7 +1189,7 @@ export function NewLCEntryForm() {
 
          <div className="mt-6">
             <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Courier Mode
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
             </FormLabel>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
                 <FormField
