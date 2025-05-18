@@ -46,10 +46,10 @@ export interface LCEntry {
   lcIssueDate?: Date;
   expireDate?: Date;
   latestShipmentDate?: Date;
+  purchaseOrderUrl?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  purchaseOrderUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null;
@@ -112,10 +112,10 @@ export interface LCEntryDocument {
   lcIssueDate?: string;
   expireDate?: string;
   latestShipmentDate?: string;
+  purchaseOrderUrl?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  purchaseOrderUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string;
@@ -174,6 +174,7 @@ export interface Customer {
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
+  applicantBondNo?: string; // Added new field
   createdAt?: any;
   updatedAt?: any;
 }
@@ -226,19 +227,19 @@ export interface UserDocumentForAdmin {
   email: string;
   contactNumber?: string;
   role: UserRole;
+  photoURL?: string;
   createdAt?: any; // Firestore ServerTimestamp
   updatedAt?: any; // Firestore ServerTimestamp
-  photoURL?: string;
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Kept as number | '' for form input flexibility
+  purchasePrice: number | ''; // Kept as number | ''
+  salesPrice: number | ''; // Kept as number | ''
+  netCommissionPercentage?: number | ''; // Kept as number | ''
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -255,7 +256,7 @@ export interface ProformaInvoice {
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string;
+  connectedLcIssueDate?: string; // Store as string (ISO)
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -263,18 +264,19 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
+  totalSalesPrice: number; // Sum of (Qty * Sales Price) from line items
   totalExtraNetCommission?: number;
-  grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number;
+  grandTotalSalesPrice: number; // totalSalesPrice + freightCharge (if excluded) - miscellaneousExpenses
+  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
 }
 
-export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses'> & {
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'netCommissionPercentage'> & {
   id: string;
   piDate: string; // ISO string
+  connectedLcIssueDate?: string; // ISO string
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -294,7 +296,5 @@ export interface LcOption {
   value: string; // LC document ID
   label: string; // LC number for display
   issueDate?: string; // ISO string
-  purchaseOrderUrl?: string; // New field
+  purchaseOrderUrl?: string;
 }
-
-    

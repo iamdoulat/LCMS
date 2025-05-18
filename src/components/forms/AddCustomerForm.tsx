@@ -26,6 +26,7 @@ const customerSchema = z.object({
   tinNo: z.string().optional(),
   newIrcNo: z.string().optional(),
   oldIrcNo: z.string().optional(),
+  applicantBondNo: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -44,6 +45,7 @@ export function AddCustomerForm() {
       tinNo: '',
       newIrcNo: '',
       oldIrcNo: '',
+      applicantBondNo: '',
     },
   });
 
@@ -155,6 +157,20 @@ export function AddCustomerForm() {
               <FormLabel>Contact Person</FormLabel>
               <FormControl>
                 <Input placeholder="Enter name of the primary contact person" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="applicantBondNo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter Applicant's Bond Number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

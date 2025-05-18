@@ -29,6 +29,7 @@ const applicantSchema = z.object({
   tinNo: z.string().optional(),
   newIrcNo: z.string().optional(),
   oldIrcNo: z.string().optional(),
+  applicantBondNo: z.string().optional(),
 });
 
 type ApplicantEditFormValues = z.infer<typeof applicantSchema>;
@@ -49,7 +50,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
 
   const form = useForm<ApplicantEditFormValues>({
     resolver: zodResolver(applicantSchema),
-    defaultValues: { // Default values will be overridden by useEffect with initialData
+    defaultValues: { 
       applicantName: '',
       email: '',
       phone: '',
@@ -59,6 +60,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       tinNo: '',
       newIrcNo: '',
       oldIrcNo: '',
+      applicantBondNo: '',
     }
   });
 
@@ -74,6 +76,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
         tinNo: initialData.tinNo || '',
         newIrcNo: initialData.newIrcNo || '',
         oldIrcNo: initialData.oldIrcNo || '',
+        applicantBondNo: initialData.applicantBondNo || '',
       });
     }
   }, [initialData, form]);
@@ -96,14 +99,12 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
         let totalValue = 0;
         querySnapshot.forEach((docSnap) => {
           const lc = docSnap.data() as LCEntryDocument;
-          totalValue += lc.amount || 0; // Sum amounts, assuming all are in a comparable currency
+          totalValue += lc.amount || 0; 
         });
         setTotalLcValueForYear(totalValue);
       } catch (error) {
         console.error("Error fetching L/C statistics for applicant:", error);
         setTotalLcValueForYear(0);
-        // Optionally show a user-friendly error message
-        // Swal.fire("Error", "Could not load L/C statistics for this applicant.", "error");
       } finally {
         setIsLoadingLcStats(false);
       }
@@ -116,18 +117,17 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
     setIsSubmitting(true);
 
     const dataToUpdate: Partial<Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>> & { updatedAt: any } = {
-      ...data, // Spread all form data
-      // Ensure optional fields that are empty strings become undefined for Firestore
+      ...data, 
       phone: data.phone || undefined,
       contactPerson: data.contactPerson || undefined,
       binNo: data.binNo || undefined,
       tinNo: data.tinNo || undefined,
       newIrcNo: data.newIrcNo || undefined,
       oldIrcNo: data.oldIrcNo || undefined,
+      applicantBondNo: data.applicantBondNo || undefined,
       updatedAt: serverTimestamp(),
     };
 
-    // Clean up any explicit undefined fields if necessary, though Firestore handles it.
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
       if (dataToUpdate[key] === undefined) {
         delete dataToUpdate[key];
@@ -225,6 +225,20 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
               <FormLabel>Contact Person</FormLabel>
               <FormControl>
                 <Input placeholder="Enter name of the primary contact person" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="applicantBondNo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>APPLICANT'S BOND NO.:</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter Applicant's Bond Number" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -350,5 +364,3 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
     </Form>
   );
 }
-
-    
