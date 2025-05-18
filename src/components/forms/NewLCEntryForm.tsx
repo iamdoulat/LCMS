@@ -56,22 +56,10 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
   expireDate: z.date({ required_error: "Expire date is required" }),
   latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  purchaseOrderUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format" }).optional()
-  ),
-  finalPIUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format" }).optional()
-  ),
-   finalLcUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format" }).optional()
-  ),
-  shippingDocumentsUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format" }).optional()
-  ),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
@@ -262,19 +250,21 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = watch("applicantId");
+  const { setValue: setFormValue } = form; 
+
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
       console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
-        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        setFormValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        setFormValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        setFormValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        setFormValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
       }
     }
-  }, [watchedApplicantId, applicantOptions, setValue]);
+  }, [watchedApplicantId, applicantOptions, setFormValue]);
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -314,7 +304,7 @@ export function NewLCEntryForm() {
 
       let shouldRecalculate = false;
       fieldsToInitializeZero.forEach(fieldName => {
-        const currentValue = getValues(fieldName);
+        const currentValue = getValues(fieldName); 
         if (currentValue === undefined || currentValue === null || String(currentValue).trim() === '') {
           setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
           shouldRecalculate = true;
@@ -955,7 +945,7 @@ export function NewLCEntryForm() {
               Partial Shipment Breakdown
             </h4>
             {/* 1st Partial */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -965,7 +955,7 @@ export function NewLCEntryForm() {
             </div>
             <Separator />
             {/* 2nd Partial */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -975,7 +965,7 @@ export function NewLCEntryForm() {
             </div>
             <Separator />
             {/* 3rd Partial */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -983,29 +973,10 @@ export function NewLCEntryForm() {
               <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd Gross W. (kg)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-            <Separator className="my-4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <FormItem>
-                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Qty</FormLabel>
-                <FormControl>
-                  <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                </FormControl>
-              </FormItem>
-              <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
-                <FormControl>
-                  <Input type="text" value={totalCalculatedPartialAmount} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                </FormControl>
-              </FormItem>
-            </div>
-             <FormDescription>
-                Note: The main "Total L/C Machine Qty" and L/C "Amount" fields above represent overall L/C values.
-                The main shipping totals below will be auto-filled from these partials if "Partial Shipment Allowed" is "Yes".
-            </FormDescription>
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
           <FormField
             control={form.control}
             name="totalPackageQty"
@@ -1058,8 +1029,23 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
+          {watchedPartialShipmentAllowed === "Yes" && (
+            <>
+              <FormItem>
+                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Qty</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Calculated Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialAmount} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormControl>
+              </FormItem>
+            </>
+          )}
         </div>
-
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Workflow className="mr-2 h-5 w-5 text-primary" />
@@ -1228,7 +1214,7 @@ export function NewLCEntryForm() {
             <FileSignature className="mr-2 h-5 w-5 text-primary" />
             46A: Documents Required
         </h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FormField
               control={form.control}
               name="originalBlQty"
