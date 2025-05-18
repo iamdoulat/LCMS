@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
@@ -19,7 +19,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -32,16 +32,9 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-const NONE_COURIER_VALUE = "__NONE__";
+const NONE_COURIER_VALUE = "__NONE_LC_NEW__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
-
-interface ApplicantOption extends ComboboxOption {
-  address?: string;
-  contactPersonName?: string;
-  email?: string;
-  phone?: string;
-}
 
 
 const lcEntrySchema = z.object({
@@ -99,7 +92,7 @@ const lcEntrySchema = z.object({
   shippingMarks: z.string().optional(),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(),
+  notifyPartyName: z.string().optional(), // This field maps to "Notify Party Contact Person:"
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
@@ -146,7 +139,7 @@ export function NewLCEntryForm() {
       applicantId: '',
       beneficiaryId: '',
       currency: 'USD' as Currency,
-      amount: undefined, // Handled by toNumberOrUndefined
+      amount: undefined,
       termsOfPay: "" as LCEntry['termsOfPay'],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
@@ -185,27 +178,27 @@ export function NewLCEntryForm() {
       numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
-      firstPartialQty: undefined,
-      secondPartialQty: undefined,
-      thirdPartialQty: undefined,
-      firstPartialAmount: undefined,
-      secondPartialAmount: undefined,
-      thirdPartialAmount: undefined,
-      originalBlQty: undefined,
-      copyBlQty: undefined,
-      originalCooQty: undefined,
-      copyCooQty: undefined,
-      invoiceQty: undefined,
-      packingListQty: undefined,
-      beneficiaryCertificateQty: undefined,
-      brandNewCertificateQty: undefined,
-      beneficiaryWarrantyCertificateQty: undefined,
-      beneficiaryComplianceCertificateQty: undefined,
-      shipmentAdviceQty: undefined,
+      firstPartialQty: 0,
+      secondPartialQty: 0,
+      thirdPartialQty: 0,
+      firstPartialAmount: 0,
+      secondPartialAmount: 0,
+      thirdPartialAmount: 0,
+      originalBlQty: 0,
+      copyBlQty: 0,
+      originalCooQty: 0,
+      copyCooQty: 0,
+      invoiceQty: 0,
+      packingListQty: 0,
+      beneficiaryCertificateQty: 0,
+      brandNewCertificateQty: 0,
+      beneficiaryWarrantyCertificateQty: 0,
+      beneficiaryComplianceCertificateQty: 0,
+      shipmentAdviceQty: 0,
     },
   });
   
-  const { setValue } = form;
+  const { setValue, watch } = form;
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -225,8 +218,6 @@ export function NewLCEntryForm() {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("NewLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
-
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
@@ -236,7 +227,7 @@ export function NewLCEntryForm() {
           })
         );
       } catch (error) {
-        console.error("Error fetching dropdown data: ", error);
+        console.error("Error fetching dropdown data for New L/C Entry Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
@@ -246,27 +237,23 @@ export function NewLCEntryForm() {
     fetchDropdownData();
   }, []);
 
-  const watchedApplicantId = form.watch("applicantId");
+  const watchedApplicantId = watch("applicantId");
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
       console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
-        console.log("NewLCEntryForm: Setting Notify Party Name and Address to:", selectedApplicant.address);
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting Notify Party Contact Person to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting Notify Party Cell to:", selectedApplicant.phone);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting Notify Party Email to:", selectedApplicant.email);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
 
 
-  const watchedShipmentMode = form.watch("shipmentMode");
+  const watchedShipmentMode = watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
   if (watchedShipmentMode === "Sea") {
     viaLabel = "Vessel Name";
@@ -274,12 +261,31 @@ export function NewLCEntryForm() {
     viaLabel = "Flight Name";
   }
 
-  const watchedCurrency = form.watch("currency");
+  const watchedCurrency = watch("currency");
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
 
-  const watchedPartialShipmentAllowed = form.watch("partialShipmentAllowed");
-  const watchedPartialQtys = [form.watch("firstPartialQty"), form.watch("secondPartialQty"), form.watch("thirdPartialQty")];
-  const watchedPartialAmounts = [form.watch("firstPartialAmount"), form.watch("secondPartialAmount"), form.watch("thirdPartialAmount")];
+  const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
+  const watchedPartialQtys = [watch("firstPartialQty"), watch("secondPartialQty"), watch("thirdPartialQty")];
+  const watchedPartialAmounts = [watch("firstPartialAmount"), watch("secondPartialAmount"), watch("thirdPartialAmount")];
+
+  React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "Yes") {
+        const currentFirstQty = form.getValues("firstPartialQty");
+        const currentSecondQty = form.getValues("secondPartialQty");
+        const currentThirdQty = form.getValues("thirdPartialQty");
+        const currentFirstAmount = form.getValues("firstPartialAmount");
+        const currentSecondAmount = form.getValues("secondPartialAmount");
+        const currentThirdAmount = form.getValues("thirdPartialAmount");
+
+        if (currentFirstQty === undefined || currentFirstQty === null || String(currentFirstQty).trim() === '') setValue("firstPartialQty", 0, { shouldValidate: true, shouldDirty: true });
+        if (currentSecondQty === undefined || currentSecondQty === null || String(currentSecondQty).trim() === '') setValue("secondPartialQty", 0, { shouldValidate: true, shouldDirty: true });
+        if (currentThirdQty === undefined || currentThirdQty === null || String(currentThirdQty).trim() === '') setValue("thirdPartialQty", 0, { shouldValidate: true, shouldDirty: true });
+        if (currentFirstAmount === undefined || currentFirstAmount === null || String(currentFirstAmount).trim() === '') setValue("firstPartialAmount", 0, { shouldValidate: true, shouldDirty: true });
+        if (currentSecondAmount === undefined || currentSecondAmount === null || String(currentSecondAmount).trim() === '') setValue("secondPartialAmount", 0, { shouldValidate: true, shouldDirty: true });
+        if (currentThirdAmount === undefined || currentThirdAmount === null || String(currentThirdAmount).trim() === '') setValue("thirdPartialAmount", 0, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [watchedPartialShipmentAllowed, setValue, form]);
+
 
   React.useEffect(() => {
     const qtys = watchedPartialQtys.map(q => Number(q) || 0);
@@ -385,6 +391,9 @@ export function NewLCEntryForm() {
         showConfirmButton: true,
       });
       form.reset();
+       // Reset calculated totals as well
+      setTotalCalculatedPartialQty(0);
+      setTotalCalculatedPartialAmount(0);
     } catch (error) {
       console.error("Error adding L/C document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -762,7 +771,7 @@ export function NewLCEntryForm() {
         />
          <FormField
             control={form.control}
-            name="notifyPartyName"
+            name="notifyPartyName" // This field maps to "Notify Party Contact Person:"
             render={({ field }) => (
             <FormItem>
                 <FormLabel>Notify Party Contact Person:</FormLabel>
