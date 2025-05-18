@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption } from '@/types';
+import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption, LCEntryDocument } from '@/types';
 import { freightChargeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,7 @@ const proformaInvoiceSchema = z.object({
   piDate: z.date({ required_error: "PI Date is required" }),
   salesPersonName: z.string().min(1, "Sales Person Name is required"),
   connectedLcId: z.string().optional(),
-  purchaseOrderUrl: z.preprocess( // Added
+  purchaseOrderUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format" }).optional()
   ),
@@ -94,17 +94,24 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   const form = useForm<ProformaInvoiceFormValues>({
     resolver: zodResolver(proformaInvoiceSchema),
     defaultValues: {
-      beneficiaryId: '',
-      applicantId: '',
-      piNo: '',
-      piDate: new Date(),
-      salesPersonName: '',
-      connectedLcId: '',
-      purchaseOrderUrl: '', // Added
-      lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
-      freightChargeOption: "Freight Included",
-      freightChargeAmount: '',
-      miscellaneousExpenses: '',
+      beneficiaryId: initialData?.beneficiaryId || '',
+      applicantId: initialData?.applicantId || '',
+      piNo: initialData?.piNo || '',
+      piDate: initialData?.piDate && isValid(parseISO(initialData.piDate)) ? parseISO(initialData.piDate) : new Date(),
+      salesPersonName: initialData?.salesPersonName || '',
+      connectedLcId: initialData?.connectedLcId || '',
+      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
+      lineItems: initialData?.lineItems?.map(item => ({
+        slNo: item.slNo || '',
+        modelNo: item.modelNo || '',
+        qty: item.qty?.toString() || '',
+        purchasePrice: item.purchasePrice?.toString() || '',
+        salesPrice: item.salesPrice?.toString() || '',
+        netCommissionPercentage: item.netCommissionPercentage?.toString() || '',
+      })) || [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
+      freightChargeOption: initialData?.freightChargeOption || "Freight Included",
+      freightChargeAmount: initialData?.freightChargeAmount?.toString() || '',
+      miscellaneousExpenses: initialData?.miscellaneousExpenses?.toString() || '',
     },
   });
 
@@ -129,10 +136,15 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
           suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
 
-        const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None" }];
+        const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None", issueDate: undefined, purchaseOrderUrl: undefined }];
         lcsSnap.forEach(doc => {
-            const data = doc.data() as ProformaInvoiceDocument; // Assuming LCEntryDocument structure
-            fetchedLcOptions.push({ value: doc.id, label: data.documentaryCreditNumber || 'Unnamed L/C', issueDate: data.lcIssueDate });
+            const data = doc.data() as LCEntryDocument; 
+            fetchedLcOptions.push({ 
+              value: doc.id, 
+              label: data.documentaryCreditNumber || 'Unnamed L/C', 
+              issueDate: data.lcIssueDate,
+              purchaseOrderUrl: data.purchaseOrderUrl 
+            });
         });
         setLcOptions(fetchedLcOptions);
 
@@ -147,7 +159,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   }, []);
 
   React.useEffect(() => {
-    if (initialData && !isLoadingDropdowns) { // Ensure dropdowns are loaded before resetting
+    if (initialData && !isLoadingDropdowns) { 
       form.reset({
         beneficiaryId: initialData.beneficiaryId || '',
         applicantId: initialData.applicantId || '',
@@ -155,7 +167,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         piDate: initialData.piDate && isValid(parseISO(initialData.piDate)) ? parseISO(initialData.piDate) : new Date(),
         salesPersonName: initialData.salesPersonName || '',
         connectedLcId: initialData.connectedLcId || '',
-        purchaseOrderUrl: initialData.purchaseOrderUrl || '', // Added
+        purchaseOrderUrl: initialData.purchaseOrderUrl || '',
         lineItems: initialData.lineItems?.map(item => ({
           slNo: item.slNo || '',
           modelNo: item.modelNo || '',
@@ -185,15 +197,26 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
   React.useEffect(() => {
     if (watchedConnectedLcId && lcOptions.length > 0 && watchedConnectedLcId !== NONE_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
-      if (selectedLc && selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate))) {
-        setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
+      if (selectedLc) {
+        setSelectedLcIssueDate(selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate)) ? format(parseISO(selectedLc.issueDate), 'PPP') : null);
+        form.setValue("purchaseOrderUrl", selectedLc.purchaseOrderUrl || '');
       } else {
         setSelectedLcIssueDate(null);
+        form.setValue("purchaseOrderUrl", initialData.purchaseOrderUrl || ''); // Revert to initial if LC not found
       }
     } else {
       setSelectedLcIssueDate(null);
+      // When "None" is selected or input cleared, revert PO URL to its initial value from loaded PI,
+      // or clear it if there was no initial PO URL (or if user cleared it manually before changing LC).
+      // This behavior might need refinement based on exact UX desired.
+      // For now, if user clears LC, keep the PO URL they might have typed, unless it was auto-filled and should be cleared.
+      // Let's clear it if "None" is selected and it was auto-filled.
+      if (watchedConnectedLcId === NONE_LC_VALUE) {
+        form.setValue("purchaseOrderUrl", '');
+      }
     }
-  }, [watchedConnectedLcId, lcOptions]);
+  }, [watchedConnectedLcId, lcOptions, form, setSelectedLcIssueDate, initialData.purchaseOrderUrl]);
+
 
   const watchedLineItems = form.watch("lineItems");
   const watchedFreightOption = form.watch("freightChargeOption");
@@ -314,7 +337,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label === "None" ? undefined : selectedLc?.label,
       connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      purchaseOrderUrl: data.purchaseOrderUrl || undefined, // Added
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: finalFreightAmount > 0 || data.freightChargeOption === "Freight Excluded" ? finalFreightAmount : undefined,
@@ -478,7 +501,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
                 <FormLabel className="flex items-center"><Link2 className="mr-2 h-4 w-4 text-muted-foreground" />Connected LC Number</FormLabel>
                 <Combobox
                   options={lcOptions}
-                  value={field.value === '' ? NONE_LC_VALUE : field.value}
+                  value={field.value === '' || !field.value ? NONE_LC_VALUE : field.value}
                   onValueChange={(value) => field.onChange(value === NONE_LC_VALUE ? '' : value)}
                   placeholder="Search L/C Number..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading L/Cs..." : "Select L/C (Optional)"}
@@ -521,6 +544,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
             </FormItem>
           )}
         />
+
 
         <Separator />
         <h3 className={cn(sectionHeadingClass, "text-lg")}>
@@ -714,3 +738,5 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
+
+    

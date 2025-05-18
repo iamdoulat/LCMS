@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption } from '@/types';
+import type { ProformaInvoiceDocument, ProformaInvoiceLineItem, FreightChargeOption, CustomerDocument, SupplierDocument, LcOption, LCEntryDocument } from '@/types';
 import { freightChargeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Link2, MinusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Link2, MinusCircle, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,6 +43,10 @@ const proformaInvoiceSchema = z.object({
   piDate: z.date({ required_error: "PI Date is required" }),
   salesPersonName: z.string().min(1, "Sales Person Name is required"),
   connectedLcId: z.string().optional(),
+  purchaseOrderUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format" }).optional()
+  ),
   lineItems: z.array(lineItemFormSchema).min(1, "At least one line item is required."),
   freightChargeOption: z.enum(freightChargeOptions, { required_error: "Freight Charge option is required" }),
   freightChargeAmount: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), { message: "Freight Amount must be a non-negative number if provided." }),
@@ -60,7 +64,7 @@ const proformaInvoiceSchema = z.object({
 
 type ProformaInvoiceFormValues = z.infer<typeof proformaInvoiceSchema>;
 
-const sectionHeadingClass = "font-semibold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
 const PLACEHOLDER_BENEFICIARY_VALUE = "__PI_ADD_BENEFICIARY_PLACEHOLDER__";
 const PLACEHOLDER_APPLICANT_VALUE = "__PI_ADD_APPLICANT_PLACEHOLDER__";
@@ -92,6 +96,7 @@ export function AddProformaInvoiceForm() {
       piDate: new Date(),
       salesPersonName: '',
       connectedLcId: '',
+      purchaseOrderUrl: '',
       lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
       freightChargeOption: "Freight Included",
       freightChargeAmount: '',
@@ -121,10 +126,15 @@ export function AddProformaInvoiceForm() {
           suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
         
-        const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None" }];
+        const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None", issueDate: undefined, purchaseOrderUrl: undefined }];
         lcsSnap.forEach(doc => {
-          const data = doc.data() as ProformaInvoiceDocument;
-          fetchedLcOptions.push({ value: doc.id, label: data.documentaryCreditNumber || 'Unnamed L/C', issueDate: data.lcIssueDate });
+          const data = doc.data() as LCEntryDocument;
+          fetchedLcOptions.push({ 
+            value: doc.id, 
+            label: data.documentaryCreditNumber || 'Unnamed L/C', 
+            issueDate: data.lcIssueDate,
+            purchaseOrderUrl: data.purchaseOrderUrl 
+          });
         });
         setLcOptions(fetchedLcOptions);
 
@@ -142,15 +152,18 @@ export function AddProformaInvoiceForm() {
   React.useEffect(() => {
     if (watchedConnectedLcId && lcOptions.length > 0 && watchedConnectedLcId !== NONE_LC_VALUE) {
       const selectedLc = lcOptions.find(opt => opt.value === watchedConnectedLcId);
-      if (selectedLc && selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate))) {
-        setSelectedLcIssueDate(format(parseISO(selectedLc.issueDate), 'PPP'));
+      if (selectedLc) {
+        setSelectedLcIssueDate(selectedLc.issueDate && isValid(parseISO(selectedLc.issueDate)) ? format(parseISO(selectedLc.issueDate), 'PPP') : null);
+        form.setValue("purchaseOrderUrl", selectedLc.purchaseOrderUrl || '');
       } else {
         setSelectedLcIssueDate(null);
+        form.setValue("purchaseOrderUrl", '');
       }
     } else {
         setSelectedLcIssueDate(null);
+        form.setValue("purchaseOrderUrl", '');
     }
-  }, [watchedConnectedLcId, lcOptions]);
+  }, [watchedConnectedLcId, lcOptions, form, setSelectedLcIssueDate]);
 
   const watchedLineItems = form.watch("lineItems");
   const watchedFreightOption = form.watch("freightChargeOption");
@@ -174,7 +187,7 @@ export function AddProformaInvoiceForm() {
             newTotalQty += qty;
             if (purchaseP >= 0) { 
               newTotalPurchase += qty * purchaseP;
-              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) {
+              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) { // Commission is on purchase price
                  newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
               }
             }
@@ -195,6 +208,7 @@ export function AddProformaInvoiceForm() {
     const currentGrandTotalSalesPrice = grossSalesPriceBeforeDeductions - miscellaneousExpensesNum;
     setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
+    // Commission based on sales vs purchase, then add extra net commission
     const baseCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
     const newGrandTotalCommissionUSD = baseCommissionUSD + newTotalExtraNetComm;
     setGrandTotalCommissionUSD(newGrandTotalCommissionUSD);
@@ -218,9 +232,6 @@ export function AddProformaInvoiceForm() {
     const selectedApplicant = applicantOptions.find(opt => opt.value === finalApplicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalBeneficiaryId);
     const selectedLc = finalConnectedLcId ? lcOptions.find(opt => opt.value === finalConnectedLcId) : undefined;
-
-    const miscellaneousExpensesForDb = parseFloat(data.miscellaneousExpenses || '0') || 0;
-
 
     let calculatedTotalQty = 0;
     let calculatedTotalPurchasePrice = 0;
@@ -275,6 +286,7 @@ export function AddProformaInvoiceForm() {
       connectedLcId: finalConnectedLcId || undefined,
       connectedLcNumber: selectedLc?.label === "None" ? undefined : selectedLc?.label,
       connectedLcIssueDate: selectedLc?.issueDate ? format(parseISO(selectedLc.issueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      purchaseOrderUrl: data.purchaseOrderUrl || undefined,
       lineItems: processedLineItems,
       freightChargeOption: data.freightChargeOption,
       freightChargeAmount: finalFreightAmount > 0 || data.freightChargeOption === "Freight Excluded" ? finalFreightAmount : undefined,
@@ -316,6 +328,7 @@ export function AddProformaInvoiceForm() {
         piDate: new Date(),
         salesPersonName: '',
         connectedLcId: '',
+        purchaseOrderUrl: '',
         lineItems: [{ slNo: '1', modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' }],
         freightChargeOption: "Freight Included",
         freightChargeAmount: '',
@@ -338,6 +351,20 @@ export function AddProformaInvoiceForm() {
     append({ slNo: (fields.length + 1).toString(), modelNo: '', qty: '', purchasePrice: '', salesPrice: '', netCommissionPercentage: '' });
   };
 
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -351,8 +378,8 @@ export function AddProformaInvoiceForm() {
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
                  <Combobox
                   options={beneficiaryOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                   placeholder="Search Beneficiary..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select Beneficiary"}
                   emptyStateMessage="No beneficiary found."
@@ -370,8 +397,8 @@ export function AddProformaInvoiceForm() {
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
                 <Combobox
                   options={applicantOptions}
-                  value={field.value}
-                  onValueChange={field.onChange}
+                  value={field.value || PLACEHOLDER_APPLICANT_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
                   placeholder="Search Applicant..."
                   selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select Applicant"}
                   emptyStateMessage="No applicant found."
@@ -450,6 +477,32 @@ export function AddProformaInvoiceForm() {
             </div>
           )}
         </div>
+         <FormField
+          control={form.control}
+          name="purchaseOrderUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Purchase Order URL</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl className="flex-grow">
+                  <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon"
+                  onClick={() => handleViewUrl(field.value)}
+                  disabled={!field.value}
+                  title="View Purchase Order"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <Separator />
         <h3 className={cn(sectionHeadingClass, "text-lg")}>
@@ -477,7 +530,7 @@ export function AddProformaInvoiceForm() {
                       control={form.control}
                       name={`lineItems.${index}.slNo`}
                       render={({ field }) => (
-                        <Input placeholder="SL" {...field} className="h-9"/>
+                        <Input placeholder="SL" {...field} value={field.value ?? ''} className="h-9"/>
                       )}
                     />
                   </TableCell>
@@ -487,7 +540,7 @@ export function AddProformaInvoiceForm() {
                       name={`lineItems.${index}.modelNo`}
                       render={({ field }) => (
                         <>
-                          <Input placeholder="Model No." {...field} className="h-9"/>
+                          <Input placeholder="Model No." {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.modelNo?.message}</FormMessage>
                         </>
                       )}
@@ -499,7 +552,7 @@ export function AddProformaInvoiceForm() {
                       name={`lineItems.${index}.qty`}
                       render={({ field }) => (
                         <>
-                          <Input type="text" placeholder="Qty" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Qty" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
                         </>
                       )}
@@ -511,7 +564,7 @@ export function AddProformaInvoiceForm() {
                       name={`lineItems.${index}.purchasePrice`}
                       render={({ field }) => (
                          <>
-                          <Input type="text" placeholder="Purchase Price" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Purchase Price" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.purchasePrice?.message}</FormMessage>
                         </>
                       )}
@@ -523,7 +576,7 @@ export function AddProformaInvoiceForm() {
                       name={`lineItems.${index}.salesPrice`}
                       render={({ field }) => (
                         <>
-                          <Input type="text" placeholder="Sales Price" {...field} className="h-9"/>
+                          <Input type="text" placeholder="Sales Price" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.salesPrice?.message}</FormMessage>
                         </>
                       )}
@@ -535,7 +588,7 @@ export function AddProformaInvoiceForm() {
                       name={`lineItems.${index}.netCommissionPercentage`}
                       render={({ field }) => (
                         <>
-                          <Input type="text" placeholder="e.g., 5" {...field} className="h-9"/>
+                          <Input type="text" placeholder="e.g., 5" {...field} value={field.value ?? ''} className="h-9"/>
                           <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.netCommissionPercentage?.message}</FormMessage>
                         </>
                       )}
@@ -622,8 +675,8 @@ export function AddProformaInvoiceForm() {
                 <p><strong className="text-muted-foreground">Total Sales (Line Items):</strong> <span className="font-semibold text-foreground">{totalSalesPriceFromLineItems.toFixed(2)}</span></p>
                 <p><strong className="text-muted-foreground">Total Extra Net Comm.:</strong> <span className="font-semibold text-foreground">{totalExtraNetCommission.toFixed(2)}</span></p>
                 <p className="font-semibold text-primary md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Sales:</strong> <span className="text-primary">{grandTotalSalesPrice.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-700 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700">{grandTotalCommissionUSD.toFixed(2)}</span></p>
-                <p className="font-semibold text-green-600 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600">{totalCommissionPercentage.toFixed(2)}%</span></p>
+                <p className="font-semibold text-green-700 dark:text-green-400 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Grand Total Comm. USD:</strong> <span className="text-green-700 dark:text-green-400">{grandTotalCommissionUSD.toFixed(2)}</span></p>
+                <p className="font-semibold text-green-600 dark:text-green-500 md:col-span-1 mt-2 md:mt-0"><strong className="text-muted-foreground">Total Comm. (%):</strong> <span className="text-green-600 dark:text-green-500">{totalCommissionPercentage.toFixed(2)}%</span></p>
             </div>
         </div>
 
@@ -644,3 +697,5 @@ export function AddProformaInvoiceForm() {
     </Form>
   );
 }
+
+    

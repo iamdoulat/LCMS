@@ -291,7 +291,10 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
 
 // Option type for L/C dropdown in PI form
 export interface LcOption {
-  value: string;
-  label: string;
-  issueDate?: string;
+  value: string; // LC document ID
+  label: string; // LC number for display
+  issueDate?: string; // ISO string
+  purchaseOrderUrl?: string; // New field
 }
+
+    
