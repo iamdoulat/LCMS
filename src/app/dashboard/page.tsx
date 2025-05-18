@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react'; // Renamed CalendarIcon to CalendarIconLucide
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
@@ -180,10 +180,11 @@ export default function DashboardPage() {
         let lcIssueDateValid = false;
         if (data.lcIssueDate) {
           try {
-            if (isValid(parseISO(data.lcIssueDate))) {
+             const parsedDate = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp).toDate();
+             if (isValid(parsedDate)) {
               lcIssueDateValid = true;
             }
-          } catch (e) { /* ignore, lcIssueDateValid remains false */ }
+          } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
 
         if (data.amount !== undefined && data.applicantId && data.beneficiaryId && lcIssueDateValid) {
@@ -229,7 +230,7 @@ export default function DashboardPage() {
         thisMonthLCQty = lcEntriesForTheYear.filter(lc => {
           if (!lc.lcIssueDate) return false;
           try {
-            const issueDate = parseISO(lc.lcIssueDate);
+            const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp).toDate();
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
           } catch (e) {
             console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
@@ -308,7 +309,7 @@ export default function DashboardPage() {
         .filter(lc => {
             if (!lc.etd || lc.status === 'Done') return false;
             try {
-                const etdDate = parseISO(lc.etd);
+                const etdDate = typeof lc.etd === 'string' ? parseISO(lc.etd) : (lc.etd as unknown as Timestamp).toDate();
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
             } catch (e) { return false; }
         })
@@ -317,7 +318,7 @@ export default function DashboardPage() {
             documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
             applicantName: lc.applicantName,
-            etdDate: parseISO(lc.etd!),
+            etdDate: typeof lc.etd === 'string' ? parseISO(lc.etd!) : (lc.etd as unknown as Timestamp).toDate(),
             currency: lc.currency,
             amount: lc.amount,
         }))
@@ -413,7 +414,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || (!authUser && !authLoading)) {
+  if (authLoading) { // Only show global loader if auth is loading
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -421,6 +422,15 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  if (!authUser && !authLoading) { // If auth is done and no user, show a message (AuthGuard might redirect anyway)
+     return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
+      </div>
+    );
+  }
+
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
@@ -435,8 +445,8 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-2xl lg:text-3xl",
-              "bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              "font-bold text-xl sm:text-2xl lg:text-3xl", // Adjusted size for mobile
+              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
             Dashboard Overview
@@ -458,7 +468,7 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-      { isLoading && !authLoading ? (
+      { isLoading && !authLoading ? ( // Show data loading spinner only if auth is done but data is still fetching
          <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
