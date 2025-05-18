@@ -25,6 +25,7 @@ const applicantSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   contactPerson: z.string().optional(),
+  contactPersonDesignation: z.string().optional(),
   binNo: z.string().optional(),
   tinNo: z.string().optional(),
   newIrcNo: z.string().optional(),
@@ -58,6 +59,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       email: '',
       phone: '',
       contactPerson: '',
+      contactPersonDesignation: '',
       binNo: '',
       tinNo: '',
       newIrcNo: '',
@@ -76,6 +78,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
         email: initialData.email || '',
         phone: initialData.phone || '',
         contactPerson: initialData.contactPerson || '',
+        contactPersonDesignation: initialData.contactPersonDesignation || '',
         binNo: initialData.binNo || '',
         tinNo: initialData.tinNo || '',
         newIrcNo: initialData.newIrcNo || '',
@@ -126,6 +129,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
       ...data, 
       phone: data.phone || undefined,
       contactPerson: data.contactPerson || undefined,
+      contactPersonDesignation: data.contactPersonDesignation || undefined,
       binNo: data.binNo || undefined,
       tinNo: data.tinNo || undefined,
       newIrcNo: data.newIrcNo || undefined,
@@ -225,19 +229,34 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="contactPerson"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact Person</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter name of the primary contact person" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+            control={form.control}
+            name="contactPerson"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Person Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter name of the primary contact person" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="contactPersonDesignation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Designation</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter contact person's designation" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

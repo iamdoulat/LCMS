@@ -22,6 +22,7 @@ const customerSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   contactPerson: z.string().optional(),
+  contactPersonDesignation: z.string().optional(),
   binNo: z.string().optional(),
   tinNo: z.string().optional(),
   newIrcNo: z.string().optional(),
@@ -43,6 +44,7 @@ export function AddCustomerForm() {
       email: '',
       phone: '',
       contactPerson: '',
+      contactPersonDesignation: '',
       binNo: '',
       tinNo: '',
       newIrcNo: '',
@@ -152,20 +154,35 @@ export function AddCustomerForm() {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="contactPerson"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact Person</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter name of the primary contact person" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="contactPerson"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Person Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter name of the primary contact person" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="contactPersonDesignation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Designation</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter contact person's designation" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

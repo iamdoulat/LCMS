@@ -170,13 +170,14 @@ export interface Customer {
   phone?: string;
   address: string;
   contactPerson?: string;
+  contactPersonDesignation?: string;
   binNo?: string;
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
   applicantBondNo?: string;
   groupName?: string;
-  bidaRegNo?: string; // Added BIDA Reg No
+  bidaRegNo?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -238,10 +239,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Kept as number | '' for form input flexibility
-  purchasePrice: number | ''; // Kept as number | ''
-  salesPrice: number | ''; // Kept as number | ''
-  netCommissionPercentage?: number | ''; // Kept as number | ''
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -266,8 +267,8 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // Sum of (Qty * Sales Price) from line items
-  grandTotalSalesPrice: number; // totalSalesPrice + freightCharge (if excluded) - miscellaneousExpenses
+  totalSalesPrice: number;
+  grandTotalSalesPrice: number;
   grandTotalCommissionUSD?: number;
   totalCommissionPercentage: number;
   totalExtraNetCommission?: number;
