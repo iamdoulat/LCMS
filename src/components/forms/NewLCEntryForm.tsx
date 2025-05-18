@@ -164,10 +164,10 @@ export function NewLCEntryForm() {
       vesselOrFlightName: '',
       vesselImoNumber: '',
       flightNumber: '',
-      totalPackageQty: 0,
-      totalNetWeight: 0,
-      totalGrossWeight: 0,
-      totalCbm: 0,
+      totalPackageQty: undefined,
+      totalNetWeight: undefined,
+      totalGrossWeight: undefined,
+      totalCbm: undefined,
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
@@ -180,24 +180,24 @@ export function NewLCEntryForm() {
       numberOfAmendments: undefined,
       status: 'Draft',
       partialShipmentAllowed: 'No',
-      firstPartialQty: 0,
-      secondPartialQty: 0,
-      thirdPartialQty: 0,
-      firstPartialAmount: 0,
-      secondPartialAmount: 0,
-      thirdPartialAmount: 0,
-      firstPartialPkgs: 0,
-      firstPartialNetWeight: 0,
-      firstPartialGrossWeight: 0,
-      firstPartialCbm: 0,
-      secondPartialPkgs: 0,
-      secondPartialNetWeight: 0,
-      secondPartialGrossWeight: 0,
-      secondPartialCbm: 0,
-      thirdPartialPkgs: 0,
-      thirdPartialNetWeight: 0,
-      thirdPartialGrossWeight: 0,
-      thirdPartialCbm: 0,
+      firstPartialQty: undefined,
+      secondPartialQty: undefined,
+      thirdPartialQty: undefined,
+      firstPartialAmount: undefined,
+      secondPartialAmount: undefined,
+      thirdPartialAmount: undefined,
+      firstPartialPkgs: undefined,
+      firstPartialNetWeight: undefined,
+      firstPartialGrossWeight: undefined,
+      firstPartialCbm: undefined,
+      secondPartialPkgs: undefined,
+      secondPartialNetWeight: undefined,
+      secondPartialGrossWeight: undefined,
+      secondPartialCbm: undefined,
+      thirdPartialPkgs: undefined,
+      thirdPartialNetWeight: undefined,
+      thirdPartialGrossWeight: undefined,
+      thirdPartialCbm: undefined,
       originalBlQty: 0,
       copyBlQty: 0,
       originalCooQty: 0,
@@ -305,22 +305,33 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+      ] as const;
+  
+      fieldsToInitializeZero.forEach(fieldName => {
+        const currentValue = getValues(fieldName); 
+        if (currentValue === undefined || String(currentValue).trim() === '') {
+          setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
+        }
+      });
+      // Also ensure 46A fields default to 0 if not already set
+      const docQtyFieldsToInitializeZero = [
         "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
         "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
         "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
       ] as const;
-
-      fieldsToInitializeZero.forEach(fieldName => {
-        const currentValue = getValues(fieldName); 
-        if (currentValue === undefined || currentValue === null || String(currentValue).trim() === '') {
-          setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
+      docQtyFieldsToInitializeZero.forEach(fieldName => {
+        const currentValue = getValues(fieldName);
+        if (currentValue === undefined || String(currentValue).trim() === '') {
+            setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
         }
       });
+
     } else {
         setTotalCalculatedPartialQty(0);
         setTotalCalculatedPartialAmount(0);
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues]);
+  
 
   React.useEffect(() => {
     const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q) || 0);
@@ -994,7 +1005,7 @@ export function NewLCEntryForm() {
           </div>
         )}
         
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1018,7 +1029,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1032,7 +1043,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1046,23 +1057,27 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription>Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
             />
-            <FormItem>
-                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
-                <FormControl>
-                <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                </FormControl>
-            </FormItem>
-            <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
-                <FormControl>
-                <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                </FormControl>
-            </FormItem>
+            {watchedPartialShipmentAllowed === 'Yes' && (
+              <>
+                <FormItem>
+                    <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
+                    <FormControl>
+                    <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                    </FormControl>
+                </FormItem>
+                <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormControl>
+                    <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                    </FormControl>
+                </FormItem>
+              </>
+            )}
         </div>
 
 
@@ -1602,4 +1617,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
