@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -31,6 +31,8 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Shipping going on':
       return 'default'; 
+    case 'Payment Done':
+      return 'default';
     case 'Done':
       return 'default'; 
     default:
@@ -85,6 +87,7 @@ export default function TotalLCPage() {
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
@@ -107,6 +110,7 @@ export default function TotalLCPage() {
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
+      setFetchError(null);
       try {
         const querySnapshot = await getDocs(collection(firestore, "lc_entries"));
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -119,7 +123,8 @@ export default function TotalLCPage() {
         setAllLcEntries(fetchedLCs);
       } catch (error: any) {
         console.error("Error fetching L/C entries: ", error);
-        Swal.fire("Error", `Could not fetch L/C data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${error.message}`, "error");
+        setFetchError(`Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`);
+        Swal.fire("Error", `Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -131,15 +136,15 @@ export default function TotalLCPage() {
       try {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
         setApplicantOptions(
-          customersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
         );
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
-          suppliersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
       } catch (error: any) {
         console.error("Error fetching filter options:", error);
-        Swal.fire("Error", `Could not load filter options for applicants/beneficiaries. Error: ${(error as Error).message}`, "error");
+        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
@@ -252,6 +257,14 @@ export default function TotalLCPage() {
     });
   };
 
+  const handleOpenLink = (url?: string) => {
+    if (url && url.trim() !== "") {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
   const clearFilters = () => {
     setFilterLcNumber('');
     setFilterApplicantId('');
@@ -327,9 +340,9 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="text-primary font-bold text-2xl lg:text-3xl flex items-center gap-2">
                 <ListChecks className="h-7 w-7 text-primary" />
-                Total L/C Overview
+                Total L/C List
               </CardTitle>
               <CardDescription>
                 View, search, filter, and manage all Letters of Credit.
@@ -479,70 +492,156 @@ export default function TotalLCPage() {
                        </div>
                     </TableCell>
                   </TableRow>
+                ) : fetchError ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center text-destructive p-2 sm:p-4">
+                      {fetchError}
+                    </TableCell>
+                  </TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((lc) => (
-                    <TableRow key={lc.id}>
-                      <TableCell className="font-medium p-2 sm:p-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{lc.applicantName || 'N/A'}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{lc.beneficiaryName || 'N/A'}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.expireDate)}</TableCell>
-                      <TableCell className="p-2 sm:p-4">
-                        <Badge
-                          variant={getStatusBadgeVariant(lc.status)}
-                          className={
-                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
-                            lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
-                            lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                          }
-                        >
-                          {lc.status || 'N/A'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right space-x-1 p-2 sm:p-4">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                               <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => lc.id && handleEditLC(lc.id)}
-                                className="hover:bg-accent/50 hover:text-accent-foreground"
-                                disabled={!lc.id}
-                                title="Edit L/C"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                                <span className="sr-only">Edit L/C</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Edit L/C</p></TooltipContent>
-                          </Tooltip>
-                           <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
+                    <React.Fragment key={lc.id}>
+                      <TableRow>
+                        <TableCell className="font-medium p-2 sm:p-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{lc.applicantName || 'N/A'}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{lc.beneficiaryName || 'N/A'}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
+                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.expireDate)}</TableCell>
+                        <TableCell className="p-2 sm:p-4">
+                          <Badge
+                            variant={getStatusBadgeVariant(lc.status)}
+                            className={
+                              lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
+                              lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                              lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                              lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
+                              lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                            }
+                          >
+                            {lc.status || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1 p-2 sm:p-4">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => lc.id && handleEditLC(lc.id)}
+                                  className="hover:bg-accent/50 hover:text-accent-foreground"
                                   disabled={!lc.id}
-                                  title="Delete L/C"
+                                  title="Edit L/C"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete L/C</span>
+                                  <FileEdit className="h-4 w-4" />
+                                  <span className="sr-only">Edit L/C</span>
                                 </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Delete L/C</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Edit L/C</p></TooltipContent>
+                            </Tooltip>
+                             <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
+                                    className="hover:bg-destructive/10 hover:text-destructive"
+                                    disabled={!lc.id}
+                                    title="Delete L/C"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete L/C</span>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Delete L/C</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow key={`${lc.id}-actions`}>
+                        <TableCell colSpan={9} className="p-0"> {/* Corrected colSpan to 9 */}
+                          <div className="flex flex-wrap items-center gap-2 py-2 px-4 border-t bg-muted/20">
+                            {/* Vessel Tracking Button */}
+                            <Button
+                              variant={lc.vesselImoNumber ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.vesselImoNumber ? `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}` : undefined)}
+                              disabled={!lc.vesselImoNumber}
+                              title="Track Vessel"
+                            >
+                              <Ship className="mr-1.5 h-3.5 w-3.5" /> Vessel
+                            </Button>
+                            {/* Document Tracking Button (DHL/FedEx) */}
+                            <Button
+                              variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                let trackUrl = "";
+                                if (lc.trackingCourier === "DHL" && lc.trackingNumber) {
+                                  trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&submit=1`;
+                                } else if (lc.trackingCourier === "FedEx" && lc.trackingNumber) {
+                                  trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(lc.trackingNumber.trim())}`;
+                                }
+                                handleOpenLink(trackUrl || undefined);
+                              }}
+                              disabled={!lc.trackingCourier || !lc.trackingNumber}
+                              title="Track Original Document"
+                            >
+                              {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /> :
+                               lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /> :
+                               <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
+                              {lc.trackingCourier ? lc.trackingCourier : "Docs"}
+                            </Button>
+                            {/* Final L/C URL Button */}
+                            <Button
+                              variant={lc.finalLcUrl ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.finalLcUrl)}
+                              disabled={!lc.finalLcUrl}
+                              title="View Final L/C Document"
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> L/C
+                            </Button>
+                            {/* Final PI URL Button */}
+                            <Button
+                              variant={lc.finalPIUrl ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.finalPIUrl)}
+                              disabled={!lc.finalPIUrl}
+                              title="View Final Proforma Invoice"
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> PI
+                            </Button>
+                            {/* Shipping Documents URL Button */}
+                            <Button
+                              variant={lc.shippingDocumentsUrl ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.shippingDocumentsUrl)}
+                              disabled={!lc.shippingDocumentsUrl}
+                              title="View Shipping Documents"
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Shipping
+                            </Button>
+                            {/* Purchase Order URL Button */}
+                            <Button
+                              variant={lc.purchaseOrderUrl ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
+                              disabled={!lc.purchaseOrderUrl}
+                              title="View Purchase Order"
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Purchase
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
+                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4"> {/* Corrected colSpan to 9 */}
                        No L/C entries found matching your criteria. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
@@ -602,3 +701,4 @@ export default function TotalLCPage() {
 
     
 
+    
