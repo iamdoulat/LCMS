@@ -145,10 +145,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     defaultValues: {
       applicantId: initialData?.applicantId || '',
       beneficiaryId: initialData?.beneficiaryId || '',
-      currency: initialData?.currency && currencyOptions.includes(initialData.currency as Currency) ? initialData.currency : currencyOptions[0],
-      termsOfPay: initialData?.termsOfPay && termsOfPayOptions.includes(initialData.termsOfPay as TermsOfPay) ? initialData.termsOfPay : termsOfPayOptions[0],
-      status: initialData?.status && lcStatusOptions.includes(initialData.status as LCStatus) ? initialData.status : lcStatusOptions[0],
-      shipmentMode: initialData?.shipmentMode && shipmentModeOptions.includes(initialData.shipmentMode as ShipmentMode) ? initialData.shipmentMode : shipmentModeOptions[0],
+      currency: initialData?.currency || currencyOptions[0],
+      termsOfPay: initialData?.termsOfPay || termsOfPayOptions[0],
+      status: initialData?.status || lcStatusOptions[0],
+      shipmentMode: initialData?.shipmentMode || shipmentModeOptions[0],
       trackingCourier: initialData?.trackingCourier || '',
       amount: initialData?.amount ?? undefined,
       documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
@@ -181,11 +181,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       shippingMarks: initialData?.shippingMarks || '',
       certificateOfOrigin: initialData?.certificateOfOrigin || [],
       notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '', // was notifyPartyContactDetails
+      notifyPartyName: initialData?.notifyPartyName || '',
       notifyPartyCell: initialData?.notifyPartyCell || '',
       notifyPartyEmail: initialData?.notifyPartyEmail || '',
       numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
-      partialShipmentAllowed: initialData?.partialShipmentAllowed && partialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : partialShipmentAllowedOptions[1], // 'No'
+      partialShipmentAllowed: initialData?.partialShipmentAllowed || partialShipmentAllowedOptions[1],
       firstPartialQty: initialData?.firstPartialQty ?? 0,
       secondPartialQty: initialData?.secondPartialQty ?? 0,
       thirdPartialQty: initialData?.thirdPartialQty ?? 0,
@@ -700,7 +700,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value && currencyOptions.includes(field.value as Currency) ? field.value : currencyOptions[0]}>
+                 <Select onValueChange={field.onChange} value={field.value && currencyOptions.includes(field.value as Currency) ? field.value : currencyOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -830,7 +830,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value && lcStatusOptions.includes(field.value as LCStatus) ? field.value : lcStatusOptions[0]}>
+                 <Select onValueChange={field.onChange} value={field.value && lcStatusOptions.includes(field.value as LCStatus) ? field.value : lcStatusOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select L/C status" />
@@ -1155,7 +1155,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+           {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1185,7 +1185,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
+                    <Select onValueChange={field.onChange} value={field.value && shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1210,7 +1210,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="vesselOrFlightName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormLabel>{viaLabelDisplay}</FormLabel>
                     <FormControl>
                     <Input
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
@@ -1302,7 +1302,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         <FormLabel>Courier By</FormLabel>
                         <Select
                             onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
+                             value={field.value && trackingCourierOptions.includes(field.value as TrackingCourier) ? field.value : (field.value === "" ? NONE_COURIER_VALUE : trackingCourierOptions[0])}
                         >
                         <FormControl>
                             <SelectTrigger>

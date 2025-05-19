@@ -393,8 +393,8 @@ export function NewLCEntryForm() {
       latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
       finalPIUrl: finalData.finalPIUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
       finalLcUrl: finalData.finalLcUrl || undefined,
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
       trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier,
       trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -603,7 +603,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? currencyOptions[0]}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -640,7 +640,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? termsOfPayOptions[0]}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -1053,7 +1053,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+           {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1083,7 +1083,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />

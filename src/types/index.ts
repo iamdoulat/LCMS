@@ -71,7 +71,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is for 'Notify Party Contact Person'
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -150,7 +150,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is for 'Notify Party Contact Person'
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -209,10 +209,10 @@ export interface Customer {
 }
 export type CustomerDocument = Customer & { id: string, createdAt: any, updatedAt: any };
 export interface ApplicantOption {
-  value: string; // Customer document ID
-  label: string; // Customer applicantName
+  value: string; 
+  label: string; 
   address?: string;
-  contactPersonName?: string; // Derived from contactPerson
+  contactPersonName?: string; 
   email?: string;
   phone?: string;
 }
@@ -259,25 +259,25 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string; // Firestore document ID
-  uid?: string; // Firebase Auth UID (if linked)
+  id: string; 
+  uid?: string; 
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
   photoURL?: string;
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any; 
+  updatedAt?: any; 
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Allow string for form input, convert to number on save
-  purchasePrice: number | ''; // Allow string for form input
-  salesPrice: number | ''; // Allow string for form input
-  netCommissionPercentage?: number | ''; // Allow string for form input
+  qty: number | ''; 
+  purchasePrice: number | ''; 
+  salesPrice: number | ''; 
+  netCommissionPercentage?: number | ''; 
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -294,7 +294,7 @@ export interface ProformaInvoice {
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string; // Store as string (ISO)
+  connectedLcIssueDate?: string;
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -302,19 +302,19 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // Sum of line items sales price
-  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded) - misc expenses
-  totalExtraNetCommission?: number; // Sum of (qty * purchasePrice * netComm%)
-  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
-  totalCommissionPercentage: number; // (grandTotalCommissionUSD / totalPurchasePrice) * 100
+  totalSalesPrice: number; 
+  grandTotalSalesPrice: number;
+  totalExtraNetCommission?: number; 
+  grandTotalCommissionUSD?: number;
+  totalCommissionPercentage: number; 
   createdAt?: any;
   updatedAt?: any;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string; // ISO string
-  connectedLcIssueDate?: string; // ISO string
+  piDate: string; 
+  connectedLcIssueDate?: string; 
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -325,14 +325,13 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   miscellaneousExpenses?: number;
   totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any; 
+  updatedAt: any; 
 };
 
-// Option type for L/C dropdown in PI form
 export interface LcOption {
-  value: string; // LC document ID
-  label: string; // LC number for display
-  issueDate?: string; // ISO string
+  value: string; 
+  label: string; 
+  issueDate?: string; 
   purchaseOrderUrl?: string;
 }
