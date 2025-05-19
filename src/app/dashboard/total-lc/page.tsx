@@ -76,7 +76,7 @@ const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
 
 
-const ALL_YEARS_VALUE = "All Years";
+const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
@@ -502,7 +502,7 @@ export default function TotalLCPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((lc) => (
                     <React.Fragment key={lc.id}>
-                      <TableRow>
+                      <TableRow className="border-b-0">
                         <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
                         <TableCell className="px-2 sm:px-4">{lc.applicantName || 'N/A'}</TableCell>
                         <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
@@ -698,6 +698,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
-
-    
