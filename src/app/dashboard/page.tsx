@@ -143,25 +143,14 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser && !authLoading) { // Check if auth is done loading and user is still null
-        console.log("Dashboard: User not authenticated for data fetch. Clearing data.");
-        setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
-        setSupplierPieData([]);
-        setRecentlyCompletedLCs([]);
-        setDraftLCs([]);
-        setUpcomingEtdShipments([]);
-        setIsLoading(false);
-        return;
-    }
-    // If auth is still loading, or if authUser is not yet available, wait.
     if (authLoading || !authUser) {
         console.log("Dashboard: Auth still loading or user not available yet. Waiting to fetch data.");
-        setIsLoading(true); // Keep loading true if auth isn't ready
+        setIsLoading(true); 
         return;
     }
     
     console.log("Dashboard: Fetching data for year", year);
-    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser?.uid); // Log UID
+    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser?.uid);
     if (!auth.currentUser) {
       console.warn("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
@@ -179,7 +168,7 @@ export default function DashboardPage() {
       // Fetch suppliers to map beneficiaryId to brandName
       const suppliersCollectionRef = collection(firestore, "suppliers");
       const suppliersSnapshot = await getDocs(suppliersCollectionRef);
-      const supplierMap = new Map<string, string>(); // Map<beneficiaryId, brandNameOrBeneficiaryName>
+      const supplierMap = new Map<string, string>(); 
       suppliersSnapshot.forEach((doc) => {
           const supplier = doc.data() as SupplierDocument;
           supplierMap.set(doc.id, supplier.brandName || supplier.beneficiaryName || 'Unknown Brand');
@@ -381,12 +370,12 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading]); // Depend on authUser and authLoading
+  }, [authUser, authLoading]); 
 
   useEffect(() => {
-    if (!authLoading && authUser) { // Only fetch if auth is done and user exists
+    if (!authLoading && authUser) { 
       fetchDashboardData(selectedYear);
-    } else if (!authLoading && !authUser) { // If auth done and no user, clear data
+    } else if (!authLoading && !authUser) { 
       console.log("Dashboard: User not authenticated after auth load, clearing data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
@@ -406,20 +395,19 @@ export default function DashboardPage() {
     const startScrolling = () => {
       scrollInterval = setInterval(() => {
         if (scrollElement) {
-          if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) { // -1 to avoid potential floating point issues
+          if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) { 
             scrollElement.scrollTop = 0;
           } else {
-            scrollElement.scrollTop += 1; // Scroll by 1 pixel
+            scrollElement.scrollTop += 1; 
           }
         }
-      }, 50); // Adjust interval for speed (e.g., 50ms for ~20px/sec)
+      }, 50); 
     };
 
     const stopScrolling = () => {
       clearInterval(scrollInterval);
     };
     
-    // Start scrolling only if content is scrollable
     if (scrollElement.scrollHeight > scrollElement.clientHeight) {
       startScrolling();
     }
@@ -441,7 +429,7 @@ export default function DashboardPage() {
         scrollElement.removeEventListener('mouseleave', startScrolling);
       }
     };
-  }, [upcomingEtdShipments, isLoading]); // Re-run if list changes or loading completes
+  }, [upcomingEtdShipments, isLoading]);
 
 
   if (authLoading) {
@@ -517,7 +505,7 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-2 xl:col-span-3"
+          className="xl:col-span-2"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -530,7 +518,6 @@ export default function DashboardPage() {
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Users className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
-          className="lg:col-start-1"
         />
         <StatCard
           title="This Month L/Cs Quantities"
@@ -549,12 +536,15 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn(
+              "font-bold text-xl lg:text-2xl flex items-center gap-2",
+              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            )}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
             <CardDescription>
-              Breakdown of L/C value by beneficiary for {selectedYear}.
+              Breakdown of L/C value by beneficiary brand name for {selectedYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] w-full">
@@ -576,7 +566,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -625,7 +615,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -678,7 +668,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -734,6 +724,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
-    
