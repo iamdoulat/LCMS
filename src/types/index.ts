@@ -25,7 +25,7 @@ export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
-  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "Thailand", "Hong Kong",
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "Thailand", "Hong Kong", "TURKEY",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
@@ -209,10 +209,10 @@ export interface Customer {
 }
 export type CustomerDocument = Customer & { id: string, createdAt: any, updatedAt: any };
 export interface ApplicantOption {
-  value: string; 
-  label: string; 
+  value: string;
+  label: string;
   address?: string;
-  contactPersonName?: string; 
+  contactPersonName?: string;
   email?: string;
   phone?: string;
 }
@@ -259,25 +259,25 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string; 
-  uid?: string; 
+  id: string;
+  uid?: string;
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
   photoURL?: string;
-  createdAt?: any; 
-  updatedAt?: any; 
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; 
-  purchasePrice: number | ''; 
-  salesPrice: number | ''; 
-  netCommissionPercentage?: number | ''; 
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -302,19 +302,19 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; 
+  totalSalesPrice: number;
   grandTotalSalesPrice: number;
-  totalExtraNetCommission?: number; 
   grandTotalCommissionUSD?: number;
-  totalCommissionPercentage: number; 
+  totalExtraNetCommission?: number;
+  totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string; 
-  connectedLcIssueDate?: string; 
+  piDate: string;
+  connectedLcIssueDate?: string;
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -325,13 +325,13 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   miscellaneousExpenses?: number;
   totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
-  createdAt: any; 
-  updatedAt: any; 
+  createdAt: any;
+  updatedAt: any;
 };
 
 export interface LcOption {
-  value: string; 
-  label: string; 
-  issueDate?: string; 
+  value: string;
+  label: string;
+  issueDate?: string;
   purchaseOrderUrl?: string;
 }
