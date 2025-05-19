@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -341,7 +341,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C List
               </CardTitle>
@@ -360,7 +360,7 @@ export default function TotalLCPage() {
         <CardContent>
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter & Sort Options</CardTitle>
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
@@ -462,7 +462,7 @@ export default function TotalLCPage() {
                 </div>
                  <div className="pt-5 xl:col-start-4">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
-                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
                   </Button>
                 </div>
               </div>
@@ -499,7 +499,7 @@ export default function TotalLCPage() {
                       {fetchError}
                     </TableCell>
                   </TableRow>
-                ) : currentItems.length > 0 ? (
+                ) : currentItems.length &gt; 0 ? (
                   currentItems.map((lc) => (
                     <React.Fragment key={lc.id}>
                       <TableRow className="border-b-0">
@@ -531,7 +531,7 @@ export default function TotalLCPage() {
                                  <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => lc.id && handleEditLC(lc.id)}
+                                  onClick={() => lc.id &amp;&amp; handleEditLC(lc.id)}
                                   className="hover:bg-accent/50 hover:text-accent-foreground"
                                   disabled={!lc.id}
                                   title="Edit L/C"
@@ -540,14 +540,14 @@ export default function TotalLCPage() {
                                   <span className="sr-only">Edit L/C</span>
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent><p>Edit L/C</p></TooltipContent>
+                              <TooltipContent>&lt;p&gt;Edit L/C&lt;/p&gt;</TooltipContent>
                             </Tooltip>
                              <Tooltip>
                               <TooltipTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
+                                    onClick={() => lc.id &amp;&amp; handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
                                     className="hover:bg-destructive/10 hover:text-destructive"
                                     disabled={!lc.id}
                                     title="Delete L/C"
@@ -556,33 +556,46 @@ export default function TotalLCPage() {
                                     <span className="sr-only">Delete L/C</span>
                                   </Button>
                               </TooltipTrigger>
-                              <TooltipContent><p>Delete L/C</p></TooltipContent>
+                              <TooltipContent>&lt;p&gt;Delete L/C&lt;/p&gt;</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
                       </TableRow>
                       <TableRow key={`${lc.id}-actions`}>
-                        <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
+                         <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
                           <div className="flex flex-wrap justify-center items-center gap-2">
-                            {/* Vessel Tracking Button */}
+                            {/* Vessel/Flight Tracking Button */}
                             <Button
-                              variant={lc.vesselImoNumber ? "default" : "outline"}
+                              variant={
+                                (lc.shipmentMode === "Sea" &amp;&amp; lc.vesselImoNumber) || (lc.shipmentMode === "Air" &amp;&amp; lc.flightNumber)
+                                  ? "default"
+                                  : "outline"
+                              }
                               size="sm"
-                              onClick={() => handleOpenLink(lc.vesselImoNumber ? `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}` : undefined)}
-                              disabled={!lc.vesselImoNumber}
-                              title="Track Vessel"
+                              onClick={() => {
+                                let url;
+                                if (lc.shipmentMode === "Sea" &amp;&amp; lc.vesselImoNumber) {
+                                  url = `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`;
+                                } else if (lc.shipmentMode === "Air" &amp;&amp; lc.flightNumber) {
+                                  url = `https://www.flightradar24.com/${lc.flightNumber}`;
+                                }
+                                handleOpenLink(url);
+                              }}
+                              disabled={!((lc.shipmentMode === "Sea" &amp;&amp; lc.vesselImoNumber) || (lc.shipmentMode === "Air" &amp;&amp; lc.flightNumber))}
+                              title={lc.shipmentMode === "Sea" ? "Track Vessel" : lc.shipmentMode === "Air" ? "Track Flight" : "Track Shipment"}
                             >
-                              <Ship className="mr-1.5 h-3.5 w-3.5" /> Vessel
+                              {lc.shipmentMode === "Sea" ? &lt;Ship className="mr-1.5 h-3.5 w-3.5" /&gt; : lc.shipmentMode === "Air" ? &lt;Plane className="mr-1.5 h-3.5 w-3.5" /&gt; : &lt;Search className="mr-1.5 h-3.5 w-3.5" /&gt;}
+                              {lc.shipmentMode === "Sea" ? "Vessel" : lc.shipmentMode === "Air" ? "Flight" : "Track"}
                             </Button>
                             {/* Document Tracking Button (DHL/FedEx) */}
                             <Button
-                              variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
+                              variant={lc.trackingCourier &amp;&amp; lc.trackingNumber ? "default" : "outline"}
                               size="sm"
                               onClick={() => {
                                 let trackUrl = "";
-                                if (lc.trackingCourier === "DHL" && lc.trackingNumber) {
-                                  trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&submit=1`;
-                                } else if (lc.trackingCourier === "FedEx" && lc.trackingNumber) {
+                                if (lc.trackingCourier === "DHL" &amp;&amp; lc.trackingNumber) {
+                                  trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&amp;submit=1`;
+                                } else if (lc.trackingCourier === "FedEx" &amp;&amp; lc.trackingNumber) {
                                   trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(lc.trackingNumber.trim())}`;
                                 }
                                 handleOpenLink(trackUrl || undefined);
@@ -590,9 +603,9 @@ export default function TotalLCPage() {
                               disabled={!lc.trackingCourier || !lc.trackingNumber}
                               title="Track Original Document"
                             >
-                              {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /> :
-                               lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /> :
-                               <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
+                              {lc.trackingCourier === "DHL" ? &lt;img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /&gt; :
+                               lc.trackingCourier === "FedEx" ? &lt;img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /&gt; :
+                               &lt;PackageCheck className="mr-1.5 h-3.5 w-3.5" /&gt;}
                               {lc.trackingCourier ? lc.trackingCourier : "Docs"}
                             </Button>
                             {/* Final L/C URL Button */}
@@ -603,7 +616,7 @@ export default function TotalLCPage() {
                               disabled={!lc.finalLcUrl}
                               title="View Final L/C Document"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> L/C
+                              &lt;FileText className="mr-1.5 h-3.5 w-3.5" /&gt; L/C
                             </Button>
                             {/* Final PI URL Button */}
                             <Button
@@ -613,7 +626,7 @@ export default function TotalLCPage() {
                               disabled={!lc.finalPIUrl}
                               title="View Final Proforma Invoice"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> PI
+                              &lt;FileText className="mr-1.5 h-3.5 w-3.5" /&gt; PI
                             </Button>
                             {/* Shipping Documents URL Button */}
                             <Button
@@ -623,7 +636,7 @@ export default function TotalLCPage() {
                               disabled={!lc.shippingDocumentsUrl}
                               title="View Shipping Documents"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Shipping
+                              &lt;FileText className="mr-1.5 h-3.5 w-3.5" /&gt; Shipping
                             </Button>
                             {/* Purchase Order URL Button */}
                             <Button
@@ -633,7 +646,7 @@ export default function TotalLCPage() {
                               disabled={!lc.purchaseOrderUrl}
                               title="View Purchase Order"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Purchase
+                              &lt;FileText className="mr-1.5 h-3.5 w-3.5" /&gt; Purchase
                             </Button>
                           </div>
                         </TableCell>
@@ -650,11 +663,11 @@ export default function TotalLCPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your Letters of Credit from Firestore. Filters are applied client-side. For very large datasets, server-side filtering would be more performant.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
+                Showing {currentItems.length &gt; 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
               </TableCaption>
             </Table>
           </div>
-          {totalPages > 1 && (
+          {totalPages &gt; 1 &amp;&amp; (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
                 variant="outline"
@@ -662,7 +675,7 @@ export default function TotalLCPage() {
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="h-4 w-4" />
+                &lt;ChevronLeft className="h-4 w-4" /&gt;
                 Previous
               </Button>
               {getPageNumbers().map((page, index) =>
@@ -689,7 +702,7 @@ export default function TotalLCPage() {
                 disabled={currentPage === totalPages}
               >
                 Next
-                <ChevronRight className="h-4 w-4" />
+                &lt;ChevronRight className="h-4 w-4" /&gt;
               </Button>
             </div>
           )}
@@ -698,3 +711,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
