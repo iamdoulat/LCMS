@@ -162,10 +162,10 @@ export default function TotalLCPage() {
     if (filterLcNumber) {
       filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     }
-    if (filterApplicantId) {
+    if (filterApplicantId && filterApplicantId !== ALL_APPLICANTS_VALUE) {
       filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
     }
-    if (filterBeneficiaryId) {
+    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
     if (filterShipmentDate) {
@@ -180,7 +180,7 @@ export default function TotalLCPage() {
         }
       });
     }
-    if (filterStatus) {
+    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
       filtered = filtered.filter(lc => lc.status === filterStatus);
     }
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
@@ -562,7 +562,7 @@ export default function TotalLCPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow key={`${lc.id}-actions`}>
-                        <TableCell colSpan={9} className="py-4 px-4 border-t border-border bg-muted/20">
+                        <TableCell colSpan={9} className="py-4 px-4 border-border bg-muted/20">
                           <div className="flex flex-wrap justify-center items-center gap-2">
                             {/* Vessel Tracking Button */}
                             <Button
@@ -698,3 +698,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
