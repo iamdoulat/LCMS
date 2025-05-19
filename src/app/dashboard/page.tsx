@@ -200,7 +200,6 @@ export default function DashboardPage() {
       const supplierBrandNameMap = new Map<string, string>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        // Firestore 'in' query limit is 30. If more, fetch all or implement batching.
         if (uniqueBeneficiaryIds.length <= 30) {
           const suppliersQuery = query(collection(firestore, "suppliers"), where(documentId(), "in", uniqueBeneficiaryIds));
           const suppliersSnapshot = await getDocs(suppliersQuery);
@@ -211,7 +210,6 @@ export default function DashboardPage() {
             }
           });
         } else {
-          // Fallback for more than 30 unique suppliers: fetch all and filter client-side (less efficient)
           console.warn("Dashboard: More than 30 unique beneficiaries for the year. Fetching all suppliers for pie chart brand names.");
           const allSuppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
           allSuppliersSnapshot.forEach((docSnap) => {
@@ -267,7 +265,7 @@ export default function DashboardPage() {
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
         const brandName = supplierBrandNameMap.get(lc.beneficiaryId);
-        const displayName = brandName || lc.beneficiaryName || 'Unknown Beneficiary';
+        const displayName = brandName || (lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand');
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + (lc.amount || 0);
       });
 
@@ -360,8 +358,6 @@ export default function DashboardPage() {
       piQuerySnapshot.forEach((docSnap) => {
         allProformaInvoices.push({ id: docSnap.id, ...docSnap.data() } as ProformaInvoiceDocument);
       });
-      // TODO: For performance on large proforma_invoices collections,
-      // this filtering should ideally be done with a more targeted Firestore query or backend aggregation.
       const linkedPIsForTheYear = allProformaInvoices.filter(pi =>
         pi.connectedLcId && lcIdsForTheYear.has(pi.connectedLcId)
       );
@@ -414,7 +410,7 @@ export default function DashboardPage() {
     if (!scrollElement || upcomingEtdShipments.length === 0) return;
 
     let scrollInterval: NodeJS.Timeout;
-    let currentScrollDirection = scrollDirection; // Use a local variable for interval
+    let currentScrollDirection = scrollDirection; 
 
     const startScrolling = () => {
       scrollInterval = setInterval(() => {
@@ -422,20 +418,20 @@ export default function DashboardPage() {
           if (currentScrollDirection === 'down') {
             if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight - 1) {
               currentScrollDirection = 'up';
-              setScrollDirection('up'); // Update state for next effect run if needed
+              setScrollDirection('up'); 
             } else {
               scrollElement.scrollTop += 1;
             }
-          } else { // Scrolling up
+          } else { 
             if (scrollElement.scrollTop <= 0) {
               currentScrollDirection = 'down';
-              setScrollDirection('down'); // Update state
+              setScrollDirection('down'); 
             } else {
               scrollElement.scrollTop -= 1;
             }
           }
         }
-      }, 50);
+      }, 100); // Slower interval for "normal speed"
     };
 
     const stopScrolling = () => {
@@ -462,10 +458,10 @@ export default function DashboardPage() {
         scrollElement.removeEventListener('mouseleave', startScrolling);
       }
     };
-  }, [upcomingEtdShipments, isLoading, scrollDirection]); // Re-run if isLoading changes or upcomingEtdShipments changes, or scrollDirection changes
+  }, [upcomingEtdShipments, isLoading, scrollDirection]); 
 
 
-  if (authLoading || (!authUser && !isLoading) ) { // Show full page loader if auth is loading OR if not loading AND no auth user
+  if (authLoading || (!authUser && !isLoading) ) { 
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -560,7 +556,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -587,7 +583,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <CardHeader>
-              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -598,7 +594,7 @@ export default function DashboardPage() {
             <CardContent
                 className="h-[350px] space-y-3"
             >
-                {isLoading || upcomingEtdShipments.length === 0 && !isLoading ? ( // Show loading or no data message if relevant
+                {isLoading || upcomingEtdShipments.length === 0 && !isLoading ? ( 
                     isLoading ? (
                          <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -638,7 +634,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -691,7 +687,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
