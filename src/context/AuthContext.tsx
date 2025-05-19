@@ -12,10 +12,6 @@ import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import type { UserRole, CompanyProfile, UserDocumentForAdmin } from '@/types';
 
-// Hardcoded emails for simulated roles
-const SIMULATED_SUPER_ADMIN_EMAILS = ['mddoulat@gmail.com'];
-const SIMULATED_ADMIN_EMAIL = 'commercial@smartsolution-bd.com';
-
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
@@ -105,35 +101,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           if (userDocSnap.exists()) {
             const userProfileData = userDocSnap.data() as UserDocumentForAdmin;
             setFirestoreUser(userProfileData);
-            
-            if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
-              setUserRole("Super Admin");
-            } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
-              setUserRole("Admin");
-            } else {
-              setUserRole(userProfileData.role || "User");
-            }
+            setUserRole(userProfileData.role || "User"); // Set role from Firestore profile
           } else {
-            console.warn(`AuthContext: No Firestore profile found for user UID: ${currentUser.uid}. Defaulting role.`);
+            console.warn(`AuthContext: No Firestore profile found for user UID: ${currentUser.uid}. Defaulting role to "User".`);
             setFirestoreUser(null);
-            if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
-              setUserRole("Super Admin");
-            } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
-              setUserRole("Admin");
-            } else {
-              setUserRole("User");
-            }
+            setUserRole("User"); // Default to "User" if no Firestore profile or role
           }
         } catch (error) {
           console.error("AuthContext: Error fetching Firestore user profile:", error);
           setFirestoreUser(null);
-          if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || "")) {
-            setUserRole("Super Admin");
-          } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
-            setUserRole("Admin");
-          } else {
-            setUserRole("User"); 
-          }
+          setUserRole("User"); // Default to "User" on error
         }
       } else {
         setFirestoreUser(null);
@@ -182,12 +159,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       const firebaseUser = userCredential.user;
       await firebaseUpdateProfile(firebaseUser, { displayName });
 
-      let assignedRole: UserRole = "User";
-      if (SIMULATED_SUPER_ADMIN_EMAILS.includes(email)) {
-        assignedRole = "Super Admin";
-      } else if (email === SIMULATED_ADMIN_EMAIL) {
-        assignedRole = "Admin";
-      }
+      // Default role for new registrations is "User"
+      const assignedRole: UserRole = "User"; 
 
       const userProfileData: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
         uid: firebaseUser.uid,
@@ -257,13 +230,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       
       const userDocRef = doc(firestore, "users", firebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
-      let assignedRole: UserRole = "User";
-
-      if (SIMULATED_SUPER_ADMIN_EMAILS.includes(firebaseUser.email || "")) {
-        assignedRole = "Super Admin";
-      } else if (firebaseUser.email === SIMULATED_ADMIN_EMAIL) {
-        assignedRole = "Admin";
-      }
+      
+      // Default role for Google Sign-In is "User" unless a profile already exists with a different role
+      let assignedRole: UserRole = "User"; 
 
       if (!userDocSnap.exists()) {
         const userProfileData: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -278,6 +247,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+      } else {
+        // If user profile exists, retain their existing role unless you want to override it.
+        const existingProfile = userDocSnap.data() as UserDocumentForAdmin;
+        assignedRole = existingProfile.role || "User"; // Use existing role or default to User
       }
       // onAuthStateChanged will handle setting states
       
@@ -298,6 +271,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = "Google Sign-In was cancelled.";
       }
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
+      setLoading(false);
     }
   }, [router]);
 
@@ -309,7 +283,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     if (profile.companyLogoUrl !== undefined) {
       setCompanyLogoUrl(profile.companyLogoUrl);
       if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, profile.companyLogoUrl);
-    } else if (profile.companyLogoUrl === null) { // Explicitly handle null to reset to default
+    } else if (profile.companyLogoUrl === null) { 
         setCompanyLogoUrl(DEFAULT_COMPANY_LOGO_URL);
         if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
     }
@@ -329,3 +303,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
