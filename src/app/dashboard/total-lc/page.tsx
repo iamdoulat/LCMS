@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
-import { lcStatusOptions, currencyOptions } from '@/types'; 
+import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -27,14 +27,14 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': 
+    case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
-      return 'default'; 
+      return 'default';
     case 'Payment Done':
       return 'default';
     case 'Done':
-      return 'default'; 
+      return 'default';
     default:
       return 'outline';
   }
@@ -123,8 +123,9 @@ export default function TotalLCPage() {
         setAllLcEntries(fetchedLCs);
       } catch (error: any) {
         console.error("Error fetching L/C entries: ", error);
-        setFetchError(`Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`);
-        Swal.fire("Error", `Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`, "error");
+        const errorMsg = `Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`;
+        setFetchError(errorMsg);
+        Swal.fire("Error", errorMsg, "error");
       } finally {
         setIsLoading(false);
       }
@@ -202,8 +203,8 @@ export default function TotalLCPage() {
              if (!isValid(valA) && !isValid(valB)) return 0;
           } catch { /* ignore parsing error, will compare as strings or fall through */ }
         }
-        
-        if (sortBy === 'amount' || sortBy === 'year') { 
+
+        if (sortBy === 'amount' || sortBy === 'year') {
             valA = Number(valA) || 0;
             valB = Number(valB) || 0;
         }
@@ -214,7 +215,7 @@ export default function TotalLCPage() {
       });
     }
     setDisplayedLcEntries(filtered);
-    setCurrentPage(1); 
+    setCurrentPage(1);
   }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
@@ -243,7 +244,7 @@ export default function TotalLCPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "lc_entries", lcId));
-          setAllLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId)); 
+          setAllLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
           Swal.fire(
             'Deleted!',
             `L/C "${lcNumber || lcId}" has been removed.`,
@@ -296,15 +297,15 @@ export default function TotalLCPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
 
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
@@ -315,7 +316,7 @@ export default function TotalLCPage() {
       if (currentPage >= totalPages - halfPagesToShow) {
         startPage = Math.max(2, totalPages - maxPagesToShow + 1);
       }
-      
+
       if (startPage > 2) {
         pageNumbers.push("...");
       }
@@ -328,7 +329,7 @@ export default function TotalLCPage() {
         pageNumbers.push("...");
       }
 
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
@@ -340,7 +341,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-primary font-bold text-2xl lg:text-3xl flex items-center gap-2">
+              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C List
               </CardTitle>
@@ -374,9 +375,9 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Select 
-                    value={filterApplicantId === '' ? ALL_APPLICANTS_VALUE : filterApplicantId} 
-                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)} 
+                  <Select
+                    value={filterApplicantId === '' ? ALL_APPLICANTS_VALUE : filterApplicantId}
+                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)}
                     disabled={isLoadingApplicants}
                   >
                     <SelectTrigger>
@@ -390,9 +391,9 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Select 
-                    value={filterBeneficiaryId === '' ? ALL_BENEFICIARIES_VALUE : filterBeneficiaryId} 
-                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)} 
+                  <Select
+                    value={filterBeneficiaryId === '' ? ALL_BENEFICIARIES_VALUE : filterBeneficiaryId}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)}
                     disabled={isLoadingBeneficiaries}
                   >
                     <SelectTrigger>
@@ -406,8 +407,8 @@ export default function TotalLCPage() {
                 </div>
                  <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
-                  <Select 
-                    value={filterYear} 
+                  <Select
+                    value={filterYear}
                     onValueChange={(value) => setFilterYear(value)}
                   >
                     <SelectTrigger>
@@ -427,8 +428,8 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select 
-                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus} 
+                  <Select
+                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
                     onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
                   >
                     <SelectTrigger>
@@ -486,7 +487,7 @@ export default function TotalLCPage() {
               <TableBody>
                  {isLoading ? (
                    <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
+                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
                        <div className="flex justify-center items-center">
                          <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
                        </div>
@@ -494,7 +495,7 @@ export default function TotalLCPage() {
                   </TableRow>
                 ) : fetchError ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-destructive p-2 sm:p-4">
+                    <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4">
                       {fetchError}
                     </TableCell>
                   </TableRow>
@@ -502,28 +503,28 @@ export default function TotalLCPage() {
                   currentItems.map((lc) => (
                     <React.Fragment key={lc.id}>
                       <TableRow>
-                        <TableCell className="font-medium p-2 sm:p-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{lc.applicantName || 'N/A'}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{lc.beneficiaryName || 'N/A'}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
-                        <TableCell className="p-2 sm:p-4">{formatDisplayDate(lc.expireDate)}</TableCell>
-                        <TableCell className="p-2 sm:p-4">
+                        <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{lc.applicantName || 'N/A'}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
+                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
+                        <TableCell className="px-2 sm:px-4">
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
                               lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
                               lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
                               lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                              lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
+                              lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
                               lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                             }
                           >
                             {lc.status || 'N/A'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right space-x-1 p-2 sm:p-4">
+                        <TableCell className="text-right space-x-1 px-2 sm:px-4">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -561,8 +562,8 @@ export default function TotalLCPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow key={`${lc.id}-actions`}>
-                        <TableCell colSpan={9} className="p-0"> {/* Corrected colSpan to 9 */}
-                          <div className="flex flex-wrap items-center gap-2 py-2 px-4 border-t bg-muted/20">
+                        <TableCell colSpan={9} className="py-4 px-4 border-t border-border bg-muted/20">
+                          <div className="flex flex-wrap justify-center items-center gap-2">
                             {/* Vessel Tracking Button */}
                             <Button
                               variant={lc.vesselImoNumber ? "default" : "outline"}
@@ -641,7 +642,7 @@ export default function TotalLCPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4"> {/* Corrected colSpan to 9 */}
+                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
                        No L/C entries found matching your criteria. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>
@@ -697,8 +698,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-    
-
-    
-
-    
