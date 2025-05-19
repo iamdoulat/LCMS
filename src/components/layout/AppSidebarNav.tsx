@@ -56,7 +56,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 
 const coreModulesNavItems: NavItemGroup[] = [
   {
-    groupLabel: 'L/C Management',
+    groupLabel: 'T/T OR L/C Management',
     icon: Briefcase,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -115,6 +115,8 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
@@ -208,18 +210,20 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
+        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e"} 
+            src={companyLogoUrlFromSettings} 
             alt="Company Logo"
+            data-ai-hint="company logo"
             width={32}
             height={32}
             className="rounded-sm object-contain"
-            data-ai-hint="company logo"
             priority
           />
           <span className={cn(
-            "group-data-[collapsible=icon]:hidden font-bold text-lg bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            "font-bold text-lg group-data-[collapsible=icon]:hidden",
+            "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
             {companyName || "Smart Solution"}
