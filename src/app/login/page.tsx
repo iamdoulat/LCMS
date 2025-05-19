@@ -3,9 +3,9 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { Loader2, LogIn } from 'lucide-react'; 
+import { Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image'; 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
+// Separator component is no longer needed for the "OR" line if we use the div-based approach.
+// import { Separator } from '@/components/ui/separator'; 
 import { auth } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
@@ -33,10 +34,10 @@ const logoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebases
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signInWithGoogle, login: contextLogin } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); 
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -57,18 +58,12 @@ export default function LoginPage() {
     setIsEmailLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      Swal.fire({
-        title: "Login Successful",
-        text: "Welcome back!",
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      router.push('/dashboard');
+      // Use the login method from AuthContext which now handles Firebase Auth
+      await contextLogin(data.email, data.password);
+      // Success handling (toast, redirect) is now managed within AuthContext's login
     } catch (err: any) {
       const errorMessage = err.message || "Failed to login. Please check your credentials.";
-      setError(errorMessage); 
+      setError(errorMessage);
       Swal.fire({
         title: "Login Failed",
         text: errorMessage,
@@ -84,7 +79,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithGoogle();
+      // Success handling (toast, redirect) is now managed within AuthContext's signInWithGoogle
     } catch (err: any) {
+      // Error is typically handled within signInWithGoogle now, but we can set local error too
       setError(err.message || "Google Sign-In failed.");
     } finally {
       setIsGoogleLoading(false);
@@ -111,7 +108,7 @@ export default function LoginPage() {
     });
 
     if (email) {
-      setIsEmailLoading(true); 
+      setIsEmailLoading(true);
       setError(null);
       try {
         await sendPasswordResetEmail(auth, email);
@@ -123,7 +120,8 @@ export default function LoginPage() {
       } catch (err: any) {
         console.error("Forgot password error:", err);
         let friendlyMessage = "Failed to send password reset email. Please try again.";
-        if (err.code === 'auth/user-not-found') {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          // Firebase now uses auth/invalid-credential for user not found in some flows
           friendlyMessage = "No account found with that email address.";
         } else if (err.code === 'auth/invalid-email') {
           friendlyMessage = "The email address is not valid.";
@@ -156,13 +154,18 @@ export default function LoginPage() {
             <Image
               src={logoUrl}
               alt="LC Management System Logo"
-              width={56} 
+              width={56}
               height={56}
               className="rounded-sm"
               priority
+              data-ai-hint="logo company"
             />
           </div>
-          <CardTitle className={cn("font-bold text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>LC Management System Login</CardTitle>
+          <CardTitle 
+            className={cn("font-bold text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}
+          >
+            LC Management System Login
+          </CardTitle>
           <CardDescription>Access your Letter of Credit Management Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
@@ -227,10 +230,15 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="my-6 flex items-center">
-            <Separator className="flex-grow" />
-            <span className="mx-4 text-xs text-muted-foreground">OR</span>
-            <Separator className="flex-grow" />
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                Or
+              </span>
+            </div>
           </div>
 
           <Button
@@ -252,7 +260,7 @@ export default function LoginPage() {
             )}
           </Button>
 
-          {/*
+          {/* Registration link is commented out as per previous request
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-primary hover:underline">
