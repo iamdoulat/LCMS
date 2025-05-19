@@ -42,7 +42,7 @@ import {
   Package,
   History,
   Search,
-  DollarSign, // Added DollarSign
+  DollarSign, 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -59,7 +59,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     groupLabel: 'L/C Management',
     icon: Briefcase,
     subLinks: [
-      { href: '/dashboard/total-lc', label: 'Total L/C List', icon: ListChecks },
+      { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
@@ -104,7 +104,7 @@ const managementNavItems: NavItemGroup[] = [
   },
 ];
 
-const settingsNavItems: NavItem[] = [ // Changed to NavItem from NavItemWithRoles for simplicity if all are shown
+const settingsNavItems: NavItem[] = [ 
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
@@ -118,7 +118,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -286,7 +286,7 @@ export function AppSidebarNav() {
                       tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                     >
                       <a>
-                        <item.icon className="h-5 w-5 text-primary" />
+                        {item.icon && <item.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </a>
                     </SidebarMenuButton>
