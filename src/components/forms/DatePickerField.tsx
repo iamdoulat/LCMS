@@ -1,8 +1,9 @@
+
 "use client";
 
 import * as React from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X as XIcon } from "lucide-react";
 import type { ControllerRenderProps, FieldValues, Path } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 
 interface DatePickerFieldProps<TFieldValues extends FieldValues> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,12 +50,31 @@ export function DatePickerField<TFieldValues extends FieldValues>({
           mode="single"
           selected={field.value ? new Date(field.value) : undefined}
           onSelect={(date) => {
-            field.onChange(date);
+            field.onChange(date); // date can be Date or undefined if nothing is selected
             setOpen(false); // Close popover on date selection
           }}
           disabled={disabled}
           initialFocus
         />
+        {field.value && (
+          <>
+            <Separator />
+            <div className="p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  field.onChange(undefined); // Clear the date
+                  setOpen(false); // Close popover
+                }}
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <XIcon className="mr-2 h-4 w-4" />
+                Clear Date
+              </Button>
+            </div>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
