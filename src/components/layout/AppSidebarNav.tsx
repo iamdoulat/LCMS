@@ -41,7 +41,8 @@ import {
   ImageIcon,
   Package,
   History,
-  Search
+  Search,
+  DollarSign, // Added DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -98,11 +99,12 @@ const managementNavItems: NavItemGroup[] = [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
       { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
+      { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
   },
 ];
 
-const settingsNavItems: NavItemWithRoles[] = [
+const settingsNavItems: NavItem[] = [ // Changed to NavItem from NavItemWithRoles for simplicity if all are shown
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
@@ -116,7 +118,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -214,6 +216,7 @@ export function AppSidebarNav() {
             height={32}
             className="rounded-sm object-contain"
             data-ai-hint="company logo"
+            priority
           />
           <span className={cn(
             "group-data-[collapsible=icon]:hidden font-bold text-lg bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
@@ -272,10 +275,8 @@ export function AppSidebarNav() {
             Settings
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
-            {settingsNavItems.map((item) => {
-              // Always render settings items now, roles check removed for visibility
-              return (
-                item.href &&
+             {settingsNavItems.map((item) => (
+                item.href && (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
@@ -291,8 +292,8 @@ export function AppSidebarNav() {
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
-              );
-            })}
+                )
+            ))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -322,11 +323,6 @@ type NavItem = {
   icon: React.ElementType;
 };
 
-type NavItemWithRoles = NavItem & {
-  roles?: UserRole[]; // Roles property is now optional and not used for filtering visibility here
-};
-
-
 type NavItemGroup = {
   groupLabel?: string;
   icon: React.ElementType;
@@ -336,3 +332,4 @@ type NavItemGroup = {
     icon?: React.ElementType;
   }>;
 };
+    
