@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isFuture, isToday, compareAsc } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -143,18 +143,25 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser) {
-      console.log("Dashboard: User not authenticated. Clearing dashboard data.");
-      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
-      setSupplierPieData([]);
-      setRecentlyCompletedLCs([]);
-      setDraftLCs([]);
-      setUpcomingEtdShipments([]);
-      setIsLoading(false);
-      return;
+    if (!authUser && !authLoading) { // Check if auth is done loading and user is still null
+        console.log("Dashboard: User not authenticated for data fetch. Clearing data.");
+        setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
+        setSupplierPieData([]);
+        setRecentlyCompletedLCs([]);
+        setDraftLCs([]);
+        setUpcomingEtdShipments([]);
+        setIsLoading(false);
+        return;
     }
+    // If auth is still loading, or if authUser is not yet available, wait.
+    if (authLoading || !authUser) {
+        console.log("Dashboard: Auth still loading or user not available yet. Waiting to fetch data.");
+        setIsLoading(true); // Keep loading true if auth isn't ready
+        return;
+    }
+    
     console.log("Dashboard: Fetching data for year", year);
-    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
+    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser?.uid); // Log UID
     if (!auth.currentUser) {
       console.warn("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
@@ -168,6 +175,16 @@ export default function DashboardPage() {
     setIsLoading(true);
     try {
       const yearNumber = parseInt(year);
+
+      // Fetch suppliers to map beneficiaryId to brandName
+      const suppliersCollectionRef = collection(firestore, "suppliers");
+      const suppliersSnapshot = await getDocs(suppliersCollectionRef);
+      const supplierMap = new Map<string, string>(); // Map<beneficiaryId, brandNameOrBeneficiaryName>
+      suppliersSnapshot.forEach((doc) => {
+          const supplier = doc.data() as SupplierDocument;
+          supplierMap.set(doc.id, supplier.brandName || supplier.beneficiaryName || 'Unknown Brand');
+      });
+
       const lcEntriesRef = collection(firestore, "lc_entries");
       const q = query(lcEntriesRef, where("year", "==", yearNumber));
       const querySnapshot = await getDocs(q);
@@ -240,8 +257,8 @@ export default function DashboardPage() {
 
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
-        const name = lc.beneficiaryName || 'Unknown Supplier';
-        supplierValueMap[name] = (supplierValueMap[name] || 0) + (lc.amount || 0);
+        const displayName = supplierMap.get(lc.beneficiaryId) || lc.beneficiaryName || 'Unknown Supplier';
+        supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + (lc.amount || 0);
       });
       const pieData = Object.entries(supplierValueMap)
         .map(([name, value], index) => ({
@@ -364,13 +381,13 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser]);
+  }, [authUser, authLoading]); // Depend on authUser and authLoading
 
   useEffect(() => {
-    if (!authLoading && authUser) {
+    if (!authLoading && authUser) { // Only fetch if auth is done and user exists
       fetchDashboardData(selectedYear);
-    } else if (!authLoading && !authUser) {
-      console.log("Dashboard: User not authenticated, not fetching dashboard data.");
+    } else if (!authLoading && !authUser) { // If auth done and no user, clear data
+      console.log("Dashboard: User not authenticated after auth load, clearing data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -500,6 +517,7 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
+          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -512,6 +530,7 @@ export default function DashboardPage() {
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Users className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
+          className="lg:col-start-1"
         />
         <StatCard
           title="This Month L/Cs Quantities"
@@ -566,7 +585,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent 
-                className="h-72 space-y-3" // Set fixed height for the content area
+                className="h-72 space-y-3" 
             >
                 {isLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -715,3 +734,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+    
