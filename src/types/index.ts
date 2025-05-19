@@ -25,7 +25,7 @@ export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
-  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "Thailand", "Hong Kong", "TURKEY",
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
@@ -83,18 +83,18 @@ export interface LCEntry {
   firstPartialAmount?: number | '';
   secondPartialAmount?: number | '';
   thirdPartialAmount?: number | '';
-  firstPartialPkgs?: number | '';
-  firstPartialNetWeight?: number | '';
-  firstPartialGrossWeight?: number | '';
-  firstPartialCbm?: number | '';
-  secondPartialPkgs?: number | '';
-  secondPartialNetWeight?: number | '';
-  secondPartialGrossWeight?: number | '';
-  secondPartialCbm?: number | '';
-  thirdPartialPkgs?: number | '';
-  thirdPartialNetWeight?: number | '';
-  thirdPartialGrossWeight?: number | '';
-  thirdPartialCbm?: number | '';
+  firstPartialPkgs?: number;
+  firstPartialNetWeight?: number;
+  firstPartialGrossWeight?: number;
+  firstPartialCbm?: number;
+  secondPartialPkgs?: number;
+  secondPartialNetWeight?: number;
+  secondPartialGrossWeight?: number;
+  secondPartialCbm?: number;
+  thirdPartialPkgs?: number;
+  thirdPartialNetWeight?: number;
+  thirdPartialGrossWeight?: number;
+  thirdPartialCbm?: number;
   originalBlQty?: number | '';
   copyBlQty?: number | '';
   originalCooQty?: number | '';
@@ -259,13 +259,13 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string;
-  uid?: string;
+  id: string; // Firestore document ID
+  uid?: string; // Firebase Auth UID, optional if profile created before Auth
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
-  photoURL?: string;
+  photoURL?: string; // Can be used if admin sets it or user updates it
   createdAt?: any;
   updatedAt?: any;
 }
@@ -274,10 +274,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Stored as number, form uses string then parses
+  purchasePrice: number | ''; // Stored as number
+  salesPrice: number | ''; // Stored as number
+  netCommissionPercentage?: number | ''; // Stored as number
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -290,11 +290,11 @@ export interface ProformaInvoice {
   applicantId: string;
   applicantName: string;
   piNo: string;
-  piDate: Date;
+  piDate: Date; // In form, Date object
   salesPersonName: string;
-  connectedLcId?: string;
-  connectedLcNumber?: string;
-  connectedLcIssueDate?: string;
+  connectedLcId?: string; // Stores the ID of the LCEntryDocument
+  connectedLcNumber?: string; // Stores the LCEntryDocument's documentaryCreditNumber
+  connectedLcIssueDate?: string; // Stores the LCEntryDocument's lcIssueDate as ISO string
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -302,19 +302,19 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
-  grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number;
-  totalExtraNetCommission?: number;
-  totalCommissionPercentage: number;
+  totalSalesPrice: number; // Sum of lineItem sales prices
+  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded) - misc expenses
+  totalExtraNetCommission?: number; // Sum of extra net commissions from line items
+  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
+  totalCommissionPercentage: number; // (grandTotalCommissionUSD / totalPurchasePrice) * 100
   createdAt?: any;
   updatedAt?: any;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string;
-  connectedLcIssueDate?: string;
+  piDate: string; // Stored as ISO string
+  connectedLcIssueDate?: string; // Stored as ISO string
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -332,6 +332,6 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
 export interface LcOption {
   value: string;
   label: string;
-  issueDate?: string;
+  issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
 }
