@@ -60,7 +60,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     icon: Briefcase,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
-      { href: '/dashboard/new-lc-entry', label: 'New L/C Entry', icon: FilePlus2 },
+      { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
   },
@@ -115,7 +115,7 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
 
   React.useEffect(() => {
@@ -128,6 +128,7 @@ export function AppSidebarNav() {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; 
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
+        // This more complex check handles cases where a sub-page of a listed item should still activate the parent.
         if (
           (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
           (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
@@ -136,8 +137,20 @@ export function AppSidebarNav() {
           (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
           return true;
+        } else if (
+          !pathname.includes('/add') && 
+          !pathname.includes('/edit') &&
+          (
+            (href === '/dashboard/suppliers' && pathname === '/dashboard/suppliers') ||
+            (href === '/dashboard/customers' && pathname === '/dashboard/customers') ||
+            (href === '/dashboard/total-lc' && pathname === '/dashboard/total-lc') ||
+            (href === '/dashboard/commission-management/issued-pi-list' && pathname === '/dashboard/commission-management/issued-pi-list') ||
+            (href === '/dashboard/settings/users' && pathname === '/dashboard/settings/users')
+          )
+        ){
+          return true;
         }
-        return true; 
+        return true; // Fallback for other top-level matches not requiring specific sub-page logic
     }
     return false;
   };
@@ -210,10 +223,9 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        {/* TODO: Company name and logo should be fetched from settings/database */}
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrlFromSettings} 
+            src={companyLogoUrlFromContext} 
             alt="Company Logo"
             data-ai-hint="company logo"
             width={32}
