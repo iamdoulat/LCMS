@@ -6,7 +6,8 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, Search } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -99,7 +100,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Payment Done':
       return 'default';
     case 'Done':
-      return 'default';
+      return 'default'; // Ensure Done has a distinct style if needed, or share with Payment Done
     default:
       return 'outline';
   }
@@ -131,8 +132,6 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState('');
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
-  const [scrollDirection, setScrollDirection] = useState<'down' | 'up'>('down');
-
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -184,7 +183,8 @@ export default function DashboardPage() {
             }
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
-
+        
+        // Ensure essential fields are present for calculations
         if (data.amount !== undefined && data.applicantId && data.beneficiaryId && lcIssueDateValid) {
           lcEntriesForTheYear.push({
               id: doc.id,
@@ -200,7 +200,7 @@ export default function DashboardPage() {
       const supplierBrandNameMap = new Map<string, string>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        if (uniqueBeneficiaryIds.length <= 30) {
+        if (uniqueBeneficiaryIds.length <= 30) { // Firestore 'in' query limit
           const suppliersQuery = query(collection(firestore, "suppliers"), where(documentId(), "in", uniqueBeneficiaryIds));
           const suppliersSnapshot = await getDocs(suppliersQuery);
           suppliersSnapshot.forEach((docSnap) => {
@@ -210,6 +210,9 @@ export default function DashboardPage() {
             }
           });
         } else {
+          // Fallback for > 30 unique beneficiaries: fetch all suppliers and filter client-side
+          // This is less efficient but handles the Firestore limitation.
+          // Consider backend aggregation for very large supplier counts.
           console.warn("Dashboard: More than 30 unique beneficiaries for the year. Fetching all suppliers for pie chart brand names.");
           const allSuppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
           allSuppliersSnapshot.forEach((docSnap) => {
@@ -223,6 +226,7 @@ export default function DashboardPage() {
 
 
       if (lcEntriesForTheYear.length === 0) {
+        // Set all stats to zero or empty if no L/Cs for the year
         setDashboardStats({
           totalLCs: 0,
           totalLCValue: 0,
@@ -247,7 +251,7 @@ export default function DashboardPage() {
       const currentDate = new Date();
       const currentSystemYear = currentDate.getFullYear();
       let thisMonthLCQty = 0;
-      if (yearNumber === currentSystemYear) {
+      if (yearNumber === currentSystemYear) { // Only calculate for the current system year
         const firstDayOfMonth = startOfMonth(currentDate);
         const lastDayOfMonth = endOfMonth(currentDate);
         thisMonthLCQty = lcEntriesForTheYear.filter(lc => {
@@ -256,14 +260,17 @@ export default function DashboardPage() {
             const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp).toDate();
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
           } catch (e) {
+            // Handle cases where lcIssueDate might not be a valid string for parseISO
             console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
             return false;
           }
         }).length;
       }
 
+      // Supplier Pie Chart Data
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
+        // Use brandName if available from the map, otherwise fallback to beneficiaryName from LC or a default
         const brandName = supplierBrandNameMap.get(lc.beneficiaryId);
         const displayName = brandName || (lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand');
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + (lc.amount || 0);
@@ -275,13 +282,14 @@ export default function DashboardPage() {
           value,
           fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
         }))
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value); // Sort by value descending for pie chart display
       setSupplierPieData(pieData);
 
+      // Recently Completed LCs
       const completedLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Done')
         .map(lc => {
-          let updatedAtDate = new Date(0);
+          let updatedAtDate = new Date(0); // Default to a very old date if updatedAt is missing
           if (lc.updatedAt) {
             if (typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
               updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
@@ -299,14 +307,15 @@ export default function DashboardPage() {
             currency: lc.currency, amount: lc.amount,
           } as RecentlyCompletedLC;
         })
-        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
-        .slice(0, 10);
+        .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime()) // Sort by most recent completion
+        .slice(0, 10); // Show top 10
       setRecentlyCompletedLCs(completedLCs);
 
+      // Draft LCs
       const currentDraftLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Draft')
         .map(lc => {
-          let createdAtDate = new Date(0);
+          let createdAtDate = new Date(0); // Default if missing
           if (lc.createdAt) {
             if (typeof (lc.createdAt as unknown as Timestamp)?.toDate === 'function') {
               createdAtDate = (lc.createdAt as unknown as Timestamp).toDate();
@@ -324,33 +333,36 @@ export default function DashboardPage() {
             currency: lc.currency, amount: lc.amount,
           } as DraftLC;
         })
-        .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime())
-        .slice(0, 10);
+        .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime()) // Sort by most recent creation
+        .slice(0, 10); // Show top 10
       setDraftLCs(currentDraftLCs);
 
+      // Upcoming ETD Shipments
       const today = new Date();
-      today.setHours(0,0,0,0);
+      today.setHours(0,0,0,0); // Normalize to start of today for comparison
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
-            if (!lc.etd || lc.status === 'Done') return false;
+            if (!lc.etd || lc.status === 'Done') return false; // Exclude if no ETD or already Done
             try {
                 const etdDate = typeof lc.etd === 'string' ? parseISO(lc.etd) : (lc.etd as unknown as Timestamp).toDate();
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
-            } catch (e) { return false; }
+            } catch (e) { return false; /* Handle potential parsing errors */ }
         })
         .map(lc => ({
             id: lc.id,
             documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName,
-            applicantName: lc.applicantName,
+            applicantName: lc.applicantName, // Added
             etdDate: typeof lc.etd === 'string' ? parseISO(lc.etd!) : (lc.etd as unknown as Timestamp).toDate(),
-            currency: lc.currency,
-            amount: lc.amount,
+            currency: lc.currency, // Added
+            amount: lc.amount, // Added
         } as UpcomingEtdShipment))
-        .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
-        .slice(0, 10);
+        .sort((a, b) => compareAsc(a.etdDate, b.etdDate)) // Sort by nearest ETD first
+        .slice(0, 10); // Show top 10
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
+      // Calculate total linked PIs for the LCs of the selected year
+      // TODO: This is inefficient for large PI collections. Optimize with backend aggregation or more targeted queries if possible.
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
       const piQuerySnapshot = await getDocs(piCollectionRef);
@@ -381,6 +393,7 @@ export default function DashboardPage() {
          errorMessage = `Could not fetch dashboard data: ${error.message} (Code: ${error.code || 'N/A'})`;
        }
       Swal.fire("Dashboard Error", errorMessage, "error");
+      // Reset stats on error
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -389,79 +402,26 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading]);
+  }, [authUser, authLoading]); // Include authUser and authLoading in dependencies
 
   useEffect(() => {
     if (!authLoading && authUser) {
+      console.log("Dashboard: Auth loaded, user available. Triggering fetch.");
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       console.log("Dashboard: User not authenticated after auth load, clearing data.");
+      // Clear dashboard data if user is not authenticated
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
- useEffect(() => {
-    const scrollElement = upcomingEtdScrollRef.current;
-    if (!scrollElement || upcomingEtdShipments.length === 0) return;
 
-    let scrollInterval: NodeJS.Timeout;
-    let currentScrollDirection = scrollDirection; 
-
-    const startScrolling = () => {
-      scrollInterval = setInterval(() => {
-        if (scrollElement) {
-          if (currentScrollDirection === 'down') {
-            if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight - 1) {
-              currentScrollDirection = 'up';
-              setScrollDirection('up'); 
-            } else {
-              scrollElement.scrollTop += 1;
-            }
-          } else { 
-            if (scrollElement.scrollTop <= 0) {
-              currentScrollDirection = 'down';
-              setScrollDirection('down'); 
-            } else {
-              scrollElement.scrollTop -= 1;
-            }
-          }
-        }
-      }, 100); // Slower interval for "normal speed"
-    };
-
-    const stopScrolling = () => {
-      clearInterval(scrollInterval);
-    };
-
-    if (scrollElement.scrollHeight > scrollElement.clientHeight) {
-      startScrolling();
-    }
-
-    scrollElement.addEventListener('mouseenter', stopScrolling);
-    scrollElement.addEventListener('mouseleave', () => {
-      if (scrollElement.scrollHeight > scrollElement.clientHeight) {
-        startScrolling();
-      }
-    });
-
-    return () => {
-      clearInterval(scrollInterval);
-      if (scrollElement) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        scrollElement.removeEventListener('mouseenter', stopScrolling);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        scrollElement.removeEventListener('mouseleave', startScrolling);
-      }
-    };
-  }, [upcomingEtdShipments, isLoading, scrollDirection]); 
-
-
-  if (authLoading || (!authUser && !isLoading) ) { 
+  if (authLoading || (!authUser && !isLoading) ) { // Show loading if auth is loading OR if auth is done but user is null and we haven't explicitly set isLoading to false after clearing data
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -505,7 +465,7 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-      { isLoading && !authLoading ? (
+      { isLoading && !authLoading ? ( // Show loading spinner if data is fetching for the selected year, but auth is done
          <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
@@ -591,10 +551,8 @@ export default function DashboardPage() {
                 L/Cs from {selectedYear} nearing their Estimated Time of Departure.
               </CardDescription>
             </CardHeader>
-            <CardContent
-                className="h-[350px] space-y-3"
-            >
-                {isLoading || upcomingEtdShipments.length === 0 && !isLoading ? ( 
+            <CardContent className="h-[350px] space-y-3">
+                 {isLoading || (upcomingEtdShipments.length === 0 && !isLoading) ? ( 
                     isLoading ? (
                          <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
