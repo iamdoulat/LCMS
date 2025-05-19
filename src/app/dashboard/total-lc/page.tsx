@@ -341,7 +341,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C List
               </CardTitle>
@@ -562,7 +562,7 @@ export default function TotalLCPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow key={`${lc.id}-actions`}>
-                        <TableCell colSpan={9} className="py-4 px-4 border-border bg-muted/20">
+                        <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
                           <div className="flex flex-wrap justify-center items-center gap-2">
                             {/* Vessel Tracking Button */}
                             <Button
@@ -699,3 +699,5 @@ export default function TotalLCPage() {
   );
 }
 
+
+    
