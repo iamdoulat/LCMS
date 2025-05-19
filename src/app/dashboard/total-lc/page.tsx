@@ -340,7 +340,7 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out", "flex items-center gap-2")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl text-primary", "flex items-center gap-2")}>
                 <ListChecks className="h-7 w-7 text-primary" />
                 Total L/C Overview
               </CardTitle>
@@ -407,7 +407,7 @@ export default function TotalLCPage() {
                  <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
                   <Select
-                    value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
+                    value={filterYear === '' || filterYear === ALL_YEARS_VALUE ? ALL_YEARS_VALUE : filterYear}
                     onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
                   >
                     <SelectTrigger>
@@ -472,7 +472,7 @@ export default function TotalLCPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-2 sm:px-4">L/C Number</TableHead>
+                  <TableHead className="px-2 sm:px-4">T/T OR L/C Number</TableHead>
                   <TableHead className="px-2 sm:px-4">Applicant</TableHead>
                   <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
                   <TableHead className="px-2 sm:px-4">Amount</TableHead>
