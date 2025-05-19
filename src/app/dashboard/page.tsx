@@ -1,13 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, Search, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument } from '@/types';
@@ -127,9 +126,9 @@ export default function DashboardPage() {
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
-  const [searchLcNumber, setSearchLcNumber] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [greeting, setGreeting] = useState('');
+
+  const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -157,7 +156,7 @@ export default function DashboardPage() {
     console.log("Dashboard: Fetching data for year", year);
     console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
     if (!auth.currentUser) {
-      console.log("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
+      console.warn("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -321,7 +320,7 @@ export default function DashboardPage() {
             etdDate: typeof lc.etd === 'string' ? parseISO(lc.etd!) : (lc.etd as unknown as Timestamp).toDate(),
             currency: lc.currency,
             amount: lc.amount,
-        }))
+        } as UpcomingEtdShipment))
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
         .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
@@ -381,40 +380,54 @@ export default function DashboardPage() {
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
-  const handleSearchLC = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchLcNumber.trim()) {
-      Swal.fire("Info", "Please enter an L/C number to search.", "info");
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const lcEntriesRef = collection(firestore, "lc_entries");
-      const q = query(lcEntriesRef, where("documentaryCreditNumber", "==", searchLcNumber.trim()));
-      const querySnapshot = await getDocs(q);
+  useEffect(() => {
+    const scrollElement = upcomingEtdScrollRef.current;
+    if (!scrollElement || upcomingEtdShipments.length === 0) return;
 
-      if (querySnapshot.empty) {
-        Swal.fire("Not Found", `No L/C found with number: ${searchLcNumber}`, "warning");
-      } else {
-        const lcDoc = querySnapshot.docs[0];
-        Swal.fire({
-            title: "L/C Found!",
-            text: `Redirecting to details for L/C ${lcDoc.data().documentaryCreditNumber}.`,
-            icon: "success",
-            timer: 1500,
-            showConfirmButton: false,
-        });
-        router.push(`/dashboard/total-lc/${lcDoc.id}/edit`);
+    let scrollInterval: NodeJS.Timeout;
+
+    const startScrolling = () => {
+      scrollInterval = setInterval(() => {
+        if (scrollElement) {
+          if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) { // -1 to avoid potential floating point issues
+            scrollElement.scrollTop = 0;
+          } else {
+            scrollElement.scrollTop += 1; // Scroll by 1 pixel
+          }
+        }
+      }, 50); // Adjust interval for speed (e.g., 50ms for ~20px/sec)
+    };
+
+    const stopScrolling = () => {
+      clearInterval(scrollInterval);
+    };
+    
+    // Start scrolling only if content is scrollable
+    if (scrollElement.scrollHeight > scrollElement.clientHeight) {
+      startScrolling();
+    }
+
+
+    scrollElement.addEventListener('mouseenter', stopScrolling);
+    scrollElement.addEventListener('mouseleave', () => {
+        if (scrollElement.scrollHeight > scrollElement.clientHeight) {
+          startScrolling();
+        }
+    });
+    
+
+    return () => {
+      clearInterval(scrollInterval);
+      if (scrollElement) {
+        scrollElement.removeEventListener('mouseenter', stopScrolling);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        scrollElement.removeEventListener('mouseleave', startScrolling);
       }
-    } catch (error) {
-      console.error("Error searching L/C: ", error);
-      Swal.fire("Error", `Failed to search L/C: ${(error as Error).message}`, "error");
-    } finally {
-      setIsSearching(false);
-    }
-  };
+    };
+  }, [upcomingEtdShipments, isLoading]); // Re-run if list changes or loading completes
 
-  if (authLoading) { // Only show global loader if auth is loading
+
+  if (authLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -423,7 +436,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!authUser && !authLoading) { // If auth is done and no user, show a message (AuthGuard might redirect anyway)
+  if (!authUser && !authLoading) {
      return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
          <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -445,7 +458,7 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-xl sm:text-2xl lg:text-3xl", // Adjusted size for mobile
+              "font-bold text-xl sm:text-2xl lg:text-3xl", 
               "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
@@ -468,7 +481,7 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-      { isLoading && !authLoading ? ( // Show data loading spinner only if auth is done but data is still fetching
+      { isLoading && !authLoading ? ( 
          <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
@@ -487,7 +500,6 @@ export default function DashboardPage() {
           value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -506,7 +518,6 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-1"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
@@ -519,7 +530,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -546,33 +557,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Search className="h-6 w-6 text-primary" />
-                Search L/C
-              </CardTitle>
-              <CardDescription>
-                Find a specific L/C by its number.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSearchLC} className="flex w-full items-center space-x-2">
-                <Input
-                    type="text"
-                    placeholder="Enter L/C Number..."
-                    className="flex-1"
-                    value={searchLcNumber}
-                    onChange={(e) => setSearchLcNumber(e.target.value)}
-                />
-                <Button type="submit" variant="outline" disabled={isSearching}>
-                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -580,32 +565,39 @@ export default function DashboardPage() {
                 L/Cs from {selectedYear} nearing their Estimated Time of Departure.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center h-20">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <CardContent 
+                className="h-72 space-y-3" // Set fixed height for the content area
+            >
+                {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : upcomingEtdShipments.length > 0 ? (
-                 <ul className="space-y-3">
-                  {upcomingEtdShipments.map((shipment) => (
-                     <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
-                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
-                           {shipment.documentaryCreditNumber || 'N/A'}
-                        </Link>
-                       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                           <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
-                           <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
-                           <p className="truncate sm:col-span-2 md:col-span-1 lg:col-span-2">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
-                           <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left sm:col-span-2 md:col-span-1 lg:col-span-2">
-                             ETD: {format(shipment.etdDate, 'PPP')}
-                           </p>
-                       </div>
-                     </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">No upcoming ETDs found for {selectedYear}.</p>
-              )}
+                ) : upcomingEtdShipments.length > 0 ? (
+                    <div 
+                        ref={upcomingEtdScrollRef} 
+                        className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    >
+                        {upcomingEtdShipments.map((shipment) => (
+                        <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
+                            <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
+                            {shipment.documentaryCreditNumber || 'N/A'}
+                            </Link>
+                            <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
+                                <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
+                                <p className="truncate sm:col-span-2">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
+                                <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left sm:col-span-2">
+                                ETD: {format(shipment.etdDate, 'PPP')}
+                                </p>
+                            </div>
+                        </li>
+                        ))}
+                    </div>
+                ) : (
+                <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground">No upcoming ETDs found for {selectedYear}.</p>
+                </div>
+                )}
             </CardContent>
           </Card>
         </div>
@@ -614,7 +606,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -667,7 +659,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-primary via-accent to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CardTitle className="text-primary font-bold text-xl lg:text-2xl flex items-center gap-2">
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
@@ -723,4 +715,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
