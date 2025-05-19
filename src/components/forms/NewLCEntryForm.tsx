@@ -141,7 +141,7 @@ export function NewLCEntryForm() {
       beneficiaryId: '',
       currency: 'USD' as Currency,
       amount: undefined,
-      termsOfPay: "" as LCEntry['termsOfPay'],
+      termsOfPay: termsOfPayOptions[0],
       documentaryCreditNumber: '',
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
@@ -160,7 +160,7 @@ export function NewLCEntryForm() {
       itemDescriptions: '',
       consigneeBankNameAddress: '',
       bankBin: '',
-      shipmentMode: "" as ShipmentMode,
+      shipmentMode: shipmentModeOptions[0],
       vesselOrFlightName: '',
       vesselImoNumber: '',
       flightNumber: '',
@@ -429,16 +429,16 @@ export function NewLCEntryForm() {
       secondPartialAmount: finalData.secondPartialAmount,
       thirdPartialAmount: finalData.thirdPartialAmount,
       firstPartialPkgs: finalData.firstPartialPkgs,
-      secondPartialPkgs: finalData.secondPartialPkgs,
-      thirdPartialPkgs: finalData.thirdPartialPkgs,
       firstPartialNetWeight: finalData.firstPartialNetWeight,
-      secondPartialNetWeight: finalData.secondPartialNetWeight,
-      thirdPartialNetWeight: finalData.thirdPartialNetWeight,
       firstPartialGrossWeight: finalData.firstPartialGrossWeight,
-      secondPartialGrossWeight: finalData.secondPartialGrossWeight,
-      thirdPartialGrossWeight: finalData.thirdPartialGrossWeight,
       firstPartialCbm: finalData.firstPartialCbm,
+      secondPartialPkgs: finalData.secondPartialPkgs,
+      secondPartialNetWeight: finalData.secondPartialNetWeight,
+      secondPartialGrossWeight: finalData.secondPartialGrossWeight,
       secondPartialCbm: finalData.secondPartialCbm,
+      thirdPartialPkgs: finalData.thirdPartialPkgs,
+      thirdPartialNetWeight: finalData.thirdPartialNetWeight,
+      thirdPartialGrossWeight: finalData.thirdPartialGrossWeight,
       thirdPartialCbm: finalData.thirdPartialCbm,
       originalBlQty: finalData.originalBlQty,
       copyBlQty: finalData.copyBlQty,
@@ -603,7 +603,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                <Select onValueChange={field.onChange} value={field.value ?? currencyOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -640,7 +640,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                <Select onValueChange={field.onChange} value={field.value ?? termsOfPayOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -1053,7 +1053,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-             {watchedPartialShipmentAllowed === "Yes" && (
+            {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1083,7 +1083,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1608,4 +1608,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-

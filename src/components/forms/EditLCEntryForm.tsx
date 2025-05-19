@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, LcOption } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions as formPartialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, CustomerDocument, SupplierDocument, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, Info, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -89,7 +89,7 @@ const lcEntrySchema = z.object({
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
-  partialShipmentAllowed: z.enum(formPartialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -181,11 +181,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       shippingMarks: initialData?.shippingMarks || '',
       certificateOfOrigin: initialData?.certificateOfOrigin || [],
       notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '',
+      notifyPartyName: initialData?.notifyPartyName || '', // was notifyPartyContactDetails
       notifyPartyCell: initialData?.notifyPartyCell || '',
       notifyPartyEmail: initialData?.notifyPartyEmail || '',
       numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
-      partialShipmentAllowed: initialData?.partialShipmentAllowed && formPartialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : formPartialShipmentAllowedOptions[1], // 'No'
+      partialShipmentAllowed: initialData?.partialShipmentAllowed && partialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : partialShipmentAllowedOptions[1], // 'No'
       firstPartialQty: initialData?.firstPartialQty ?? 0,
       secondPartialQty: initialData?.secondPartialQty ?? 0,
       thirdPartialQty: initialData?.thirdPartialQty ?? 0,
@@ -238,7 +238,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("EditLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
         
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -246,7 +245,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
-        console.log("EditLCEntryForm: Fetched Beneficiary Options:", fetchedBeneficiaries);
 
       } catch (error) {
         console.error("Error fetching dropdown data for Edit L/C Form: ", error);
@@ -257,15 +255,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       }
     };
     fetchDropdownData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
-    console.log("EditLCEntryForm: Initial L/C Data for Form:", initialData);
-    console.log("EditLCEntryForm: isLoadingApplicants:", isLoadingApplicants, "isLoadingBeneficiaries:", isLoadingBeneficiaries);
-
     if (initialData && !isLoadingApplicants && !isLoadingBeneficiaries && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
-      console.log("EditLCEntryForm: Populating form with initialData");
+      console.log("EditLCEntryForm: Initial L/C Data for Form:", initialData);
+      console.log("EditLCEntryForm: Fetched Applicant Options:", applicantOptions);
+      console.log("EditLCEntryForm: Fetched Beneficiary Options:", beneficiaryOptions);
+      
       form.reset({
         applicantId: initialData.applicantId || '',
         beneficiaryId: initialData.beneficiaryId || '',
@@ -309,7 +306,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         notifyPartyCell: initialData.notifyPartyCell || '',
         notifyPartyEmail: initialData.notifyPartyEmail || '',
         numberOfAmendments: initialData.numberOfAmendments ?? undefined,
-        partialShipmentAllowed: initialData.partialShipmentAllowed && formPartialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : formPartialShipmentAllowedOptions[1], 
+        partialShipmentAllowed: initialData.partialShipmentAllowed && partialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : partialShipmentAllowedOptions[1], 
         firstPartialQty: initialData.firstPartialQty ?? 0,
         secondPartialQty: initialData.secondPartialQty ?? 0,
         thirdPartialQty: initialData.thirdPartialQty ?? 0,
@@ -1046,14 +1043,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed*</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value && formPartialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : formPartialShipmentAllowedOptions[1]}>
+              <Select onValueChange={field.onChange} value={field.value && partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : partialShipmentAllowedOptions[1]}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {formPartialShipmentAllowedOptions.map(option => (
+                  {partialShipmentAllowedOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1188,7 +1185,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value && shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}>
+                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1213,7 +1210,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="vesselOrFlightName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{viaLabelDisplay}</FormLabel>
+                    <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
                     <Input
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
@@ -1704,8 +1701,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
@@ -1713,4 +1710,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
