@@ -214,13 +214,13 @@ export default function UpcomingShipmentsPage() {
                 const isPastOrToday = isValid(shipmentDateStart) && compareAsc(shipmentDateStart, today) <= 0;
 
                 return (
-                <li 
-                    key={lc.id} 
+                <li
+                    key={lc.id}
                     className={cn(
                         "p-4 rounded-lg hover:shadow-md transition-shadow",
-                        isPastOrToday 
-                            ? "border-2 border-destructive dark:border-destructive shadow-md shadow-destructive/20" 
-                            : "border"
+                        isPastOrToday
+                            ? "bg-destructive/10 border border-destructive/30"
+                            : "border bg-card"
                     )}
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start mb-2">
@@ -229,11 +229,11 @@ export default function UpcomingShipmentsPage() {
                     </Link>
                      <Badge
                         variant={getStatusBadgeVariant(lc.status)}
-                        className={
+                        className={cn(
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
-                            lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600 dark:text-white' : ''
-                        }
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                            lc.status === 'Transmitted' ? 'bg-primary/80 text-primary-foreground' : ''
+                        )}
                         >
                         {lc.status || 'N/A'}
                     </Badge>
@@ -247,27 +247,26 @@ export default function UpcomingShipmentsPage() {
                          <p className="text-muted-foreground">
                           Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                         </p>
+                         {lc.status === "Shipping going on" && (
+                            <p className="text-muted-foreground">
+                                ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                            </p>
+                        )}
                     </div>
                     <div>
                         <p className="text-muted-foreground">
                           Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                         </p>
-                        <p className="text-muted-foreground font-semibold">
-                          Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-destructive-foreground" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                        <p className={cn("text-muted-foreground font-semibold")}>
+                          Latest Shipment: <span className={cn("font-medium", isPastOrToday && (isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground"))}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                         </p>
+                        {lc.status === "Shipping going on" && (
+                            <p className="text-muted-foreground">
+                                ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                            </p>
+                        )}
                     </div>
                   </div>
-                  
-                  {lc.status === "Shipping going on" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-1">
-                      <p className="text-muted-foreground">
-                        ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
-                      </p>
-                      <p className="text-muted-foreground">
-                        ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                      </p>
-                    </div>
-                  )}
 
                    <div className="mt-2 flex justify-end">
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
@@ -323,6 +322,3 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
-
-
-    
