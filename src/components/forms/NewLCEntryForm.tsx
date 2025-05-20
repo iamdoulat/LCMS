@@ -64,6 +64,7 @@ const lcEntrySchema = z.object({
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
+  // bankBin removed as per previous request
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
@@ -156,6 +157,7 @@ export function NewLCEntryForm() {
       portOfLoading: '',
       portOfDischarge: '',
       consigneeBankNameAddress: '',
+      // bankBin removed
       notifyPartyNameAndAddress: '',
       notifyPartyName: '',
       notifyPartyCell: '',
@@ -256,8 +258,7 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = watch("applicantId");
-  const { setValue: setFormValue } = form; // Destructure for stable reference
-
+  
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
@@ -265,13 +266,17 @@ export function NewLCEntryForm() {
       console.log("NewLCEntryForm: Applicant Options for check:", applicantOptions);
       console.log("NewLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
-        setFormValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        setFormValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        setFormValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        setFormValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
+        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
+        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
+        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
-  }, [watchedApplicantId, applicantOptions, setFormValue]);
+  }, [watchedApplicantId, applicantOptions, setValue]);
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -340,11 +345,9 @@ export function NewLCEntryForm() {
         setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0) as any, { shouldValidate: true, shouldDirty: true });
         setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0) as any, { shouldValidate: true, shouldDirty: true });
     } else {
-        // When partial shipment is "No", calculated partial totals should be 0
         setTotalCalculatedPartialQty(0);
         setTotalCalculatedPartialAmount(0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
 
@@ -357,9 +360,8 @@ export function NewLCEntryForm() {
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
-    let finalData = { ...data };
+    const finalData = { ...data };
 
-    // Prepare dataToSave object
     const dataToSave: Omit<LCEntryDocument, 'id'> = {
       applicantId: finalData.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : '',
@@ -404,8 +406,6 @@ export function NewLCEntryForm() {
       year: extractedYear,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
-
-      // Partial shipment details (save actuals, not just totals if partial is No)
       firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialQty : undefined,
       secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialQty : undefined,
       thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialQty : undefined,
@@ -424,7 +424,6 @@ export function NewLCEntryForm() {
       firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialCbm : undefined,
       secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialCbm : undefined,
       thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialCbm : undefined,
-      
       totalPackageQty: finalData.partialShipmentAllowed === "Yes" 
         ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
         : finalData.totalPackageQty,
@@ -437,22 +436,20 @@ export function NewLCEntryForm() {
       totalCbm: finalData.partialShipmentAllowed === "Yes" 
         ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
         : finalData.totalCbm,
-
-      // 46A Document Quantities
-      originalBlQty: finalData.originalBlQty,
-      copyBlQty: finalData.copyBlQty,
-      originalCooQty: finalData.originalCooQty,
-      copyCooQty: finalData.copyCooQty,
-      invoiceQty: finalData.invoiceQty,
-      packingListQty: finalData.packingListQty,
-      beneficiaryCertificateQty: finalData.beneficiaryCertificateQty,
-      brandNewCertificateQty: finalData.brandNewCertificateQty,
-      beneficiaryWarrantyCertificateQty: finalData.beneficiaryWarrantyCertificateQty,
-      beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty,
-      shipmentAdviceQty: finalData.shipmentAdviceQty,
-      billOfExchangeQty: finalData.billOfExchangeQty,
+      originalBlQty: toNumberOrUndefined(finalData.originalBlQty) ?? undefined,
+      copyBlQty: toNumberOrUndefined(finalData.copyBlQty) ?? undefined,
+      originalCooQty: toNumberOrUndefined(finalData.originalCooQty) ?? undefined,
+      copyCooQty: toNumberOrUndefined(finalData.copyCooQty) ?? undefined,
+      invoiceQty: toNumberOrUndefined(finalData.invoiceQty) ?? undefined,
+      packingListQty: toNumberOrUndefined(finalData.packingListQty) ?? undefined,
+      beneficiaryCertificateQty: toNumberOrUndefined(finalData.beneficiaryCertificateQty) ?? undefined,
+      brandNewCertificateQty: toNumberOrUndefined(finalData.brandNewCertificateQty) ?? undefined,
+      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(finalData.beneficiaryWarrantyCertificateQty) ?? undefined,
+      beneficiaryComplianceCertificateQty: toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty) ?? undefined,
+      shipmentAdviceQty: toNumberOrUndefined(finalData.shipmentAdviceQty) ?? undefined,
+      billOfExchangeQty: toNumberOrUndefined(finalData.billOfExchangeQty) ?? undefined,
     };
-
+    
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
         acc[key as keyof typeof acc] = value;
@@ -473,6 +470,7 @@ export function NewLCEntryForm() {
       form.reset();
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
+      setActiveSection46A(undefined); // Close accordion
     } catch (error) {
       console.error("Error adding L/C document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -602,7 +600,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? currencyOptions[0]}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -639,7 +637,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? termsOfPayOptions[0]}>
+                <Select onValueChange={field.onChange} value={field.value ?? ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -876,7 +874,6 @@ export function NewLCEntryForm() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 p-2">
-            {/* 1st Partial */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -886,7 +883,6 @@ export function NewLCEntryForm() {
               <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
-            {/* 2nd Partial */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -896,7 +892,6 @@ export function NewLCEntryForm() {
               <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
-            {/* 3rd Partial */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -919,7 +914,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated.</FormDescription>}
+                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -933,7 +928,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -947,7 +942,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -961,7 +956,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated.</FormDescription>}
+                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
                     <FormMessage />
                 </FormItem>
                 )}
@@ -982,6 +977,206 @@ export function NewLCEntryForm() {
                 </FormItem>
               </>
             )}
+        </div>
+        <Separator />
+
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+            <Workflow className="mr-2 h-5 w-5 text-primary" />
+            Shipping Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <FormField
+                control={form.control}
+                name="shipmentMode"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select shipment mode" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {shipmentModeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                            {option}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="vesselOrFlightName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormControl>
+                    <Input
+                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                        {...field}
+                        disabled={!watchedShipmentMode}
+                        value={field.value ?? ''}
+                    />
+                    </FormControl>
+                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+        {watchedShipmentMode === 'Sea' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                    control={form.control}
+                    name="vesselImoNumber"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                            <FormLabel>Vessel IMO Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleTrackVessel}
+                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
+                    className="md:col-span-1"
+                    title="Track Vessel via IMO Number"
+                >
+                    <Search className="mr-2 h-4 w-4" />
+                    Track Vessel
+                </Button>
+            </div>
+        )}
+        {watchedShipmentMode === 'Air' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+            <FormField
+              control={form.control}
+              name="flightNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Flight Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                const flightNum = form.getValues("flightNumber");
+                if (flightNum && flightNum.trim() !== "") {
+                  window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
+                } else {
+                  Swal.fire("Info", "Please enter a flight number to track.", "info");
+                }
+              }}
+              disabled={!form.watch("flightNumber") || isSubmitting}
+              className="md:col-span-1"
+              title="Track Flight on FlightRadar24"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Track Flight
+            </Button>
+          </div>
+        )}
+        <Separator />
+
+        <div className="mt-6">
+            <h4 className="text-base font-bold text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+                <FormField
+                    control={form.control}
+                    name="trackingCourier"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Courier By</FormLabel>
+                        <Select
+                            onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
+                        >
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select Courier" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                             <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
+                            {trackingCourierOptions.map(courier => (
+                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="trackingNumber"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel>Tracking Number</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''}/>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleTrackDocument}
+                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
+                    className="md:col-span-1 mt-4 md:mt-0"
+                    title="Track Original Document"
+                >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Track
+                </Button>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+             <FormField
+                control={form.control}
+                name="etd"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
+                     <DatePickerField field={field} placeholder="Select ETD" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="eta"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
+                    <DatePickerField field={field} placeholder="Select ETA" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
         </div>
         <Separator />
 
@@ -1304,206 +1499,6 @@ export function NewLCEntryForm() {
         />
         <Separator />
 
-        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-            <Workflow className="mr-2 h-5 w-5 text-primary" />
-            Shipping Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField
-                control={form.control}
-                name="shipmentMode"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
-                    <FormControl>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Select shipment mode" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {shipmentModeOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                            {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
-                            {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
-                            {option}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="vesselOrFlightName"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>{viaLabel}</FormLabel>
-                    <FormControl>
-                    <Input
-                        placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
-                        {...field}
-                        disabled={!watchedShipmentMode}
-                        value={field.value ?? ''}
-                    />
-                    </FormControl>
-                    {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-        </div>
-        {watchedShipmentMode === 'Sea' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-                <FormField
-                    control={form.control}
-                    name="vesselImoNumber"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                            <FormLabel>Vessel IMO Number</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''}/>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleTrackVessel}
-                    disabled={!form.watch("vesselImoNumber") || isSubmitting}
-                    className="md:col-span-1"
-                    title="Track Vessel via IMO Number"
-                >
-                    <Search className="mr-2 h-4 w-4" />
-                    Track Vessel
-                </Button>
-            </div>
-        )}
-        {watchedShipmentMode === 'Air' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-            <FormField
-              control={form.control}
-              name="flightNumber"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Flight Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => {
-                const flightNum = form.getValues("flightNumber");
-                if (flightNum && flightNum.trim() !== "") {
-                  window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
-                } else {
-                  Swal.fire("Info", "Please enter a flight number to track.", "info");
-                }
-              }}
-              disabled={!form.watch("flightNumber") || isSubmitting}
-              className="md:col-span-1"
-              title="Track Flight on FlightRadar24"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Track Flight
-            </Button>
-          </div>
-        )}
-        <Separator />
-
-        <div className="mt-6">
-            <h4 className="text-base font-bold text-foreground flex items-center mb-2">
-                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-                <FormField
-                    control={form.control}
-                    name="trackingCourier"
-                    render={({ field }) => (
-                    <FormItem className="md:col-span-1">
-                        <FormLabel>Courier By</FormLabel>
-                        <Select
-                            onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
-                        >
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select Courier" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                             <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
-                            {trackingCourierOptions.map(courier => (
-                                <SelectItem key={courier} value={courier}>{courier}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="trackingNumber"
-                    render={({ field }) => (
-                    <FormItem className="md:col-span-1">
-                        <FormLabel>Tracking Number</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Enter tracking number" {...field} disabled={!form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''}/>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleTrackDocument}
-                    disabled={!form.watch("trackingNumber") || !form.watch("trackingCourier") || form.watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
-                    className="md:col-span-1 mt-4 md:mt-0"
-                    title="Track Original Document"
-                >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Track
-                </Button>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-             <FormField
-                control={form.control}
-                name="etd"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
-                     <DatePickerField field={field} placeholder="Select ETD" />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="eta"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
-                    <DatePickerField field={field} placeholder="Select ETA" />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-        </div>
-        <Separator />
-        
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
