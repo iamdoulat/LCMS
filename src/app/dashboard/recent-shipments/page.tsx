@@ -218,7 +218,7 @@ export default function RecentShipmentsPage() {
                       {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
                     <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
@@ -242,11 +242,8 @@ export default function RecentShipmentsPage() {
                        ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                     </p>
                   </div>
-                  <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <p className="text-xs text-muted-foreground">
-                      Completed: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
-                    </p>
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline mt-1 sm:mt-0 inline-flex items-center">
+                  <div className="mt-2 flex justify-end">
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
                      View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
                    </Link>
                   </div>
