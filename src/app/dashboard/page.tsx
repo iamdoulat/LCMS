@@ -115,9 +115,9 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
-    return 'Invalid Date Format';
+    return 'N/A';
   }
 };
 
@@ -228,6 +228,7 @@ export default function DashboardPage() {
 
 
       if (lcEntriesForTheYear.length === 0) {
+        console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
         setDashboardStats({
           totalLCs: 0,
           totalLCValue: 0,
@@ -244,7 +245,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (lc.amount || 0), 0);
+      const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
       const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => id)).size;
 
@@ -269,9 +270,10 @@ export default function DashboardPage() {
 
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
+        if (typeof lc.amount !== 'number' || !lc.beneficiaryId) return;
         const brandName = supplierBrandNameMap.get(lc.beneficiaryId);
         const displayName = brandName || (lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand');
-        supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + (lc.amount || 0);
+        supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
       });
 
       const pieData = Object.entries(supplierValueMap)
@@ -286,17 +288,6 @@ export default function DashboardPage() {
       const completedLCs = lcEntriesForTheYear
         .filter(lc => lc.status === 'Done')
         .map(lc => {
-          let updatedAtDate = new Date(0);
-          if (lc.updatedAt) {
-            if (typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
-              updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
-            } else if (typeof lc.updatedAt === 'string') {
-              try {
-                const parsed = parseISO(lc.updatedAt);
-                if (isValid(parsed)) updatedAtDate = parsed;
-              } catch (e) { console.warn("Error parsing updatedAt for completed L/C:", lc.id, lc.updatedAt); }
-            }
-          }
           return {
             id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
             beneficiaryName: lc.beneficiaryName, applicantName: lc.applicantName,
@@ -468,11 +459,19 @@ export default function DashboardPage() {
   }, [upcomingEtdShipments, isLoading]); 
 
 
-  if (authLoading || (!authUser && !isLoading) ) {
+  if (authLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+  
+  if (!authUser && !isLoading && !authLoading) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <p className="text-muted-foreground">Please log in to view the dashboard.</p>
       </div>
     );
   }
@@ -590,7 +589,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <CardHeader>
-              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "text-primary")}>
+              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
                 Upcoming ETDs
               </CardTitle>
@@ -637,7 +636,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "text-primary")}>
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
               Draft L/Cs
             </CardTitle>
@@ -690,7 +689,7 @@ export default function DashboardPage() {
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "text-primary")}>
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
               Recently Completed L/Cs
             </CardTitle>
