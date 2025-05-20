@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount'> {
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'etd' | 'eta'> {
   latestShipmentDateObj: Date;
 }
 
@@ -72,7 +72,6 @@ export default function UpcomingShipmentsPage() {
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
           orderBy("latestShipmentDate", "asc")
-          // Removed limit(30) to fetch all matching LCs for pagination
         );
         const querySnapshot = await getDocs(q);
 
@@ -103,6 +102,8 @@ export default function UpcomingShipmentsPage() {
             status: data.status,
             currency: data.currency,
             amount: data.amount,
+            etd: data.etd,
+            eta: data.eta,
           };
         });
 
@@ -179,7 +180,7 @@ export default function UpcomingShipmentsPage() {
             Upcoming Shipments
           </CardTitle>
           <CardDescription>
-            List of L/Cs with status Transmitted, Shipment Pending, or Shipping going on, sorted by nearest latest shipment date.
+            List of L/Cs with active shipment statuses, sorted by nearest latest shipment date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -223,7 +224,7 @@ export default function UpcomingShipmentsPage() {
                         {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-sm">
                     <p className="text-muted-foreground">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
@@ -233,8 +234,16 @@ export default function UpcomingShipmentsPage() {
                     <p className="text-muted-foreground">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
-                     <p className="text-muted-foreground">
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mt-1">
+                     <p className="text-muted-foreground font-semibold">
                       Latest Shipment: <span className="font-medium text-foreground">{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                    </p>
+                     <p className="text-muted-foreground">
+                      ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                     </p>
                   </div>
                    <div className="mt-2 flex justify-end">
