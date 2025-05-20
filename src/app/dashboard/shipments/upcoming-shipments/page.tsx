@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore'; // Removed limit
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipping going on':
       return 'default';
     case 'Payment Done':
-      return 'default';
+      return 'default'; // Added to handle this status, though not primary for "upcoming"
     case 'Done':
       return 'default'; 
     default:
@@ -72,7 +72,7 @@ export default function UpcomingShipmentsPage() {
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
           orderBy("latestShipmentDate", "asc")
-          // Removed limit(30) to allow pagination through all matching LCs
+          // Removed limit to fetch all matching LCs for pagination
         );
         const querySnapshot = await getDocs(q);
 
@@ -91,8 +91,6 @@ export default function UpcomingShipmentsPage() {
                console.warn(`Unexpected type for latestShipmentDate for L/C ID: ${doc.id}`, data.latestShipmentDate);
             }
           } else {
-            // If latestShipmentDate is crucial for sorting/filtering, consider how to handle missing ones.
-            // For now, it might result in an invalid date for sorting purposes if not handled carefully.
             console.warn(`Missing latestShipmentDate for L/C ID: ${doc.id}`);
           }
 
@@ -178,9 +176,9 @@ export default function UpcomingShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl text-primary")}>
             <CalendarClock className="h-7 w-7 text-primary" />
-            Upcoming Shipments
+            Upcoming L/C Shipment Dates
           </CardTitle>
           <CardDescription>
             List of L/Cs with active shipment statuses (Transmitted, Shipment Pending, Shipping going on), sorted by nearest latest shipment date.
@@ -213,7 +211,7 @@ export default function UpcomingShipmentsPage() {
             <ul className="space-y-4">
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                  <div className="flex flex-col sm:flex-row justify-between items-start mb-2">
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
@@ -227,28 +225,32 @@ export default function UpcomingShipmentsPage() {
                         {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-sm">
-                    <p className="text-muted-foreground">
-                      Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
-                    </p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div>
+                        <p className="text-muted-foreground">
+                          Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">
+                          Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
+                        </p>
+                        <p className="text-muted-foreground font-semibold">
+                          Latest Shipment: <span className="font-medium text-foreground">{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                        </p>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mt-1">
-                     <p className="text-muted-foreground font-semibold">
-                      Latest Shipment: <span className="font-medium text-foreground">{formatDisplayDate(lc.latestShipmentDateObj)}</span>
-                    </p>
-                     <p className="text-muted-foreground">
-                      ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                    </p>
-                  </div>
+
                    <div className="mt-2 flex justify-end">
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
                         View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
@@ -302,3 +304,6 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
+
+
+    
