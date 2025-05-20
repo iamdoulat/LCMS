@@ -8,7 +8,7 @@ import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, compareAsc } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
@@ -175,7 +175,7 @@ export default function UpcomingShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl text-primary")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <CalendarClock className="h-7 w-7 text-primary" />
             Upcoming L/C Shipment Dates
           </CardTitle>
@@ -208,8 +208,21 @@ export default function UpcomingShipmentsPage() {
             </div>
           ) : (
             <ul className="space-y-4">
-              {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
+              {currentItems.map((lc) => {
+                const today = startOfDay(new Date());
+                const shipmentDateStart = startOfDay(lc.latestShipmentDateObj);
+                const isPastOrToday = isValid(shipmentDateStart) && compareAsc(shipmentDateStart, today) <= 0;
+
+                return (
+                <li 
+                    key={lc.id} 
+                    className={cn(
+                        "p-4 rounded-lg hover:shadow-md transition-shadow",
+                        isPastOrToday 
+                            ? "border-2 border-destructive dark:border-destructive shadow-md shadow-destructive/20" 
+                            : "border"
+                    )}
+                >
                   <div className="flex flex-col sm:flex-row justify-between items-start mb-2">
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
                       {lc.documentaryCreditNumber || 'N/A'}
@@ -218,7 +231,8 @@ export default function UpcomingShipmentsPage() {
                         variant={getStatusBadgeVariant(lc.status)}
                         className={
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : ''
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
+                            lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600 dark:text-white' : ''
                         }
                         >
                         {lc.status || 'N/A'}
@@ -239,10 +253,11 @@ export default function UpcomingShipmentsPage() {
                           Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                         </p>
                         <p className="text-muted-foreground font-semibold">
-                          Latest Shipment: <span className="font-medium text-foreground">{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                          Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-destructive-foreground" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                         </p>
                     </div>
                   </div>
+                  
                   {lc.status === "Shipping going on" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-1">
                       <p className="text-muted-foreground">
@@ -260,7 +275,8 @@ export default function UpcomingShipmentsPage() {
                     </Link>
                    </div>
                 </li>
-              ))}
+                );
+            })}
             </ul>
           )}
           {totalPages > 1 && (
@@ -307,3 +323,6 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
+
+
+    
