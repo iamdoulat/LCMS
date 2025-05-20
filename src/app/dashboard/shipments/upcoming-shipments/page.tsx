@@ -4,9 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
+import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore'; // Removed limit
+import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'etd' | 'eta'> { 
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'latestShipmentDate' | 'etd' | 'eta'> {
   latestShipmentDateObj: Date;
 }
 
@@ -26,14 +26,14 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': 
-      return 'default'; 
+    case 'Shipment Pending':
+      return 'default';
     case 'Shipping going on':
       return 'default';
     case 'Payment Done':
-      return 'default'; // Added to handle this status, though not primary for "upcoming"
+      return 'default';
     case 'Done':
-      return 'default'; 
+      return 'default';
     default:
       return 'outline';
   }
@@ -54,7 +54,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ACTIVE_LC_STATUSES: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"]; 
+const ACTIVE_LC_STATUSES: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"];
 
 export default function UpcomingShipmentsPage() {
   const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
@@ -72,13 +72,12 @@ export default function UpcomingShipmentsPage() {
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
           orderBy("latestShipmentDate", "asc")
-          // Removed limit to fetch all matching LCs for pagination
         );
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0); 
+          let latestShipmentDateObj = new Date(0);
 
           if (data.latestShipmentDate) {
             if (typeof (data.latestShipmentDate as unknown as Timestamp).toDate === 'function') {
@@ -97,17 +96,17 @@ export default function UpcomingShipmentsPage() {
           return {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
-            applicantName: data.applicantName, 
+            applicantName: data.applicantName,
             beneficiaryName: data.beneficiaryName,
             latestShipmentDateObj: latestShipmentDateObj,
             status: data.status,
-            currency: data.currency, 
+            currency: data.currency,
             amount: data.amount,
             etd: data.etd,
             eta: data.eta,
           };
         });
-        
+
         setAllUpcomingLCs(fetchedLCs);
 
       } catch (error: any) {
@@ -151,15 +150,15 @@ export default function UpcomingShipmentsPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -167,7 +166,7 @@ export default function UpcomingShipmentsPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
@@ -225,17 +224,14 @@ export default function UpcomingShipmentsPage() {
                         {lc.status || 'N/A'}
                     </Badge>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
                     <div>
                         <p className="text-muted-foreground">
                           Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                         </p>
-                        <p className="text-muted-foreground">
+                         <p className="text-muted-foreground">
                           Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
-                        </p>
-                        <p className="text-muted-foreground">
-                          ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
                         </p>
                     </div>
                     <div>
@@ -245,11 +241,18 @@ export default function UpcomingShipmentsPage() {
                         <p className="text-muted-foreground font-semibold">
                           Latest Shipment: <span className="font-medium text-foreground">{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                         </p>
-                        <p className="text-muted-foreground">
-                          ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                        </p>
                     </div>
                   </div>
+                  {lc.status === "Shipping going on" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-1">
+                      <p className="text-muted-foreground">
+                        ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                      </p>
+                    </div>
+                  )}
 
                    <div className="mt-2 flex justify-end">
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
@@ -304,6 +307,3 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
-
-
-    
