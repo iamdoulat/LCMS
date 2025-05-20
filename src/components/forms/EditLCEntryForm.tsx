@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -58,25 +57,18 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
-  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
-  expireDate: z.date({ required_error: "Expire date is required" }),
-  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
+  numberOfAmendments: z.preprocess(
+    toNumberOrUndefined,
+    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
+  ),
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
@@ -86,10 +78,9 @@ const lcEntrySchema = z.object({
   notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  numberOfAmendments: z.preprocess(
-    toNumberOrUndefined,
-    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
-  ),
+  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
+  expireDate: z.date({ required_error: "Expire date is required" }),
+  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -109,6 +100,10 @@ const lcEntrySchema = z.object({
   thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
   thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
   thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -121,6 +116,10 @@ const lcEntrySchema = z.object({
   beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -349,8 +348,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId || '');
       console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId || '');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]); // Removed form from dependencies
+  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
 
   const watchedApplicantId = watch("applicantId");
   
@@ -414,30 +412,31 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedPartialShipmentAllowed, setValue]); // getValues removed from dep array as it can cause loops
+  }, [watchedPartialShipmentAllowed, setValue, getValues]); 
   
 
   React.useEffect(() => {
     const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q) || 0);
     const amounts = [getValues("firstPartialAmount"), getValues("secondPartialAmount"), getValues("thirdPartialAmount")].map(a => Number(a) || 0);
     
-    setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-    setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
-
     if (watchedPartialShipmentAllowed === "Yes") {
-      const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
-      const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
-      const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
-      const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
+        setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
+        setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
 
-      setValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
+        const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
+        const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
+        const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
+
+        setValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+    } else {
+        setTotalCalculatedPartialQty(0);
+        setTotalCalculatedPartialAmount(0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedPartialShipmentAllowed, setValue, ...watchedPartialValues]); // getValues removed from dep array
+  }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]); 
 
 
   async function onSubmit(data: LCEditFormValues) {
@@ -555,7 +554,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     };
     
     const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
-      if (value !== undefined) { // Keep deleteField() sentinels
+      if (value !== undefined) { 
          acc[key as keyof typeof acc] = value;
       }
       return acc;
@@ -662,7 +661,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
-          L/C & Invoice Details
+          L/C &amp; Invoice Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -867,20 +866,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               )}
             />
         </div>
-        <FormField
-            control={form.control}
-            name="itemDescriptions"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Item Descriptions</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="partialShipments"
@@ -922,6 +908,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
+        <FormField
+            control={form.control}
+            name="itemDescriptions"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Item Descriptions</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
@@ -1003,7 +1002,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-            Important Dates & Partial Shipment Details
+            Important Dates &amp; Partial Shipment Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
@@ -1082,8 +1081,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
@@ -1092,8 +1091,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
@@ -1102,8 +1101,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             </CardContent>
@@ -1197,7 +1196,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select onValueChange={field.onChange} value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1222,7 +1221,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="vesselOrFlightName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormLabel>{viaLabelDisplay}</FormLabel>
                     <FormControl>
                     <Input
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
@@ -1711,7 +1710,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
                         <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
-                    </FormControl>
+                    FormControl>
                      <Button
                         type="button"
                         variant="default"
@@ -1733,12 +1732,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Saving Changes...
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>

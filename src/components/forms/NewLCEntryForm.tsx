@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, deleteField } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +22,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -325,19 +325,22 @@ export function NewLCEntryForm() {
     const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q) || 0);
     const amounts = [getValues("firstPartialAmount"), getValues("secondPartialAmount"), getValues("thirdPartialAmount")].map(a => Number(a) || 0);
     
-    setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-    setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
-
     if (watchedPartialShipmentAllowed === "Yes") {
-      const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
-      const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
-      const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
-      const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
+        setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
+        setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
 
-      setValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
-      setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
+        const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
+        const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
+        const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
+
+        setValue("totalPackageQty", pkgs.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalNetWeight", netWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+        setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
+    } else {
+        setTotalCalculatedPartialQty(0);
+        setTotalCalculatedPartialAmount(0);
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
@@ -362,7 +365,7 @@ export function NewLCEntryForm() {
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
       ] as const;
       fieldsToNullify.forEach(field => {
-        (finalData as any)[field] = undefined;
+        (finalData as any)[field] = deleteField();
       });
     } else { 
         finalData.totalPackageQty = [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
@@ -550,7 +553,7 @@ export function NewLCEntryForm() {
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
-          L/C & Invoice Details
+          L/C &amp; Invoice Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -601,7 +604,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                <Select onValueChange={field.onChange} value={field.value ?? currencyOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -638,7 +641,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms of Pay*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                <Select onValueChange={field.onChange} value={field.value ?? termsOfPayOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms of payment" />
@@ -745,20 +748,8 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <FormField
-            control={form.control}
-            name="itemDescriptions"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Item Descriptions</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="partialShipments"
@@ -800,6 +791,19 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+        <FormField
+            control={form.control}
+            name="itemDescriptions"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Item Descriptions</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
@@ -881,7 +885,7 @@ export function NewLCEntryForm() {
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-            Important Dates & Partial Shipment Details
+            Important Dates &amp; Partial Shipment Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
@@ -957,8 +961,8 @@ export function NewLCEntryForm() {
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
@@ -967,8 +971,8 @@ export function NewLCEntryForm() {
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
@@ -977,8 +981,8 @@ export function NewLCEntryForm() {
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             </CardContent>
@@ -1042,7 +1046,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+           {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1072,7 +1076,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select onValueChange={field.onChange} value={field.value ?? shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
