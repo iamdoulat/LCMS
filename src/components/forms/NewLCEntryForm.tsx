@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -66,7 +67,7 @@ const lcEntrySchema = z.object({
   eta: z.date().optional().nullable(),
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
-  bankBin: z.string().optional(),
+  // bankBin: z.string().optional(), // Removed
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
@@ -119,6 +120,7 @@ const lcEntrySchema = z.object({
   beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
 });
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
@@ -139,7 +141,7 @@ export function NewLCEntryForm() {
     defaultValues: {
       applicantId: '',
       beneficiaryId: '',
-      currency: 'USD' as Currency,
+      currency: currencyOptions[0],
       amount: undefined,
       termsOfPay: termsOfPayOptions[0],
       documentaryCreditNumber: '',
@@ -159,7 +161,7 @@ export function NewLCEntryForm() {
       eta: undefined,
       itemDescriptions: '',
       consigneeBankNameAddress: '',
-      bankBin: '',
+      // bankBin: '', // Removed
       shipmentMode: shipmentModeOptions[0],
       vesselOrFlightName: '',
       vesselImoNumber: '',
@@ -209,6 +211,7 @@ export function NewLCEntryForm() {
       beneficiaryWarrantyCertificateQty: 0,
       beneficiaryComplianceCertificateQty: 0,
       shipmentAdviceQty: 0,
+      billOfExchangeQty: 0,
     },
   });
   
@@ -241,7 +244,6 @@ export function NewLCEntryForm() {
             return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
           })
         );
-        console.log("NewLCEntryForm: Fetched Beneficiary Options:", beneficiaryOptions);
       } catch (error) {
         console.error("Error fetching dropdown data for New L/C Entry Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
@@ -251,7 +253,6 @@ export function NewLCEntryForm() {
       }
     };
     fetchDropdownData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const watchedApplicantId = watch("applicantId");
@@ -264,13 +265,9 @@ export function NewLCEntryForm() {
       console.log("NewLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -311,7 +308,7 @@ export function NewLCEntryForm() {
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
         "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
         "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
-        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
+        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ] as const;
   
       fieldsToInitializeZero.forEach(fieldName => {
@@ -342,7 +339,6 @@ export function NewLCEntryForm() {
       setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
       setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
 
@@ -401,7 +397,7 @@ export function NewLCEntryForm() {
       eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       itemDescriptions: finalData.itemDescriptions || undefined,
       consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      bankBin: finalData.bankBin || undefined,
+      // bankBin: finalData.bankBin || undefined, // Removed
       shipmentMode: finalData.shipmentMode,
       vesselOrFlightName: finalData.vesselOrFlightName || undefined,
       vesselImoNumber: finalData.vesselImoNumber || undefined,
@@ -451,6 +447,7 @@ export function NewLCEntryForm() {
       beneficiaryWarrantyCertificateQty: finalData.beneficiaryWarrantyCertificateQty,
       beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: finalData.shipmentAdviceQty,
+      billOfExchangeQty: finalData.billOfExchangeQty,
       year: extractedYear,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
@@ -597,6 +594,8 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="currency"
@@ -820,19 +819,7 @@ export function NewLCEntryForm() {
             </FormItem>
             )}
         />
-        <FormField
-            control={form.control}
-            name="bankBin"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Bank BIN</FormLabel>
-                <FormControl>
-                <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        {/* Bank BIN field removed */}
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -1187,10 +1174,10 @@ export function NewLCEntryForm() {
           </div>
         )}
 
-         <div className="mt-6">
-            <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+        <div className="mt-6">
+            <h4 className="text-base font-bold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
-            </FormLabel>
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
                 <FormField
                     control={form.control}
@@ -1270,201 +1257,220 @@ export function NewLCEntryForm() {
               />
         </div>
 
-        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-            <FileSignature className="mr-2 h-5 w-5 text-primary" />
-            46A: Documents Required
-        </h3>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FormField
-              control={form.control}
-              name="originalBlQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="copyBlQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="originalCooQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="copyCooQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="invoiceQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="packingListQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="beneficiaryCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="brandNewCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="beneficiaryWarrantyCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="beneficiaryComplianceCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          <FormField
-            control={form.control}
-            name="shipmentAdviceQty"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="certificateOfOrigin"
-          render={() => (
-            <FormItem>
-              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
-              </FormLabel>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
-                {certificateOfOriginCountries.map((country) => (
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="documents-required">
+            <AccordionTrigger className={cn(sectionHeadingClass, "border-b-0 mb-0")}>
+              <FileSignature className="mr-2 h-5 w-5 text-primary" />
+              46A: Documents Required
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormField
-                    key={country}
                     control={form.control}
-                    name="certificateOfOrigin"
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(country)}
-                              onCheckedChange={(checked) => {
-                                const currentValue = field.value || [];
-                                return checked
-                                  ? field.onChange([...currentValue, country])
-                                  : field.onChange(
-                                      currentValue.filter(
-                                        (value) => value !== country
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                            {country}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
+                    name="originalBlQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                ))}
+                  <FormField
+                    control={form.control}
+                    name="copyBlQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="originalCooQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="copyCooQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="invoiceQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="packingListQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="brandNewCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryWarrantyCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryComplianceCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                <FormField
+                  control={form.control}
+                  name="shipmentAdviceQty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billOfExchangeQty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Bill of Exchange Qty</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              <FormField
+                control={form.control}
+                name="certificateOfOrigin"
+                render={() => (
+                  <FormItem>
+                    <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+                      <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
+                    </FormLabel>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                      {certificateOfOriginCountries.map((country) => (
+                        <FormField
+                          key={country}
+                          control={form.control}
+                          name="certificateOfOrigin"
+                          render={({ field }) => {
+                            return (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(country)}
+                                    onCheckedChange={(checked) => {
+                                      const currentValue = field.value || [];
+                                      return checked
+                                        ? field.onChange([...currentValue, country])
+                                        : field.onChange(
+                                            currentValue.filter(
+                                              (value) => value !== country
+                                            )
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                                  {country}
+                                </FormLabel>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Edit3 className="mr-2 h-5 w-5 text-primary" />

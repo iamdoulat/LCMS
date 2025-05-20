@@ -56,7 +56,7 @@ export interface LCEntry {
   eta?: Date | null;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  bankBin?: string;
+  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -83,18 +83,18 @@ export interface LCEntry {
   firstPartialAmount?: number | '';
   secondPartialAmount?: number | '';
   thirdPartialAmount?: number | '';
-  firstPartialPkgs?: number;
-  firstPartialNetWeight?: number;
-  firstPartialGrossWeight?: number;
-  firstPartialCbm?: number;
-  secondPartialPkgs?: number;
-  secondPartialNetWeight?: number;
-  secondPartialGrossWeight?: number;
-  secondPartialCbm?: number;
-  thirdPartialPkgs?: number;
-  thirdPartialNetWeight?: number;
-  thirdPartialGrossWeight?: number;
-  thirdPartialCbm?: number;
+  firstPartialPkgs?: number | '';
+  firstPartialNetWeight?: number | '';
+  firstPartialGrossWeight?: number | '';
+  firstPartialCbm?: number | '';
+  secondPartialPkgs?: number | '';
+  secondPartialNetWeight?: number | '';
+  secondPartialGrossWeight?: number | '';
+  secondPartialCbm?: number | '';
+  thirdPartialPkgs?: number | '';
+  thirdPartialNetWeight?: number | '';
+  thirdPartialGrossWeight?: number | '';
+  thirdPartialCbm?: number | '';
   originalBlQty?: number | '';
   copyBlQty?: number | '';
   originalCooQty?: number | '';
@@ -106,6 +106,7 @@ export interface LCEntry {
   beneficiaryWarrantyCertificateQty?: number | '';
   beneficiaryComplianceCertificateQty?: number | '';
   shipmentAdviceQty?: number | '';
+  billOfExchangeQty?: number | '';
 }
 
 export interface LCEntryDocument {
@@ -135,7 +136,7 @@ export interface LCEntryDocument {
   eta?: string;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  bankBin?: string;
+  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -187,6 +188,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
+  billOfExchangeQty?: number;
 }
 
 export interface Customer {
@@ -265,7 +267,7 @@ export interface UserDocumentForAdmin {
   email: string;
   contactNumber?: string;
   role: UserRole;
-  photoURL?: string; // Can be used if admin sets it or user updates it
+  photoURL?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -274,14 +276,13 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Stored as number, form uses string then parses
-  purchasePrice: number | ''; // Stored as number
-  salesPrice: number | ''; // Stored as number
-  netCommissionPercentage?: number | ''; // Stored as number
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
-export type FreightChargeOption = typeof freightChargeOptions[number];
 
 export interface ProformaInvoice {
   id?: string;
@@ -290,11 +291,11 @@ export interface ProformaInvoice {
   applicantId: string;
   applicantName: string;
   piNo: string;
-  piDate: Date; // In form, Date object
+  piDate: Date;
   salesPersonName: string;
-  connectedLcId?: string; // Stores the ID of the LCEntryDocument
-  connectedLcNumber?: string; // Stores the LCEntryDocument's documentaryCreditNumber
-  connectedLcIssueDate?: string; // Stores the LCEntryDocument's lcIssueDate as ISO string
+  connectedLcId?: string;
+  connectedLcNumber?: string;
+  connectedLcIssueDate?: string;
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -302,19 +303,19 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // Sum of lineItem sales prices
-  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded) - misc expenses
-  totalExtraNetCommission?: number; // Sum of extra net commissions from line items
-  grandTotalCommissionUSD?: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
-  totalCommissionPercentage: number; // (grandTotalCommissionUSD / totalPurchasePrice) * 100
+  totalSalesPrice: number;
+  grandTotalSalesPrice: number;
+  totalExtraNetCommission?: number;
+  grandTotalCommissionUSD?: number;
+  totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string; // Stored as ISO string
-  connectedLcIssueDate?: string; // Stored as ISO string
+  piDate: string;
+  connectedLcIssueDate?: string;
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;

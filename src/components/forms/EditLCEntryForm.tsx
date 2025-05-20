@@ -10,7 +10,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, collection, getDocs, deleteField } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -68,7 +69,7 @@ const lcEntrySchema = z.object({
   eta: z.date().optional().nullable(),
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
-  bankBin: z.string().optional(),
+  // bankBin: z.string().optional(), // Removed
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -119,6 +120,7 @@ const lcEntrySchema = z.object({
   beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -129,6 +131,14 @@ interface EditLCEntryFormProps {
 }
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+
+const getValidOption = (value: string | undefined | null, options: readonly string[], defaultValue: string) => {
+  if (value && options.includes(value)) {
+    return value;
+  }
+  return defaultValue;
+};
+
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -145,10 +155,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     defaultValues: {
       applicantId: initialData?.applicantId || '',
       beneficiaryId: initialData?.beneficiaryId || '',
-      currency: initialData?.currency || currencyOptions[0],
-      termsOfPay: initialData?.termsOfPay || termsOfPayOptions[0],
-      status: initialData?.status || lcStatusOptions[0],
-      shipmentMode: initialData?.shipmentMode || shipmentModeOptions[0],
+      currency: getValidOption(initialData?.currency, currencyOptions, currencyOptions[0]) as Currency,
+      termsOfPay: getValidOption(initialData?.termsOfPay, termsOfPayOptions, termsOfPayOptions[0]) as TermsOfPay,
+      status: getValidOption(initialData?.status, lcStatusOptions, lcStatusOptions[0]) as LCStatus,
+      shipmentMode: getValidOption(initialData?.shipmentMode, shipmentModeOptions, shipmentModeOptions[0]) as ShipmentMode,
       trackingCourier: initialData?.trackingCourier || '',
       amount: initialData?.amount ?? undefined,
       documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
@@ -167,7 +177,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
       itemDescriptions: initialData?.itemDescriptions || '',
       consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
-      bankBin: initialData?.bankBin || '',
+      // bankBin: initialData?.bankBin || '', // Removed
       vesselOrFlightName: initialData?.vesselOrFlightName || '',
       vesselImoNumber: initialData?.vesselImoNumber || '',
       flightNumber: initialData?.flightNumber || '',
@@ -185,7 +195,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       notifyPartyCell: initialData?.notifyPartyCell || '',
       notifyPartyEmail: initialData?.notifyPartyEmail || '',
       numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
-      partialShipmentAllowed: initialData?.partialShipmentAllowed || partialShipmentAllowedOptions[1],
+      partialShipmentAllowed: getValidOption(initialData?.partialShipmentAllowed, partialShipmentAllowedOptions, partialShipmentAllowedOptions[1]) as PartialShipmentAllowed, 
       firstPartialQty: initialData?.firstPartialQty ?? 0,
       secondPartialQty: initialData?.secondPartialQty ?? 0,
       thirdPartialQty: initialData?.thirdPartialQty ?? 0,
@@ -215,10 +225,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
       beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
       shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
+      billOfExchangeQty: initialData?.billOfExchangeQty ?? 0,
     },
   });
   
-  const { control, setValue, watch, getValues } = form;
+  const { control, setValue, watch, getValues, reset } = form;
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -260,16 +271,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   React.useEffect(() => {
     if (initialData && !isLoadingApplicants && !isLoadingBeneficiaries && applicantOptions.length > 0 && beneficiaryOptions.length > 0) {
       console.log("EditLCEntryForm: Initial L/C Data for Form:", initialData);
-      console.log("EditLCEntryForm: Fetched Applicant Options:", applicantOptions);
-      console.log("EditLCEntryForm: Fetched Beneficiary Options:", beneficiaryOptions);
-      
-      form.reset({
+      reset({
         applicantId: initialData.applicantId || '',
         beneficiaryId: initialData.beneficiaryId || '',
-        currency: initialData.currency && currencyOptions.includes(initialData.currency as Currency) ? initialData.currency : currencyOptions[0],
-        termsOfPay: initialData.termsOfPay && termsOfPayOptions.includes(initialData.termsOfPay as TermsOfPay) ? initialData.termsOfPay : termsOfPayOptions[0],
-        status: initialData.status && lcStatusOptions.includes(initialData.status as LCStatus) ? initialData.status : lcStatusOptions[0],
-        shipmentMode: initialData.shipmentMode && shipmentModeOptions.includes(initialData.shipmentMode as ShipmentMode) ? initialData.shipmentMode : shipmentModeOptions[0],
+        currency: getValidOption(initialData.currency, currencyOptions, currencyOptions[0]) as Currency,
+        termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, termsOfPayOptions[0]) as TermsOfPay,
+        status: getValidOption(initialData.status, lcStatusOptions, lcStatusOptions[0]) as LCStatus,
+        shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, shipmentModeOptions[0]) as ShipmentMode,
         trackingCourier: initialData.trackingCourier || '',
         amount: initialData.amount ?? undefined,
         documentaryCreditNumber: initialData.documentaryCreditNumber || '',
@@ -288,7 +296,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
         itemDescriptions: initialData.itemDescriptions || '',
         consigneeBankNameAddress: initialData.consigneeBankNameAddress || '',
-        bankBin: initialData.bankBin || '',
+        // bankBin: initialData.bankBin || '', // Removed
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
         flightNumber: initialData.flightNumber || '',
@@ -306,7 +314,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         notifyPartyCell: initialData.notifyPartyCell || '',
         notifyPartyEmail: initialData.notifyPartyEmail || '',
         numberOfAmendments: initialData.numberOfAmendments ?? undefined,
-        partialShipmentAllowed: initialData.partialShipmentAllowed && partialShipmentAllowedOptions.includes(initialData.partialShipmentAllowed as PartialShipmentAllowed) ? initialData.partialShipmentAllowed : partialShipmentAllowedOptions[1], 
+        partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, partialShipmentAllowedOptions[1]) as PartialShipmentAllowed, 
         firstPartialQty: initialData.firstPartialQty ?? 0,
         secondPartialQty: initialData.secondPartialQty ?? 0,
         thirdPartialQty: initialData.thirdPartialQty ?? 0,
@@ -336,11 +344,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         beneficiaryWarrantyCertificateQty: initialData.beneficiaryWarrantyCertificateQty ?? 0,
         beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? 0,
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? 0,
+        billOfExchangeQty: initialData.billOfExchangeQty ?? 0,
       });
-      console.log("EditLCEntryForm: Form reset complete. Applicant ID in form:", form.getValues("applicantId"));
-      console.log("EditLCEntryForm: Form reset complete. Beneficiary ID in form:", form.getValues("beneficiaryId"));
+      console.log("EditLCEntryForm: Form reset complete.");
     }
-  }, [initialData, form, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions, setValue]);
+  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
 
   const watchedApplicantId = watch("applicantId");
   
@@ -348,17 +356,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     console.log("EditLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
-      console.log("EditLCEntryForm: Applicant Options for check:", applicantOptions);
-      console.log("EditLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("EditLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
@@ -372,7 +374,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }
 
   const watchedCurrency = watch("currency");
-  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
+  const amountLabel = watchedCurrency ? `${currencyOptions.includes(watchedCurrency as Currency) ? watchedCurrency : currencyOptions[0]} Amount*` : "Amount*";
 
   const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
   
@@ -387,7 +389,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const watchedPartialValues = watch(partialFieldsToWatch);
 
- React.useEffect(() => {
+  React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes") {
       const fieldsToInitializeZero = [
         "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -398,13 +400,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
         "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", 
         "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
-        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty"
+        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ] as const;
   
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName); 
         if (currentValue === undefined || String(currentValue).trim() === '') {
-          setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
+          setValue(fieldName, 0, { shouldValidate: true, shouldDirty: true });
         }
       });
     }
@@ -449,18 +451,23 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
       ] as const;
       fieldsToNullify.forEach(field => {
-        (finalData as any)[field] = undefined;
+        (finalData as any)[field] = deleteField();
       });
-       finalData.totalPackageQty = toNumberOrUndefined(data.totalPackageQty) ?? initialData.totalPackageQty ?? undefined;
-       finalData.totalNetWeight = toNumberOrUndefined(data.totalNetWeight) ?? initialData.totalNetWeight ?? undefined;
-       finalData.totalGrossWeight = toNumberOrUndefined(data.totalGrossWeight) ?? initialData.totalGrossWeight ?? undefined;
-       finalData.totalCbm = toNumberOrUndefined(data.totalCbm) ?? initialData.totalCbm ?? undefined;
+       finalData.totalPackageQty = toNumberOrUndefined(data.totalPackageQty) ?? (initialData.totalPackageQty !== undefined ? initialData.totalPackageQty : deleteField() as any);
+       finalData.totalNetWeight = toNumberOrUndefined(data.totalNetWeight) ?? (initialData.totalNetWeight !== undefined ? initialData.totalNetWeight : deleteField() as any);
+       finalData.totalGrossWeight = toNumberOrUndefined(data.totalGrossWeight) ?? (initialData.totalGrossWeight !== undefined ? initialData.totalGrossWeight : deleteField() as any);
+       finalData.totalCbm = toNumberOrUndefined(data.totalCbm) ?? (initialData.totalCbm !== undefined ? initialData.totalCbm : deleteField() as any);
     } else { 
         finalData.totalPackageQty = [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
         finalData.totalNetWeight = [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
         finalData.totalGrossWeight = [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
         finalData.totalCbm = [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0);
     }
+
+    const dateToFirestore = (date?: Date | null): string | undefined | ReturnType<typeof deleteField> => {
+      if (date === undefined || date === null) return deleteField(); // Use deleteField() for undefined dates to remove from Firestore
+      return isValid(date) ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(); // Or undefined if date is invalid
+    };
 
     const dataToUpdate: Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> = {
       applicantId: finalData.applicantId,
@@ -471,41 +478,41 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
-      trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier,
+      trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? deleteField() : finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
-      invoiceDate: finalData.invoiceDate ? format(finalData.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      proformaInvoiceNumber: finalData.proformaInvoiceNumber || deleteField(),
+      invoiceDate: dateToFirestore(finalData.invoiceDate),
       totalMachineQty: finalData.totalMachineQty,
-      lcIssueDate: finalData.lcIssueDate ? format(finalData.lcIssueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      expireDate: finalData.expireDate ? format(finalData.expireDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      latestShipmentDate: finalData.latestShipmentDate ? format(finalData.latestShipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
-      finalPIUrl: finalData.finalPIUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
-      finalLcUrl: finalData.finalLcUrl || undefined,
-      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(finalData.etd, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      eta: finalData.eta ? format(finalData.eta, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      itemDescriptions: finalData.itemDescriptions || undefined,
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      bankBin: finalData.bankBin || undefined,
-      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
-      vesselImoNumber: finalData.vesselImoNumber || undefined,
-      flightNumber: finalData.flightNumber || undefined,
+      lcIssueDate: dateToFirestore(finalData.lcIssueDate),
+      expireDate: dateToFirestore(finalData.expireDate),
+      latestShipmentDate: dateToFirestore(finalData.latestShipmentDate),
+      purchaseOrderUrl: finalData.purchaseOrderUrl || deleteField(),
+      finalPIUrl: finalData.finalPIUrl || deleteField(),
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl || deleteField(),
+      finalLcUrl: finalData.finalLcUrl || deleteField(),
+      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? deleteField() : finalData.trackingNumber || deleteField(),
+      etd: dateToFirestore(finalData.etd),
+      eta: dateToFirestore(finalData.eta),
+      itemDescriptions: finalData.itemDescriptions || deleteField(),
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress || deleteField(),
+      // bankBin: finalData.bankBin || deleteField(), // Removed
+      vesselOrFlightName: finalData.vesselOrFlightName || deleteField(),
+      vesselImoNumber: finalData.vesselImoNumber || deleteField(),
+      flightNumber: finalData.flightNumber || deleteField(),
       totalPackageQty: finalData.totalPackageQty,
       totalNetWeight: finalData.totalNetWeight,
       totalGrossWeight: finalData.totalGrossWeight,
       totalCbm: finalData.totalCbm,
-      partialShipments: finalData.partialShipments || undefined,
-      portOfLoading: finalData.portOfLoading || undefined,
-      portOfDischarge: finalData.portOfDischarge || undefined,
-      shippingMarks: finalData.shippingMarks || undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: finalData.notifyPartyName || undefined,
-      notifyPartyCell: finalData.notifyPartyCell || undefined,
-      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
+      partialShipments: finalData.partialShipments || deleteField(),
+      portOfLoading: finalData.portOfLoading || deleteField(),
+      portOfDischarge: finalData.portOfDischarge || deleteField(),
+      shippingMarks: finalData.shippingMarks || deleteField(),
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : deleteField(),
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || deleteField(),
+      notifyPartyName: finalData.notifyPartyName || deleteField(),
+      notifyPartyCell: finalData.notifyPartyCell || deleteField(),
+      notifyPartyEmail: finalData.notifyPartyEmail || deleteField(),
       numberOfAmendments: finalData.numberOfAmendments,
       partialShipmentAllowed: finalData.partialShipmentAllowed,
       firstPartialQty: finalData.firstPartialQty,
@@ -537,13 +544,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryWarrantyCertificateQty: finalData.beneficiaryWarrantyCertificateQty,
       beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: finalData.shipmentAdviceQty,
+      billOfExchangeQty: finalData.billOfExchangeQty,
       updatedAt: serverTimestamp() as any,
       year: finalData.lcIssueDate ? new Date(finalData.lcIssueDate).getFullYear() : initialData.year,
     };
     
     const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
-      if (value !== undefined) { 
-        acc[key as keyof typeof acc] = value;
+      // Keep deleteField() sentinels, process other undefined to also become deleteField()
+      if (value === undefined && key !== 'updatedAt' && key !== 'year') { // updatedAt and year should not be deleted if undefined
+         acc[key as keyof typeof acc] = deleteField() as any;
+      } else if (value !== undefined) {
+         acc[key as keyof typeof acc] = value;
       }
       return acc;
     }, {} as Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> & {updatedAt: any});
@@ -579,7 +590,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }
 
   const watchedCurrencyForLabel = watch("currency");
-  const amountLabelDisplay = watchedCurrencyForLabel ? `${watchedCurrencyForLabel} Amount*` : "Amount*";
+  const amountLabelDisplay = watchedCurrencyForLabel ? `${currencyOptions.includes(watchedCurrencyForLabel as Currency) ? watchedCurrencyForLabel : currencyOptions[0]} Amount*` : "Amount*";
 
   const handleTrackDocument = () => {
     const courier = form.getValues("trackingCourier");
@@ -693,161 +704,166 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Currency*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value && currencyOptions.includes(field.value as Currency) ? field.value : currencyOptions[0]}>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency*</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={currencyOptions.includes(field.value as Currency) ? field.value : currencyOptions[0]}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {currencyOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{amountLabelDisplay}</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
+                    <Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} />
                   </FormControl>
-                  <SelectContent>
-                    {currencyOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{amountLabelDisplay}</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="termsOfPay"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Terms of Pay*</FormLabel>
-                 <Select
-                  onValueChange={field.onChange}
-                  value={field.value && termsOfPayOptions.includes(field.value as TermsOfPay) ? field.value : termsOfPayOptions[0]}
-                >
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="termsOfPay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Terms of Pay*</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={termsOfPayOptions.includes(field.value as TermsOfPay) ? field.value : termsOfPayOptions[0]}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select terms of payment" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {termsOfPayOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="documentaryCreditNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Documentary Credit Number*</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select terms of payment" />
-                    </SelectTrigger>
+                    <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''}/>
                   </FormControl>
-                  <SelectContent>
-                    {termsOfPayOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="documentaryCreditNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Documentary Credit Number*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="proformaInvoiceNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proforma Invoice Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="invoiceDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Invoice Date</FormLabel>
-                <DatePickerField field={field} placeholder="Select invoice date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="totalMachineQty"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Total L/C Machine Qty*</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormDescription>Overall quantity for this L/C.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="numberOfAmendments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value && lcStatusOptions.includes(field.value as LCStatus) ? field.value : lcStatusOptions[0]}>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="proformaInvoiceNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Proforma Invoice Number</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select L/C status" />
-                    </SelectTrigger>
+                    <Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/>
                   </FormControl>
-                  <SelectContent>
-                    {lcStatusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="invoiceDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Invoice Date</FormLabel>
+                  <DatePickerField field={field} placeholder="Select invoice date" />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="totalMachineQty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Total L/C Machine Qty*</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormDescription>Overall quantity for this L/C.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="numberOfAmendments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={lcStatusOptions.includes(field.value as LCStatus) ? field.value : lcStatusOptions[0]}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select L/C status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {lcStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
         <FormField
             control={form.control}
@@ -922,19 +938,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormItem>
             )}
         />
-        <FormField
-            control={form.control}
-            name="bankBin"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Bank BIN</FormLabel>
-                <FormControl>
-                <Input placeholder="Enter Bank Identification Number" {...field} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        {/* Bank BIN field removed */}
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -1043,7 +1047,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed*</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value && partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : partialShipmentAllowedOptions[1]}>
+              <Select
+                onValueChange={field.onChange}
+                value={partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : partialShipmentAllowedOptions[1]}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select option" />
@@ -1098,7 +1105,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1155,7 +1162,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
                 )}
             />
-           {watchedPartialShipmentAllowed === "Yes" && (
+            {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1185,7 +1192,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value && shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}
+                    >
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1289,10 +1299,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </div>
         )}
 
-         <div className="mt-6">
-            <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+        <div className="mt-6">
+            <h4 className="text-base font-bold text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
-            </FormLabel>
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
                 <FormField
                     control={form.control}
@@ -1302,7 +1312,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                         <FormLabel>Courier By</FormLabel>
                         <Select
                             onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                             value={field.value && trackingCourierOptions.includes(field.value as TrackingCourier) ? field.value : (field.value === "" ? NONE_COURIER_VALUE : trackingCourierOptions[0])}
+                            value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
                         >
                         <FormControl>
                             <SelectTrigger>
@@ -1371,202 +1381,221 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 )}
               />
         </div>
-
-        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-            <FileSignature className="mr-2 h-5 w-5 text-primary" />
-            46A: Documents Required
-        </h3>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FormField
-              control={form.control}
-              name="originalBlQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="copyBlQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="originalCooQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="copyCooQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="invoiceQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="packingListQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="beneficiaryCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="brandNewCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="beneficiaryWarrantyCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="beneficiaryComplianceCertificateQty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          <FormField
-            control={form.control}
-            name="shipmentAdviceQty"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="certificateOfOrigin"
-          render={() => (
-            <FormItem>
-              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
-              </FormLabel>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
-                {certificateOfOriginCountries.map((country) => (
+        
+        <Accordion type="single" collapsible className="w-full" defaultValue="documents-required">
+          <AccordionItem value="documents-required">
+            <AccordionTrigger className={cn(sectionHeadingClass, "border-b-0 mb-0 hover:no-underline")}>
+              <FileSignature className="mr-2 h-5 w-5 text-primary" />
+              46A: Documents Required
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormField
-                    key={country}
                     control={form.control}
-                    name="certificateOfOrigin"
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(country)}
-                              onCheckedChange={(checked) => {
-                                const currentValue = field.value || [];
-                                return checked
-                                  ? field.onChange([...currentValue, country])
-                                  : field.onChange(
-                                      currentValue.filter(
-                                        (value) => value !== country
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                            {country}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
+                    name="originalBlQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original BL Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                ))}
+                  <FormField
+                    control={form.control}
+                    name="copyBlQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy BL Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="originalCooQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Original COO Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="copyCooQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Copy COO Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="invoiceQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Invoice Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="packingListQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="brandNewCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Brand New Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryWarrantyCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Warranty Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="beneficiaryComplianceCertificateQty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Beneficiary's Compliance Certificate Qty</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                <FormField
+                  control={form.control}
+                  name="shipmentAdviceQty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Shipment Advice Qty</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billOfExchangeQty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Bill of Exchange Qty</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              <FormField
+                control={form.control}
+                name="certificateOfOrigin"
+                render={() => (
+                  <FormItem>
+                    <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+                      <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
+                    </FormLabel>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                      {certificateOfOriginCountries.map((country) => (
+                        <FormField
+                          key={country}
+                          control={form.control}
+                          name="certificateOfOrigin"
+                          render={({ field }) => {
+                            return (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(country)}
+                                    onCheckedChange={(checked) => {
+                                      const currentValue = field.value || [];
+                                      return checked
+                                        ? field.onChange([...currentValue, country])
+                                        : field.onChange(
+                                            currentValue.filter(
+                                              (value) => value !== country
+                                            )
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                                  {country}
+                                </FormLabel>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <Edit3 className="mr-2 h-5 w-5 text-primary" />
@@ -1697,7 +1726,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              Saving Changes...
             </>
           ) : (
             <>
