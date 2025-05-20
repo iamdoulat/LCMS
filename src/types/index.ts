@@ -56,7 +56,7 @@ export interface LCEntry {
   eta?: Date | null;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed
+  // bankBin?: string; // Removed as per request
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -71,7 +71,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is contact person name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -283,6 +283,7 @@ export interface ProformaInvoiceLineItem {
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
+export type FreightChargeOption = typeof freightChargeOptions[number];
 
 export interface ProformaInvoice {
   id?: string;
@@ -295,7 +296,7 @@ export interface ProformaInvoice {
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string;
+  connectedLcIssueDate?: string; // Store as ISO string
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -314,8 +315,8 @@ export interface ProformaInvoice {
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string;
-  connectedLcIssueDate?: string;
+  piDate: string; // Stored as ISO string in Firestore
+  connectedLcIssueDate?: string; // Stored as ISO string
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -336,3 +337,4 @@ export interface LcOption {
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
 }
+
