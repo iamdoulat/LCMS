@@ -4,9 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types'; // Added Currency
+import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount'> { // Added applicantName, currency, amount
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount'> {
   latestShipmentDateObj: Date;
 }
 
@@ -26,12 +26,14 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': // Updated
-      return 'default'; 
+    case 'Shipment Pending':
+      return 'default';
     case 'Shipping going on':
       return 'default';
+    case 'Payment Done':
+      return 'default';
     case 'Done':
-      return 'default'; 
+      return 'default';
     default:
       return 'outline';
   }
@@ -52,7 +54,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ACTIVE_LC_STATUSES: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on"]; // Updated
+const ACTIVE_LC_STATUSES: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"];
 
 export default function UpcomingShipmentsPage() {
   const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
@@ -69,14 +71,14 @@ export default function UpcomingShipmentsPage() {
         const q = query(
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
-          orderBy("latestShipmentDate", "asc"),
-          limit(30) 
+          orderBy("latestShipmentDate", "asc")
+          // Removed limit(30) to fetch all matching LCs for pagination
         );
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0); 
+          let latestShipmentDateObj = new Date(0);
 
           if (data.latestShipmentDate) {
             if (typeof (data.latestShipmentDate as unknown as Timestamp).toDate === 'function') {
@@ -95,22 +97,22 @@ export default function UpcomingShipmentsPage() {
           return {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
-            applicantName: data.applicantName, // Added
+            applicantName: data.applicantName,
             beneficiaryName: data.beneficiaryName,
             latestShipmentDateObj: latestShipmentDateObj,
             status: data.status,
-            currency: data.currency, // Added
-            amount: data.amount, // Added
+            currency: data.currency,
+            amount: data.amount,
           };
         });
-        
+
         setAllUpcomingLCs(fetchedLCs);
 
       } catch (error: any) {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN array) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -147,15 +149,15 @@ export default function UpcomingShipmentsPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -163,7 +165,7 @@ export default function UpcomingShipmentsPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
@@ -172,12 +174,12 @@ export default function UpcomingShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <CalendarClock className="h-7 w-7 text-primary" />
-            Upcoming L/C Shipment Dates
+            Upcoming Shipments
           </CardTitle>
           <CardDescription>
-            List of active Letters of Credit approaching their latest shipment date (up to 30 shown, paginated). 
+            List of L/Cs with status Transmitted, Shipment Pending, or Shipping going on, sorted by nearest latest shipment date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -200,7 +202,7 @@ export default function UpcomingShipmentsPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Upcoming L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no active L/Cs nearing their shipment date, or the required Firestore index is missing/still building.
+                There are no L/Cs currently matching the active shipment statuses, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
@@ -214,8 +216,8 @@ export default function UpcomingShipmentsPage() {
                      <Badge
                         variant={getStatusBadgeVariant(lc.status)}
                         className={
-                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black' : ''
+                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : ''
                         }
                         >
                         {lc.status || 'N/A'}
@@ -288,5 +290,4 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
-
 
