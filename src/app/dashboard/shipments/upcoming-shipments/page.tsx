@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'etd' | 'eta'> {
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'etd' | 'eta'> { 
   latestShipmentDateObj: Date;
 }
 
@@ -26,14 +26,14 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending':
-      return 'default';
+    case 'Shipment Pending': 
+      return 'default'; 
     case 'Shipping going on':
       return 'default';
     case 'Payment Done':
       return 'default';
     case 'Done':
-      return 'default';
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -43,9 +43,9 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
-    return 'Invalid Date Format';
+    return 'N/A';
   }
 };
 
@@ -54,7 +54,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ACTIVE_LC_STATUSES: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"];
+const ACTIVE_LC_STATUSES: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"]; 
 
 export default function UpcomingShipmentsPage() {
   const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
@@ -72,12 +72,13 @@ export default function UpcomingShipmentsPage() {
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES),
           orderBy("latestShipmentDate", "asc")
+          // Removed limit(30) to allow pagination through all matching LCs
         );
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0);
+          let latestShipmentDateObj = new Date(0); 
 
           if (data.latestShipmentDate) {
             if (typeof (data.latestShipmentDate as unknown as Timestamp).toDate === 'function') {
@@ -90,23 +91,25 @@ export default function UpcomingShipmentsPage() {
                console.warn(`Unexpected type for latestShipmentDate for L/C ID: ${doc.id}`, data.latestShipmentDate);
             }
           } else {
+            // If latestShipmentDate is crucial for sorting/filtering, consider how to handle missing ones.
+            // For now, it might result in an invalid date for sorting purposes if not handled carefully.
             console.warn(`Missing latestShipmentDate for L/C ID: ${doc.id}`);
           }
 
           return {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
-            applicantName: data.applicantName,
+            applicantName: data.applicantName, 
             beneficiaryName: data.beneficiaryName,
             latestShipmentDateObj: latestShipmentDateObj,
             status: data.status,
-            currency: data.currency,
+            currency: data.currency, 
             amount: data.amount,
             etd: data.etd,
             eta: data.eta,
           };
         });
-
+        
         setAllUpcomingLCs(fetchedLCs);
 
       } catch (error: any) {
@@ -150,15 +153,15 @@ export default function UpcomingShipmentsPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5;
+    const maxPagesToShow = 5; 
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) {
+    if (totalPages <= maxPagesToShow + 2) { 
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1);
+      pageNumbers.push(1); 
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -166,7 +169,7 @@ export default function UpcomingShipmentsPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages);
+      pageNumbers.push(totalPages); 
     }
     return pageNumbers;
   };
@@ -175,12 +178,12 @@ export default function UpcomingShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
             <CalendarClock className="h-7 w-7 text-primary" />
             Upcoming Shipments
           </CardTitle>
           <CardDescription>
-            List of L/Cs with active shipment statuses, sorted by nearest latest shipment date.
+            List of L/Cs with active shipment statuses (Transmitted, Shipment Pending, Shipping going on), sorted by nearest latest shipment date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -299,4 +302,3 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
-
