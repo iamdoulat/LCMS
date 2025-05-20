@@ -37,9 +37,10 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE_LC_EDIT__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
+const NONE_LC_VALUE = "__NONE_LC_PI_EDIT__";
 
 
-const defaultFormValues = {
+const defaultFormValues: Partial<LCEditFormValues> = {
   applicantId: '',
   beneficiaryId: '',
   currency: currencyOptions[0],
@@ -50,7 +51,7 @@ const defaultFormValues = {
   invoiceDate: undefined,
   totalMachineQty: undefined,
   numberOfAmendments: undefined,
-  status: lcStatusOptions[0],
+  status: lcStatusOptions[0], // Default to 'Draft'
   itemDescriptions: '',
   partialShipments: '',
   portOfLoading: '',
@@ -64,28 +65,28 @@ const defaultFormValues = {
   expireDate: new Date(),
   latestShipmentDate: new Date(),
   partialShipmentAllowed: partialShipmentAllowedOptions[1], // Default to "No"
-  firstPartialQty: undefined,
-  secondPartialQty: undefined,
-  thirdPartialQty: undefined,
-  firstPartialAmount: undefined,
-  secondPartialAmount: undefined,
-  thirdPartialAmount: undefined,
-  firstPartialPkgs: undefined,
-  secondPartialPkgs: undefined,
-  thirdPartialPkgs: undefined,
-  firstPartialNetWeight: undefined,
-  secondPartialNetWeight: undefined,
-  thirdPartialNetWeight: undefined,
-  firstPartialGrossWeight: undefined,
-  secondPartialGrossWeight: undefined,
-  thirdPartialGrossWeight: undefined,
-  firstPartialCbm: undefined,
-  secondPartialCbm: undefined,
-  thirdPartialCbm: undefined,
-  totalPackageQty: undefined,
-  totalNetWeight: undefined,
-  totalGrossWeight: undefined,
-  totalCbm: undefined,
+  firstPartialQty: 0,
+  secondPartialQty: 0,
+  thirdPartialQty: 0,
+  firstPartialAmount: 0,
+  secondPartialAmount: 0,
+  thirdPartialAmount: 0,
+  firstPartialPkgs: 0,
+  secondPartialPkgs: 0,
+  thirdPartialPkgs: 0,
+  firstPartialNetWeight: 0,
+  secondPartialNetWeight: 0,
+  thirdPartialNetWeight: 0,
+  firstPartialGrossWeight: 0,
+  secondPartialGrossWeight: 0,
+  thirdPartialGrossWeight: 0,
+  firstPartialCbm: 0,
+  secondPartialCbm: 0,
+  thirdPartialCbm: 0,
+  totalPackageQty: 0,
+  totalNetWeight: 0,
+  totalGrossWeight: 0,
+  totalCbm: 0,
   shipmentMode: shipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
@@ -94,18 +95,18 @@ const defaultFormValues = {
   trackingNumber: '',
   etd: undefined,
   eta: undefined,
-  originalBlQty: undefined,
-  copyBlQty: undefined,
-  originalCooQty: undefined,
-  copyCooQty: undefined,
-  invoiceQty: undefined,
-  packingListQty: undefined,
-  beneficiaryCertificateQty: undefined,
-  brandNewCertificateQty: undefined,
-  beneficiaryWarrantyCertificateQty: undefined,
-  beneficiaryComplianceCertificateQty: undefined,
-  shipmentAdviceQty: undefined,
-  billOfExchangeQty: undefined,
+  originalBlQty: 0,
+  copyBlQty: 0,
+  originalCooQty: 0,
+  copyCooQty: 0,
+  invoiceQty: 0,
+  packingListQty: 0,
+  beneficiaryCertificateQty: 0,
+  brandNewCertificateQty: 0,
+  beneficiaryWarrantyCertificateQty: 0,
+  beneficiaryComplianceCertificateQty: 0,
+  shipmentAdviceQty: 0,
+  billOfExchangeQty: 0,
   certificateOfOrigin: [],
   shippingMarks: '',
   purchaseOrderUrl: '',
@@ -207,15 +208,19 @@ interface EditLCEntryFormProps {
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
+// Helper to get a valid option or a default
 const getValidOption = <T extends string>(
-  value: T | undefined | null,
-  options: readonly T[],
-  defaultValue: T
+  valueFromInitialData: T | undefined | null,
+  optionsArray: readonly T[],
+  fallbackDefaultFromFormState?: T
 ): T => {
-  if (value && options.includes(value)) {
-    return value;
+  if (valueFromInitialData && typeof valueFromInitialData === 'string' && optionsArray.includes(valueFromInitialData.trim() as T)) {
+    return valueFromInitialData.trim() as T;
   }
-  return defaultValue;
+  if (fallbackDefaultFromFormState && optionsArray.includes(fallbackDefaultFromFormState)) {
+    return fallbackDefaultFromFormState;
+  }
+  return optionsArray[0]; // Absolute fallback to the first option
 };
 
 
@@ -223,8 +228,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
+    const [lcOptions, setLcOptions] = React.useState<LcOption[]>([]); // For Connected LC Number
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
+  const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
+
 
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
@@ -243,6 +251,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const fetchDropdownData = async () => {
       setIsLoadingApplicants(true);
       setIsLoadingBeneficiaries(true);
+      setIsLoadingLcOptions(true);
       try {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
         const fetchedApplicants = customersSnapshot.docs.map(doc => {
@@ -257,6 +266,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
            } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
+        console.log("EditLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         const fetchedBeneficiaries = suppliersSnapshot.docs.map(doc => {
@@ -264,28 +274,44 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary' };
         });
         setBeneficiaryOptions(fetchedBeneficiaries);
+        console.log("EditLCEntryForm: Fetched Beneficiary Options:", fetchedBeneficiaries);
+
+        const lcsSnap = await getDocs(collection(firestore, "lc_entries"));
+        const fetchedLcOptions: LcOption[] = [{ value: NONE_LC_VALUE, label: "None", issueDate: undefined, purchaseOrderUrl: undefined }];
+        lcsSnap.forEach(docSnap => {
+            const data = docSnap.data() as LCEntryDocument;
+            fetchedLcOptions.push({
+                value: docSnap.id,
+                label: data.documentaryCreditNumber || 'Unnamed L/C',
+                issueDate: data.lcIssueDate,
+                purchaseOrderUrl: data.purchaseOrderUrl
+            });
+        });
+        setLcOptions(fetchedLcOptions);
+
 
       } catch (error) {
         console.error("EditLCEntryForm: Error fetching dropdown data: ", error);
-        Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console.", "error");
+        Swal.fire("Error", "Could not fetch applicant/beneficiary/LC data. See console.", "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
+        setIsLoadingLcOptions(false);
       }
     };
     fetchDropdownData();
   }, []);
 
   React.useEffect(() => {
-    if (initialData && !isLoadingApplicants && !isLoadingBeneficiaries) {
+    if (initialData && !isLoadingApplicants && !isLoadingBeneficiaries && !isLoadingLcOptions) {
       console.log("EditLCEntryForm: Initial L/C Data for Form:", initialData);
-      reset({
+      const valuesToSet: LCEditFormValues = {
         applicantId: getValidOption(initialData.applicantId, applicantOptions.map(o => o.value), defaultFormValues.applicantId),
         beneficiaryId: getValidOption(initialData.beneficiaryId, beneficiaryOptions.map(o => o.value), defaultFormValues.beneficiaryId),
         currency: getValidOption(initialData.currency, currencyOptions, defaultFormValues.currency),
         amount: initialData.amount ?? defaultFormValues.amount,
         termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, defaultFormValues.termsOfPay),
-        documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber,
+        documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber!,
         proformaInvoiceNumber: initialData.proformaInvoiceNumber || defaultFormValues.proformaInvoiceNumber,
         invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : defaultFormValues.invoiceDate,
         totalMachineQty: initialData.totalMachineQty ?? defaultFormValues.totalMachineQty,
@@ -297,12 +323,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         portOfDischarge: initialData.portOfDischarge || defaultFormValues.portOfDischarge,
         consigneeBankNameAddress: initialData.consigneeBankNameAddress || defaultFormValues.consigneeBankNameAddress,
         notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || defaultFormValues.notifyPartyNameAndAddress,
-        notifyPartyName: initialData.notifyPartyName || defaultFormValues.notifyPartyName,
+        notifyPartyName: initialData.notifyPartyName || initialData.notifyPartyContactDetails || defaultFormValues.notifyPartyName, // Fallback for older data
         notifyPartyCell: initialData.notifyPartyCell || defaultFormValues.notifyPartyCell,
         notifyPartyEmail: initialData.notifyPartyEmail || defaultFormValues.notifyPartyEmail,
-        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
-        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
-        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
+        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate!,
+        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate!,
+        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate!,
         partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed),
         firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
         secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
@@ -346,21 +372,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? defaultFormValues.beneficiaryComplianceCertificateQty,
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? defaultFormValues.shipmentAdviceQty,
         billOfExchangeQty: initialData.billOfExchangeQty ?? defaultFormValues.billOfExchangeQty,
-        certificateOfOrigin: initialData.certificateOfOrigin || defaultFormValues.certificateOfOrigin,
+        certificateOfOrigin: initialData.certificateOfOrigin || defaultFormValues.certificateOfOrigin!,
         shippingMarks: initialData.shippingMarks || defaultFormValues.shippingMarks,
         purchaseOrderUrl: initialData.purchaseOrderUrl || defaultFormValues.purchaseOrderUrl,
         finalPIUrl: initialData.finalPIUrl || defaultFormValues.finalPIUrl,
         finalLcUrl: initialData.finalLcUrl || defaultFormValues.finalLcUrl,
         shippingDocumentsUrl: initialData.shippingDocumentsUrl || defaultFormValues.shippingDocumentsUrl,
-      });
-      console.log("EditLCEntryForm: Form reset complete with initial data.");
-      console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId || '');
-      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId || '');
+      };
+      reset(valuesToSet);
+      console.log("EditLCEntryForm: Form reset complete with initial data and defaults.");
+      console.log("EditLCEntryForm: Setting Applicant ID in form to:", valuesToSet.applicantId);
+      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", valuesToSet.beneficiaryId);
     }
-  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
+  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, isLoadingLcOptions, applicantOptions, beneficiaryOptions]);
 
   const watchedApplicantId = watch("applicantId");
-  const { setValue: setFormValue } = form;
+  const { setValue: setFormValue } = form; // Ensure stability by destructuring
 
   React.useEffect(() => {
     console.log("EditLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
@@ -436,27 +463,34 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     setTotalCalculatedPartialAmount(currentTotalCalculatedPartialAmount);
 
     if (watchedPartialShipmentAllowed === "Yes") {
-      const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
-      const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
-      const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
-      const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
-
-      const newTotalPkgs = pkgs.reduce((sum, val) => sum + val, 0);
+      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
       if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
         setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
       }
 
-      const newTotalNetWeight = netWeights.reduce((sum, val) => sum + val, 0);
+      const firstPartialNetWeight = Number(getValues("firstPartialNetWeight") || 0);
+      const secondPartialNetWeight = Number(getValues("secondPartialNetWeight") || 0);
+      const thirdPartialNetWeight = Number(getValues("thirdPartialNetWeight") || 0);
+      const newTotalNetWeight = firstPartialNetWeight + secondPartialNetWeight + thirdPartialNetWeight;
       if (Number(getValues("totalNetWeight") || 0) !== newTotalNetWeight) {
         setValue("totalNetWeight", newTotalNetWeight, { shouldValidate: true, shouldDirty: true });
       }
 
-      const newTotalGrossWeight = grossWeights.reduce((sum, val) => sum + val, 0);
+      const firstPartialGrossWeight = Number(getValues("firstPartialGrossWeight") || 0);
+      const secondPartialGrossWeight = Number(getValues("secondPartialGrossWeight") || 0);
+      const thirdPartialGrossWeight = Number(getValues("thirdPartialGrossWeight") || 0);
+      const newTotalGrossWeight = firstPartialGrossWeight + secondPartialGrossWeight + thirdPartialGrossWeight;
       if (Number(getValues("totalGrossWeight") || 0) !== newTotalGrossWeight) {
         setValue("totalGrossWeight", newTotalGrossWeight, { shouldValidate: true, shouldDirty: true });
       }
 
-      const newTotalCbm = cbms.reduce((sum, val) => sum + val, 0);
+      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
       if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
@@ -582,7 +616,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         timer: 2500,
         showConfirmButton: true,
       });
-    } catch (error: any) {
+    } catch (error: any)  {
       console.error("Error updating L/C document: ", error);
       Swal.fire({
         title: "Update Failed",
@@ -653,7 +687,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   };
 
 
-  if (isLoadingApplicants || isLoadingBeneficiaries) {
+  if (isLoadingApplicants || isLoadingBeneficiaries || isLoadingLcOptions) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading L/C options...</span></div>;
   }
 
@@ -715,7 +749,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Currency*</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={currencyOptions.includes(field.value as Currency) ? field.value : currencyOptions[0]}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select currency" />
@@ -752,7 +786,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Terms of Pay*</FormLabel>
-                   <Select onValueChange={field.onChange} value={field.value}>
+                   <Select onValueChange={field.onChange} value={termsOfPayOptions.includes(field.value as TermsOfPay) ? field.value : termsOfPayOptions[0]}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select terms of payment" />
@@ -840,7 +874,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                   <Select onValueChange={field.onChange} value={field.value}>
+                   <Select onValueChange={field.onChange} value={lcStatusOptions.includes(field.value as LCStatus) ? field.value : lcStatusOptions[0]}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select L/C status" />
@@ -902,7 +936,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
-        <FormField
+         <FormField
             control={control}
             name="itemDescriptions"
             render={({ field }) => (
@@ -917,7 +951,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
         <Separator />
 
-         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates &amp; Partial Shipment Details
         </h3>
@@ -962,7 +996,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed*</FormLabel>
-               <Select onValueChange={field.onChange} value={field.value}>
+               <Select onValueChange={field.onChange} value={partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : partialShipmentAllowedOptions[1]}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select option" />
@@ -1027,7 +1061,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
                     </FormControl>
-                     <FormDescription className="text-xs">{watchedPartialShipmentAllowed === 'Yes' ? "Auto-calculated." : "Enter total."}</FormDescription>
+                    <FormDescription className="text-xs">{watchedPartialShipmentAllowed === 'Yes' ? "Auto-calculated." : "Enter total."}</FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1074,7 +1108,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+             {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1083,7 +1117,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     </FormControl>
                 </FormItem>
                 <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount (USD)</FormLabel>
                     <FormControl>
                     <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
@@ -1104,7 +1138,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value}>
+                     <Select onValueChange={field.onChange} value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1375,12 +1409,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A">
-             <AccordionTrigger className={cn("hover:no-underline py-3 font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b mb-4 w-full flex justify-between items-center")}>
-                <div className="flex items-center gap-2">
-                    <FileSignature className="mr-2 h-5 w-5 text-primary" />
-                    46A: Documents Required
+             <AccordionTrigger className={cn("hover:no-underline py-3 font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b mb-4 w-full")}>
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                        <FileSignature className="mr-2 h-5 w-5 text-primary" />
+                        46A: Documents Required
+                    </div>
+                    {activeSection46A === "section46A" ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
                 </div>
-                {activeSection46A === "section46A" ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1616,4 +1652,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   );
 }
 
-    
