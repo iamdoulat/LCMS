@@ -305,10 +305,7 @@ export default function DashboardPage() {
             etd: lc.etd, eta: lc.eta,
           } as RecentlyCompletedLC;
         })
-        .sort((a, b) => { // Assuming a and b have an updatedAtDate property (which they don't directly here)
-            // This sort needs to be based on the original lc.updatedAt if we want truly "recent"
-            // For now, this might just be sorted by default order from Firestore if no other sort is applied
-            // Or, if lc.updatedAt can be accessed and converted, we can use it here
+        .sort((a, b) => { 
             const dateA = a.id ? lcEntriesForTheYear.find(l => l.id === a.id)?.updatedAt : null;
             const dateB = b.id ? lcEntriesForTheYear.find(l => l.id === b.id)?.updatedAt : null;
 
@@ -323,7 +320,7 @@ export default function DashboardPage() {
                 if (typeof (dateB as unknown as Timestamp)?.toDate === 'function') timeB = (dateB as unknown as Timestamp).toDate().getTime();
                 else if (typeof dateB === 'string') try { timeB = parseISO(dateB).getTime(); } catch {}
             }
-            return timeB - timeA; // Sort by most recent update
+            return timeB - timeA; 
         })
         .slice(0, 10);
       setRecentlyCompletedLCs(completedLCs);
@@ -493,7 +490,7 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-xl sm:text-2xl lg:text-3xl", "text-primary"
+              "font-bold text-xl sm:text-2xl lg:text-3xl", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
             Dashboard Overview
@@ -566,7 +563,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "text-primary")}>
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
               Beneficiary L/Cs Value Distribution
             </CardTitle>
@@ -750,3 +747,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
