@@ -41,10 +41,10 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
 };
 
 const formatDisplayDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
+  if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return format(date, 'PPP');
   } catch (e) {
     return 'N/A';
   }
@@ -340,9 +340,12 @@ export default function TotalLCPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl text-primary", "flex items-center gap-2")}>
+              <CardTitle className={cn(
+                "font-bold text-2xl lg:text-3xl flex items-center gap-2",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              )}>
                 <ListChecks className="h-7 w-7 text-primary" />
-                Total L/C Overview
+                Total T/T OR L/C Overview
               </CardTitle>
               <CardDescription>
                 View, search, filter, and manage all Letters of Credit.
@@ -351,7 +354,7 @@ export default function TotalLCPage() {
             <Link href="/dashboard/new-lc-entry" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
-                Add New L/C Entry
+                New T/T OR L/C Entry
               </Button>
             </Link>
           </div>
