@@ -17,12 +17,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, Save, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Minus, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -69,7 +70,6 @@ const lcEntrySchema = z.object({
   eta: z.date().optional().nullable(),
   itemDescriptions: z.string().optional(),
   consigneeBankNameAddress: z.string().optional(),
-  // bankBin: z.string().optional(), // Removed
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -149,83 +149,83 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
+  const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
     defaultValues: {
-      applicantId: initialData?.applicantId || '',
-      beneficiaryId: initialData?.beneficiaryId || '',
-      currency: getValidOption(initialData?.currency, currencyOptions, currencyOptions[0]) as Currency,
-      termsOfPay: getValidOption(initialData?.termsOfPay, termsOfPayOptions, termsOfPayOptions[0]) as TermsOfPay,
-      status: getValidOption(initialData?.status, lcStatusOptions, lcStatusOptions[0]) as LCStatus,
-      shipmentMode: getValidOption(initialData?.shipmentMode, shipmentModeOptions, shipmentModeOptions[0]) as ShipmentMode,
-      trackingCourier: initialData?.trackingCourier || '',
-      amount: initialData?.amount ?? undefined,
-      documentaryCreditNumber: initialData?.documentaryCreditNumber || '',
-      proformaInvoiceNumber: initialData?.proformaInvoiceNumber || '',
-      invoiceDate: initialData?.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-      totalMachineQty: initialData?.totalMachineQty ?? undefined,
-      lcIssueDate: initialData?.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : new Date(),
-      expireDate: initialData?.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : new Date(),
-      latestShipmentDate: initialData?.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : new Date(),
-      purchaseOrderUrl: initialData?.purchaseOrderUrl || '',
-      finalPIUrl: initialData?.finalPIUrl || '',
-      shippingDocumentsUrl: initialData?.shippingDocumentsUrl || '',
-      finalLcUrl: initialData?.finalLcUrl || '',
-      trackingNumber: initialData?.trackingNumber || '',
-      etd: initialData?.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : undefined,
-      eta: initialData?.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
-      itemDescriptions: initialData?.itemDescriptions || '',
-      consigneeBankNameAddress: initialData?.consigneeBankNameAddress || '',
-      // bankBin: initialData?.bankBin || '', // Removed
-      vesselOrFlightName: initialData?.vesselOrFlightName || '',
-      vesselImoNumber: initialData?.vesselImoNumber || '',
-      flightNumber: initialData?.flightNumber || '',
-      totalPackageQty: initialData?.totalPackageQty ?? 0,
-      totalNetWeight: initialData?.totalNetWeight ?? 0,
-      totalGrossWeight: initialData?.totalGrossWeight ?? 0,
-      totalCbm: initialData?.totalCbm ?? 0,
-      partialShipments: initialData?.partialShipments || '',
-      portOfLoading: initialData?.portOfLoading || '',
-      portOfDischarge: initialData?.portOfDischarge || '',
-      shippingMarks: initialData?.shippingMarks || '',
-      certificateOfOrigin: initialData?.certificateOfOrigin || [],
-      notifyPartyNameAndAddress: initialData?.notifyPartyNameAndAddress || '',
-      notifyPartyName: initialData?.notifyPartyName || '',
-      notifyPartyCell: initialData?.notifyPartyCell || '',
-      notifyPartyEmail: initialData?.notifyPartyEmail || '',
-      numberOfAmendments: initialData?.numberOfAmendments ?? undefined,
-      partialShipmentAllowed: getValidOption(initialData?.partialShipmentAllowed, partialShipmentAllowedOptions, partialShipmentAllowedOptions[1]) as PartialShipmentAllowed, 
-      firstPartialQty: initialData?.firstPartialQty ?? 0,
-      secondPartialQty: initialData?.secondPartialQty ?? 0,
-      thirdPartialQty: initialData?.thirdPartialQty ?? 0,
-      firstPartialAmount: initialData?.firstPartialAmount ?? 0,
-      secondPartialAmount: initialData?.secondPartialAmount ?? 0,
-      thirdPartialAmount: initialData?.thirdPartialAmount ?? 0,
-      firstPartialPkgs: initialData?.firstPartialPkgs ?? 0,
-      secondPartialPkgs: initialData?.secondPartialPkgs ?? 0,
-      thirdPartialPkgs: initialData?.thirdPartialPkgs ?? 0,
-      firstPartialNetWeight: initialData?.firstPartialNetWeight ?? 0,
-      secondPartialNetWeight: initialData?.secondPartialNetWeight ?? 0,
-      thirdPartialNetWeight: initialData?.thirdPartialNetWeight ?? 0,
-      firstPartialGrossWeight: initialData?.firstPartialGrossWeight ?? 0,
-      secondPartialGrossWeight: initialData?.secondPartialGrossWeight ?? 0,
-      thirdPartialGrossWeight: initialData?.thirdPartialGrossWeight ?? 0,
-      firstPartialCbm: initialData?.firstPartialCbm ?? 0,
-      secondPartialCbm: initialData?.secondPartialCbm ?? 0,
-      thirdPartialCbm: initialData?.thirdPartialCbm ?? 0,
-      originalBlQty: initialData?.originalBlQty ?? 0,
-      copyBlQty: initialData?.copyBlQty ?? 0,
-      originalCooQty: initialData?.originalCooQty ?? 0,
-      copyCooQty: initialData?.copyCooQty ?? 0,
-      invoiceQty: initialData?.invoiceQty ?? 0,
-      packingListQty: initialData?.packingListQty ?? 0,
-      beneficiaryCertificateQty: initialData?.beneficiaryCertificateQty ?? 0,
-      brandNewCertificateQty: initialData?.brandNewCertificateQty ?? 0,
-      beneficiaryWarrantyCertificateQty: initialData?.beneficiaryWarrantyCertificateQty ?? 0,
-      beneficiaryComplianceCertificateQty: initialData?.beneficiaryComplianceCertificateQty ?? 0,
-      shipmentAdviceQty: initialData?.shipmentAdviceQty ?? 0,
-      billOfExchangeQty: initialData?.billOfExchangeQty ?? 0,
+      applicantId: '',
+      beneficiaryId: '',
+      currency: currencyOptions[0],
+      termsOfPay: termsOfPayOptions[0],
+      status: lcStatusOptions[0],
+      shipmentMode: shipmentModeOptions[0],
+      trackingCourier: '',
+      amount: undefined,
+      documentaryCreditNumber: '',
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      totalMachineQty: undefined,
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
+      purchaseOrderUrl: '',
+      finalPIUrl: '',
+      shippingDocumentsUrl: '',
+      finalLcUrl: '',
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
+      itemDescriptions: '',
+      consigneeBankNameAddress: '',
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      flightNumber: '',
+      totalPackageQty: 0,
+      totalNetWeight: 0,
+      totalGrossWeight: 0,
+      totalCbm: 0,
+      partialShipments: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shippingMarks: '',
+      certificateOfOrigin: [],
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
+      numberOfAmendments: undefined,
+      partialShipmentAllowed: partialShipmentAllowedOptions[1], 
+      firstPartialQty: 0,
+      secondPartialQty: 0,
+      thirdPartialQty: 0,
+      firstPartialAmount: 0,
+      secondPartialAmount: 0,
+      thirdPartialAmount: 0,
+      firstPartialPkgs: 0,
+      secondPartialPkgs: 0,
+      thirdPartialPkgs: 0,
+      firstPartialNetWeight: 0,
+      secondPartialNetWeight: 0,
+      thirdPartialNetWeight: 0,
+      firstPartialGrossWeight: 0,
+      secondPartialGrossWeight: 0,
+      thirdPartialGrossWeight: 0,
+      firstPartialCbm: 0,
+      secondPartialCbm: 0,
+      thirdPartialCbm: 0,
+      originalBlQty: 0,
+      copyBlQty: 0,
+      originalCooQty: 0,
+      copyCooQty: 0,
+      invoiceQty: 0,
+      packingListQty: 0,
+      beneficiaryCertificateQty: 0,
+      brandNewCertificateQty: 0,
+      beneficiaryWarrantyCertificateQty: 0,
+      beneficiaryComplianceCertificateQty: 0,
+      shipmentAdviceQty: 0,
+      billOfExchangeQty: 0,
     },
   });
   
@@ -296,7 +296,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : undefined,
         itemDescriptions: initialData.itemDescriptions || '',
         consigneeBankNameAddress: initialData.consigneeBankNameAddress || '',
-        // bankBin: initialData.bankBin || '', // Removed
         vesselOrFlightName: initialData.vesselOrFlightName || '',
         vesselImoNumber: initialData.vesselImoNumber || '',
         flightNumber: initialData.flightNumber || '',
@@ -347,8 +346,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         billOfExchangeQty: initialData.billOfExchangeQty ?? 0,
       });
       console.log("EditLCEntryForm: Form reset complete.");
+      console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId || '');
+      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId || '');
     }
-  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]); // Removed form from dependencies
 
   const watchedApplicantId = watch("applicantId");
   
@@ -356,6 +358,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     console.log("EditLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("EditLCEntryForm: Applicant Options for check:", applicantOptions);
+      console.log("EditLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
@@ -410,7 +414,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         }
       });
     }
-  }, [watchedPartialShipmentAllowed, setValue, getValues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPartialShipmentAllowed, setValue]); // getValues removed from dep array as it can cause loops
   
 
   React.useEffect(() => {
@@ -431,7 +436,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       setValue("totalGrossWeight", grossWeights.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
       setValue("totalCbm", cbms.reduce((sum, val) => sum + val, 0), { shouldValidate: true, shouldDirty: true });
     }
-  }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPartialShipmentAllowed, setValue, ...watchedPartialValues]); // getValues removed from dep array
 
 
   async function onSubmit(data: LCEditFormValues) {
@@ -465,8 +471,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
 
     const dateToFirestore = (date?: Date | null): string | undefined | ReturnType<typeof deleteField> => {
-      if (date === undefined || date === null) return deleteField(); // Use deleteField() for undefined dates to remove from Firestore
-      return isValid(date) ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(); // Or undefined if date is invalid
+      if (date === undefined || date === null) return deleteField(); 
+      return isValid(date) ? format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField();
     };
 
     const dataToUpdate: Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> = {
@@ -496,7 +502,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       eta: dateToFirestore(finalData.eta),
       itemDescriptions: finalData.itemDescriptions || deleteField(),
       consigneeBankNameAddress: finalData.consigneeBankNameAddress || deleteField(),
-      // bankBin: finalData.bankBin || deleteField(), // Removed
       vesselOrFlightName: finalData.vesselOrFlightName || deleteField(),
       vesselImoNumber: finalData.vesselImoNumber || deleteField(),
       flightNumber: finalData.flightNumber || deleteField(),
@@ -550,10 +555,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     };
     
     const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
-      // Keep deleteField() sentinels, process other undefined to also become deleteField()
-      if (value === undefined && key !== 'updatedAt' && key !== 'year') { // updatedAt and year should not be deleted if undefined
-         acc[key as keyof typeof acc] = deleteField() as any;
-      } else if (value !== undefined) {
+      if (value !== undefined) { // Keep deleteField() sentinels
          acc[key as keyof typeof acc] = value;
       }
       return acc;
@@ -938,7 +940,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormItem>
             )}
         />
-        {/* Bank BIN field removed */}
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -957,20 +958,20 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </FormItem>
             )}
         />
-         <FormField
-            control={form.control}
-            name="notifyPartyName"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notify Party Contact Person:</FormLabel>
-                <FormControl>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+              control={form.control}
+              name="notifyPartyName"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Contact Person:</FormLabel>
+                  <FormControl>
                   <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
           <FormField
               control={form.control}
               name="notifyPartyCell"
@@ -1068,44 +1069,48 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
 
         {watchedPartialShipmentAllowed === "Yes" && (
-          <div className="space-y-6 rounded-md border p-4 mt-4">
-            <h4 className="text-md font-medium text-foreground flex items-center mb-4">
-              <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-              Partial Shipment Breakdown
-            </h4>
+          <Card className="p-4 mt-4 border-dashed">
+            <CardHeader className="p-2 pb-4">
+                <CardTitle className="text-md font-medium text-foreground flex items-center">
+                    <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                    Partial Shipment Breakdown
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-2">
             {/* 1st Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 2nd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 3rd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1162,7 +1167,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+           {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1192,10 +1197,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Shipment Mode*</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select shipment mode" />
@@ -1220,7 +1222,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="vesselOrFlightName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>{viaLabelDisplay}</FormLabel>
+                    <FormLabel>{viaLabel}</FormLabel>
                     <FormControl>
                     <Input
                         placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
@@ -1382,11 +1384,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               />
         </div>
         
-        <Accordion type="single" collapsible className="w-full" defaultValue="documents-required">
-          <AccordionItem value="documents-required">
-            <AccordionTrigger className={cn(sectionHeadingClass, "border-b-0 mb-0 hover:no-underline")}>
-              <FileSignature className="mr-2 h-5 w-5 text-primary" />
-              46A: Documents Required
+        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+          <AccordionItem value="section46A">
+            <AccordionTrigger className={cn("hover:no-underline py-3 font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b mb-4")}>
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                        <FileSignature className="mr-2 h-5 w-5 text-primary" />
+                        46A: Documents Required
+                    </div>
+                    {activeSection46A === "section46A" ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                </div>
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1726,12 +1733,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Submitting...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <FileText className="mr-2 h-4 w-4" />
+              Submit L/C Entry
             </>
           )}
         </Button>
@@ -1739,3 +1746,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+

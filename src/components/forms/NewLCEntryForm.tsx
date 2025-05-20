@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCEntryDocument, CustomerDocument, SupplierDocument, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
+import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Minus, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -54,42 +54,23 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
-  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
-  expireDate: z.date({ required_error: "Expire date is required" }),
-  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
-  itemDescriptions: z.string().optional(),
-  consigneeBankNameAddress: z.string().optional(),
-  // bankBin: z.string().optional(), // Removed
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
-  vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(),
-  flightNumber: z.string().optional(),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
-  partialShipments: z.string().optional(),
-  portOfLoading: z.string().optional(),
-  portOfDischarge: z.string().optional(),
-  shippingMarks: z.string().optional(),
-  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(),
-  notifyPartyCell: z.string().optional(),
-  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   numberOfAmendments: z.preprocess(
     toNumberOrUndefined,
     z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
   ),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }).default("Draft"),
+  itemDescriptions: z.string().optional(),
+  partialShipments: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
+  consigneeBankNameAddress: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyName: z.string().optional(),
+  notifyPartyCell: z.string().optional(),
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
+  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
+  expireDate: z.date({ required_error: "Expire date is required" }),
+  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -109,6 +90,18 @@ const lcEntrySchema = z.object({
   thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
   thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
   thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
   originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -121,6 +114,12 @@ const lcEntrySchema = z.object({
   beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  shippingMarks: z.string().optional(),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
 });
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
@@ -135,6 +134,8 @@ export function NewLCEntryForm() {
 
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
+  const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
+
 
   const form = useForm<z.infer<typeof lcEntrySchema>>({
     resolver: zodResolver(lcEntrySchema),
@@ -148,39 +149,20 @@ export function NewLCEntryForm() {
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
       totalMachineQty: undefined,
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
-      purchaseOrderUrl: '',
-      finalPIUrl: '',
-      finalLcUrl: '',
-      shippingDocumentsUrl: '',
-      trackingCourier: '',
-      trackingNumber: '',
-      etd: undefined,
-      eta: undefined,
+      numberOfAmendments: undefined,
+      status: 'Draft',
       itemDescriptions: '',
-      consigneeBankNameAddress: '',
-      // bankBin: '', // Removed
-      shipmentMode: shipmentModeOptions[0],
-      vesselOrFlightName: '',
-      vesselImoNumber: '',
-      flightNumber: '',
-      totalPackageQty: 0,
-      totalNetWeight: 0,
-      totalGrossWeight: 0,
-      totalCbm: 0,
       partialShipments: '',
       portOfLoading: '',
       portOfDischarge: '',
-      shippingMarks: '',
-      certificateOfOrigin: [],
+      consigneeBankNameAddress: '',
       notifyPartyNameAndAddress: '',
       notifyPartyName: '',
       notifyPartyCell: '',
       notifyPartyEmail: '',
-      numberOfAmendments: undefined,
-      status: 'Draft',
+      lcIssueDate: new Date(),
+      expireDate: new Date(),
+      latestShipmentDate: new Date(),
       partialShipmentAllowed: 'No',
       firstPartialQty: 0,
       secondPartialQty: 0,
@@ -200,6 +182,18 @@ export function NewLCEntryForm() {
       firstPartialCbm: 0,
       secondPartialCbm: 0,
       thirdPartialCbm: 0,
+      totalPackageQty: 0,
+      totalNetWeight: 0,
+      totalGrossWeight: 0,
+      totalCbm: 0,
+      shipmentMode: shipmentModeOptions[0],
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      flightNumber: '',
+      trackingCourier: '',
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
       originalBlQty: 0,
       copyBlQty: 0,
       originalCooQty: 0,
@@ -212,6 +206,12 @@ export function NewLCEntryForm() {
       beneficiaryComplianceCertificateQty: 0,
       shipmentAdviceQty: 0,
       billOfExchangeQty: 0,
+      certificateOfOrigin: [],
+      shippingMarks: '',
+      purchaseOrderUrl: '',
+      finalPIUrl: '',
+      finalLcUrl: '',
+      shippingDocumentsUrl: '',
     },
   });
   
@@ -384,39 +384,20 @@ export function NewLCEntryForm() {
       proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
       invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: finalData.totalMachineQty,
-      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      expireDate: finalData.expireDate ? format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
-      finalPIUrl: finalData.finalPIUrl || undefined,
-      finalLcUrl: finalData.finalLcUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
-      trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier,
-      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      numberOfAmendments: finalData.numberOfAmendments,
+      status: finalData.status || 'Draft',
       itemDescriptions: finalData.itemDescriptions || undefined,
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      // bankBin: finalData.bankBin || undefined, // Removed
-      shipmentMode: finalData.shipmentMode,
-      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
-      vesselImoNumber: finalData.vesselImoNumber || undefined,
-      flightNumber: finalData.flightNumber || undefined,
-      totalPackageQty: finalData.totalPackageQty,
-      totalNetWeight: finalData.totalNetWeight,
-      totalGrossWeight: finalData.totalGrossWeight,
-      totalCbm: finalData.totalCbm,
       partialShipments: finalData.partialShipments || undefined,
       portOfLoading: finalData.portOfLoading || undefined,
       portOfDischarge: finalData.portOfDischarge || undefined,
-      shippingMarks: finalData.shippingMarks || undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
       notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
       notifyPartyName: finalData.notifyPartyName || undefined,
       notifyPartyCell: finalData.notifyPartyCell || undefined,
       notifyPartyEmail: finalData.notifyPartyEmail || undefined,
-      numberOfAmendments: finalData.numberOfAmendments,
-      status: finalData.status || 'Draft',
+      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: finalData.expireDate ? format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       partialShipmentAllowed: finalData.partialShipmentAllowed,
       firstPartialQty: finalData.firstPartialQty,
       secondPartialQty: finalData.secondPartialQty,
@@ -436,6 +417,18 @@ export function NewLCEntryForm() {
       thirdPartialNetWeight: finalData.thirdPartialNetWeight,
       thirdPartialGrossWeight: finalData.thirdPartialGrossWeight,
       thirdPartialCbm: finalData.thirdPartialCbm,
+      totalPackageQty: finalData.totalPackageQty,
+      totalNetWeight: finalData.totalNetWeight,
+      totalGrossWeight: finalData.totalGrossWeight,
+      totalCbm: finalData.totalCbm,
+      shipmentMode: finalData.shipmentMode,
+      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
+      vesselImoNumber: finalData.vesselImoNumber || undefined,
+      flightNumber: finalData.flightNumber || undefined,
+      trackingCourier: finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier,
+      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
+      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       originalBlQty: finalData.originalBlQty,
       copyBlQty: finalData.copyBlQty,
       originalCooQty: finalData.originalCooQty,
@@ -448,6 +441,12 @@ export function NewLCEntryForm() {
       beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: finalData.shipmentAdviceQty,
       billOfExchangeQty: finalData.billOfExchangeQty,
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
+      shippingMarks: finalData.shippingMarks || undefined,
+      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
+      finalPIUrl: finalData.finalPIUrl || undefined,
+      finalLcUrl: finalData.finalLcUrl || undefined,
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
       year: extractedYear,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
@@ -819,7 +818,6 @@ export function NewLCEntryForm() {
             </FormItem>
             )}
         />
-        {/* Bank BIN field removed */}
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -838,20 +836,20 @@ export function NewLCEntryForm() {
             </FormItem>
             )}
         />
-         <FormField
-            control={form.control}
-            name="notifyPartyName"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Notify Party Contact Person:</FormLabel>
-                <FormControl>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+              control={form.control}
+              name="notifyPartyName"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Notify Party Contact Person:</FormLabel>
+                  <FormControl>
                   <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
           <FormField
               control={form.control}
               name="notifyPartyCell"
@@ -946,44 +944,48 @@ export function NewLCEntryForm() {
         />
 
         {watchedPartialShipmentAllowed === "Yes" && (
-          <div className="space-y-6 rounded-md border p-4 mt-4">
-            <h4 className="text-md font-medium text-foreground flex items-center mb-4">
-              <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-              Partial Shipment Breakdown
-            </h4>
+          <Card className="p-4 mt-4 border-dashed">
+            <CardHeader className="p-2 pb-4">
+                <CardTitle className="text-md font-medium text-foreground flex items-center">
+                    <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                    Partial Shipment Breakdown
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-2">
             {/* 1st Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 2nd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
             <Separator />
             {/* 3rd Partial */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 items-start">
               <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd Partial Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
             </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1040,7 +1042,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-           {watchedPartialShipmentAllowed === "Yes" && (
+            {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1256,12 +1258,17 @@ export function NewLCEntryForm() {
                 )}
               />
         </div>
-
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="documents-required">
-            <AccordionTrigger className={cn(sectionHeadingClass, "border-b-0 mb-0")}>
-              <FileSignature className="mr-2 h-5 w-5 text-primary" />
-              46A: Documents Required
+        
+        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+          <AccordionItem value="section46A">
+            <AccordionTrigger className={cn("hover:no-underline py-3 font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b mb-4")}>
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                        <FileSignature className="mr-2 h-5 w-5 text-primary" />
+                        46A: Documents Required
+                    </div>
+                    {activeSection46A === "section46A" ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                </div>
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1614,3 +1621,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
