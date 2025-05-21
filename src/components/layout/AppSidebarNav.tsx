@@ -27,7 +27,6 @@ import {
   ListChecks,
   FilePlus2,
   Truck,
-  CalendarClock,
   Users as UsersIcon,
   Settings,
   LogOut,
@@ -42,7 +41,11 @@ import {
   Package,
   History,
   Search,
-  DollarSign, 
+  DollarSign,
+  Bell,
+  CalendarClock, 
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -97,7 +100,7 @@ const managementNavItems: NavItemGroup[] = [
     icon: Truck,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
-      { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock },
+      // { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock }, // Removed
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
@@ -115,8 +118,8 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-
+  const defaultCompanyLogoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const displayLogoUrl = companyLogoUrl || defaultCompanyLogoUrl;
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
@@ -127,63 +130,69 @@ export function AppSidebarNav() {
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; 
+    
+    // More specific checks to prevent overly broad matching for parent items
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
-        // This more complex check handles cases where a sub-page of a listed item should still activate the parent.
         if (
-          (href === '/dashboard/suppliers' && (pathname.startsWith('/dashboard/suppliers/add') || (pathname.startsWith('/dashboard/suppliers/') && pathname.includes('/edit')))) ||
-          (href === '/dashboard/customers' && (pathname.startsWith('/dashboard/customers/add') || (pathname.startsWith('/dashboard/customers/') && pathname.includes('/edit')))) ||
-          (href === '/dashboard/total-lc' && (pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit'))) ||
-          (href === '/dashboard/commission-management/issued-pi-list' && (pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
-          (href === '/dashboard/settings/users' && (pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
+          (href === '/dashboard/suppliers' && (pathname === '/dashboard/suppliers' || pathname.startsWith('/dashboard/suppliers/add') || pathname.includes('/edit'))) ||
+          (href === '/dashboard/customers' && (pathname === '/dashboard/customers' || pathname.startsWith('/dashboard/customers/add') || pathname.includes('/edit'))) ||
+          (href === '/dashboard/total-lc' && (pathname === '/dashboard/total-lc' || (pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit')))) ||
+          (href === '/dashboard/commission-management/issued-pi-list' && (pathname === '/dashboard/commission-management/issued-pi-list' || pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
+          (href === '/dashboard/settings/users' && (pathname === '/dashboard/settings/users' || pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
         ) {
           return true;
-        } else if (
-          !pathname.includes('/add') && 
-          !pathname.includes('/edit') &&
-          (
-            (href === '/dashboard/suppliers' && pathname === '/dashboard/suppliers') ||
-            (href === '/dashboard/customers' && pathname === '/dashboard/customers') ||
-            (href === '/dashboard/total-lc' && pathname === '/dashboard/total-lc') ||
-            (href === '/dashboard/commission-management/issued-pi-list' && pathname === '/dashboard/commission-management/issued-pi-list') ||
-            (href === '/dashboard/settings/users' && pathname === '/dashboard/settings/users')
-          )
-        ){
+        }
+        // Handle direct matches for sub-pages that don't have their own add/edit patterns listed above
+        if (pathname === href) {
           return true;
         }
-        return true; // Fallback for other top-level matches not requiring specific sub-page logic
+        return false; // Avoids parent being active if a sibling path starts with same prefix
     }
     return false;
   };
-
+  
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => isActive(sub.href));
   };
 
   const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems];
 
-  const defaultOpenAccordions = allAccordionGroups
-    .filter(item => item.subLinks && isGroupActive(item.subLinks))
-    .map(item => item.groupLabel || '');
+  // Determine default open accordions based on active sub-links
+  const defaultOpenAccordions = React.useMemo(() => {
+    return allAccordionGroups
+      .filter(item => item.subLinks && isGroupActive(item.subLinks))
+      .map(item => item.groupLabel || '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]); // Re-calculate when pathname changes
 
 
-  const renderNavGroup = (item: NavItemGroup, index: number) => (
-    item.subLinks ? (
+  const renderNavGroup = (item: NavItemGroup, index: number) => {
+    const [isAccordionOpen, setIsAccordionOpen] = React.useState(defaultOpenAccordions.includes(item.groupLabel || ''));
+    
+    React.useEffect(() => {
+        setIsAccordionOpen(defaultOpenAccordions.includes(item.groupLabel || ''));
+    }, [defaultOpenAccordions, item.groupLabel]);
+
+    const IconComponent = item.icon;
+
+    return item.subLinks ? (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
                 <AccordionTrigger
+                  onClick={() => setIsAccordionOpen(!isAccordionOpen)}
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "group-data-[collapsible=icon]:[&>svg.lucide-chevron-down]:hidden",
-                    isGroupActive(item.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    isAccordionOpen && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <item.icon className="h-5 w-5 text-primary" />
+                    <IconComponent className="h-5 w-5 text-primary" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </div>
+                  {isAccordionOpen ? <Minus className="h-4 w-4 text-primary group-data-[collapsible=icon]:hidden" /> : <Plus className="h-4 w-4 text-primary group-data-[collapsible=icon]:hidden" />}
                 </AccordionTrigger>
             </TooltipTrigger>
               <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -216,8 +225,8 @@ export function AppSidebarNav() {
           </SidebarMenu>
         </AccordionContent>
       </AccordionItem>
-    ) : null
-  );
+    ) : null;
+  };
 
 
   return (
@@ -225,7 +234,7 @@ export function AppSidebarNav() {
       <SidebarHeader className="border-b">
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={companyLogoUrlFromContext} 
+            src={displayLogoUrl} 
             alt="Company Logo"
             data-ai-hint="company logo"
             width={32}
@@ -292,7 +301,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                item.href && (
+                item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
@@ -308,7 +317,6 @@ export function AppSidebarNav() {
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
-                )
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -333,13 +341,13 @@ export function AppSidebarNav() {
   );
 }
 
-type NavItem = {
+interface NavItem {
   href?: string;
   label?: string;
   icon: React.ElementType;
-};
+}
 
-type NavItemGroup = {
+interface NavItemGroup {
   groupLabel?: string;
   icon: React.ElementType;
   subLinks?: Array<{
@@ -347,5 +355,5 @@ type NavItemGroup = {
     label: string;
     icon?: React.ElementType;
   }>;
-};
+}
     
