@@ -27,15 +27,15 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Truck, // Keep for Suppliers / Beneficiary
+  Truck,
   Users as UsersIcon,
   Settings,
   LogOut,
   Briefcase,
   Loader2,
-  Ship, // Keep for Shipment Management
+  Ship,
   UserPlus,
-  Building, // Add for Customers / Applicants
+  Building, // Kept for "Company Setup"
   FileText,
   FileEdit,
   Package,
@@ -45,6 +45,7 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
+  Factory, // Added Factory icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -78,7 +79,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed icon
+    icon: Truck,
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -86,7 +87,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Building, // Changed icon
+    icon: Factory, // Changed icon here
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -94,9 +95,9 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed icon
+    icon: Ship,
     subLinks: [
-      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck }, // Icon for sub-link remains Truck for consistency
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
@@ -174,7 +175,7 @@ export function AppSidebarNav() {
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                    defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    (defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
                   <div className="flex items-center gap-2">
