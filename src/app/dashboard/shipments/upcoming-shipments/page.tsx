@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'latestShipmentDate' | 'etd' | 'eta'> {
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'etd' | 'eta'> {
   latestShipmentDateObj: Date;
 }
 
@@ -219,7 +219,7 @@ export default function UpcomingShipmentsPage() {
                     className={cn(
                         "p-4 rounded-lg hover:shadow-md transition-shadow",
                         isPastOrToday
-                            ? "bg-destructive/10 border border-destructive/30"
+                            ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600"
                             : "border bg-card"
                     )}
                 >
@@ -232,7 +232,7 @@ export default function UpcomingShipmentsPage() {
                         className={cn(
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
                             lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                            lc.status === 'Transmitted' ? 'bg-primary/80 text-primary-foreground' : ''
+                            lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
                         )}
                         >
                         {lc.status || 'N/A'}
@@ -247,24 +247,20 @@ export default function UpcomingShipmentsPage() {
                          <p className="text-muted-foreground">
                           Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                         </p>
-                         {lc.status === "Shipping going on" && (
-                            <p className="text-muted-foreground">
-                                ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
-                            </p>
-                        )}
+                        <p className="text-muted-foreground">
+                            ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                        </p>
                     </div>
                     <div>
                         <p className="text-muted-foreground">
                           Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                         </p>
                         <p className={cn("text-muted-foreground font-semibold")}>
-                          Latest Shipment: <span className={cn("font-medium", isPastOrToday && (isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground"))}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                          Latest Shipment: <span className={cn("font-medium", isPastOrToday && "text-red-600 dark:text-red-400")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                         </p>
-                        {lc.status === "Shipping going on" && (
-                            <p className="text-muted-foreground">
-                                ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                            </p>
-                        )}
+                        <p className="text-muted-foreground">
+                            ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                        </p>
                     </div>
                   </div>
 
@@ -322,3 +318,6 @@ export default function UpcomingShipmentsPage() {
     </div>
   );
 }
+
+
+    
