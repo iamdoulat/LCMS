@@ -27,15 +27,15 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Truck,
+  Truck, // Keep for Suppliers / Beneficiary
   Users as UsersIcon,
   Settings,
   LogOut,
   Briefcase,
   Loader2,
-  Ship,
+  Ship, // Keep for Shipment Management
   UserPlus,
-  Building,
+  Building, // Add for Customers / Applicants
   FileText,
   FileEdit,
   Package,
@@ -58,7 +58,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -67,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -78,7 +78,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Ship,
+    icon: Truck, // Changed icon
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -86,7 +86,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: UsersIcon,
+    icon: Building, // Changed icon
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -94,9 +94,9 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Truck,
+    icon: Ship, // Changed icon
     subLinks: [
-      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck }, // Icon for sub-link remains Truck for consistency
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
@@ -121,7 +121,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
