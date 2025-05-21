@@ -6,7 +6,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck } from 'lucide-react'; // Added Truck
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory } from 'lucide-react'; // Added Factory
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -409,7 +409,7 @@ export default function DashboardPage() {
       const totalLinkedPIsCount = linkedPIsForTheYear.length;
 
       setDashboardStats({
-        totalLCs: lcEntriesForTheYear.length,
+        totalLCs: lcEntriesForTheYear.filter(lc => typeof lc.amount === 'number' && isValid(typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate())).length,
         totalLCValue,
         activeSuppliers: activeSuppliersCount,
         activeApplicants: activeApplicantsCount,
@@ -549,7 +549,7 @@ export default function DashboardPage() {
           </div>
       ) : (
         <>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 animatedGradientClasses">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -572,7 +572,7 @@ export default function DashboardPage() {
         <StatCard
           title="Active Applicants"
           value={dashboardStats.activeApplicants.toLocaleString()}
-          icon={<Users className="h-7 w-7 text-primary" />}
+          icon={<Factory className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
         />
         <StatCard
@@ -644,11 +644,9 @@ export default function DashboardPage() {
                     >
                         {upcomingEtdShipments.map((shipment) => (
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
-                             <div className="flex justify-between items-start mb-1">
-                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
+                             <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block mb-1">
                                     {shipment.documentaryCreditNumber || 'N/A'}
-                                </Link>
-                             </div>
+                            </Link>
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                 <div>
                                     <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
@@ -782,4 +780,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
