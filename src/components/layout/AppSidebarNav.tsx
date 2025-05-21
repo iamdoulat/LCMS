@@ -31,12 +31,12 @@ import {
   Users as UsersIcon,
   Settings,
   LogOut,
-  Briefcase, // Will remove if FileText replaces its only use here
+  Briefcase, // Ensured Briefcase is imported
   Loader2,
   Ship,
   UserPlus,
   Building,
-  FileText, // Ensure this is imported
+  FileText, // FileText remains for Commission Management
   FileEdit,
   Package,
   History,
@@ -58,7 +58,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: Briefcase, // Changed icon here
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -67,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: FileText, // This was already FileText
+    icon: FileText,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -187,7 +187,7 @@ export function AppSidebarNav() {
                   </div>
                 </AccordionTrigger>
             </TooltipTrigger>
-              <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
+             <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
               <p>{item.groupLabel}</p>
             </TooltipContent>
           </Tooltip>
