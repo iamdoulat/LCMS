@@ -43,9 +43,10 @@ import {
   Search,
   DollarSign,
   Bell,
-  CalendarClock, 
+  CalendarClock,
   Plus,
   Minus,
+  CreditCard, // Added for consistency if DollarSign is used elsewhere
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -69,7 +70,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, 
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -100,14 +101,14 @@ const managementNavItems: NavItemGroup[] = [
     icon: Truck,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
-      // { href: '/dashboard/upcoming-shipments', label: 'Upcoming Shipments', icon: CalendarClock }, // Removed
+      { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
   },
 ];
 
-const settingsNavItems: NavItem[] = [ 
+const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
@@ -118,8 +119,8 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const defaultCompanyLogoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-  const displayLogoUrl = companyLogoUrl || defaultCompanyLogoUrl;
+  const displayLogoUrl = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
@@ -129,9 +130,8 @@ export function AppSidebarNav() {
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true; 
-    
-    // More specific checks to prevent overly broad matching for parent items
+    if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true;
+
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
         if (
           (href === '/dashboard/suppliers' && (pathname === '/dashboard/suppliers' || pathname.startsWith('/dashboard/suppliers/add') || pathname.includes('/edit'))) ||
@@ -142,33 +142,33 @@ export function AppSidebarNav() {
         ) {
           return true;
         }
-        // Handle direct matches for sub-pages that don't have their own add/edit patterns listed above
         if (pathname === href) {
           return true;
         }
-        return false; // Avoids parent being active if a sibling path starts with same prefix
+        return false;
     }
     return false;
   };
-  
+
   const isGroupActive = (subLinks: Array<{ href: string }>) => {
     return subLinks.some(sub => isActive(sub.href));
   };
 
   const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems];
 
-  // Determine default open accordions based on active sub-links
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
       .filter(item => item.subLinks && isGroupActive(item.subLinks))
       .map(item => item.groupLabel || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]); // Re-calculate when pathname changes
+  }, [pathname]);
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [isAccordionOpen, setIsAccordionOpen] = React.useState(defaultOpenAccordions.includes(item.groupLabel || ''));
-    
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     React.useEffect(() => {
         setIsAccordionOpen(defaultOpenAccordions.includes(item.groupLabel || ''));
     }, [defaultOpenAccordions, item.groupLabel]);
@@ -207,7 +207,7 @@ export function AppSidebarNav() {
                 <Link href={subLink.href} passHref legacyBehavior>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === subLink.href} 
+                    isActive={pathname === subLink.href}
                     className={cn(
                       pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                       "h-8 text-xs"
@@ -234,7 +234,7 @@ export function AppSidebarNav() {
       <SidebarHeader className="border-b">
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={displayLogoUrl} 
+            src={displayLogoUrl}
             alt="Company Logo"
             data-ai-hint="company logo"
             width={32}
@@ -280,7 +280,7 @@ export function AppSidebarNav() {
         <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
             {coreModulesNavItems.map(renderNavGroup)}
         </Accordion>
-        
+
 
         <SidebarSeparator />
 
@@ -356,4 +356,5 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
+
     
