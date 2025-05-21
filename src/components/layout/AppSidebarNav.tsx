@@ -31,12 +31,12 @@ import {
   Users as UsersIcon,
   Settings,
   LogOut,
-  Briefcase,
+  Briefcase, // Will remove if FileText replaces its only use here
   Loader2,
-  Ship, // Changed from Store
+  Ship,
   UserPlus,
   Building,
-  FileText,
+  FileText, // Ensure this is imported
   FileEdit,
   Package,
   History,
@@ -58,7 +58,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: Briefcase,
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -67,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText, // This was already FileText
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -78,7 +78,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Ship, // Changed from Store
+    icon: Ship,
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -177,7 +177,6 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    // Hide default chevron in icon mode
                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
                     defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
@@ -193,7 +192,6 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        {/* AccordionContent is hidden by default by sidebar.tsx when collapsible=icon and state=collapsed */}
         <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <SidebarMenu className="gap-0 py-1">
             {item.subLinks.map((subLink) => (
@@ -228,7 +226,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext} // Uses dynamic URL from context
+                src={companyLogoUrlFromContext}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -241,7 +239,7 @@ export function AppSidebarNav() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
                 )}
             >
-                {displayCompanyName} {/* Uses dynamic name from context */}
+                {displayCompanyName}
             </span>
             </Link>
             {!sidebar.isMobile && (
