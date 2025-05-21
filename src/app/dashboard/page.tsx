@@ -6,7 +6,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck } from 'lucide-react'; // Added Truck
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -74,6 +74,7 @@ interface UpcomingEtdShipment {
   beneficiaryName?: string;
   applicantName?: string;
   etdDate: Date;
+  etaDate?: Date;
   currency?: Currency;
   amount?: number;
 }
@@ -196,19 +197,18 @@ export default function DashboardPage() {
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
 
-        if (data.amount !== undefined && lcIssueDateValid) { // applicantId and beneficiaryId might be missing initially for some LCs
+        if (data.amount !== undefined && typeof data.amount === 'number' && lcIssueDateValid) { 
           lcEntriesForTheYear.push({
               id: doc.id,
               ...data,
             } as LCEntryDocument);
         } else {
-          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields or invalid lcIssueDate:", doc.id, data);
+          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-
+      
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id)));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
-
 
       if (uniqueBeneficiaryIds.length > 0) {
         const BATCH_SIZE = 30; 
@@ -225,17 +225,9 @@ export default function DashboardPage() {
         }
       }
 
-
       if (lcEntriesForTheYear.length === 0 && !authLoading) {
         console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
-        setDashboardStats({
-          totalLCs: 0,
-          totalLCValue: 0,
-          activeSuppliers: 0,
-          activeApplicants: 0,
-          thisMonthLCQty: 0,
-          totalLinkedPIs: 0,
-        });
+        setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0, });
         setSupplierPieData([]);
         setRecentlyCompletedLCs([]);
         setDraftLCs([]);
@@ -371,7 +363,7 @@ export default function DashboardPage() {
             }
         })
         .map(lc => {
-            let etdDate = new Date(0); // Default invalid date
+            let etdDate = new Date(0); 
             if (lc.etd) {
                 if (typeof lc.etd === 'string') {
                     const parsed = parseISO(lc.etd);
@@ -380,12 +372,22 @@ export default function DashboardPage() {
                     etdDate = (lc.etd as unknown as Timestamp).toDate();
                 }
             }
+            let etaDate: Date | undefined = undefined;
+            if (lc.eta) {
+                if (typeof lc.eta === 'string') {
+                    const parsed = parseISO(lc.eta);
+                    if (isValid(parsed)) etaDate = parsed;
+                } else if (typeof (lc.eta as unknown as Timestamp).toDate === 'function') {
+                    etaDate = (lc.eta as unknown as Timestamp).toDate();
+                }
+            }
             return {
                 id: lc.id,
                 documentaryCreditNumber: lc.documentaryCreditNumber,
                 beneficiaryName: lc.beneficiaryName,
                 applicantName: lc.applicantName,
                 etdDate: etdDate,
+                etaDate: etaDate,
                 currency: lc.currency,
                 amount: lc.amount,
             } as UpcomingEtdShipment;
@@ -547,7 +549,7 @@ export default function DashboardPage() {
           </div>
       ) : (
         <>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 animatedGradientClasses">
         <StatCard
           title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -564,7 +566,7 @@ export default function DashboardPage() {
         <StatCard
           title="Active Beneficiaries"
           value={dashboardStats.activeSuppliers.toLocaleString()}
-          icon={<UsersRound className="h-7 w-7 text-primary" />}
+          icon={<Truck className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
         />
         <StatCard
@@ -642,16 +644,21 @@ export default function DashboardPage() {
                     >
                         {upcomingEtdShipments.map((shipment) => (
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
-                            <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
-                            {shipment.documentaryCreditNumber || 'N/A'}
-                            </Link>
-                             <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
-                                <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
-                                <p className="truncate sm:col-span-2">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
-                                <p className="font-semibold text-foreground mt-0.5 sm:mt-0 sm:text-left sm:col-span-2">
-                                ETD: {format(shipment.etdDate, 'PPP')}
-                                </p>
+                             <div className="flex justify-between items-start mb-1">
+                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block">
+                                    {shipment.documentaryCreditNumber || 'N/A'}
+                                </Link>
+                             </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <div>
+                                    <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
+                                    <p className="truncate">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
+                                    <p className="truncate">ETD: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etdDate)}</span></p>
+                                </div>
+                                <div>
+                                    <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
+                                    <p className="truncate">ETA: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etaDate)}</span></p>
+                                </div>
                             </div>
                         </li>
                         ))}
