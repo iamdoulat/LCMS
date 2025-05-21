@@ -94,7 +94,7 @@ export default function TotalLCPage() {
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
-  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
@@ -272,7 +272,7 @@ export default function TotalLCPage() {
     setFilterBeneficiaryId('');
     setFilterShipmentDate(null);
     setFilterStatus('');
-    setFilterYear(ALL_YEARS_VALUE);
+    setFilterYear(ALL_YEARS_VALUE); // Reset to "All Years"
     setSortBy('lcIssueDate');
     setSortOrder('desc');
     setCurrentPage(1);
