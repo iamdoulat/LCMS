@@ -1,3 +1,4 @@
+
 // src/components/dashboard/SupplierPieChart.tsx
 "use client";
 
@@ -18,7 +19,7 @@ const CustomTooltip: FC<any> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <p className="text-sm font-medium text-foreground">{`${payload[0].name} : ${payload[0].value}%`}</p>
+        <p className="text-sm font-medium text-foreground">{`${payload[0].name} : USD ${payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
       </div>
     );
   }
