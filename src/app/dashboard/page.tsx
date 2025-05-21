@@ -4,15 +4,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory } from 'lucide-react'; // Added Factory
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory, BarChart3 } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,6 +19,14 @@ import dynamic from 'next/dynamic';
 
 const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
+  {
+    loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+    ssr: false
+  }
+);
+
+const YearlyLcValueBarChart = dynamic(() =>
+  import('@/components/dashboard/YearlyLcValueBarChart').then(mod => mod.YearlyLcValueBarChart),
   {
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
     ssr: false
@@ -43,6 +49,11 @@ interface PieChartDataItem {
   name: string;
   value: number;
   fill: string;
+}
+
+interface YearlyLcValue {
+  year: string;
+  totalValue: number | null;
 }
 
 interface RecentlyCompletedLC {
@@ -122,9 +133,57 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   }
 };
 
+const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef: React.MutableRefObject<NodeJS.Timeout | null>, dependencies: any[]) => {
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    let isPaused = false;
+
+    const startScrolling = () => {
+      if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => {
+          if (!isPaused && scrollElement) {
+            if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) { // -1 for safety margin
+              scrollElement.scrollTop = 0;
+            } else {
+              scrollElement.scrollTop += 1;
+            }
+          }
+        }, 75);
+      }
+    };
+
+    const stopScrolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    const handleMouseEnter = () => { isPaused = true; };
+    const handleMouseLeave = () => { isPaused = false; startScrolling(); };
+
+    if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
+      startScrolling();
+      scrollElement.addEventListener('mouseenter', handleMouseEnter);
+      scrollElement.addEventListener('mouseleave', handleMouseLeave);
+    } else {
+      stopScrolling(); // Stop if not scrollable
+    }
+
+    return () => {
+      stopScrolling();
+      if (scrollElement) {
+        scrollElement.removeEventListener('mouseenter', handleMouseEnter);
+        scrollElement.removeEventListener('mouseleave', handleMouseLeave);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...dependencies, scrollRef]); // Add scrollRef to dependencies
+};
+
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user: authUser, loading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
@@ -137,13 +196,18 @@ export default function DashboardPage() {
     totalLinkedPIs: 0,
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
+  const [yearlyLcValueData, setYearlyLcValueData] = useState<YearlyLcValue[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
-  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const draftLcScrollRef = useRef<HTMLDivElement>(null);
+  const completedLcScrollRef = useRef<HTMLDivElement>(null);
+  const upcomingEtdIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const draftLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const completedLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
   useEffect(() => {
@@ -173,6 +237,7 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
+      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
       setIsLoading(false);
       return;
     }
@@ -190,14 +255,14 @@ export default function DashboardPage() {
         let lcIssueDateValid = false;
         if (data.lcIssueDate) {
           try {
-             const parsedDate = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp).toDate();
+             const parsedDate = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp)?.toDate();
              if (isValid(parsedDate)) {
               lcIssueDateValid = true;
             }
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
 
-        if (data.amount !== undefined && typeof data.amount === 'number' && lcIssueDateValid) { 
+        if (data.amount !== undefined && typeof data.amount === 'number' && lcIssueDateValid) {
           lcEntriesForTheYear.push({
               id: doc.id,
               ...data,
@@ -206,12 +271,12 @@ export default function DashboardPage() {
           console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-      
+
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id)));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30; 
+        const BATCH_SIZE = 30;
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -232,13 +297,14 @@ export default function DashboardPage() {
         setRecentlyCompletedLCs([]);
         setDraftLCs([]);
         setUpcomingEtdShipments([]);
-        setIsLoading(false);
-        return;
+        // setYearlyLcValueData previously handled below
+        // setIsLoading(false); // Will be set in finally
+        // return; // Do not return early, allow yearly data fetch
       }
 
-      const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' ? lc.amount : 0), 0);
+      const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
-      const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => id)).size;
+      const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => !!id)).size;
 
 
       const currentDate = new Date();
@@ -250,7 +316,7 @@ export default function DashboardPage() {
         thisMonthLCQty = lcEntriesForTheYear.filter(lc => {
           if (!lc.lcIssueDate) return false;
           try {
-            const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp).toDate();
+            const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate();
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
           } catch (e) {
             console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
@@ -261,14 +327,14 @@ export default function DashboardPage() {
 
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
-        if (typeof lc.amount !== 'number' || !lc.beneficiaryId) return;
-        
+        if (typeof lc.amount !== 'number' || isNaN(lc.amount) || !lc.beneficiaryId) return;
+
         const supplierDetails = supplierMap.get(lc.beneficiaryId);
-        const displayName = supplierDetails?.brandName && supplierDetails.brandName.trim() !== "" 
-                            ? supplierDetails.brandName 
-                            : supplierDetails?.beneficiaryName 
+        const displayName = supplierDetails?.brandName && supplierDetails.brandName.trim() !== ""
+                            ? supplierDetails.brandName
+                            : supplierDetails?.beneficiaryName
                                 ? (supplierDetails.beneficiaryName.length > 20 ? supplierDetails.beneficiaryName.substring(0, 17) + "..." : supplierDetails.beneficiaryName)
-                                : lc.beneficiaryName // Fallback to L/C's beneficiaryName if supplier record or its name is missing
+                                : lc.beneficiaryName // Fallback to L/C's beneficiaryName
                                     ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName)
                                     : 'Unknown/No Brand';
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
@@ -294,7 +360,7 @@ export default function DashboardPage() {
             etd: lc.etd, eta: lc.eta,
           } as RecentlyCompletedLC;
         })
-        .sort((a, b) => { 
+        .sort((a, b) => {
             const lcEntryA = lcEntriesForTheYear.find(l => l.id === a.id);
             const lcEntryB = lcEntriesForTheYear.find(l => l.id === b.id);
             const dateA = lcEntryA?.updatedAt;
@@ -311,7 +377,7 @@ export default function DashboardPage() {
                 if (typeof (dateB as unknown as Timestamp)?.toDate === 'function') timeB = (dateB as unknown as Timestamp).toDate().getTime();
                 else if (typeof dateB === 'string') try { timeB = parseISO(dateB).getTime(); } catch {}
             }
-            return timeB - timeA; 
+            return timeB - timeA;
         })
         .slice(0, 10);
       setRecentlyCompletedLCs(completedLCs);
@@ -354,16 +420,16 @@ export default function DashboardPage() {
                 } else if (etdDateSource && typeof (etdDateSource as unknown as Timestamp).toDate === 'function') {
                     etdDate = (etdDateSource as unknown as Timestamp).toDate();
                 } else {
-                    return false; 
+                    return false;
                 }
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
-            } catch (e) { 
+            } catch (e) {
                 console.warn("Error parsing ETD for upcoming shipments card:", lc.id, lc.etd, e);
-                return false; 
+                return false;
             }
         })
         .map(lc => {
-            let etdDate = new Date(0); 
+            let etdDate = new Date(0);
             if (lc.etd) {
                 if (typeof lc.etd === 'string') {
                     const parsed = parseISO(lc.etd);
@@ -398,7 +464,7 @@ export default function DashboardPage() {
 
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
-      const piQuerySnapshot = await getDocs(piCollectionRef); 
+      const piQuerySnapshot = await getDocs(piCollectionRef);
       const allProformaInvoices: ProformaInvoiceDocument[] = [];
       piQuerySnapshot.forEach((docSnap) => {
         allProformaInvoices.push({ id: docSnap.id, ...docSnap.data() } as ProformaInvoiceDocument);
@@ -417,6 +483,26 @@ export default function DashboardPage() {
         totalLinkedPIs: totalLinkedPIsCount,
       });
 
+      // Fetch data for bar chart (yearly values)
+      const yearlyDataPromises = years.map(async chartYearStr => {
+        const chartYearNum = parseInt(chartYearStr);
+        const yearlyLcQuery = query(lcEntriesRef, where("year", "==", chartYearNum));
+        const yearlySnapshot = await getDocs(yearlyLcQuery);
+        let yearlyTotalValue = 0;
+        let foundDataForYear = false;
+        yearlySnapshot.forEach(doc => {
+            const data = doc.data() as LCEntryDocument;
+            if (data.amount && typeof data.amount === 'number' && !isNaN(data.amount)) {
+                yearlyTotalValue += data.amount;
+                foundDataForYear = true;
+            }
+        });
+        return { year: chartYearStr, totalValue: foundDataForYear ? yearlyTotalValue : null };
+      });
+      const resolvedYearlyData = await Promise.all(yearlyDataPromises);
+      setYearlyLcValueData(resolvedYearlyData);
+
+
     } catch (error: any) {
       console.error("Dashboard: Detailed error fetching dashboard data: ", error);
       let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
@@ -431,63 +517,35 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
+      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, authLoading, selectedYear]); // Removed fetchDashboardData from dependency array as it's defined within scope
 
   useEffect(() => {
+    console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
     if (!authLoading && authUser) {
       console.log("Dashboard: Auth loaded, user available. Triggering fetch.");
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       console.log("Dashboard: User not authenticated after auth load, clearing data.");
+      // Clear all dashboard specific data
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setIsLoading(false); // Ensure loading is false if no user
+      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
+      setIsLoading(false);
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
-   useEffect(() => {
-    const scrollElement = upcomingEtdScrollRef.current;
 
-    const startScrolling = () => {
-      if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
-        scrollIntervalRef.current = setInterval(() => {
-          if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight) {
-            scrollElement.scrollTop = 0; 
-          } else {
-            scrollElement.scrollTop += 1; 
-          }
-        }, 75); 
-      }
-    };
-
-    const stopScrolling = () => {
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
-      }
-    };
-    
-    if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
-        startScrolling();
-        scrollElement.addEventListener('mouseenter', stopScrolling);
-        scrollElement.addEventListener('mouseleave', startScrolling);
-    }
-
-
-    return () => {
-      stopScrolling();
-      if (scrollElement) {
-        scrollElement.removeEventListener('mouseenter', stopScrolling);
-        scrollElement.removeEventListener('mouseleave', startScrolling);
-      }
-    };
-  }, [upcomingEtdShipments, isLoading]); 
+  setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef, [upcomingEtdShipments, isLoading]);
+  setupAutoScroll(draftLcScrollRef, draftLcIntervalRef, [draftLCs, isLoading]);
+  setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
   if (authLoading) {
@@ -498,8 +556,8 @@ export default function DashboardPage() {
       </div>
     );
   }
-  
-  if (!authUser && !isLoading && !authLoading) { // Check !isLoading here as well
+
+  if (!authUser && !isLoading && !authLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -520,7 +578,8 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-xl sm:text-2xl lg:text-3xl", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              "font-bold text-xl sm:text-2xl lg:text-3xl",
+              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
             Dashboard Overview
@@ -549,7 +608,7 @@ export default function DashboardPage() {
           </div>
       ) : (
         <>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         <StatCard
           title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -558,10 +617,9 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total L/Cs Values"
-          value={`$${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -580,7 +638,6 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-1"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
@@ -602,7 +659,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] w-full">
-            {isLoading && !authLoading ? (
+            {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">Loading chart data...</p>
@@ -611,7 +668,7 @@ export default function DashboardPage() {
               <SupplierPieChart data={supplierPieData} />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No L/C data available to display chart for {selectedYear}.</p>
+                <p className="text-muted-foreground">No L/C data available to display pie chart for {selectedYear}.</p>
               </div>
             )}
           </CardContent>
@@ -625,15 +682,15 @@ export default function DashboardPage() {
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
-                L/Cs from {selectedYear} nearing their Estimated Time of Departure.
+                L/Cs from {selectedYear} nearing ETD (Status not &quot;Done&quot;).
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">
-                 {isLoading && !authLoading ? (
+                 {isLoading ? (
                          <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                          </div>
-                    ) : upcomingEtdShipments.length === 0 && !isLoading ? (
+                    ) : upcomingEtdShipments.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                             <p className="text-sm text-muted-foreground text-center">No upcoming ETDs found for {selectedYear}.</p>
                         </div>
@@ -667,6 +724,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+        <CardHeader>
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <BarChart3 className="h-6 w-6 text-primary" />
+                Total L/C Values by Year (2020-2030)
+            </CardTitle>
+            <CardDescription>
+                Overview of total L/C values for each year. Data fetched from Firestore.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[350px] w-full">
+             {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Loading yearly chart data...</p>
+                </div>
+            ) : yearlyLcValueData.length > 0 ? (
+              <YearlyLcValueBarChart data={yearlyLcValueData} />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">No data available to display yearly L/C values chart.</p>
+              </div>
+            )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
@@ -678,17 +761,21 @@ export default function DashboardPage() {
               L/Cs currently in &quot;Draft&quot; status for {selectedYear}, sorted by most recent creation.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-             {isLoading && !authLoading ? (
-                <div className="flex items-center justify-center h-20">
+          <CardContent className="h-[350px] space-y-3">
+             {isLoading ? (
+                <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : draftLCs.length > 0 ? (
-              <ul className="space-y-3">
+              ) : draftLCs.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground text-center">No L/Cs in &quot;Draft&quot; status found for {selectedYear}.</p>
+                </div>
+              ) : (
+              <div ref={draftLcScrollRef} className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {draftLCs.map((lc) => (
-                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline truncate">
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
@@ -712,11 +799,7 @@ export default function DashboardPage() {
                     </div>
                   </li>
                 ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No L/Cs in &quot;Draft&quot; status found for {selectedYear}.
-              </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -731,17 +814,21 @@ export default function DashboardPage() {
               L/Cs marked as &quot;Done&quot; in {selectedYear}, sorted by most recent update.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {isLoading && !authLoading ? (
-                <div className="flex items-center justify-center h-20">
+          <CardContent className="h-[350px] space-y-3">
+            {isLoading ? (
+                <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : recentlyCompletedLCs.length > 0 ? (
-              <ul className="space-y-3">
+              ) : recentlyCompletedLCs.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground text-center">No L/Cs marked as &quot;Done&quot; found for {selectedYear}.</p>
+                </div>
+              ) : (
+              <div ref={completedLcScrollRef} className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {recentlyCompletedLCs.map((lc) => (
-                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50">
+                  <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline truncate">
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
@@ -766,11 +853,7 @@ export default function DashboardPage() {
                     </div>
                   </li>
                 ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No L/Cs marked as &quot;Done&quot; found for {selectedYear}.
-              </p>
+              </div>
             )}
           </CardContent>
         </Card>
