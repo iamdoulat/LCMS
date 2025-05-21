@@ -31,12 +31,12 @@ import {
   Users as UsersIcon,
   Settings,
   LogOut,
-  Briefcase, // Ensured Briefcase is imported
+  Briefcase,
   Loader2,
   Ship,
   UserPlus,
   Building,
-  FileText, // FileText remains for Commission Management
+  FileText,
   FileEdit,
   Package,
   History,
@@ -58,7 +58,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: Briefcase, // Changed icon here
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -67,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: FileText,
+    icon: Briefcase, // Changed from FileText
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -116,7 +116,7 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
@@ -126,12 +126,9 @@ export function AppSidebarNav() {
   }, [userRole]);
 
   const isActive = (href: string) => {
-    // Exact match for dashboard
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    // Starts with for search
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true;
 
-    // More specific checks for parent routes of add/edit pages
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
         if (
           (href === '/dashboard/suppliers' && (pathname === '/dashboard/suppliers' || pathname.startsWith('/dashboard/suppliers/add') || pathname.includes('/edit'))) ||
@@ -142,7 +139,6 @@ export function AppSidebarNav() {
         ) {
           return true;
         }
-        // Fallback for other direct matches
         if (pathname === href) {
           return true;
         }
@@ -226,7 +222,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext}
+                src={companyLogoUrlFromSettings}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
