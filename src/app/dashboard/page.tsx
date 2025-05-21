@@ -6,11 +6,11 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, CalendarDays, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, Search, ExternalLink, Plane } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isFuture, isToday, compareAsc } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -196,7 +196,7 @@ export default function DashboardPage() {
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
 
-        if (data.amount !== undefined && data.applicantId && data.beneficiaryId && lcIssueDateValid) {
+        if (data.amount !== undefined && lcIssueDateValid) { // applicantId and beneficiaryId might be missing initially for some LCs
           lcEntriesForTheYear.push({
               id: doc.id,
               ...data,
@@ -207,7 +207,8 @@ export default function DashboardPage() {
       });
 
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id)));
-      const supplierBrandNameMap = new Map<string, string>();
+      const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
+
 
       if (uniqueBeneficiaryIds.length > 0) {
         const BATCH_SIZE = 30; 
@@ -218,16 +219,14 @@ export default function DashboardPage() {
             const suppliersSnapshot = await getDocs(suppliersQuery);
             suppliersSnapshot.forEach((docSnap) => {
               const supplier = docSnap.data() as SupplierDocument;
-              if (supplier.brandName && supplier.brandName.trim() !== "") {
-                supplierBrandNameMap.set(docSnap.id, supplier.brandName);
-              }
+              supplierMap.set(docSnap.id, { brandName: supplier.brandName, beneficiaryName: supplier.beneficiaryName });
             });
           }
         }
       }
 
 
-      if (lcEntriesForTheYear.length === 0) {
+      if (lcEntriesForTheYear.length === 0 && !authLoading) {
         console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
         setDashboardStats({
           totalLCs: 0,
@@ -271,8 +270,15 @@ export default function DashboardPage() {
       const supplierValueMap: { [key: string]: number } = {};
       lcEntriesForTheYear.forEach(lc => {
         if (typeof lc.amount !== 'number' || !lc.beneficiaryId) return;
-        const brandName = supplierBrandNameMap.get(lc.beneficiaryId);
-        const displayName = brandName || (lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand');
+        
+        const supplierDetails = supplierMap.get(lc.beneficiaryId);
+        const displayName = supplierDetails?.brandName && supplierDetails.brandName.trim() !== "" 
+                            ? supplierDetails.brandName 
+                            : supplierDetails?.beneficiaryName 
+                                ? (supplierDetails.beneficiaryName.length > 20 ? supplierDetails.beneficiaryName.substring(0, 17) + "..." : supplierDetails.beneficiaryName)
+                                : lc.beneficiaryName // Fallback to L/C's beneficiaryName if supplier record or its name is missing
+                                    ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName)
+                                    : 'Unknown/No Brand';
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
       });
 
@@ -297,8 +303,10 @@ export default function DashboardPage() {
           } as RecentlyCompletedLC;
         })
         .sort((a, b) => { 
-            const dateA = a.id ? lcEntriesForTheYear.find(l => l.id === a.id)?.updatedAt : null;
-            const dateB = b.id ? lcEntriesForTheYear.find(l => l.id === b.id)?.updatedAt : null;
+            const lcEntryA = lcEntriesForTheYear.find(l => l.id === a.id);
+            const lcEntryB = lcEntriesForTheYear.find(l => l.id === b.id);
+            const dateA = lcEntryA?.updatedAt;
+            const dateB = lcEntryB?.updatedAt;
 
             let timeA = 0;
             let timeB = 0;
@@ -347,26 +355,47 @@ export default function DashboardPage() {
         .filter(lc => {
             if (!lc.etd || lc.status === 'Done') return false;
             try {
-                const etdDate = typeof lc.etd === 'string' ? parseISO(lc.etd) : (lc.etd as unknown as Timestamp).toDate();
+                const etdDateSource = lc.etd;
+                let etdDate: Date;
+                if (typeof etdDateSource === 'string') {
+                    etdDate = parseISO(etdDateSource);
+                } else if (etdDateSource && typeof (etdDateSource as unknown as Timestamp).toDate === 'function') {
+                    etdDate = (etdDateSource as unknown as Timestamp).toDate();
+                } else {
+                    return false; 
+                }
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
-            } catch (e) { return false; }
+            } catch (e) { 
+                console.warn("Error parsing ETD for upcoming shipments card:", lc.id, lc.etd, e);
+                return false; 
+            }
         })
-        .map(lc => ({
-            id: lc.id,
-            documentaryCreditNumber: lc.documentaryCreditNumber,
-            beneficiaryName: lc.beneficiaryName,
-            applicantName: lc.applicantName,
-            etdDate: typeof lc.etd === 'string' ? parseISO(lc.etd!) : (lc.etd as unknown as Timestamp).toDate(),
-            currency: lc.currency,
-            amount: lc.amount,
-        } as UpcomingEtdShipment))
+        .map(lc => {
+            let etdDate = new Date(0); // Default invalid date
+            if (lc.etd) {
+                if (typeof lc.etd === 'string') {
+                    const parsed = parseISO(lc.etd);
+                    if (isValid(parsed)) etdDate = parsed;
+                } else if (typeof (lc.etd as unknown as Timestamp).toDate === 'function') {
+                    etdDate = (lc.etd as unknown as Timestamp).toDate();
+                }
+            }
+            return {
+                id: lc.id,
+                documentaryCreditNumber: lc.documentaryCreditNumber,
+                beneficiaryName: lc.beneficiaryName,
+                applicantName: lc.applicantName,
+                etdDate: etdDate,
+                currency: lc.currency,
+                amount: lc.amount,
+            } as UpcomingEtdShipment;
+        })
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
         .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
-      // TODO: This can be very inefficient for large PI collections. Consider backend aggregation.
       const piQuerySnapshot = await getDocs(piCollectionRef); 
       const allProformaInvoices: ProformaInvoiceDocument[] = [];
       piQuerySnapshot.forEach((docSnap) => {
@@ -416,7 +445,7 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is false if no user
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
@@ -468,7 +497,7 @@ export default function DashboardPage() {
     );
   }
   
-  if (!authUser && !isLoading && !authLoading) {
+  if (!authUser && !isLoading && !authLoading) { // Check !isLoading here as well
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -559,8 +588,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="lg:col-span-1 shadow-xl hover:shadow-2xl transition-shadow duration-300">
           <CardHeader>
             <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <PieChartIcon className="h-6 w-6 text-primary" />
