@@ -44,8 +44,6 @@ import {
   DollarSign,
   Bell,
   CalendarClock,
-  Plus,
-  Minus,
   CreditCard, // Added for consistency if DollarSign is used elsewhere
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -70,7 +68,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Consider a different icon like Percent or DollarSign if more appropriate
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -119,7 +117,8 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const displayLogoUrl = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const displayCompanyName = companyName || "Smart Solution";
 
 
   React.useEffect(() => {
@@ -165,14 +164,6 @@ export function AppSidebarNav() {
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [isAccordionOpen, setIsAccordionOpen] = React.useState(defaultOpenAccordions.includes(item.groupLabel || ''));
-
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    React.useEffect(() => {
-        setIsAccordionOpen(defaultOpenAccordions.includes(item.groupLabel || ''));
-    }, [defaultOpenAccordions, item.groupLabel]);
-
     const IconComponent = item.icon;
 
     return item.subLinks ? (
@@ -181,18 +172,17 @@ export function AppSidebarNav() {
           <Tooltip>
             <TooltipTrigger asChild>
                 <AccordionTrigger
-                  onClick={() => setIsAccordionOpen(!isAccordionOpen)}
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-                    "hover:no-underline justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    isAccordionOpen && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                    defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <IconComponent className="h-5 w-5 text-primary" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </div>
-                  {isAccordionOpen ? <Minus className="h-4 w-4 text-primary group-data-[collapsible=icon]:hidden" /> : <Plus className="h-4 w-4 text-primary group-data-[collapsible=icon]:hidden" />}
+                  {/* Default chevron from AccordionTrigger will handle expand/collapse icon */}
                 </AccordionTrigger>
             </TooltipTrigger>
               <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -234,7 +224,7 @@ export function AppSidebarNav() {
       <SidebarHeader className="border-b">
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image
-            src={displayLogoUrl}
+            src={companyLogoUrlFromSettings} 
             alt="Company Logo"
             data-ai-hint="company logo"
             width={32}
@@ -247,7 +237,7 @@ export function AppSidebarNav() {
             "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
-            {companyName || "Smart Solution"}
+            {displayCompanyName}
           </span>
         </Link>
       </SidebarHeader>
@@ -356,5 +346,3 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
-
-    
