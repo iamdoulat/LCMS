@@ -33,7 +33,7 @@ import {
   LogOut,
   Briefcase,
   Loader2,
-  Store,
+  Ship, // Changed from Store
   UserPlus,
   Building,
   FileText,
@@ -45,7 +45,6 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  CreditCard, // Added for consistency, though DollarSign is used
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -68,7 +67,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Consider a more specific icon like Percent if available and fitting
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -79,7 +78,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Store,
+    icon: Ship, // Changed from Store
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -117,7 +116,7 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
@@ -179,7 +178,7 @@ export function AppSidebarNav() {
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                     // Hide default chevron in icon mode
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", 
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
                     defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -229,7 +228,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromSettings}
+                src={companyLogoUrlFromContext} // Uses dynamic URL from context
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -242,7 +241,7 @@ export function AppSidebarNav() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
                 )}
             >
-                {displayCompanyName}
+                {displayCompanyName} {/* Uses dynamic name from context */}
             </span>
             </Link>
             {!sidebar.isMobile && (
@@ -343,7 +342,6 @@ export function AppSidebarNav() {
           )}
           <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
-        {/* The footer expand button is removed as the header button now handles both expand/collapse */}
       </SidebarFooter>
     </>
   );
