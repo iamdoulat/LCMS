@@ -8,15 +8,14 @@ import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, compareAsc } from 'date-fns'; // Added startOfDay and compareAsc
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
 interface UpcomingLcShipmentItem extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta'> {
-  // latestShipmentDate is already a string from LCEntryDocument, no need to parse if used directly for display via formatDisplayDate
-  // If specific Date object operations are needed before display, they'd happen during mapping
+  latestShipmentDateObj: Date; // Keep this as Date object for comparisons
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -41,10 +40,10 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
   }
 };
 
-const formatDisplayDate = (dateString?: string): string => {
+const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
   try {
-    const date = parseISO(dateString);
+    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
@@ -77,6 +76,14 @@ export default function UpcomingLcShipmentDatesPage() {
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
+          let latestShipmentDateObj = new Date(0); // Default to a very old date if invalid
+          if (data.latestShipmentDate) {
+            const parsed = parseISO(data.latestShipmentDate);
+            if (isValid(parsed)) {
+              latestShipmentDateObj = parsed;
+            }
+          }
+
           return {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
@@ -85,7 +92,8 @@ export default function UpcomingLcShipmentDatesPage() {
             currency: data.currency,
             amount: data.amount,
             lcIssueDate: data.lcIssueDate,
-            latestShipmentDate: data.latestShipmentDate,
+            latestShipmentDate: data.latestShipmentDate, // Keep original string for display if needed
+            latestShipmentDateObj: latestShipmentDateObj, // Store as Date object for comparison
             etd: data.etd,
             eta: data.eta,
             status: data.status,
@@ -193,16 +201,19 @@ export default function UpcomingLcShipmentDatesPage() {
             <ul className="space-y-4">
               {currentItems.map((lc) => {
                 const today = startOfDay(new Date());
-                const shipmentDate = lc.latestShipmentDate ? startOfDay(parseISO(lc.latestShipmentDate)) : null;
-                const isPastOrToday = shipmentDate && isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
+                const shipmentDate = startOfDay(lc.latestShipmentDateObj); // Use the Date object
+                const isPastOrToday = isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
+                
+                // console.log({ id: lc.id, latestShipmentDateObj: lc.latestShipmentDateObj, isPastOrToday });
+
 
                 return (
-                  <li 
-                    key={lc.id} 
+                  <li
+                    key={lc.id}
                     className={cn(
                         "p-4 rounded-lg hover:shadow-md transition-shadow",
-                        isPastOrToday 
-                            ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2" 
+                        isPastOrToday
+                            ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2"
                             : "border bg-card"
                     )}
                   >
@@ -214,7 +225,7 @@ export default function UpcomingLcShipmentDatesPage() {
                           variant={getStatusBadgeVariant(lc.status)}
                           className={cn(
                             lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : 
+                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
                             lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
                           )}
                           >
@@ -238,7 +249,7 @@ export default function UpcomingLcShipmentDatesPage() {
                             Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                             </p>
                              <p className="text-muted-foreground">
-                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-red-600 dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDate)}</span>
+                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-red-600 dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                             </p>
                             <p className="text-muted-foreground">
                                 ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
@@ -299,5 +310,3 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
-
-    
