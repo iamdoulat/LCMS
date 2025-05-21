@@ -13,7 +13,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
-  useSidebar, // Import useSidebar
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,8 +43,9 @@ import {
   Search,
   DollarSign,
   CalendarClock,
-  PanelLeftClose, // Icon for collapse
-  PanelRightClose, // Icon for expand
+  PanelLeftClose,
+  PanelRightClose,
+  CreditCard, // Added for consistency, though DollarSign is used
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -54,7 +55,6 @@ import React from 'react';
 
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search };
-
 
 const coreModulesNavItems: NavItemGroup[] = [
   {
@@ -68,7 +68,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Consider a more specific icon like Percent if available and fitting
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -76,9 +76,8 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
 ];
 
-
 const managementNavItems: NavItemGroup[] = [
- {
+  {
     groupLabel: 'Suppliers / Beneficiary',
     icon: Store,
     subLinks: [
@@ -113,26 +112,27 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
 
-
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const sidebar = useSidebar(); // Get sidebar context
+  const sidebar = useSidebar();
 
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
-
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
   const isActive = (href: string) => {
+    // Exact match for dashboard
     if (href === '/dashboard' && pathname === '/dashboard') return true;
+    // Starts with for search
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true;
 
+    // More specific checks for parent routes of add/edit pages
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
         if (
           (href === '/dashboard/suppliers' && (pathname === '/dashboard/suppliers' || pathname.startsWith('/dashboard/suppliers/add') || pathname.includes('/edit'))) ||
@@ -143,6 +143,7 @@ export function AppSidebarNav() {
         ) {
           return true;
         }
+        // Fallback for other direct matches
         if (pathname === href) {
           return true;
         }
@@ -177,6 +178,8 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                    // Hide default chevron in icon mode
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", 
                     defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   )}
                 >
@@ -191,6 +194,7 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        {/* AccordionContent is hidden by default by sidebar.tsx when collapsible=icon and state=collapsed */}
         <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <SidebarMenu className="gap-0 py-1">
             {item.subLinks.map((subLink) => (
@@ -219,14 +223,13 @@ export function AppSidebarNav() {
     ) : null;
   };
 
-
   return (
     <>
       <SidebarHeader className="border-b">
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromSettings} 
+                src={companyLogoUrlFromSettings}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -246,7 +249,7 @@ export function AppSidebarNav() {
                  <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 group-data-[collapsible=icon]:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
                     title={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
                 >
@@ -285,7 +288,6 @@ export function AppSidebarNav() {
         <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
             {coreModulesNavItems.map(renderNavGroup)}
         </Accordion>
-
 
         <SidebarSeparator />
 
@@ -341,18 +343,7 @@ export function AppSidebarNav() {
           )}
           <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
-        {!sidebar.isMobile && sidebar.state === 'collapsed' && (
-             <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={sidebar.toggleSidebar}
-                title="Expand Sidebar"
-            >
-                <PanelRightClose className="h-5 w-5" />
-                <span className="sr-only">Expand Sidebar</span>
-            </Button>
-        )}
+        {/* The footer expand button is removed as the header button now handles both expand/collapse */}
       </SidebarFooter>
     </>
   );
@@ -373,5 +364,3 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
-
-    

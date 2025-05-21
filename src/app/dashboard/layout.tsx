@@ -6,13 +6,12 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import AuthGuard from '@/components/auth/AuthGuard';
-// Toaster removed from here as it's now in RootLayout
 
 export default function DashboardLayout({ children }: PropsWithChildren) {
   return (
     <AuthGuard>
       <SidebarProvider defaultOpen>
-        <Sidebar>
+        <Sidebar collapsible="icon"> {/* Enable icon-only collapse mode */}
           <AppSidebarNav />
         </Sidebar>
         <SidebarInset className="flex flex-col min-h-screen"> {/* Ensure SidebarInset takes full height */}
@@ -37,5 +36,3 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
     </AuthGuard>
   );
 }
-
-    
