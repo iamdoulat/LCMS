@@ -13,6 +13,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
+  useSidebar, // Import useSidebar
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,14 +38,13 @@ import {
   Building,
   FileText,
   FileEdit,
-  ImageIcon,
   Package,
   History,
   Search,
   DollarSign,
-  Bell,
   CalendarClock,
-  CreditCard, // Added for consistency if DollarSign is used elsewhere
+  PanelLeftClose, // Icon for collapse
+  PanelRightClose, // Icon for expand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -68,7 +68,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Consider a different icon like Percent or DollarSign if more appropriate
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -117,6 +117,8 @@ const settingsNavItems: NavItem[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const sidebar = useSidebar(); // Get sidebar context
+
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
@@ -182,7 +184,6 @@ export function AppSidebarNav() {
                     <IconComponent className="h-5 w-5 text-primary" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </div>
-                  {/* Default chevron from AccordionTrigger will handle expand/collapse icon */}
                 </AccordionTrigger>
             </TooltipTrigger>
               <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
@@ -222,24 +223,38 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="border-b">
-        <Link href="/dashboard" className="flex items-center gap-2 p-2">
-          <Image
-            src={companyLogoUrlFromSettings} 
-            alt="Company Logo"
-            data-ai-hint="company logo"
-            width={32}
-            height={32}
-            className="rounded-sm object-contain"
-            priority
-          />
-          <span className={cn(
-            "font-bold text-lg group-data-[collapsible=icon]:hidden",
-            "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+        <div className="flex items-center justify-between p-2">
+            <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+                src={companyLogoUrlFromSettings} 
+                alt="Company Logo"
+                data-ai-hint="company logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain"
+                priority
+            />
+            <span className={cn(
+                "font-bold text-lg group-data-[collapsible=icon]:hidden",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
+            >
+                {displayCompanyName}
+            </span>
+            </Link>
+            {!sidebar.isMobile && (
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 group-data-[collapsible=icon]:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    onClick={sidebar.toggleSidebar}
+                    title={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+                >
+                    {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
+                    <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
+                </Button>
             )}
-          >
-            {displayCompanyName}
-          </span>
-        </Link>
+        </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
@@ -311,10 +326,10 @@ export function AppSidebarNav() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="mt-auto border-t p-2">
+      <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           onClick={logout}
           disabled={authLoading}
           title="Logout"
@@ -326,6 +341,18 @@ export function AppSidebarNav() {
           )}
           <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
+        {!sidebar.isMobile && sidebar.state === 'collapsed' && (
+             <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={sidebar.toggleSidebar}
+                title="Expand Sidebar"
+            >
+                <PanelRightClose className="h-5 w-5" />
+                <span className="sr-only">Expand Sidebar</span>
+            </Button>
+        )}
       </SidebarFooter>
     </>
   );
@@ -346,3 +373,5 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
+
+    
