@@ -35,7 +35,7 @@ import {
   Loader2,
   Ship,
   UserPlus,
-  Building, // Kept for "Company Setup"
+  Building,
   FileText,
   FileEdit,
   Package,
@@ -45,7 +45,8 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory, // Added Factory icon
+  Factory,
+  CreditCard, // Added for consistency, though not used directly for new link
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -63,6 +64,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
+      { href: '/dashboard/lc-tt-entry', label: 'LC T/T Entry', icon: FilePlus2 }, // New Link
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
   },
@@ -87,7 +89,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed icon here
+    icon: Factory,
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -117,7 +119,7 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
@@ -143,6 +145,7 @@ export function AppSidebarNav() {
         if (pathname === href) {
           return true;
         }
+        // Exact match for other sub-links like /dashboard/new-lc-entry, etc.
         return false;
     }
     return false;
@@ -223,7 +226,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromSettings}
+                src={companyLogoUrlFromContext}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
