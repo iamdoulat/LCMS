@@ -29,12 +29,12 @@ import {
   FilePlus2,
   Settings,
   LogOut,
-  Briefcase, 
+  Briefcase,
   Loader2,
-  Ship, 
+  Ship,
   UserPlus,
-  Building, 
-  FileText, 
+  Building,
+  FileText,
   Package,
   History,
   Search,
@@ -42,9 +42,10 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory, 
+  Factory,
   Truck,
-  FileEdit, // Added FileEdit here
+  FileEdit,
+  PackageCheck, // Added PackageCheck here
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -58,7 +59,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -67,7 +68,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -78,7 +79,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -86,7 +87,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -94,11 +95,11 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     subLinks: [
-      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck }, // Changed from Truck
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
-      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package }, // Using Package instead of Truck
+      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
   },
@@ -106,7 +107,7 @@ const managementNavItems: NavItemGroup[] = [
 
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus }, // Changed icon for consistency
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
@@ -130,19 +131,22 @@ export function AppSidebarNav() {
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true;
 
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
-        if (
-          (href === '/dashboard/suppliers' && (pathname === '/dashboard/suppliers' || pathname.startsWith('/dashboard/suppliers/add') || pathname.includes('/edit'))) ||
-          (href === '/dashboard/customers' && (pathname === '/dashboard/customers' || pathname.startsWith('/dashboard/customers/add') || pathname.includes('/edit'))) ||
-          (href === '/dashboard/total-lc' && (pathname === '/dashboard/total-lc' || (pathname.startsWith('/dashboard/total-lc/') && pathname.includes('/edit')))) ||
-          (href === '/dashboard/commission-management/issued-pi-list' && (pathname === '/dashboard/commission-management/issued-pi-list' || pathname.startsWith('/dashboard/commission-management/add-pi') || (pathname.startsWith('/dashboard/commission-management/edit-pi/')))) ||
-          (href === '/dashboard/settings/users' && (pathname === '/dashboard/settings/users' || pathname.startsWith('/dashboard/settings/users/add') || (pathname.startsWith('/dashboard/settings/users/') && pathname.includes('/edit'))))
-        ) {
-          return true;
-        }
-        if (pathname === href) {
-          return true;
-        }
-        return false;
+      // More specific checks for parent routes
+      const parentRoutes = [
+        '/dashboard/suppliers',
+        '/dashboard/customers',
+        '/dashboard/total-lc',
+        '/dashboard/commission-management/issued-pi-list',
+        '/dashboard/settings/users'
+      ];
+      if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
+        return true;
+      }
+      // Fallback for exact match if not a parent route scenario covered above
+      if (pathname === href) {
+        return true;
+      }
+      return false;
     }
     return false;
   };
@@ -244,7 +248,7 @@ export function AppSidebarNav() {
                     size="icon"
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
-                >
+                 >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
                 </Button>
