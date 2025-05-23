@@ -27,17 +27,15 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Truck,
   Users as UsersIcon,
   Settings,
   LogOut,
-  Briefcase,
+  Briefcase, // Used for Commission Management
   Loader2,
-  Ship,
+  Ship, // Used for Shipment Management
   UserPlus,
-  Building,
-  FileText,
-  FileEdit,
+  Building, // Used for Company Setup
+  FileText, // Used for T/T OR L/C Management
   Package,
   History,
   Search,
@@ -45,8 +43,11 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory,
+  Factory, // Used for Customers / Applicants
+  Truck, // Used for Suppliers / Beneficiary
   CreditCard, 
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -64,7 +65,6 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/lc-tt-entry', label: 'LC T/T Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
   },
@@ -99,7 +99,7 @@ const managementNavItems: NavItemGroup[] = [
     groupLabel: 'Shipment Management',
     icon: Ship,
     subLinks: [
-      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck },
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck }, // Consider changing icon if Truck is for Suppliers
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
@@ -124,7 +124,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -247,7 +247,6 @@ export function AppSidebarNav() {
                     size="icon"
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
-                    
                 >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
