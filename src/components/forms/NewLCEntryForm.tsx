@@ -36,7 +36,7 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__"; // Maintained for consistency if other dropdowns might use it
+const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__"; 
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -97,7 +97,7 @@ const lcEntrySchema = z.object({
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  trackingCourier: z.enum(trackingCourierOptions).optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
@@ -131,7 +131,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   beneficiaryId: '',
   currency: currencyOptions[0],
   amount: undefined,
-  termsOfPay: undefined, // Default to placeholder
+  termsOfPay: undefined, 
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
   invoiceDate: undefined,
@@ -139,7 +139,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   commercialInvoiceDate: undefined,
   totalMachineQty: undefined,
   numberOfAmendments: 0,
-  status: undefined, // Default to placeholder
+  status: undefined, 
   itemDescriptions: '',
   partialShipments: '',
   portOfLoading: '',
@@ -224,7 +224,7 @@ export function NewLCEntryForm() {
 
   const form = useForm<LCFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: defaultFormValues as LCFormValues, // Cast because defaultValues is Partial
+    defaultValues: defaultFormValues as LCFormValues, 
   });
 
   const { control, setValue, watch, getValues, reset } = form;
@@ -247,7 +247,6 @@ export function NewLCEntryForm() {
           } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
-        console.log("NewLCEntryForm: Fetched Applicant Options:", fetchedApplicants);
 
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
@@ -270,23 +269,17 @@ export function NewLCEntryForm() {
   const watchedApplicantId = watch("applicantId");
 
   React.useEffect(() => {
-    console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
+    const { setValue } = form;
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
-      console.log("NewLCEntryForm: Applicant Options for check:", applicantOptions);
-      console.log("NewLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
-        console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
-  }, [watchedApplicantId, applicantOptions, setValue]);
+  }, [watchedApplicantId, applicantOptions, form]);
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -649,128 +642,183 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <FormField
+                control={control}
+                name="currency"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Currency*</FormLabel>
+                    <FormControl>
+                    <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                        {currencyOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value={option} /></FormControl>
+                            <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                        </FormItem>
+                        ))}
+                    </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="amount"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{amountLabel}</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="documentaryCreditNumber"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Documentary Credit Number*</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="proformaInvoiceNumber"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Proforma Invoice Number</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter PI number" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="invoiceDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Invoice Date</FormLabel>
+                    <DatePickerField field={field} placeholder="Select invoice date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="totalMachineQty"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Total L/C Machine Qty*</FormLabel>
+                    <FormControl>
+                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormDescription>Overall quantity for this L/C.</FormDescription>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="numberOfAmendments"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
+                    <FormControl>
+                    <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="commercialInvoiceNumber"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Commercial Invoice Number</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="commercialInvoiceDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Commercial Invoice Date</FormLabel>
+                    <DatePickerField field={field} placeholder="Select C.I. date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+           <FormField
             control={control}
-            name="currency"
+            name="termsOfPay"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Currency*</FormLabel>
+               <FormItem className="space-y-3"> 
+                <FormLabel>Terms of Pay*</FormLabel>
                  <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value || ""}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
-                    {currencyOptions.map((option) => (
+                    {termsOfPayOptions.map((option) => (
                       <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
                         <FormLabel className="font-normal text-sm">{option}</FormLabel>
                       </FormItem>
                     ))}
                   </RadioGroup>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{amountLabel}</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="documentaryCreditNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Documentary Credit Number*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="proformaInvoiceNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Proforma Invoice Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="invoiceDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Invoice Date</FormLabel>
-                <DatePickerField field={field} placeholder="Select invoice date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="totalMachineQty"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Total L/C Machine Qty*</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormDescription>Overall quantity for this L/C.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="numberOfAmendments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
-                </FormControl>
-                <FormMessage />
+                 <FormMessage />
               </FormItem>
             )}
           />
            <FormField
-            control={form.control}
-            name="commercialInvoiceNumber"
+            control={control}
+            name="status"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Commercial Invoice Number</FormLabel>
+               <FormItem className="space-y-3"> 
+                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                  >
+                    {lcStatusOptions.map((statusOpt) => (
+                      <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={statusOpt} />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="commercialInvoiceDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Commercial Invoice Date</FormLabel>
-                <DatePickerField field={field} placeholder="Select C.I. date" />
                 <FormMessage />
               </FormItem>
             )}
@@ -812,60 +860,6 @@ export function NewLCEntryForm() {
                 <FormLabel>44F: Port of Discharge</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <FormField
-            control={control}
-            name="termsOfPay"
-            render={({ field }) => (
-               <FormItem className="space-y-3"> 
-                <FormLabel>Terms of Pay*</FormLabel>
-                 <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {termsOfPayOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={option} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={control}
-            name="status"
-            render={({ field }) => (
-               <FormItem className="space-y-3"> 
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {lcStatusOptions.map((statusOpt) => (
-                      <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={statusOpt} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -939,6 +933,10 @@ export function NewLCEntryForm() {
                   value={field.value || ""}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                     <FormControl><RadioGroupItem value={""} /></FormControl>
+                     <FormLabel className="font-normal text-sm text-muted-foreground">N/A</FormLabel>
+                  </FormItem>
                   {partialShipmentAllowedOptions.map((option) => (
                     <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                       <FormControl><RadioGroupItem value={option} /></FormControl>
@@ -1196,7 +1194,7 @@ export function NewLCEntryForm() {
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value || "DHL"}
+                      value={field.value || "DHL"} // Default to DHL if no value
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {trackingCourierOptions.map(courier => (
@@ -1391,7 +1389,7 @@ export function NewLCEntryForm() {
         <Separator />
 
         {/* Section: 46A Documents Required */}
-        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
               className={cn(
@@ -1607,7 +1605,7 @@ export function NewLCEntryForm() {
           ) : (
             <>
               <FileText className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              Submit T/T OR L/C Entry
             </>
           )}
         </Button>
@@ -1615,3 +1613,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+

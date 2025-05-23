@@ -18,7 +18,7 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Done", "Done"] as const;
+export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Done", "Shipment Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
@@ -58,6 +58,7 @@ export interface LCEntry {
   eta?: Date | null | undefined;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
+  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -72,7 +73,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is for the contact person name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -142,6 +143,7 @@ export interface LCEntryDocument {
   eta?: string; // ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
+  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -156,7 +158,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is for the contact person name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -222,7 +224,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string;
+  contactPersonName?: string; // This should map from Customer's contactPerson
   email?: string;
   phone?: string;
 }
@@ -309,7 +311,7 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number;
+  miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number; // Sum of line item sales prices
