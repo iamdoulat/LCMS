@@ -1,5 +1,4 @@
 
-
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -39,22 +38,24 @@ export interface LCEntry {
   beneficiaryName: string;
   currency: Currency;
   amount: number | '';
-  termsOfPay: TermsOfPay;
+  termsOfPay?: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: Date | null;
+  invoiceDate?: Date | null | undefined;
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: Date | null | undefined;
   totalMachineQty: number | '';
-  lcIssueDate?: Date;
-  expireDate?: Date;
-  latestShipmentDate?: Date;
+  lcIssueDate?: Date | null | undefined;
+  expireDate?: Date | null | undefined;
+  latestShipmentDate?: Date | null | undefined;
   purchaseOrderUrl?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: Date | null;
-  eta?: Date | null;
+  etd?: Date | null | undefined;
+  eta?: Date | null | undefined;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   shipmentMode?: ShipmentMode;
@@ -71,12 +72,12 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; 
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
-  partialShipmentAllowed?: PartialShipmentAllowed;
+  partialShipmentAllowed?: PartialShipmentAllowed | undefined;
   firstPartialQty?: number | '';
   secondPartialQty?: number | '';
   thirdPartialQty?: number | '';
@@ -121,22 +122,24 @@ export interface LCEntryDocument {
   beneficiaryName: string;
   currency: Currency;
   amount: number;
-  termsOfPay: TermsOfPay;
+  termsOfPay?: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
-  invoiceDate?: string;
+  invoiceDate?: string; // ISO string
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: string; // ISO string
   totalMachineQty: number;
-  lcIssueDate?: string;
-  expireDate?: string;
-  latestShipmentDate?: string;
+  lcIssueDate?: string; // ISO string
+  expireDate?: string; // ISO string
+  latestShipmentDate?: string; // ISO string
   purchaseOrderUrl?: string;
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
-  etd?: string;
-  eta?: string;
+  etd?: string; // ISO string
+  eta?: string; // ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
   shipmentMode?: ShipmentMode;
@@ -157,10 +160,10 @@ export interface LCEntryDocument {
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
-  status: LCStatus;
-  createdAt: any;
-  updatedAt: any;
-  partialShipmentAllowed?: PartialShipmentAllowed;
+  status?: LCStatus;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+  partialShipmentAllowed?: PartialShipmentAllowed | undefined;
   firstPartialQty?: number;
   secondPartialQty?: number;
   thirdPartialQty?: number;
@@ -297,7 +300,7 @@ export interface ProformaInvoice {
   applicantId: string;
   applicantName: string;
   piNo: string;
-  piDate: Date;
+  piDate: Date; // Stored as Date object in form, ISO string in Firestore
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
@@ -309,8 +312,8 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number;
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
-  grandTotalSalesPrice: number;
+  totalSalesPrice: number; // Sum of line item sales prices
+  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded) - misc expenses
   grandTotalCommissionUSD?: number;
   totalExtraNetCommission?: number;
   totalCommissionPercentage: number;
