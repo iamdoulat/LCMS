@@ -79,7 +79,6 @@ const lcTtEntrySchema = z.object({
   notifyPartyName: z.string().optional(), 
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  // 46A Fields
   originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
@@ -93,9 +92,7 @@ const lcTtEntrySchema = z.object({
   shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional().default(0)),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
-  // 47A Field
   shippingMarks: z.string().optional(),
-  // Document URLs
   purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
@@ -106,7 +103,7 @@ type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LCTTT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LCTTT_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__";
+const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__"; // Unique constant for this form
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -538,7 +535,32 @@ export default function LcTtEntryPage() {
                 <div className="mt-6">
                     <h4 className="text-base font-medium text-foreground flex items-center mb-2"><PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-                        <FormField control={control} name="trackingCourier" render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel>Courier By</FormLabel><Select onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)} value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Courier" /></SelectTrigger></FormControl><SelectContent><SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>{trackingCourierOptions.map(courier => (<SelectItem key={courier} value={courier}>{courier}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField
+                        control={control}
+                        name="trackingCourier"
+                        render={({ field }) => (
+                            <FormItem className="md:col-span-1">
+                            <FormLabel>Courier By</FormLabel>
+                            <Select
+                                onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                                value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}
+                            >
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Courier" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
+                                {trackingCourierOptions.map(courier => (
+                                    <SelectItem key={courier} value={courier}>{courier}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                         <FormField control={control} name="trackingNumber" render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel>Tracking Number</FormLabel><FormControl><Input placeholder="Enter tracking number" {...field} disabled={!watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                         <Button type="button" variant="default" onClick={handleTrackDocument} disabled={!watch("trackingNumber") || !watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE} className="md:col-span-1 mt-4 md:mt-0" title="Track Original Document"><ExternalLink className="mr-2 h-4 w-4" />Track</Button>
                     </div>
@@ -574,7 +596,7 @@ export default function LcTtEntryPage() {
                   Notify Details
                 </h3>
                 <FormField
-                  control={control}
+                  control={form.control}
                   name="notifyPartyNameAndAddress"
                   render={({ field }) => (
                     <FormItem>
@@ -588,7 +610,7 @@ export default function LcTtEntryPage() {
                 />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormField
-                    control={control}
+                    control={form.control}
                     name="notifyPartyName"
                     render={({ field }) => (
                       <FormItem>
@@ -601,7 +623,7 @@ export default function LcTtEntryPage() {
                     )}
                   />
                   <FormField
-                    control={control}
+                    control={form.control}
                     name="notifyPartyCell"
                     render={({ field }) => (
                       <FormItem>
@@ -614,7 +636,7 @@ export default function LcTtEntryPage() {
                     )}
                   />
                   <FormField
-                    control={control}
+                    control={form.control}
                     name="notifyPartyEmail"
                     render={({ field }) => (
                       <FormItem>
