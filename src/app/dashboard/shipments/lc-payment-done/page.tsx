@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface PaymentDoneLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate'> {
+interface PaymentDoneLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
   updatedAtDate: Date;
 }
 
@@ -29,10 +29,10 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
-      return 'default';
+      return 'default'; 
     case 'Payment Done':
       return 'default'; // Highlight for this page
-    case 'Done':
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -101,6 +101,9 @@ export default function LCPaymentDonePage() {
             lcIssueDate: data.lcIssueDate,
             updatedAtDate: updatedAtDate,
             status: data.status,
+            isFirstShipment: data.isFirstShipment,
+            isSecondShipment: data.isSecondShipment,
+            isThirdShipment: data.isThirdShipment,
           };
         });
         setPaymentDoneLCs(fetchedLCs);
@@ -204,18 +207,61 @@ export default function LCPaymentDonePage() {
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
-                      {lc.documentaryCreditNumber || 'N/A'}
-                    </Link>
+                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
+                  <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
                        className={lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
+                    <div className="flex gap-1.5">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isFirstShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="1st Shipment Status"
+                          >
+                              1st
+                          </Button>
+                      </Link>
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isSecondShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="2nd Shipment Status"
+                          >
+                              2nd
+                          </Button>
+                      </Link>
+                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isThirdShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="3rd Shipment Status"
+                          >
+                              3rd
+                          </Button>
+                      </Link>
+                    </div>
                   </div>
+
+                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                    {lc.documentaryCreditNumber || 'N/A'}
+                  </Link>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
                     <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
@@ -288,6 +334,6 @@ export default function LCPaymentDonePage() {
     </div>
   );
 }
-
+    
 
     
