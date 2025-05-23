@@ -8,20 +8,21 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed } from '@/types';
-import { currencyOptions, termsOfPayOptions, lcStatusOptions, partialShipmentAllowedOptions } from '@/types';
+import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed, ShipmentMode, TrackingCourier } from '@/types';
+import { currencyOptions, termsOfPayOptions, lcStatusOptions, partialShipmentAllowedOptions, shipmentModeOptions, trackingCourierOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers } from 'lucide-react';
+import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers, Ship, Plane, ExternalLink, Search, PackageCheck } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { format, isValid, parseISO } from 'date-fns';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
@@ -63,12 +64,21 @@ const lcTtEntrySchema = z.object({
   firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount must be non-negative.").optional()),
   secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount must be non-negative.").optional()),
   thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount must be non-negative.").optional()),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required."}),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
 });
 
 type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LCTTT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LCTTT_BENEFICIARY_PLACEHOLDER__";
+const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__";
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -79,6 +89,8 @@ export default function LcTtEntryPage() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
+  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined>();
+
 
   const form = useForm<LcTtEntryFormValues>({
     resolver: zodResolver(lcTtEntrySchema),
@@ -94,26 +106,36 @@ export default function LcTtEntryPage() {
       portOfLoading: '',
       portOfDischarge: '',
       piNumber: '',
-      piDate: null,
+      piDate: undefined,
       termsOfPay: termsOfPayOptions[0],
       lcStatus: lcStatusOptions[0],
       itemDescriptionsDetails: '',
       lcIssueDate: new Date(),
       expireDate: new Date(),
       latestShipmentDate: new Date(),
-      partialShipmentAllowed: undefined, // Changed from 'No'
+      partialShipmentAllowed: undefined,
       firstPartialQty: 0,
       secondPartialQty: 0,
       thirdPartialQty: 0,
       firstPartialAmount: 0,
       secondPartialAmount: 0,
       thirdPartialAmount: 0,
+      shipmentMode: shipmentModeOptions[0],
+      vesselOrFlightName: '',
+      vesselImoNumber: '',
+      flightNumber: '',
+      trackingCourier: '',
+      trackingNumber: '',
+      etd: undefined,
+      eta: undefined,
     },
   });
 
   const { control, watch, setValue, getValues } = form;
   const watchedCurrency = watch("currency");
   const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
+  const watchedShipmentMode = watch("shipmentMode");
+
   const partialFieldsToWatch: (keyof LcTtEntryFormValues)[] = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
     "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount"
@@ -153,19 +175,7 @@ export default function LcTtEntryPage() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedPartialShipmentAllowed === "Yes") {
-      const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q || 0));
-      const amounts = [getValues("firstPartialAmount"), getValues("secondPartialAmount"), getValues("thirdPartialAmount")].map(a => Number(a || 0));
-      setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-      setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
-    } else {
-      setTotalCalculatedPartialQty(0);
-      setTotalCalculatedPartialAmount(0);
-    }
-  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues]);
-
-  React.useEffect(() => {
-    if (watchedPartialShipmentAllowed === "Yes") {
+    if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
       const fieldsToInitializeZero = [
         "firstPartialQty", "secondPartialQty", "thirdPartialQty",
         "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
@@ -177,7 +187,21 @@ export default function LcTtEntryPage() {
         }
       });
     }
+    prevPartialShipmentAllowedRef.current = watchedPartialShipmentAllowed;
   }, [watchedPartialShipmentAllowed, setValue, getValues]);
+
+
+  React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "Yes") {
+      const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q || 0));
+      const amounts = [getValues("firstPartialAmount"), getValues("secondPartialAmount"), getValues("thirdPartialAmount")].map(a => Number(a || 0));
+      setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
+      setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
+    } else {
+      setTotalCalculatedPartialQty(0);
+      setTotalCalculatedPartialAmount(0);
+    }
+  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues]);
 
 
   async function onSubmit(data: LcTtEntryFormValues) {
@@ -196,7 +220,43 @@ export default function LcTtEntryPage() {
     setIsSubmitting(false);
   }
 
+  const handleTrackDocument = () => {
+    const courier = getValues("trackingCourier");
+    const number = getValues("trackingNumber");
+    if (!courier || courier.trim() === "" || courier === NONE_COURIER_VALUE || !number || number.trim() === "") {
+      Swal.fire("Information Missing", "Please select a courier and enter a tracking number.", "info");
+      return;
+    }
+    let url = "";
+    if (courier === "DHL") url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(number.trim())}&submit=1`;
+    else if (courier === "FedEx") url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number.trim())}`;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    else Swal.fire("Courier Not Supported", "Tracking for the selected courier is not implemented.", "warning");
+  };
+
+  const handleTrackVessel = () => {
+    const imoNumber = getValues("vesselImoNumber");
+    if (!imoNumber || imoNumber.trim() === "") {
+      Swal.fire("IMO Number Missing", "Please enter a Vessel IMO number to track.", "info");
+      return;
+    }
+    window.open(`https://www.vesselfinder.com/vessels/details/${encodeURIComponent(imoNumber.trim())}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleTrackFlight = () => {
+    const flightNum = getValues("flightNumber");
+    if (!flightNum || flightNum.trim() === "") {
+      Swal.fire("Flight Number Missing", "Please enter a flight number to track.", "info");
+      return;
+    }
+    window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
+  };
+
+
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
+  let viaLabel = "Vessel/Flight Name";
+  if (watchedShipmentMode === "Sea") viaLabel = "Vessel Name";
+  else if (watchedShipmentMode === "Air") viaLabel = "Flight Name";
 
   return (
     <div className="container mx-auto py-8">
@@ -213,7 +273,7 @@ export default function LcTtEntryPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              
+
               <h3 className={cn(sectionHeadingClass)}>
                 <FileText className="mr-2 h-5 w-5 text-primary" />
                 Invoice and T/C, L/C Details
@@ -291,8 +351,8 @@ export default function LcTtEntryPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Partial Shipment Allowed</FormLabel>
-                    <Select 
-                        onValueChange={(value) => field.onChange(value === "" ? undefined : value)} 
+                    <Select
+                        onValueChange={(value) => field.onChange(value === "" ? undefined : value)}
                         value={field.value ?? ""}
                     >
                       <FormControl><SelectTrigger><SelectValue placeholder="Select option (Optional)" /></SelectTrigger></FormControl>
@@ -321,12 +381,7 @@ export default function LcTtEntryPage() {
                         {index < 2 && <Separator />}
                       </React.Fragment>
                     ))}
-                  </CardContent>
-                </Card>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                 {watchedPartialShipmentAllowed === "Yes" && (
-                    <>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                         <FormItem>
                             <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
                             <FormControl><Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" /></FormControl>
@@ -335,9 +390,79 @@ export default function LcTtEntryPage() {
                             <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({watchedCurrency})</FormLabel>
                             <FormControl><Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" /></FormControl>
                         </FormItem>
-                    </>
-                 )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Separator />
+              <h3 className={cn(sectionHeadingClass)}>
+                 <Ship className="mr-2 h-5 w-5 text-primary" />
+                 Shipping Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                 <FormField
+                    control={control}
+                    name="shipmentMode"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Shipment Mode*</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select shipment mode" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {shipmentModeOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                                {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
+                                {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
+                                {option}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control}
+                    name="vesselOrFlightName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{viaLabel}</FormLabel>
+                        <FormControl><Input placeholder={watchedShipmentMode ? `Enter ${viaLabel}` : "Enter name"} {...field} value={field.value ?? ''} disabled={!watchedShipmentMode} /></FormControl>
+                        {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
               </div>
+
+                {watchedShipmentMode === 'Sea' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                        <FormField control={control} name="vesselImoNumber" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>Vessel IMO Number</FormLabel><FormControl><Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="default" onClick={handleTrackVessel} disabled={!watch("vesselImoNumber")} className="md:col-span-1" title="Track Vessel"><Search className="mr-2 h-4 w-4" />Track Vessel</Button>
+                    </div>
+                )}
+                {watchedShipmentMode === 'Air' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                        <FormField control={control} name="flightNumber" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>Flight Number</FormLabel><FormControl><Input placeholder="Enter Flight Number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="default" onClick={handleTrackFlight} disabled={!watch("flightNumber")} className="md:col-span-1" title="Track Flight"><Search className="mr-2 h-4 w-4" />Track Flight</Button>
+                    </div>
+                )}
+                
+                <div className="mt-6">
+                    <h4 className="text-base font-medium text-foreground flex items-center mb-2"><PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+                        <FormField control={control} name="trackingCourier" render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel>Courier By</FormLabel><Select onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)} value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Courier" /></SelectTrigger></FormControl><SelectContent><SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>{trackingCourierOptions.map(courier => (<SelectItem key={courier} value={courier}>{courier}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="trackingNumber" render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel>Tracking Number</FormLabel><FormControl><Input placeholder="Enter tracking number" {...field} disabled={!watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="default" onClick={handleTrackDocument} disabled={!watch("trackingNumber") || !watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE} className="md:col-span-1 mt-4 md:mt-0" title="Track Original Document"><ExternalLink className="mr-2 h-4 w-4" />Track</Button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <FormField control={control} name="etd" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>ETD (Estimated Time of Departure)</FormLabel><DatePickerField field={field} placeholder="Select ETD" /><FormMessage /></FormItem>)} />
+                    <FormField control={control} name="eta" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>ETA (Estimated Time of Arrival)</FormLabel><DatePickerField field={field} placeholder="Select ETA" /><FormMessage /></FormItem>)} />
+                </div>
 
 
               <Separator />
