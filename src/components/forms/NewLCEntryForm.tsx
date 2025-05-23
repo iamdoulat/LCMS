@@ -36,7 +36,7 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__"; 
+const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -46,7 +46,7 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
-  termsOfPay: z.enum(termsOfPayOptions, { errorMap: () => ({ message: "Terms of Pay is required." }) }).optional(),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay is required." }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -57,7 +57,7 @@ const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
   numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
-  status: z.enum(lcStatusOptions, { errorMap: () => ({ message: "L/C Status is required."}) }).optional(),
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required."}),
   itemDescriptions: z.string().optional(),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
@@ -67,10 +67,10 @@ const lcEntrySchema = z.object({
   notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }).nullable().optional(),
-  expireDate: z.date({ required_error: "Expire Date is required." }).nullable().optional(),
-  latestShipmentDate: z.date({ required_error: "Latest Shipment Date is required." }).nullable().optional(),
-  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
+  lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }).nullable(),
+  expireDate: z.date({ required_error: "Expire Date is required." }).nullable(),
+  latestShipmentDate: z.date({ required_error: "Latest Shipment Date is required." }).nullable(),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -93,11 +93,11 @@ const lcEntrySchema = z.object({
   totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
   totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required." }).optional(),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required." }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingCourier: z.enum(trackingCourierOptions).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
@@ -124,14 +124,14 @@ const lcEntrySchema = z.object({
   isThirdShipment: z.boolean().optional().default(false),
 });
 
-export type LCFormValues = z.infer<typeof lcEntrySchema>;
+export type NewLCFormValues = z.infer<typeof lcEntrySchema>;
 
-const defaultFormValues: Partial<LCFormValues> = {
+const defaultFormValues: Partial<NewLCFormValues> = {
   applicantId: '',
   beneficiaryId: '',
   currency: currencyOptions[0],
   amount: undefined,
-  termsOfPay: undefined, 
+  termsOfPay: undefined,
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
   invoiceDate: undefined,
@@ -139,7 +139,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   commercialInvoiceDate: undefined,
   totalMachineQty: undefined,
   numberOfAmendments: 0,
-  status: undefined, 
+  status: undefined,
   itemDescriptions: '',
   partialShipments: '',
   portOfLoading: '',
@@ -152,7 +152,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   lcIssueDate: undefined,
   expireDate: undefined,
   latestShipmentDate: undefined,
-  partialShipmentAllowed: undefined,
+  partialShipmentAllowed: "No",
   firstPartialQty: 0,
   secondPartialQty: 0,
   thirdPartialQty: 0,
@@ -222,9 +222,9 @@ export function NewLCEntryForm() {
   const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
 
 
-  const form = useForm<LCFormValues>({
+  const form = useForm<NewLCFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: defaultFormValues as LCFormValues, 
+    defaultValues: defaultFormValues as NewLCFormValues,
   });
 
   const { control, setValue, watch, getValues, reset } = form;
@@ -269,17 +269,21 @@ export function NewLCEntryForm() {
   const watchedApplicantId = watch("applicantId");
 
   React.useEffect(() => {
-    const { setValue } = form;
     if (watchedApplicantId && applicantOptions.length > 0) {
+      console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
+      console.log("NewLCEntryForm: Available applicantOptions:", applicantOptions);
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+         console.log("NewLCEntryForm: Set notifyPartyNameAndAddress to:", selectedApplicant.address);
+         console.log("NewLCEntryForm: Set notifyPartyName to:", selectedApplicant.contactPersonName);
       }
     }
-  }, [watchedApplicantId, applicantOptions, form]);
+  }, [watchedApplicantId, applicantOptions, setValue]);
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -308,7 +312,7 @@ export function NewLCEntryForm() {
 
  React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
-      const fieldsToInitializeZero: (keyof LCFormValues)[] = [
+      const fieldsToInitializeZero = [
         "firstPartialQty", "secondPartialQty", "thirdPartialQty",
         "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
         "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
@@ -318,7 +322,7 @@ export function NewLCEntryForm() {
         "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
         "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
         "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
-      ];
+      ] as const;
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName);
         if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
@@ -341,18 +345,17 @@ export function NewLCEntryForm() {
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
-    if (watchedPartialShipmentAllowed === "Yes") {
-      setTotalCalculatedPartialQty(newTotalQty);
-      setTotalCalculatedPartialAmount(newTotalAmount);
+    setTotalCalculatedPartialQty(newTotalQty); // For display field
+    setTotalCalculatedPartialAmount(newTotalAmount); // For display field
 
+    if (watchedPartialShipmentAllowed === "Yes") {
       const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
       const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
       const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
       const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-       if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
+      if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
         setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
       }
-
 
       const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
       const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
@@ -361,7 +364,6 @@ export function NewLCEntryForm() {
       if (Number(getValues("totalNetWeight") || 0) !== newTotalNetW) {
         setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
       }
-
 
       const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
       const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
@@ -378,15 +380,11 @@ export function NewLCEntryForm() {
        if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
-
-    } else {
-       setTotalCalculatedPartialQty(0); 
-       setTotalCalculatedPartialAmount(0);
     }
-  }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
+  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue]);
 
 
-  async function onSubmit(finalData: LCFormValues) {
+  async function onSubmit(finalData: NewLCFormValues) {
     setIsSubmitting(true);
 
     const lcIssueDateObj = finalData.lcIssueDate ? new Date(finalData.lcIssueDate) : new Date();
@@ -505,7 +503,7 @@ export function NewLCEntryForm() {
         timer: 3000,
         showConfirmButton: true,
       });
-      reset(defaultFormValues as LCFormValues);
+      reset(defaultFormValues as NewLCFormValues);
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
       setActiveSection46A(undefined);
@@ -595,7 +593,6 @@ export function NewLCEntryForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
-        {/* Section: L/C & Invoice Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
@@ -780,7 +777,7 @@ export function NewLCEntryForm() {
                  <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value || ""}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {termsOfPayOptions.map((option) => (
@@ -806,7 +803,7 @@ export function NewLCEntryForm() {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value || ""}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {lcStatusOptions.map((statusOpt) => (
@@ -834,7 +831,6 @@ export function NewLCEntryForm() {
                 <FormControl>
                   <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''} />
                 </FormControl>
-                <FormDescription>As per L/C document clause 43P.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -880,8 +876,7 @@ export function NewLCEntryForm() {
             )}
         />
         <Separator />
-        
-        {/* Section: Important Dates & Partial Shipment Details */}
+
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -926,17 +921,13 @@ export function NewLCEntryForm() {
           name="partialShipmentAllowed"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Partial Shipment Allowed</FormLabel>
+              <FormLabel>Partial Shipment Allowed*</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={field.value || ""}
+                  value={field.value}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
-                  <FormItem className="flex items-center space-x-2 space-y-0">
-                     <FormControl><RadioGroupItem value={""} /></FormControl>
-                     <FormLabel className="font-normal text-sm text-muted-foreground">N/A</FormLabel>
-                  </FormItem>
                   {partialShipmentAllowedOptions.map((option) => (
                     <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                       <FormControl><RadioGroupItem value={option} /></FormControl>
@@ -1067,7 +1058,6 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
-        {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
@@ -1082,7 +1072,7 @@ export function NewLCEntryForm() {
                  <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value || ""}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {shipmentModeOptions.map((option) => (
@@ -1194,7 +1184,7 @@ export function NewLCEntryForm() {
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value || "DHL"} // Default to DHL if no value
+                      value={field.value}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {trackingCourierOptions.map(courier => (
@@ -1307,7 +1297,6 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
-        {/* Section: Consignee Bank Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
@@ -1327,7 +1316,6 @@ export function NewLCEntryForm() {
         />
         <Separator />
         
-        {/* Section: Notify Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <BellRing className="mr-2 h-5 w-5 text-primary" />
           Notify Details
@@ -1388,7 +1376,6 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
-        {/* Section: 46A Documents Required */}
          <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
@@ -1423,12 +1410,11 @@ export function NewLCEntryForm() {
         </Accordion>
         <Separator />
 
-        {/* Section: 47A Additional Conditions */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
-        <FormField
+         <FormField
           control={control}
           name="certificateOfOrigin"
           render={() => (
@@ -1488,7 +1474,6 @@ export function NewLCEntryForm() {
         />
         <Separator />
 
-        {/* Section: Document URLs */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
@@ -1614,3 +1599,4 @@ export function NewLCEntryForm() {
   );
 }
 
+    
