@@ -27,15 +27,14 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Users as UsersIcon,
   Settings,
   LogOut,
-  Briefcase, // Used for Commission Management
+  Briefcase, 
   Loader2,
-  Ship, // Used for Shipment Management
+  Ship, 
   UserPlus,
-  Building, // Used for Company Setup
-  FileText, // Used for T/T OR L/C Management
+  Building, 
+  FileText, 
   Package,
   History,
   Search,
@@ -43,11 +42,9 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory, // Used for Customers / Applicants
-  Truck, // Used for Suppliers / Beneficiary
-  CreditCard, 
-  Minus,
-  Plus,
+  Factory, 
+  Truck,
+  FileEdit, // Added FileEdit here
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -99,9 +96,9 @@ const managementNavItems: NavItemGroup[] = [
     groupLabel: 'Shipment Management',
     icon: Ship,
     subLinks: [
-      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: Truck }, // Consider changing icon if Truck is for Suppliers
+      { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck }, // Changed from Truck
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
-      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
+      { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package }, // Using Package instead of Truck
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
   },
@@ -124,7 +121,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -329,7 +326,6 @@ export function AppSidebarNav() {
           className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           onClick={logout}
           disabled={authLoading}
-          title="Logout"
         >
           {authLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
