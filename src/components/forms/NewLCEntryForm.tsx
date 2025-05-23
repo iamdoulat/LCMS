@@ -10,7 +10,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { doc, addDoc, serverTimestamp, collection, getDocs, deleteField } from 'firebase/firestore';
+import { addDoc, serverTimestamp, collection, getDocs, deleteField } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -38,7 +39,6 @@ const NONE_COURIER_VALUE = "__NONE_LC_NEW__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
 const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION_NEW__";
-
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -151,28 +151,28 @@ const defaultFormValues: Partial<LCFormValues> = {
   expireDate: undefined,
   latestShipmentDate: undefined,
   partialShipmentAllowed: undefined,
-  firstPartialQty: undefined,
-  secondPartialQty: undefined,
-  thirdPartialQty: undefined,
-  firstPartialAmount: undefined,
-  secondPartialAmount: undefined,
-  thirdPartialAmount: undefined,
-  firstPartialPkgs: undefined,
-  secondPartialPkgs: undefined,
-  thirdPartialPkgs: undefined,
-  firstPartialNetWeight: undefined,
-  secondPartialNetWeight: undefined,
-  thirdPartialNetWeight: undefined,
-  firstPartialGrossWeight: undefined,
-  secondPartialGrossWeight: undefined,
-  thirdPartialGrossWeight: undefined,
-  firstPartialCbm: undefined,
-  secondPartialCbm: undefined,
-  thirdPartialCbm: undefined,
-  totalPackageQty: undefined,
-  totalNetWeight: undefined,
-  totalGrossWeight: undefined,
-  totalCbm: undefined,
+  firstPartialQty: 0,
+  secondPartialQty: 0,
+  thirdPartialQty: 0,
+  firstPartialAmount: 0,
+  secondPartialAmount: 0,
+  thirdPartialAmount: 0,
+  firstPartialPkgs: 0,
+  secondPartialPkgs: 0,
+  thirdPartialPkgs: 0,
+  firstPartialNetWeight: 0,
+  secondPartialNetWeight: 0,
+  thirdPartialNetWeight: 0,
+  firstPartialGrossWeight: 0,
+  secondPartialGrossWeight: 0,
+  thirdPartialGrossWeight: 0,
+  firstPartialCbm: 0,
+  secondPartialCbm: 0,
+  thirdPartialCbm: 0,
+  totalPackageQty: 0,
+  totalNetWeight: 0,
+  totalGrossWeight: 0,
+  totalCbm: 0,
   shipmentMode: shipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
@@ -320,11 +320,13 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ] as const;
 
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName);
-        // Only set to 0 if the field is currently undefined or an empty string (truly uninitialized)
         if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
           setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
         }
@@ -384,7 +386,6 @@ export function NewLCEntryForm() {
       }
 
     } else {
-      // When partial shipment is "No", these are for display and should be 0 if not explicitly managed
        setTotalCalculatedPartialQty(0); 
        setTotalCalculatedPartialAmount(0);
     }
@@ -651,7 +652,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || currencyOptions[0]}>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select currency" />
@@ -686,22 +687,24 @@ export function NewLCEntryForm() {
             control={control}
             name="termsOfPay"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="space-y-3">
                 <FormLabel>Terms of Pay*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Terms of Pay" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"
+                  >
                     {termsOfPayOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                      </FormItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </RadioGroup>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -774,22 +777,24 @@ export function NewLCEntryForm() {
             control={control}
             name="status"
             render={({ field }) => (
-              <FormItem>
+               <FormItem className="space-y-3">
                 <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select L/C Status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2"
+                  >
                     {lcStatusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
+                      <FormItem key={status} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={status} />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">{status}</FormLabel>
+                      </FormItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </RadioGroup>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -904,11 +909,11 @@ export function NewLCEntryForm() {
               >
                 <FormControl>
                   <SelectTrigger>
-                     <SelectValue placeholder="Select option (Optional)" />
+                     <SelectValue placeholder="N/A" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>Select option (Optional)</SelectItem>
+                  <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>N/A</SelectItem>
                   {partialShipmentAllowedOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -953,7 +958,7 @@ export function NewLCEntryForm() {
           </Card>
         )}
         
-         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1046,24 +1051,28 @@ export function NewLCEntryForm() {
             control={control}
             name="shipmentMode"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="space-y-3">
                 <FormLabel>Shipment Mode*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || shipmentModeOptions[0]}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select shipment mode" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
+                 <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex space-x-4"
+                  >
                     {shipmentModeOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option === 'Sea' && <Ship className="mr-2 h-4 w-4 inline-block" />}
-                        {option === 'Air' && <Plane className="mr-2 h-4 w-4 inline-block" />}
-                        {option}
-                      </SelectItem>
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">
+                            {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                            {option}
+                        </FormLabel>
+                      </FormItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </RadioGroup>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -1154,24 +1163,26 @@ export function NewLCEntryForm() {
               control={control}
               name="trackingCourier"
               render={({ field }) => (
-                <FormItem className="md:col-span-1">
+                <FormItem className="md:col-span-1 space-y-3">
                   <FormLabel>Courier By</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                    value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Courier" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                         <SelectItem value={NONE_COURIER_VALUE}>None</SelectItem>
-                        {trackingCourierOptions.map(courier => (
-                            <SelectItem key={courier} value={courier}>{courier}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
+                      value={field.value === "" ? NONE_COURIER_VALUE : field.value}
+                      className="flex space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value={NONE_COURIER_VALUE} /></FormControl>
+                        <FormLabel className="font-normal text-sm">None</FormLabel>
+                      </FormItem>
+                      {trackingCourierOptions.map(courier => (
+                        <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={courier} /></FormControl>
+                          <FormLabel className="font-normal text-sm">{courier}</FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1361,7 +1372,7 @@ export function NewLCEntryForm() {
                 sectionHeadingClass, "border-b-0 mb-0"
               )}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2"> 
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
@@ -1562,12 +1573,12 @@ export function NewLCEntryForm() {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving L/C Entry...
+              Saving Entry...
             </>
           ) : (
             <>
               <FileText className="mr-2 h-4 w-4" />
-              Submit L/C Entry
+              Submit LC T/T Entry
             </>
           )}
         </Button>
@@ -1575,4 +1586,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-

@@ -1,4 +1,5 @@
 
+
 export const termsOfPayOptions = [
   "TT in Advance",
   "LC at sight",
@@ -305,7 +306,7 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | '';
+  miscellaneousExpenses?: number;
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number;
