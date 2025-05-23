@@ -17,7 +17,7 @@ import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Cur
 import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Done':
+    case 'Shipment Done': // Updated from "Done"
       return 'default';
     default:
       return 'outline';
@@ -112,7 +112,8 @@ export default function TotalLCPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const querySnapshot = await getDocs(collection(firestore, "lc_entries"));
+        const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(lcQuery);
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -260,7 +261,12 @@ export default function TotalLCPage() {
 
   const handleOpenLink = (url?: string) => {
     if (url && url.trim() !== "") {
-      window.open(url, '_blank', 'noopener,noreferrer');
+        try {
+            new URL(url); // Validate URL
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+            Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+        }
     } else {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
@@ -272,7 +278,7 @@ export default function TotalLCPage() {
     setFilterBeneficiaryId('');
     setFilterShipmentDate(null);
     setFilterStatus('');
-    setFilterYear(ALL_YEARS_VALUE); // Reset to "All Years"
+    setFilterYear(new Date().getFullYear().toString());
     setSortBy('lcIssueDate');
     setSortOrder('desc');
     setCurrentPage(1);
@@ -367,7 +373,7 @@ export default function TotalLCPage() {
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1">
-                  <label htmlFor="lcNumberFilter" className="text-sm font-medium">L/C Number</label>
+                  <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
                   <Input
                     id="lcNumberFilter"
                     placeholder="Search by L/C No..."
@@ -498,7 +504,7 @@ export default function TotalLCPage() {
                 ) : fetchError ? (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4">
-                      {fetchError} Please check Firestore rules and console for details.
+                      {fetchError}
                     </TableCell>
                   </TableRow>
                 ) : currentItems.length > 0 ? (
@@ -518,7 +524,7 @@ export default function TotalLCPage() {
                             className={
                               lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
                               lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                              lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                              lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
                               lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
                               lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                             }
@@ -536,7 +542,6 @@ export default function TotalLCPage() {
                                   onClick={() => lc.id && handleEditLC(lc.id)}
                                   className="hover:bg-accent/50 hover:text-accent-foreground"
                                   disabled={!lc.id}
-                                  title="Edit L/C"
                                 >
                                   <FileEdit className="h-4 w-4" />
                                   <span className="sr-only">Edit L/C</span>
@@ -552,7 +557,6 @@ export default function TotalLCPage() {
                                     onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
                                     className="hover:bg-destructive/10 hover:text-destructive"
                                     disabled={!lc.id}
-                                    title="Delete L/C"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                     <span className="sr-only">Delete L/C</span>
@@ -640,6 +644,36 @@ export default function TotalLCPage() {
                             >
                               <FileText className="mr-1.5 h-3.5 w-3.5" /> Purchase
                             </Button>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isFirstShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    title="1st Shipment Status"
+                                >
+                                    1st
+                                </Button>
+                            </Link>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isSecondShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    title="2nd Shipment Status"
+                                >
+                                    2nd
+                                </Button>
+                            </Link>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isThirdShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    title="3rd Shipment Status"
+                                >
+                                    3rd
+                                </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -654,7 +688,7 @@ export default function TotalLCPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Letters of Credit from Firestore. Filters are applied client-side. For very large datasets, server-side filtering would be more performant.
+                A list of your Letters of Credit from Firestore.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
               </TableCaption>
             </Table>
@@ -703,4 +737,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
+    
