@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed, ShipmentMode, TrackingCourier } from '@/types';
+import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed, ShipmentMode, TrackingCourier, ApplicantOption } from '@/types';
 import { currencyOptions, termsOfPayOptions, lcStatusOptions, partialShipmentAllowedOptions, shipmentModeOptions, trackingCourierOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers, Ship, Plane, ExternalLink, Search, PackageCheck } from 'lucide-react';
+import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers, Ship, Plane, ExternalLink, Search, PackageCheck, Landmark, BellRing } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
@@ -72,6 +72,11 @@ const lcTtEntrySchema = z.object({
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
+  consigneeBankNameAddress: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyName: z.string().optional(), // For Notify Party Contact Person
+  notifyPartyCell: z.string().optional(),
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
 });
 
 type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
@@ -84,12 +89,12 @@ const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--
 
 export default function LcTtEntryPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
+  const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
-  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined>();
+  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
 
 
   const form = useForm<LcTtEntryFormValues>({
@@ -128,6 +133,11 @@ export default function LcTtEntryPage() {
       trackingNumber: '',
       etd: undefined,
       eta: undefined,
+      consigneeBankNameAddress: '',
+      notifyPartyNameAndAddress: '',
+      notifyPartyName: '',
+      notifyPartyCell: '',
+      notifyPartyEmail: '',
     },
   });
 
@@ -135,6 +145,7 @@ export default function LcTtEntryPage() {
   const watchedCurrency = watch("currency");
   const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
   const watchedShipmentMode = watch("shipmentMode");
+  const watchedApplicantId = watch("applicantId");
 
   const partialFieldsToWatch: (keyof LcTtEntryFormValues)[] = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -154,7 +165,14 @@ export default function LcTtEntryPage() {
         setApplicantOptions(
           customersSnap.docs.map(doc => {
             const data = doc.data() as CustomerDocument;
-            return { value: doc.id, label: data.applicantName || 'Unnamed Applicant' };
+            return { 
+                value: doc.id, 
+                label: data.applicantName || 'Unnamed Applicant',
+                address: data.address,
+                contactPersonName: data.contactPerson,
+                email: data.email,
+                phone: data.phone,
+            };
           })
         );
 
@@ -173,6 +191,18 @@ export default function LcTtEntryPage() {
     };
     fetchDropdownData();
   }, []);
+
+  React.useEffect(() => {
+    if (watchedApplicantId && applicantOptions.length > 0) {
+      const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      if (selectedApplicant) {
+        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+      }
+    }
+  }, [watchedApplicantId, applicantOptions, setValue]);
 
   React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
@@ -325,15 +355,15 @@ export default function LcTtEntryPage() {
                 <FormField control={control} name="lcOrTtNumber" render={({ field }) => (<FormItem><FormLabel>L/C Or TT Number*</FormLabel><FormControl><Input placeholder="Enter L/C or T/T No." {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="amendmentsNumber" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Amendments Number</FormLabel><FormControl><Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="totalMachineQty" render={({ field }) => (<FormItem><FormLabel>Total L/C Machine Qty*</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="partialShipments" render={({ field }) => (<FormItem><FormLabel>Partial Shipments</FormLabel><FormControl><Input placeholder="e.g., Allowed" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="Enter port name" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="Enter port name" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="piNumber" render={({ field }) => (<FormItem><FormLabel>PI Number</FormLabel><FormControl><Input placeholder="Enter PI number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="partialShipments" render={({ field }) => (<FormItem><FormLabel>Partial Shipments</FormLabel><FormControl><Input placeholder="e.g., Allowed" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="Enter port name" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="Enter port name" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="piNumber" render={({ field }) => (<FormItem><FormLabel>PI Number</FormLabel><FormControl><Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="piDate" render={({ field }) => (<FormItem className="flex flex-col pt-0.5"><FormLabel>PI Date</FormLabel><DatePickerField field={field} placeholder="Select PI date" /><FormMessage /></FormItem>)} />
                 <FormField control={control} name="termsOfPay" render={({ field }) => ( <FormItem><FormLabel>Terms of Pay*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select terms" /></SelectTrigger></FormControl><SelectContent>{termsOfPayOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <FormField control={control} name="lcStatus" render={({ field }) => ( <FormItem><FormLabel>L/C Status*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent>{lcStatusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
-              <FormField control={control} name="itemDescriptionsDetails" render={({ field }) => (<FormItem><FormLabel>Details Item Descriptions</FormLabel><FormControl><Textarea placeholder="Detailed description of items..." {...field} rows={4} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="itemDescriptionsDetails" render={({ field }) => (<FormItem><FormLabel>Details Item Descriptions</FormLabel><FormControl><Textarea placeholder="Detailed description of items..." {...field} rows={4} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
 
               <Separator />
               <h3 className={cn(sectionHeadingClass)}>
@@ -463,9 +493,88 @@ export default function LcTtEntryPage() {
                     <FormField control={control} name="etd" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>ETD (Estimated Time of Departure)</FormLabel><DatePickerField field={field} placeholder="Select ETD" /><FormMessage /></FormItem>)} />
                     <FormField control={control} name="eta" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>ETA (Estimated Time of Arrival)</FormLabel><DatePickerField field={field} placeholder="Select ETA" /><FormMessage /></FormItem>)} />
                 </div>
+                <Separator />
+
+                <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+                  <Landmark className="mr-2 h-5 w-5 text-primary" />
+                  Consignee Bank Details
+                </h3>
+                <FormField
+                  control={control}
+                  name="consigneeBankNameAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consignee Bank Name and Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter bank name and full address" {...field} rows={3} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Separator />
+
+                <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+                  <BellRing className="mr-2 h-5 w-5 text-primary" />
+                  Notify Details
+                </h3>
+                <FormField
+                  control={control}
+                  name="notifyPartyNameAndAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notify Party Name and Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter notify party's full name and address" {...field} rows={3} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <FormField
+                    control={control}
+                    name="notifyPartyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notify Party Contact Person:</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter notify party's contact person name" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="notifyPartyCell"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notify Party Cell</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="notifyPartyEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notify Party Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="notify@example.com" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Separator />
 
 
-              <Separator />
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
                 {isSubmitting ? (
                   <>
