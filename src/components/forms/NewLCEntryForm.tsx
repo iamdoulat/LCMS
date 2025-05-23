@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -23,7 +22,6 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -129,7 +127,7 @@ export type NewLCFormValues = z.infer<typeof lcEntrySchema>;
 const defaultFormValues: NewLCFormValues = {
   applicantId: '',
   beneficiaryId: '',
-  currency: 'USD',
+  currency: currencyOptions[0], // Default to USD
   amount: undefined,
   termsOfPay: undefined,
   documentaryCreditNumber: '',
@@ -557,7 +555,7 @@ export function NewLCEntryForm() {
   const handleTrackVessel = () => {
     const imoNumber = getValues("vesselImoNumber");
     if (!imoNumber || imoNumber.trim() === "") {
-      Swal.fire({
+       Swal.fire({
         title: "IMO Number Missing",
         text: "Please enter a Vessel IMO number to track.",
         icon: "info",
@@ -596,6 +594,7 @@ export function NewLCEntryForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
+        {/* Section: L/C & Invoice Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
@@ -646,43 +645,6 @@ export function NewLCEntryForm() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormField
                 control={control}
-                name="currency"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Currency*</FormLabel>
-                    <FormControl>
-                    <RadioGroup
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                    >
-                        {currencyOptions.map((option) => (
-                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                            <FormControl><RadioGroupItem value={option} /></FormControl>
-                            <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                        </FormItem>
-                        ))}
-                    </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="amount"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>{amountLabel}</FormLabel>
-                    <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
                 name="documentaryCreditNumber"
                 render={({ field }) => (
                 <FormItem>
@@ -701,74 +663,74 @@ export function NewLCEntryForm() {
                 <FormItem>
                     <FormLabel>Proforma Invoice Number</FormLabel>
                     <FormControl>
-                    <Input placeholder="Enter PI number" {...field} value={field.value ?? ''} />
+                    <Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-            <FormField
-                control={control}
-                name="invoiceDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Invoice Date</FormLabel>
-                    <DatePickerField field={field} placeholder="Select invoice date" />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="totalMachineQty"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Total L/C Machine Qty*</FormLabel>
-                    <FormControl>
-                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormDescription>Overall quantity for this L/C.</FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="numberOfAmendments"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
-                    <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="commercialInvoiceNumber"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Commercial Invoice Number</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="commercialInvoiceDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Commercial Invoice Date</FormLabel>
-                    <DatePickerField field={field} placeholder="Select C.I. date" />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+           <FormField
+            control={control}
+            name="invoiceDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Invoice Date</FormLabel>
+                <DatePickerField field={field} placeholder="Select invoice date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="totalMachineQty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Total L/C Machine Qty*</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormDescription>Overall quantity for this L/C.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="numberOfAmendments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="commercialInvoiceNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Commercial Invoice Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="commercialInvoiceDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Commercial Invoice Date</FormLabel>
+                <DatePickerField field={field} placeholder="Select C.I. date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
             <FormField
                 control={control}
                 name="partialShipments"
@@ -795,7 +757,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            <FormField
+             <FormField
                 control={control}
                 name="portOfDischarge"
                 render={({ field }) => (
@@ -808,55 +770,95 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-              control={control}
-              name="termsOfPay"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Terms of Pay*</FormLabel>
-                  <FormControl>
+             <FormField
+                control={control}
+                name="currency"
+                render={({ field }) => (
+                <FormItem className="space-y-3 pb-4">
+                    <FormLabel>Currency*</FormLabel>
+                    <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
-                      {termsOfPayOptions.map((option) => (
+                        {currencyOptions.map((option) => (
                         <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={option} /></FormControl>
-                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                            <FormControl><RadioGroupItem value={option} /></FormControl>
+                            <FormLabel className="font-normal text-sm">{option}</FormLabel>
                         </FormItem>
-                      ))}
+                        ))}
                     </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
+                    </FormControl>
+                    <FormMessage />
                 </FormItem>
-              )}
+                )}
+            />
+             <FormField
+                control={control}
+                name="amount"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>{amountLabel}</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={control}
+                name="termsOfPay"
+                render={({ field }) => (
+                <FormItem className="space-y-3"> 
+                    <FormLabel>Terms of Pay*</FormLabel>
+                    <FormControl>
+                    <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                        {termsOfPayOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value={option} /></FormControl>
+                            <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                        </FormItem>
+                        ))}
+                    </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
             />
             <FormField
-              control={control}
-              name="status"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                  <FormControl>
+                control={control}
+                name="status"
+                render={({ field }) => (
+                <FormItem className="space-y-3"> 
+                    <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                    <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
-                      {lcStatusOptions.map((statusOpt) => (
+                        {lcStatusOptions.map((statusOpt) => (
                         <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={statusOpt} /></FormControl>
-                          <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
+                            <FormControl>
+                            <RadioGroupItem value={statusOpt} />
+                            </FormControl>
+                            <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
                         </FormItem>
-                      ))}
+                        ))}
                     </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
+                    </FormControl>
+                    <FormMessage />
                 </FormItem>
-              )}
+                )}
             />
         </div>
          <FormField
@@ -874,6 +876,8 @@ export function NewLCEntryForm() {
         />
         <Separator />
         
+
+        {/* Section: Important Dates & Partial Shipment Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -938,9 +942,12 @@ export function NewLCEntryForm() {
           )}
         />
         {watchedPartialShipmentAllowed === "Yes" && (
-          <Card className="p-4 mt-4 border-dashed">
-            <CardHeader className="p-2 pb-4"><CardTitle className="text-md font-medium text-foreground flex items-center"><Package className="mr-2 h-5 w-5 text-muted-foreground" />Partial Shipment Breakdown</CardTitle></CardHeader>
-            <CardContent className="space-y-6 p-2">
+          <div className="p-4 mt-4 border border-dashed rounded-md shadow-sm bg-muted/20">
+            <h4 className="text-md font-medium text-foreground flex items-center mb-4 border-b pb-2">
+                <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                Partial Shipment Breakdown
+            </h4>
+            <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -967,8 +974,8 @@ export function NewLCEntryForm() {
                 <FormField control={control} name="thirdPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>3rd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialCbm" render={({ field }) => (<FormItem><FormLabel>3rd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
         
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
@@ -1055,6 +1062,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
         
+        {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
@@ -1294,6 +1302,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
+        {/* Section: Consignee Bank Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
@@ -1313,6 +1322,7 @@ export function NewLCEntryForm() {
         />
         <Separator />
         
+        {/* Section: Notify Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <BellRing className="mr-2 h-5 w-5 text-primary" />
           Notify Details
@@ -1373,6 +1383,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
+        {/* Section: 46A: Documents Required */}
         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
@@ -1407,6 +1418,7 @@ export function NewLCEntryForm() {
         </Accordion>
         <Separator />
 
+        {/* Section: 47A: Additional Conditions */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
@@ -1471,6 +1483,7 @@ export function NewLCEntryForm() {
         />
         <Separator />
 
+        {/* Section: Document URLs */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
@@ -1595,3 +1608,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
