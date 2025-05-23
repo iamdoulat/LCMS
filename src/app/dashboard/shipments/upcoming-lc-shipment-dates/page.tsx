@@ -8,14 +8,14 @@ import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, startOfDay, compareAsc } from 'date-fns'; // Added startOfDay and compareAsc
+import { format, parseISO, isValid, startOfDay, compareAsc } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLcShipmentItem extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta'> {
-  latestShipmentDateObj: Date; // Keep this as Date object for comparisons
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
+  latestShipmentDateObj: Date;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -33,7 +33,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Done':
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -56,7 +56,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 };
 
 export default function UpcomingLcShipmentDatesPage() {
-  const [upcomingLCs, setUpcomingLCs] = useState<UpcomingLcShipmentItem[]>([]);
+  const [upcomingLCs, setUpcomingLCs] = useState<UpcomingLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,13 +76,15 @@ export default function UpcomingLcShipmentDatesPage() {
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0); // Default to a very old date if invalid
+          let latestShipmentDateObj = new Date(0);
           if (data.latestShipmentDate) {
             const parsed = parseISO(data.latestShipmentDate);
             if (isValid(parsed)) {
               latestShipmentDateObj = parsed;
             }
           }
+          console.log({ id: doc.id, etd: data.etd, eta: data.eta, latestShipmentDate: data.latestShipmentDate, latestShipmentDateObj: latestShipmentDateObj, status: data.status });
+
 
           return {
             id: doc.id,
@@ -92,11 +94,14 @@ export default function UpcomingLcShipmentDatesPage() {
             currency: data.currency,
             amount: data.amount,
             lcIssueDate: data.lcIssueDate,
-            latestShipmentDate: data.latestShipmentDate, // Keep original string for display if needed
-            latestShipmentDateObj: latestShipmentDateObj, // Store as Date object for comparison
+            latestShipmentDate: data.latestShipmentDate,
+            latestShipmentDateObj: latestShipmentDateObj,
             etd: data.etd,
             eta: data.eta,
             status: data.status,
+            isFirstShipment: data.isFirstShipment,
+            isSecondShipment: data.isSecondShipment,
+            isThirdShipment: data.isThirdShipment,
           };
         });
         setUpcomingLCs(fetchedLCs);
@@ -166,7 +171,7 @@ export default function UpcomingLcShipmentDatesPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <CalendarClock className="h-7 w-7 text-primary" />
             Upcoming L/C Shipment Dates
           </CardTitle>
@@ -201,23 +206,20 @@ export default function UpcomingLcShipmentDatesPage() {
             <ul className="space-y-4">
               {currentItems.map((lc) => {
                 const today = startOfDay(new Date());
-                const shipmentDate = startOfDay(lc.latestShipmentDateObj); // Use the Date object
+                const shipmentDate = startOfDay(lc.latestShipmentDateObj);
                 const isPastOrToday = isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
                 
-                // console.log({ id: lc.id, latestShipmentDateObj: lc.latestShipmentDateObj, isPastOrToday });
-
-
                 return (
                   <li
                     key={lc.id}
                     className={cn(
-                        "p-4 rounded-lg hover:shadow-md transition-shadow",
+                        "p-4 rounded-lg hover:shadow-md transition-shadow relative", // Added relative for positioning context
                         isPastOrToday
                             ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2"
                             : "border bg-card"
                     )}
                   >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                    <div className="flex flex-col sm:flex-row justify-between items-start mb-2">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
@@ -232,13 +234,14 @@ export default function UpcomingLcShipmentDatesPage() {
                           {lc.status || 'N/A'}
                       </Badge>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
                         <div>
                             <p className="text-muted-foreground">
-                            Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
+                              Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                             </p>
                             <p className="text-muted-foreground">
-                            Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                              Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                             </p>
                              <p className="text-muted-foreground">
                                 ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
@@ -246,20 +249,63 @@ export default function UpcomingLcShipmentDatesPage() {
                         </div>
                         <div>
                             <p className="text-muted-foreground">
-                            Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
+                              Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                             </p>
                              <p className="text-muted-foreground">
-                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-red-600 dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                             </p>
                             <p className="text-muted-foreground">
                                 ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                             </p>
                         </div>
                     </div>
-                    <div className="mt-2 flex justify-end">
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
-                          View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
-                      </Link>
+                    
+                    {/* Shipment Status Buttons & View Details Link Container */}
+                    <div className="mt-2 flex flex-col items-end space-y-1">
+                        <div className="flex gap-1.5">
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isFirstShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="1st Shipment Status"
+                                >
+                                    1st
+                                </Button>
+                            </Link>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isSecondShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="2nd Shipment Status"
+                                >
+                                    2nd
+                                </Button>
+                            </Link>
+                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isThirdShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="3rd Shipment Status"
+                                >
+                                    3rd
+                                </Button>
+                            </Link>
+                        </div>
+                         <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
+                            View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
+                        </Link>
                     </div>
                   </li>
                 );
@@ -310,3 +356,4 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
+
