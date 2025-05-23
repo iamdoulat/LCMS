@@ -104,7 +104,7 @@ type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
 const PLACEHOLDER_APPLICANT_VALUE = "__LCTTT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LCTTT_BENEFICIARY_PLACEHOLDER__";
 const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__"; 
-const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION__"; // Placeholder for Partial Shipment Allowed
+const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION__";
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -137,9 +137,9 @@ export default function LcTtEntryPage() {
       termsOfPay: termsOfPayOptions[0],
       lcStatus: lcStatusOptions[0],
       itemDescriptionsDetails: '',
-      lcIssueDate: new Date(),
-      expireDate: new Date(),
-      latestShipmentDate: new Date(),
+      lcIssueDate: undefined,
+      expireDate: undefined,
+      latestShipmentDate: undefined,
       partialShipmentAllowed: undefined,
       firstPartialQty: 0,
       secondPartialQty: 0,
@@ -333,7 +333,7 @@ export default function LcTtEntryPage() {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url); // Validate URL structure
+        new URL(url); 
         window.open(url, '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -412,7 +412,7 @@ export default function LcTtEntryPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField control={control} name="currency" render={({ field }) => ( <FormItem><FormLabel>Currency*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger></FormControl><SelectContent>{currencyOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <FormField control={control} name="amount" render={({ field }) => (<FormItem><FormLabel>{amountLabel}</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="lcOrTtNumber" render={({ field }) => (<FormItem><FormLabel>L/C Or TT Number*</FormLabel><FormControl><Input placeholder="Enter L/C or T/T No." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="lcOrTtNumber" render={({ field }) => (<FormItem><FormLabel>L/C Or TT Number*</FormLabel><FormControl><Input placeholder="Enter L/C or T/T No." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="amendmentsNumber" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Amendments Number</FormLabel><FormControl><Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="totalMachineQty" render={({ field }) => (<FormItem><FormLabel>Total L/C Machine Qty*</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="partialShipments" render={({ field }) => (<FormItem><FormLabel>Partial Shipments</FormLabel><FormControl><Input placeholder="e.g., Allowed" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
@@ -428,12 +428,12 @@ export default function LcTtEntryPage() {
               <Separator />
               <h3 className={cn(sectionHeadingClass)}>
                 <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                Important Dates &amp; Partial Shipment Details
+                Important Dates & Partial Shipment Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField control={control} name="lcIssueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>L/C Issue Date*</FormLabel><DatePickerField field={field} placeholder="Select L/C Issue Date" /><FormMessage /></FormItem>)} />
-                <FormField control={control} name="expireDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Expire Date*</FormLabel><DatePickerField field={field} placeholder="Select Expire Date" /><FormMessage /></FormItem>)} />
-                <FormField control={control} name="latestShipmentDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Latest Shipment Date*</FormLabel><DatePickerField field={field} placeholder="Select Latest Shipment Date" /><FormMessage /></FormItem>)} />
+                <FormField control={control} name="lcIssueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>L/C Issue Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                <FormField control={control} name="expireDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Expire Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                <FormField control={control} name="latestShipmentDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Latest Shipment Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
               </div>
               
               <FormField
@@ -448,7 +448,7 @@ export default function LcTtEntryPage() {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue /> {/* Placeholder is handled by the first disabled SelectItem */}
+                           <SelectValue placeholder="Select option (Optional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -893,5 +893,7 @@ export default function LcTtEntryPage() {
     </div>
   );
 }
+
+    
 
     
