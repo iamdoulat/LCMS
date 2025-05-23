@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarIcon as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory, BarChart3 } from 'lucide-react';
+import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory, BarChart3 } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
+
 
 const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
@@ -88,6 +90,9 @@ interface UpcomingEtdShipment {
   etaDate?: Date;
   currency?: Currency;
   amount?: number;
+  isFirstShipment?: boolean;
+  isSecondShipment?: boolean;
+  isThirdShipment?: boolean;
 }
 
 
@@ -111,7 +116,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done': // Updated from "Done"
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -179,7 +184,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...dependencies, scrollRef]); 
+  }, [...dependencies, scrollRef]);
 };
 
 
@@ -262,7 +267,7 @@ export default function DashboardPage() {
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
         }
 
-        if (data.amount !== undefined && typeof data.amount === 'number' && lcIssueDateValid) {
+        if (data.amount !== undefined && typeof data.amount === 'number' && !isNaN(data.amount) && lcIssueDateValid) {
           lcEntriesForTheYear.push({
               id: doc.id,
               ...data,
@@ -271,12 +276,12 @@ export default function DashboardPage() {
           console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-      
+
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30; 
+        const BATCH_SIZE = 30;
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -289,6 +294,7 @@ export default function DashboardPage() {
           }
         }
       }
+
 
       if (lcEntriesForTheYear.length === 0 && !authLoading) {
         console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
@@ -342,7 +348,7 @@ export default function DashboardPage() {
       setSupplierPieData(pieData);
 
       const completedLCs = lcEntriesForTheYear
-        .filter(lc => lc.status === 'Shipment Done') // Updated from 'Done'
+        .filter(lc => lc.status === 'Shipment Done')
         .map(lc => {
           return {
             id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
@@ -403,7 +409,7 @@ export default function DashboardPage() {
       today.setHours(0,0,0,0);
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
-            if (!lc.etd || lc.status === 'Shipment Done') return false; // Updated from 'Done'
+            if (!lc.etd || lc.status === 'Shipment Done') return false;
             try {
                 const etdDateSource = lc.etd;
                 let etdDate: Date;
@@ -448,6 +454,9 @@ export default function DashboardPage() {
                 etaDate: etaDate,
                 currency: lc.currency,
                 amount: lc.amount,
+                isFirstShipment: lc.isFirstShipment,
+                isSecondShipment: lc.isSecondShipment,
+                isThirdShipment: lc.isThirdShipment,
             } as UpcomingEtdShipment;
         })
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
@@ -512,7 +521,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading, selectedYear]); 
+  }, [authUser, authLoading]);
 
   useEffect(() => {
     console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
@@ -597,7 +606,7 @@ export default function DashboardPage() {
           </div>
       ) : (
         <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
@@ -609,7 +618,7 @@ export default function DashboardPage() {
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-1 xl:col-span-1" 
+          className="lg:col-span-1 xl:col-span-1"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -704,6 +713,32 @@ export default function DashboardPage() {
                                 <div>
                                     <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
                                     <p className="truncate">ETA: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etaDate)}</span></p>
+                                     <div className="flex gap-1.5 mt-1">
+                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                            <Button
+                                                variant={shipment.isFirstShipment ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                                title="1st Shipment Status"
+                                            >1st</Button>
+                                        </Link>
+                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                            <Button
+                                                variant={shipment.isSecondShipment ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                                title="2nd Shipment Status"
+                                            >2nd</Button>
+                                        </Link>
+                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                            <Button
+                                                variant={shipment.isThirdShipment ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                                title="3rd Shipment Status"
+                                            >3rd</Button>
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </li>
