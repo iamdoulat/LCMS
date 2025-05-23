@@ -19,7 +19,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,10 +34,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-const NONE_COURIER_VALUE = "__NONE_LC_NEW__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
-const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION_NEW__";
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -97,7 +94,7 @@ const lcEntrySchema = z.object({
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingCourier: z.enum(trackingCourierOptions).optional(), // No "" as DHL is default
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
@@ -129,7 +126,7 @@ type LCFormValues = z.infer<typeof lcEntrySchema>;
 const defaultFormValues: Partial<LCFormValues> = {
   applicantId: '',
   beneficiaryId: '',
-  currency: currencyOptions[0],
+  currency: undefined,
   amount: undefined,
   termsOfPay: undefined,
   documentaryCreditNumber: '',
@@ -177,7 +174,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
-  trackingCourier: '',
+  trackingCourier: "DHL", // Default to DHL
   trackingNumber: '',
   etd: undefined,
   eta: undefined,
@@ -204,7 +201,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   isThirdShipment: false,
 };
 
-const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -313,18 +310,14 @@ export function NewLCEntryForm() {
 
  React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
-      const fieldsToInitializeZero = [
+      const fieldsToInitializeZero: (keyof LCFormValues)[] = [
         "firstPartialQty", "secondPartialQty", "thirdPartialQty",
         "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
         "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
-        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
-        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
-        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
-      ] as const;
-
+      ];
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName);
         if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
@@ -386,6 +379,7 @@ export function NewLCEntryForm() {
       }
 
     } else {
+      // If partial shipment is "No", totals are manually entered, so calculated partial totals should be zero
        setTotalCalculatedPartialQty(0); 
        setTotalCalculatedPartialAmount(0);
     }
@@ -432,8 +426,8 @@ export function NewLCEntryForm() {
       vesselOrFlightName: data.vesselOrFlightName,
       vesselImoNumber: data.vesselImoNumber,
       flightNumber: data.flightNumber,
-      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier,
-      trackingNumber: (data.trackingCourier === "" || data.trackingCourier === NONE_COURIER_VALUE || !data.trackingCourier) ? undefined : data.trackingNumber,
+      trackingCourier: data.trackingCourier,
+      trackingNumber: (data.trackingCourier === "" || !data.trackingCourier) ? undefined : data.trackingNumber,
       etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       certificateOfOrigin: data.certificateOfOrigin && data.certificateOfOrigin.length > 0 ? data.certificateOfOrigin : undefined,
@@ -530,7 +524,7 @@ export function NewLCEntryForm() {
     const courier = getValues("trackingCourier");
     const number = getValues("trackingNumber");
 
-    if (!courier || courier.trim() === "" || courier === NONE_COURIER_VALUE || !number || number.trim() === "") {
+    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
       Swal.fire({
         title: "Information Missing",
         text: "Please select a courier and enter a tracking number.",
@@ -652,20 +646,14 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Currency*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
+                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4 pt-2">
                     {currencyOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                      </FormItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                </RadioGroup>
                 <FormMessage />
               </FormItem>
             )}
@@ -689,7 +677,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem className="space-y-3">
                 <FormLabel>Terms of Pay*</FormLabel>
-                <FormControl>
+                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
@@ -778,19 +766,19 @@ export function NewLCEntryForm() {
             name="status"
             render={({ field }) => (
                <FormItem className="space-y-3">
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                <FormLabel>L/C Status*</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
                     className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2"
                   >
-                    {lcStatusOptions.map((status) => (
-                      <FormItem key={status} className="flex items-center space-x-2 space-y-0">
+                    {lcStatusOptions.map((statusOpt) => (
+                      <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value={status} />
+                          <RadioGroupItem value={statusOpt} />
                         </FormControl>
-                        <FormLabel className="font-normal text-sm">{status}</FormLabel>
+                        <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
                       </FormItem>
                     ))}
                   </RadioGroup>
@@ -843,20 +831,20 @@ export function NewLCEntryForm() {
           />
         </div>
         <FormField
-          control={control}
-          name="itemDescriptions"
-          render={({ field }) => (
+            control={control}
+            name="itemDescriptions"
+            render={({ field }) => (
             <FormItem>
-              <FormLabel>Item Descriptions</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
+                <FormLabel>Item Descriptions</FormLabel>
+                <FormControl>
+                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
+                </FormControl>
+                <FormMessage />
             </FormItem>
-          )}
+            )}
         />
         <Separator />
-        
+
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -903,22 +891,18 @@ export function NewLCEntryForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_PSA_VALUE ? undefined : value as PartialShipmentAllowed)}
-                value={field.value ?? PLACEHOLDER_PSA_VALUE}
+              <RadioGroup
+                onValueChange={field.onChange}
+                value={field.value || ""}
+                className="flex space-x-4 pt-2"
               >
-                <FormControl>
-                  <SelectTrigger>
-                     <SelectValue placeholder="N/A" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>N/A</SelectItem>
-                  {partialShipmentAllowedOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {partialShipmentAllowedOptions.map((option) => (
+                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                    <FormControl><RadioGroupItem value={option} /></FormControl>
+                    <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                  </FormItem>
+                ))}
+              </RadioGroup>
               <FormMessage />
             </FormItem>
           )}
@@ -1023,7 +1007,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-             {watchedPartialShipmentAllowed === "Yes" && (
+            {watchedPartialShipmentAllowed === "Yes" && (
               <>
                 <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1057,7 +1041,7 @@ export function NewLCEntryForm() {
                   <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
-                    className="flex space-x-4"
+                    className="flex space-x-4 pt-2"
                   >
                     {shipmentModeOptions.map((option) => (
                       <FormItem key={option} className="flex items-center space-x-2 space-y-0">
@@ -1167,14 +1151,10 @@ export function NewLCEntryForm() {
                   <FormLabel>Courier By</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                      value={field.value === "" ? NONE_COURIER_VALUE : field.value}
-                      className="flex space-x-4"
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex space-x-4 pt-2"
                     >
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl><RadioGroupItem value={NONE_COURIER_VALUE} /></FormControl>
-                        <FormLabel className="font-normal text-sm">None</FormLabel>
-                      </FormItem>
                       {trackingCourierOptions.map(courier => (
                         <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
                           <FormControl><RadioGroupItem value={courier} /></FormControl>
@@ -1194,7 +1174,7 @@ export function NewLCEntryForm() {
                 <FormItem className="md:col-span-1">
                   <FormLabel>Tracking Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter tracking number" {...field} disabled={!watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE} value={field.value ?? ''} />
+                    <Input placeholder="Enter tracking number" {...field} disabled={!watch("trackingCourier")} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1204,7 +1184,7 @@ export function NewLCEntryForm() {
               type="button"
               variant="default"
               onClick={handleTrackDocument}
-              disabled={!watch("trackingNumber") || !watch("trackingCourier") || watch("trackingCourier") === NONE_COURIER_VALUE || isSubmitting}
+              disabled={!watch("trackingNumber") || !watch("trackingCourier") || isSubmitting}
               className="md:col-span-1 mt-4 md:mt-0"
               title="Track Original Document"
             >
@@ -1368,8 +1348,8 @@ export function NewLCEntryForm() {
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
               className={cn(
-                "flex w-full items-center justify-between py-3 font-bold text-xl text-foreground hover:no-underline",
-                sectionHeadingClass, "border-b-0 mb-0"
+                "flex w-full items-center justify-between py-3 text-foreground hover:no-underline",
+                sectionHeadingClass, "border-b-0 mb-0" 
               )}
             >
               <div className="flex items-center gap-2"> 
@@ -1578,7 +1558,7 @@ export function NewLCEntryForm() {
           ) : (
             <>
               <FileText className="mr-2 h-4 w-4" />
-              Submit LC T/T Entry
+              Submit L/C Entry
             </>
           )}
         </Button>
@@ -1586,3 +1566,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
