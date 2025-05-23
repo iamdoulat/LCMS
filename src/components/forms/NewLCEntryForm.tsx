@@ -10,7 +10,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { addDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { addDoc, serverTimestamp, collection, getDocs, deleteField } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,10 +126,10 @@ const lcEntrySchema = z.object({
 
 export type NewLCFormValues = z.infer<typeof lcEntrySchema>;
 
-const defaultFormValues: Partial<NewLCFormValues> = {
+const defaultFormValues: NewLCFormValues = {
   applicantId: '',
   beneficiaryId: '',
-  currency: currencyOptions[0],
+  currency: 'USD',
   amount: undefined,
   termsOfPay: undefined,
   documentaryCreditNumber: '',
@@ -224,7 +224,7 @@ export function NewLCEntryForm() {
 
   const form = useForm<NewLCFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: defaultFormValues as NewLCFormValues,
+    defaultValues: defaultFormValues,
   });
 
   const { control, setValue, watch, getValues, reset } = form;
@@ -244,7 +244,7 @@ export function NewLCEntryForm() {
             contactPersonName: data.contactPerson,
             email: data.email,
             phone: data.phone,
-          } as ApplicantOption;
+           } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
 
@@ -269,9 +269,9 @@ export function NewLCEntryForm() {
   const watchedApplicantId = watch("applicantId");
 
   React.useEffect(() => {
+    console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
+    console.log("NewLCEntryForm: Available applicantOptions:", applicantOptions);
     if (watchedApplicantId && applicantOptions.length > 0) {
-      console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
-      console.log("NewLCEntryForm: Available applicantOptions:", applicantOptions);
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
       console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
       if (selectedApplicant) {
@@ -345,10 +345,10 @@ export function NewLCEntryForm() {
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
-    setTotalCalculatedPartialQty(newTotalQty); // For display field
-    setTotalCalculatedPartialAmount(newTotalAmount); // For display field
-
     if (watchedPartialShipmentAllowed === "Yes") {
+      setTotalCalculatedPartialQty(newTotalQty);
+      setTotalCalculatedPartialAmount(newTotalAmount);
+
       const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
       const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
       const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
@@ -380,8 +380,11 @@ export function NewLCEntryForm() {
        if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
+    } else {
+        if (totalCalculatedPartialQty !== 0) setTotalCalculatedPartialQty(0);
+        if (totalCalculatedPartialAmount !== 0) setTotalCalculatedPartialAmount(0);
     }
-  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue]);
+  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
 
   async function onSubmit(finalData: NewLCFormValues) {
@@ -503,7 +506,7 @@ export function NewLCEntryForm() {
         timer: 3000,
         showConfirmButton: true,
       });
-      reset(defaultFormValues as NewLCFormValues);
+      reset(defaultFormValues);
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
       setActiveSection46A(undefined);
@@ -742,7 +745,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            <FormField
+             <FormField
                 control={form.control}
                 name="commercialInvoiceNumber"
                 render={({ field }) => (
@@ -766,101 +769,95 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
+            <FormField
+                control={control}
+                name="partialShipments"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>43P: Partial Shipments Rule</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''}/>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="portOfLoading"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>44E: Port of Loading</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="portOfDischarge"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>44F: Port of Discharge</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-           <FormField
-            control={control}
-            name="termsOfPay"
-            render={({ field }) => (
-               <FormItem className="space-y-3"> 
-                <FormLabel>Terms of Pay*</FormLabel>
-                 <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {termsOfPayOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={option} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                 <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={control}
-            name="status"
-            render={({ field }) => (
-               <FormItem className="space-y-3"> 
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {lcStatusOptions.map((statusOpt) => (
-                      <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={statusOpt} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-            control={control}
-            name="partialShipments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>43P: Partial Shipments Rule</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="portOfLoading"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>44E: Port of Loading</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="portOfDischarge"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>44F: Port of Discharge</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              control={control}
+              name="termsOfPay"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Terms of Pay*</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                      {termsOfPayOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={option} /></FormControl>
+                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="status"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                      {lcStatusOptions.map((statusOpt) => (
+                        <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={statusOpt} /></FormControl>
+                          <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
          <FormField
             control={control}
@@ -876,7 +873,7 @@ export function NewLCEntryForm() {
             )}
         />
         <Separator />
-
+        
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -1039,7 +1036,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+             {watchedPartialShipmentAllowed === "Yes" && (
                 <>
                     <FormItem>
                         <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1057,7 +1054,7 @@ export function NewLCEntryForm() {
             )}
         </div>
         <Separator />
-
+        
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
@@ -1376,7 +1373,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
-         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
               className={cn(
@@ -1414,7 +1411,7 @@ export function NewLCEntryForm() {
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
-         <FormField
+        <FormField
           control={control}
           name="certificateOfOrigin"
           render={() => (
@@ -1598,5 +1595,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-    
