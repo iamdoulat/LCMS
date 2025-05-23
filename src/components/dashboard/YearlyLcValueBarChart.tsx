@@ -70,11 +70,11 @@ export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) 
             tickFormatter={yAxisTickFormatter}
             tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
             stroke="hsl(var(--border))"
-            label={{ value: 'Total L/C Value (USD)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40 }}
+            label={{ value: 'Total Value (USD)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 12, dy: 40 }}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}/>
         <Legend wrapperStyle={{ fontSize: '0.875rem', paddingTop: '10px' }} formatter={(value, entry) => <span className="text-foreground/80">{value}</span>} />
-        <Bar dataKey="totalValue" name="Total L/C Value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="totalValue" name="Total L/C and T/T Value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
