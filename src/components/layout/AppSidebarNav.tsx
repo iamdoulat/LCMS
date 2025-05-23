@@ -45,7 +45,8 @@ import {
   Factory,
   Truck,
   FileEdit,
-  PackageCheck, // Added PackageCheck here
+  PackageCheck,
+  BarChart3, // Added BarChart3 for Reporting
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -59,7 +60,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -68,7 +69,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -76,10 +77,21 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
 ];
 
+const reportingManagementNavItems: NavItemGroup[] = [ // New Reporting Section
+  {
+    groupLabel: 'Reporting Management',
+    icon: BarChart3, // Using BarChart3 as a "reports" icon
+    subLinks: [
+      // Add sub-links here later if needed
+      // Example: { href: '/dashboard/reports/sales', label: 'Sales Reports', icon: ListChecks },
+    ],
+  },
+];
+
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
+    icon: Truck,
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -87,7 +99,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from Building
+    icon: Factory,
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -95,7 +107,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
@@ -107,7 +119,7 @@ const managementNavItems: NavItemGroup[] = [
 
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus }, // Changed icon for consistency
+  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
@@ -131,7 +143,6 @@ export function AppSidebarNav() {
     if (href === '/dashboard/search' && pathname.startsWith('/dashboard/search')) return true;
 
     if (href !== '/dashboard' && href !== '/dashboard/search' && pathname.startsWith(href)) {
-      // More specific checks for parent routes
       const parentRoutes = [
         '/dashboard/suppliers',
         '/dashboard/customers',
@@ -142,7 +153,6 @@ export function AppSidebarNav() {
       if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
         return true;
       }
-      // Fallback for exact match if not a parent route scenario covered above
       if (pathname === href) {
         return true;
       }
@@ -155,7 +165,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems];
+  const allAccordionGroups = [...coreModulesNavItems, ...reportingManagementNavItems, ...managementNavItems];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
@@ -168,7 +178,28 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    return item.subLinks ? (
+    if (!item.subLinks || item.subLinks.length === 0) {
+      // Render as a direct link if no subLinks (useful for single-item groups or future expansion)
+      return (
+        <SidebarMenuItem key={item.groupLabel || `group-${index}`}>
+          <Link href={item.href || '#'} passHref legacyBehavior>
+            <SidebarMenuButton
+              asChild
+              isActive={item.href ? isActive(item.href) : false}
+              className={cn(item.href && isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+              tooltip={{children: item.groupLabel!, side: "right", className: "ml-2"}}
+            >
+              <a>
+                {IconComponent && <IconComponent className="h-5 w-5 text-primary" />}
+                <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
+              </a>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      );
+    }
+
+    return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
@@ -217,7 +248,7 @@ export function AppSidebarNav() {
           </SidebarMenu>
         </AccordionContent>
       </AccordionItem>
-    ) : null;
+    )
   };
 
   return (
@@ -286,6 +317,15 @@ export function AppSidebarNav() {
         </Accordion>
 
         <SidebarSeparator />
+        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Reporting Management
+        </SidebarGroupLabel>
+        <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+            {reportingManagementNavItems.map(renderNavGroup)}
+        </Accordion>
+
+
+        <SidebarSeparator />
 
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -347,10 +387,12 @@ interface NavItem {
   href?: string;
   label?: string;
   icon: React.ElementType;
+  roles?: UserRole[];
 }
 
 interface NavItemGroup {
   groupLabel?: string;
+  href?: string; // Added for top-level non-accordion groups
   icon: React.ElementType;
   subLinks?: Array<{
     href: string;
