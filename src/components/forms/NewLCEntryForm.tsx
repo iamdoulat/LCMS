@@ -160,7 +160,8 @@ const defaultFormValues: Partial<LCFormValues> = {
   notifyPartyName: '',
   notifyPartyCell: '',
   notifyPartyEmail: '',
-  partialShipmentAllowed: undefined, // Now optional
+  numberOfAmendments: 0,
+  partialShipmentAllowed: undefined,
   firstPartialQty: 0,
   secondPartialQty: 0,
   thirdPartialQty: 0,
@@ -191,11 +192,9 @@ const defaultFormValues: Partial<LCFormValues> = {
   beneficiaryComplianceCertificateQty: 0,
   shipmentAdviceQty: 0,
   billOfExchangeQty: 0,
-  // No need to explicitly set undefined for optional fields like amount, totalMachineQty etc.
-  // Zod's .optional() handles this.
 };
 
-const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
+const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -309,9 +308,6 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
-        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty",
-        "invoiceQty", "packingListQty", "beneficiaryCertificateQty", "brandNewCertificateQty",
-        "beneficiaryWarrantyCertificateQty", "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ] as const;
 
       fieldsToInitializeZero.forEach(fieldName => {
@@ -356,8 +352,11 @@ export function NewLCEntryForm() {
       }
 
     } else {
+      // If partial shipment is not allowed, these calculated totals should reflect zero
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
+      // Main totals are user-editable, so we don't clear them here,
+      // but their descriptions will indicate they are not auto-calculated.
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
@@ -382,38 +381,38 @@ export function NewLCEntryForm() {
       amount: finalData.amount,
       termsOfPay: finalData.termsOfPay,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || "",
+      proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
       invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: finalData.totalMachineQty,
       numberOfAmendments: finalData.numberOfAmendments,
       status: finalData.status || 'Draft',
-      itemDescriptions: finalData.itemDescriptions || "",
-      partialShipments: finalData.partialShipments || "",
-      portOfLoading: finalData.portOfLoading || "",
-      portOfDischarge: finalData.portOfDischarge || "",
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || "",
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || "",
-      notifyPartyName: finalData.notifyPartyName || "",
-      notifyPartyCell: finalData.notifyPartyCell || "",
-      notifyPartyEmail: finalData.notifyPartyEmail || "",
+      itemDescriptions: finalData.itemDescriptions || undefined,
+      partialShipments: finalData.partialShipments || undefined,
+      portOfLoading: finalData.portOfLoading || undefined,
+      portOfDischarge: finalData.portOfDischarge || undefined,
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
+      notifyPartyName: finalData.notifyPartyName || undefined,
+      notifyPartyCell: finalData.notifyPartyCell || undefined,
+      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
       lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: finalData.expireDate ? format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       partialShipmentAllowed: finalData.partialShipmentAllowed,
       shipmentMode: finalData.shipmentMode,
-      vesselOrFlightName: finalData.vesselOrFlightName || "",
-      vesselImoNumber: finalData.vesselImoNumber || "",
-      flightNumber: finalData.flightNumber || "",
-      trackingCourier: finalData.trackingCourier === NONE_COURIER_VALUE ? "" : finalData.trackingCourier || "",
-      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? "" : finalData.trackingNumber || "",
+      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
+      vesselImoNumber: finalData.vesselImoNumber || undefined,
+      flightNumber: finalData.flightNumber || undefined,
+      trackingCourier: finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier || undefined,
+      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : [],
-      shippingMarks: finalData.shippingMarks || "",
-      purchaseOrderUrl: finalData.purchaseOrderUrl || "",
-      finalPIUrl: finalData.finalPIUrl || "",
-      finalLcUrl: finalData.finalLcUrl || "",
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || "",
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
+      shippingMarks: finalData.shippingMarks || undefined,
+      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
+      finalPIUrl: finalData.finalPIUrl || undefined,
+      finalLcUrl: finalData.finalLcUrl || undefined,
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
       year: extractedYear,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -461,15 +460,17 @@ export function NewLCEntryForm() {
       billOfExchangeQty: finalData.billOfExchangeQty,
     };
 
-    Object.keys(dataToSave).forEach(keyStr => {
-      const key = keyStr as keyof typeof dataToSave;
-      if (dataToSave[key] === undefined && typeof defaultFormValues[key] === 'string') {
-        (dataToSave as any)[key] = "";
+    // Remove undefined fields before saving to Firestore
+    const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key as keyof typeof acc] = value;
       }
-    });
+      return acc;
+    }, {} as typeof dataToSave);
+
 
     try {
-      await addDoc(collection(firestore, "lc_entries"), dataToSave);
+      await addDoc(collection(firestore, "lc_entries"), cleanedDataToSave);
       Swal.fire({
         title: "L/C Entry Saved!",
         text: `L/C entry has been successfully saved.`,
@@ -754,6 +755,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={control}
@@ -810,8 +812,8 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-
-         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+        
+        <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
         </h3>
@@ -916,9 +918,9 @@ export function NewLCEntryForm() {
           </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
             <FormField
-                control={control}
+                control={form.control}
                 name="totalPackageQty"
                 render={({ field }) => (
                 <FormItem>
@@ -932,7 +934,7 @@ export function NewLCEntryForm() {
                 )}
             />
             <FormField
-                control={control}
+                control={form.control}
                 name="totalNetWeight"
                 render={({ field }) => (
                 <FormItem>
@@ -946,7 +948,7 @@ export function NewLCEntryForm() {
                 )}
             />
             <FormField
-                control={control}
+                control={form.control}
                 name="totalGrossWeight"
                 render={({ field }) => (
                 <FormItem>
@@ -960,7 +962,7 @@ export function NewLCEntryForm() {
                 )}
             />
             <FormField
-                control={control}
+                control={form.control}
                 name="totalCbm"
                 render={({ field }) => (
                 <FormItem>
@@ -982,7 +984,7 @@ export function NewLCEntryForm() {
                     </FormControl>
                 </FormItem>
                 <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'Currency'})</FormLabel>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'USD'})</FormLabel>
                     <FormControl>
                     <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
@@ -993,7 +995,7 @@ export function NewLCEntryForm() {
         <Separator />
 
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-          <Workflow className="mr-2 h-5 w-5 text-primary" />
+          <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
@@ -1276,10 +1278,10 @@ export function NewLCEntryForm() {
              <AccordionTrigger
               className={cn(
                 "flex w-full items-center justify-between py-3 font-bold text-xl text-foreground hover:no-underline",
-                sectionHeadingClass, "border-b-0 mb-0" // Remove bottom border from accordion trigger
+                sectionHeadingClass, "border-b-0 mb-0" 
               )}
             >
-              <div className="flex items-center gap-2"> {/* Wrapper for title and icon */}
+              <div className="flex items-center gap-2"> 
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
