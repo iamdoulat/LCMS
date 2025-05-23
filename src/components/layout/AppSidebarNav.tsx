@@ -46,7 +46,7 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Factory,
-  CreditCard, // Added for consistency, though not used directly for new link
+  CreditCard, 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -64,7 +64,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/lc-tt-entry', label: 'LC T/T Entry', icon: FilePlus2 }, // New Link
+      { href: '/dashboard/lc-tt-entry', label: 'LC T/T Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     ],
   },
@@ -145,7 +145,6 @@ export function AppSidebarNav() {
         if (pathname === href) {
           return true;
         }
-        // Exact match for other sub-links like /dashboard/new-lc-entry, etc.
         return false;
     }
     return false;
@@ -248,7 +247,7 @@ export function AppSidebarNav() {
                     size="icon"
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
-                    title={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+                    
                 >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
