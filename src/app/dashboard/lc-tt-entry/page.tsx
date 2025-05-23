@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -52,11 +53,10 @@ const lcTtEntrySchema = z.object({
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay are required." }),
   lcStatus: z.enum(lcStatusOptions, { required_error: "L/C Status is required." }),
   itemDescriptionsDetails: z.string().optional(),
-  // New fields for Important Dates & Partial Shipment
   lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }),
   expireDate: z.date({ required_error: "Expire Date is required." }),
   latestShipmentDate: z.date({ required_error: "Latest Shipment Date is required." }),
-  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed." }),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity must be a non-negative integer.").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity must be a non-negative integer.").optional()),
   thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity must be a non-negative integer.").optional()),
@@ -98,11 +98,10 @@ export default function LcTtEntryPage() {
       termsOfPay: termsOfPayOptions[0],
       lcStatus: lcStatusOptions[0],
       itemDescriptionsDetails: '',
-      // New defaults
       lcIssueDate: new Date(),
       expireDate: new Date(),
       latestShipmentDate: new Date(),
-      partialShipmentAllowed: 'No',
+      partialShipmentAllowed: undefined, // Changed from 'No'
       firstPartialQty: 0,
       secondPartialQty: 0,
       thirdPartialQty: 0,
@@ -291,10 +290,15 @@ export default function LcTtEntryPage() {
                 name="partialShipmentAllowed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Partial Shipment Allowed*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select option" /></SelectTrigger></FormControl>
-                      <SelectContent>{partialShipmentAllowedOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                    <FormLabel>Partial Shipment Allowed</FormLabel>
+                    <Select 
+                        onValueChange={(value) => field.onChange(value === "" ? undefined : value)} 
+                        value={field.value ?? ""}
+                    >
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select option (Optional)" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {partialShipmentAllowedOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
+                      </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
