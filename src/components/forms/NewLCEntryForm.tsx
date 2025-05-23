@@ -1,8 +1,7 @@
-
 "use client";
 
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntry, ShipmentMode, Currency, TrackingCourier, LCStatus, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption } from '@/types';
@@ -10,14 +9,14 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { addDoc, serverTimestamp, collection, getDocs, deleteField } from 'firebase/firestore';
+import { addDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -36,6 +35,8 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
+const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
+const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION_NEW_LC__";
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -94,7 +95,7 @@ const lcEntrySchema = z.object({
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  trackingCourier: z.enum(trackingCourierOptions).optional(), // No "" as DHL is default
+  trackingCourier: z.enum(trackingCourierOptions).default("DHL"),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
@@ -126,15 +127,15 @@ type LCFormValues = z.infer<typeof lcEntrySchema>;
 const defaultFormValues: Partial<LCFormValues> = {
   applicantId: '',
   beneficiaryId: '',
-  currency: undefined,
+  currency: undefined, // Placeholder for Select
   amount: undefined,
-  termsOfPay: undefined,
+  termsOfPay: undefined, // Placeholder for Select
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
   invoiceDate: undefined,
   totalMachineQty: undefined,
   numberOfAmendments: 0,
-  status: undefined,
+  status: undefined, // Placeholder for Select
   itemDescriptions: '',
   partialShipments: '',
   portOfLoading: '',
@@ -147,7 +148,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   lcIssueDate: undefined,
   expireDate: undefined,
   latestShipmentDate: undefined,
-  partialShipmentAllowed: undefined,
+  partialShipmentAllowed: undefined, // Placeholder for Select
   firstPartialQty: 0,
   secondPartialQty: 0,
   thirdPartialQty: 0,
@@ -174,7 +175,7 @@ const defaultFormValues: Partial<LCFormValues> = {
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
-  trackingCourier: "DHL", // Default to DHL
+  trackingCourier: "DHL",
   trackingNumber: '',
   etd: undefined,
   eta: undefined,
@@ -317,6 +318,9 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ];
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName);
@@ -379,7 +383,6 @@ export function NewLCEntryForm() {
       }
 
     } else {
-      // If partial shipment is "No", totals are manually entered, so calculated partial totals should be zero
        setTotalCalculatedPartialQty(0); 
        setTotalCalculatedPartialAmount(0);
     }
@@ -593,6 +596,7 @@ export function NewLCEntryForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
+        {/* Section: L/C & Invoice Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <FileText className="mr-2 h-5 w-5 text-primary" />
           L/C & Invoice Details
@@ -644,16 +648,22 @@ export function NewLCEntryForm() {
             control={control}
             name="currency"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="space-y-3">
                 <FormLabel>Currency*</FormLabel>
-                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4 pt-2">
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                  >
                     {currencyOptions.map((option) => (
                       <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                         <FormControl><RadioGroupItem value={option} /></FormControl>
                         <FormLabel className="font-normal text-sm">{option}</FormLabel>
                       </FormItem>
                     ))}
-                </RadioGroup>
+                  </RadioGroup>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -666,32 +676,6 @@ export function NewLCEntryForm() {
                 <FormLabel>{amountLabel}</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="e.g., 50000.00" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={control}
-            name="termsOfPay"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Terms of Pay*</FormLabel>
-                 <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"
-                  >
-                    {termsOfPayOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={option} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -761,17 +745,43 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-          <FormField
+           <FormField
+            control={control}
+            name="termsOfPay"
+            render={({ field }) => (
+               <FormItem className="space-y-3 md:col-span-3">
+                <FormLabel>Terms of Pay*</FormLabel>
+                 <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                  >
+                    {termsOfPayOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
             control={control}
             name="status"
             render={({ field }) => (
-               <FormItem className="space-y-3">
-                <FormLabel>L/C Status*</FormLabel>
+               <FormItem className="space-y-3 md:col-span-3">
+                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2"
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {lcStatusOptions.map((statusOpt) => (
                       <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
@@ -830,7 +840,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <FormField
+         <FormField
             control={control}
             name="itemDescriptions"
             render={({ field }) => (
@@ -844,7 +854,8 @@ export function NewLCEntryForm() {
             )}
         />
         <Separator />
-
+        
+        {/* Section: Important Dates & Partial Shipment Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -884,30 +895,30 @@ export function NewLCEntryForm() {
                 )}
             />
         </div>
-
         <FormField
           control={control}
           name="partialShipmentAllowed"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Partial Shipment Allowed</FormLabel>
-              <RadioGroup
-                onValueChange={field.onChange}
-                value={field.value || ""}
-                className="flex space-x-4 pt-2"
-              >
-                {partialShipmentAllowedOptions.map((option) => (
-                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                    <FormControl><RadioGroupItem value={option} /></FormControl>
-                    <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                  </FormItem>
-                ))}
-              </RadioGroup>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                >
+                  {partialShipmentAllowedOptions.map((option) => (
+                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                      <FormControl><RadioGroupItem value={option} /></FormControl>
+                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                    </FormItem>
+                  ))}
+                </RadioGroup>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         {watchedPartialShipmentAllowed === "Yes" && (
           <Card className="p-4 mt-4 border-dashed">
             <CardHeader className="p-2 pb-4"><CardTitle className="text-md font-medium text-foreground flex items-center"><Package className="mr-2 h-5 w-5 text-muted-foreground" />Partial Shipment Breakdown</CardTitle></CardHeader>
@@ -1026,6 +1037,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
+        {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
@@ -1041,7 +1053,7 @@ export function NewLCEntryForm() {
                   <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
-                    className="flex space-x-4 pt-2"
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {shipmentModeOptions.map((option) => (
                       <FormItem key={option} className="flex items-center space-x-2 space-y-0">
@@ -1153,7 +1165,7 @@ export function NewLCEntryForm() {
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="flex space-x-4 pt-2"
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {trackingCourierOptions.map(courier => (
                         <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
@@ -1265,6 +1277,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
+        {/* Section: Consignee Bank Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Landmark className="mr-2 h-5 w-5 text-primary" />
           Consignee Bank Details
@@ -1283,12 +1296,13 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-
+        
+        {/* Section: Notify Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <BellRing className="mr-2 h-5 w-5 text-primary" />
           Notify Details
         </h3>
-        <FormField
+         <FormField
           control={form.control}
           name="notifyPartyNameAndAddress"
           render={({ field }) => (
@@ -1344,6 +1358,7 @@ export function NewLCEntryForm() {
         </div>
         <Separator />
 
+        {/* Section: 46A Documents Required */}
         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
@@ -1378,6 +1393,7 @@ export function NewLCEntryForm() {
         </Accordion>
         <Separator />
 
+        {/* Section: 47A Additional Conditions */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
@@ -1442,6 +1458,7 @@ export function NewLCEntryForm() {
         />
         <Separator />
 
+        {/* Section: Document URLs */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
         </h3>
@@ -1566,4 +1583,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
