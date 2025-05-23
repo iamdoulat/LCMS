@@ -136,6 +136,9 @@ const defaultFormValues: Partial<LCFormValues> = {
   lcIssueDate: undefined,
   expireDate: undefined,
   latestShipmentDate: undefined,
+  etd: undefined,
+  eta: undefined,
+  invoiceDate: undefined,
   purchaseOrderUrl: '',
   finalPIUrl: '',
   finalLcUrl: '',
@@ -205,12 +208,13 @@ export function NewLCEntryForm() {
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
   const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
-  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined>();
+  
+  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
 
 
   const form = useForm<LCFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: defaultFormValues as any, // Cast as any to satisfy TS for complex default structure
+    defaultValues: defaultFormValues as any, 
   });
 
   const { control, setValue, watch, getValues, reset } = form;
@@ -254,7 +258,7 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = watch("applicantId");
-  const { setValue: setFormValueForNotify } = form; // Alias setValue for clarity in this effect
+  const { setValue: setFormValueForNotify } = form; 
 
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
@@ -273,7 +277,7 @@ export function NewLCEntryForm() {
         console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
-  }, [watchedApplicantId, applicantOptions, setFormValueForNotify]); // Added setFormValueForNotify to dependency array
+  }, [watchedApplicantId, applicantOptions, setFormValueForNotify]);
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -309,6 +313,9 @@ export function NewLCEntryForm() {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty", 
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty", 
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ] as const;
 
       fieldsToInitializeZero.forEach(fieldName => {
@@ -370,8 +377,6 @@ export function NewLCEntryForm() {
       }
 
     } else {
-      // If partial shipment is not allowed, these calculated totals should reflect zero
-      // or be hidden depending on further requirements. For now, set to 0.
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
     }
@@ -475,7 +480,6 @@ export function NewLCEntryForm() {
       billOfExchangeQty: data.billOfExchangeQty,
     };
     
-    // Remove undefined fields before saving to Firestore
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
         acc[key as keyof typeof acc] = value;
@@ -739,7 +743,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? 0} />
+                  <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -1002,7 +1006,7 @@ export function NewLCEntryForm() {
                     </FormControl>
                 </FormItem>
                 <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({form.getValues("currency") || 'USD'})</FormLabel>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount (USD)</FormLabel>
                     <FormControl>
                     <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
@@ -1319,51 +1323,6 @@ export function NewLCEntryForm() {
                 <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-              <FormField
-                control={control}
-                name="certificateOfOrigin"
-                render={() => (
-                  <FormItem>
-                    <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
-                      <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
-                    </FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
-                      {certificateOfOriginCountries.map((country) => (
-                        <FormField
-                          key={country}
-                          control={control}
-                          name="certificateOfOrigin"
-                          render={({ field }) => {
-                            return (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(country)}
-                                    onCheckedChange={(checked) => {
-                                      const currentValue = field.value || [];
-                                      return checked
-                                        ? field.onChange([...currentValue, country])
-                                        : field.onChange(
-                                          currentValue.filter(
-                                            (value) => value !== country
-                                          )
-                                        );
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                                  {country}
-                                </FormLabel>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -1373,6 +1332,51 @@ export function NewLCEntryForm() {
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
+        <FormField
+          control={control}
+          name="certificateOfOrigin"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
+              </FormLabel>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                {certificateOfOriginCountries.map((country) => (
+                  <FormField
+                    key={country}
+                    control={control}
+                    name="certificateOfOrigin"
+                    render={({ field }) => {
+                      return (
+                        <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(country)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value || [];
+                                return checked
+                                  ? field.onChange([...currentValue, country])
+                                  : field.onChange(
+                                    currentValue.filter(
+                                      (value) => value !== country
+                                    )
+                                  );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                            {country}
+                          </FormLabel>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={control}
           name="shippingMarks"
@@ -1512,3 +1516,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+

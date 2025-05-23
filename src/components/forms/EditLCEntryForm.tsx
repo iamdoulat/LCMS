@@ -37,19 +37,18 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE_LC_EDIT__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
+const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION_EDIT__";
+
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
-  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
-  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -57,38 +56,20 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
-  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
-  expireDate: z.date({ required_error: "Expire date is required" }),
-  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
+  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
   itemDescriptions: z.string().optional(),
-  consigneeBankNameAddress: z.string().optional(),
-  vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(),
-  flightNumber: z.string().optional(),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  shippingMarks: z.string().optional(),
-  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  consigneeBankNameAddress: z.string().optional(),
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  numberOfAmendments: z.preprocess(
-    toNumberOrUndefined,
-    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
-  ),
+  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
+  expireDate: z.date({ required_error: "Expire date is required" }),
+  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -108,18 +89,36 @@ const lcEntrySchema = z.object({
   thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
   thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
   thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
-  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional()),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional().default(0)),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  shippingMarks: z.string().optional(),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
 });
 
 type LCEditFormValues = z.infer<typeof lcEntrySchema>;
@@ -169,8 +168,8 @@ const defaultFormValues: LCEditFormValues = {
   notifyPartyCell: '',
   notifyPartyEmail: '',
   numberOfAmendments: 0,
-  status: lcStatusOptions[0], // "Draft"
-  partialShipmentAllowed: partialShipmentAllowedOptions[1], // "No"
+  status: lcStatusOptions[0], 
+  partialShipmentAllowed: partialShipmentAllowedOptions[1], 
   firstPartialQty: 0,
   secondPartialQty: 0,
   thirdPartialQty: 0,
@@ -201,22 +200,23 @@ const defaultFormValues: LCEditFormValues = {
   beneficiaryComplianceCertificateQty: 0,
   shipmentAdviceQty: 0,
   billOfExchangeQty: 0,
+  shipmentMode: shipmentModeOptions[0],
 };
 
-const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
-
 const getValidOption = <T extends string>(
-    valueFromInitialData: T | undefined | null,
-    optionsArray: readonly T[],
-    fallbackDefault: T
-  ): T => {
-    const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : valueFromInitialData;
-    if (trimmedValue && optionsArray.includes(trimmedValue)) {
-      return trimmedValue;
-    }
-    return fallbackDefault; // Use the provided default from defaultFormValues
-  };
+  valueFromInitialData: T | undefined | null,
+  optionsArray: readonly T[],
+  fallbackDefaultFromForm: T
+): T => {
+  const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : valueFromInitialData;
+  if (trimmedValue && optionsArray.includes(trimmedValue)) {
+    return trimmedValue;
+  }
+  return fallbackDefaultFromForm;
+};
 
+
+const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -229,7 +229,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
   const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   
-  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined>();
+  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
+
 
   const form = useForm<LCEditFormValues>({
     resolver: zodResolver(lcEntrySchema),
@@ -266,7 +267,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
       } catch (error) {
         console.error("EditLCEntryForm: Error fetching dropdown data: ", error);
-        Swal.fire("Error", "Could not load applicant/beneficiary data. See console.", "error");
       } finally {
         setIsLoadingApplicants(false);
         setIsLoadingBeneficiaries(false);
@@ -280,60 +280,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       console.log("EditLCEntryForm: Initial L/C Data for Form:", initialData);
       
       const valuesToSet: LCEditFormValues = {
-        ...defaultFormValues,
-        ...(initialData as unknown as LCEditFormValues), // Cast to allow spread, careful with types
-        applicantId: initialData.applicantId || defaultFormValues.applicantId,
-        beneficiaryId: initialData.beneficiaryId || defaultFormValues.beneficiaryId,
-        
+        applicantId: initialData.applicantId || defaultFormValues.applicantId!,
+        beneficiaryId: initialData.beneficiaryId || defaultFormValues.beneficiaryId!,
         currency: getValidOption(initialData.currency, currencyOptions, defaultFormValues.currency!),
-        amount: initialData.amount ?? defaultFormValues.amount,
+        amount: initialData.amount ?? defaultFormValues.amount!,
         termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, defaultFormValues.termsOfPay!),
-        status: getValidOption(initialData.status, lcStatusOptions, defaultFormValues.status!),
-        shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, defaultFormValues.shipmentMode!),
-        trackingCourier: (initialData.trackingCourier && trackingCourierOptions.includes(initialData.trackingCourier as TrackingCourier)) 
-                          ? initialData.trackingCourier 
-                          : defaultFormValues.trackingCourier,
-        partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed!),
-        
-        documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber,
-        proformaInvoiceNumber: initialData.proformaInvoiceNumber || defaultFormValues.proformaInvoiceNumber,
-        totalMachineQty: initialData.totalMachineQty ?? defaultFormValues.totalMachineQty,
-        numberOfAmendments: initialData.numberOfAmendments ?? defaultFormValues.numberOfAmendments,
-        
+        documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber!,
+        proformaInvoiceNumber: initialData.proformaInvoiceNumber || defaultFormValues.proformaInvoiceNumber!,
         invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : defaultFormValues.invoiceDate,
-        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
-        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
-        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
-        etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
-        eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
-
-        itemDescriptions: initialData.itemDescriptions || defaultFormValues.itemDescriptions,
-        consigneeBankNameAddress: initialData.consigneeBankNameAddress || defaultFormValues.consigneeBankNameAddress,
-        vesselOrFlightName: initialData.vesselOrFlightName || defaultFormValues.vesselOrFlightName,
-        vesselImoNumber: initialData.vesselImoNumber || defaultFormValues.vesselImoNumber,
-        flightNumber: initialData.flightNumber || defaultFormValues.flightNumber,
-        
-        totalPackageQty: initialData.totalPackageQty ?? defaultFormValues.totalPackageQty,
-        totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
-        totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
-        totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
-
-        partialShipments: initialData.partialShipments || defaultFormValues.partialShipments,
-        portOfLoading: initialData.portOfLoading || defaultFormValues.portOfLoading,
-        portOfDischarge: initialData.portOfDischarge || defaultFormValues.portOfDischarge,
-        shippingMarks: initialData.shippingMarks || defaultFormValues.shippingMarks,
-        certificateOfOrigin: initialData.certificateOfOrigin || defaultFormValues.certificateOfOrigin,
-        
-        notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || defaultFormValues.notifyPartyNameAndAddress,
-        notifyPartyName: initialData.notifyPartyName || defaultFormValues.notifyPartyName,
-        notifyPartyCell: initialData.notifyPartyCell || defaultFormValues.notifyPartyCell,
-        notifyPartyEmail: initialData.notifyPartyEmail || defaultFormValues.notifyPartyEmail,
-        
-        purchaseOrderUrl: initialData.purchaseOrderUrl || defaultFormValues.purchaseOrderUrl,
-        finalPIUrl: initialData.finalPIUrl || defaultFormValues.finalPIUrl,
-        finalLcUrl: initialData.finalLcUrl || defaultFormValues.finalLcUrl,
-        shippingDocumentsUrl: initialData.shippingDocumentsUrl || defaultFormValues.shippingDocumentsUrl,
-
+        totalMachineQty: initialData.totalMachineQty ?? defaultFormValues.totalMachineQty!,
+        numberOfAmendments: initialData.numberOfAmendments ?? defaultFormValues.numberOfAmendments!,
+        status: getValidOption(initialData.status, lcStatusOptions, defaultFormValues.status!),
+        itemDescriptions: initialData.itemDescriptions || defaultFormValues.itemDescriptions!,
+        partialShipments: initialData.partialShipments || defaultFormValues.partialShipments!,
+        portOfLoading: initialData.portOfLoading || defaultFormValues.portOfLoading!,
+        portOfDischarge: initialData.portOfDischarge || defaultFormValues.portOfDischarge!,
+        consigneeBankNameAddress: initialData.consigneeBankNameAddress || defaultFormValues.consigneeBankNameAddress!,
+        notifyPartyNameAndAddress: initialData.notifyPartyNameAndAddress || defaultFormValues.notifyPartyNameAndAddress!,
+        notifyPartyName: initialData.notifyPartyName || defaultFormValues.notifyPartyName!,
+        notifyPartyCell: initialData.notifyPartyCell || defaultFormValues.notifyPartyCell!,
+        notifyPartyEmail: initialData.notifyPartyEmail || defaultFormValues.notifyPartyEmail!,
+        lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate!,
+        expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate!,
+        latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate!,
+        partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed!),
         firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
         secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
         thirdPartialQty: initialData.thirdPartialQty ?? defaultFormValues.thirdPartialQty,
@@ -352,7 +322,18 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         firstPartialCbm: initialData.firstPartialCbm ?? defaultFormValues.firstPartialCbm,
         secondPartialCbm: initialData.secondPartialCbm ?? defaultFormValues.secondPartialCbm,
         thirdPartialCbm: initialData.thirdPartialCbm ?? defaultFormValues.thirdPartialCbm,
-
+        totalPackageQty: initialData.totalPackageQty ?? defaultFormValues.totalPackageQty,
+        totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
+        totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
+        totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
+        shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, defaultFormValues.shipmentMode!),
+        vesselOrFlightName: initialData.vesselOrFlightName || defaultFormValues.vesselOrFlightName!,
+        vesselImoNumber: initialData.vesselImoNumber || defaultFormValues.vesselImoNumber!,
+        flightNumber: initialData.flightNumber || defaultFormValues.flightNumber!,
+        trackingCourier: initialData.trackingCourier || defaultFormValues.trackingCourier!,
+        trackingNumber: initialData.trackingNumber || defaultFormValues.trackingNumber!,
+        etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
+        eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
         originalBlQty: initialData.originalBlQty ?? defaultFormValues.originalBlQty,
         copyBlQty: initialData.copyBlQty ?? defaultFormValues.copyBlQty,
         originalCooQty: initialData.originalCooQty ?? defaultFormValues.originalCooQty,
@@ -365,12 +346,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         beneficiaryComplianceCertificateQty: initialData.beneficiaryComplianceCertificateQty ?? defaultFormValues.beneficiaryComplianceCertificateQty,
         shipmentAdviceQty: initialData.shipmentAdviceQty ?? defaultFormValues.shipmentAdviceQty,
         billOfExchangeQty: initialData.billOfExchangeQty ?? defaultFormValues.billOfExchangeQty,
-
+        certificateOfOrigin: initialData.certificateOfOrigin || defaultFormValues.certificateOfOrigin!,
+        shippingMarks: initialData.shippingMarks || defaultFormValues.shippingMarks!,
+        purchaseOrderUrl: initialData.purchaseOrderUrl || defaultFormValues.purchaseOrderUrl!,
+        finalPIUrl: initialData.finalPIUrl || defaultFormValues.finalPIUrl!,
+        finalLcUrl: initialData.finalLcUrl || defaultFormValues.finalLcUrl!,
+        shippingDocumentsUrl: initialData.shippingDocumentsUrl || defaultFormValues.shippingDocumentsUrl!,
       };
       reset(valuesToSet);
       console.log("EditLCEntryForm: Form reset with values:", valuesToSet);
-      // Trigger an immediate validation after reset if needed
-      // form.trigger();
+      console.log("EditLCEntryForm: Setting Applicant ID in form to:", initialData.applicantId);
+      console.log("EditLCEntryForm: Setting Beneficiary ID in form to:", initialData.beneficiaryId);
     }
   }, [initialData, reset, isLoadingApplicants, isLoadingBeneficiaries, applicantOptions, beneficiaryOptions]);
 
@@ -424,14 +410,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
         "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
         "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
-        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty", 
-        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty", 
-        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
       ];
       fieldsToInitializeZero.forEach(fieldName => {
         const currentValue = getValues(fieldName);
-        if (currentValue === undefined || String(currentValue).trim() === '') {
+        if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
           setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
+        }
+      });
+       const docQtyFieldsToInitializeZero: (keyof LCEditFormValues)[] = [
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
+      ];
+      docQtyFieldsToInitializeZero.forEach(fieldName => {
+        const currentValue = getValues(fieldName);
+         if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
+            setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
         }
       });
     }
@@ -444,15 +438,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const secondPartialQty = Number(getValues("secondPartialQty") || 0);
     const thirdPartialQty = Number(getValues("thirdPartialQty") || 0);
     const newTotalQty = firstPartialQty + secondPartialQty + thirdPartialQty;
-    setTotalCalculatedPartialQty(newTotalQty);
 
     const firstPartialAmount = Number(getValues("firstPartialAmount") || 0);
     const secondPartialAmount = Number(getValues("secondPartialAmount") || 0);
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
-    setTotalCalculatedPartialAmount(newTotalAmount);
     
     if (watchedPartialShipmentAllowed === "Yes") {
+      setTotalCalculatedPartialQty(newTotalQty);
+      setTotalCalculatedPartialAmount(newTotalAmount);
+
       const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
       const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
       const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
@@ -484,6 +479,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
        if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
+
+    } else {
+      // When partial shipment is "No", these are for display and should be 0
+      setTotalCalculatedPartialQty(0);
+      setTotalCalculatedPartialAmount(0);
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
@@ -555,7 +555,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialCbm : deleteField() as any,
       secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialCbm : deleteField() as any,
       thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialCbm : deleteField() as any,
-      
       totalPackageQty: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
         : (finalData.totalPackageQty === undefined ? deleteField() as any : finalData.totalPackageQty),
@@ -568,7 +567,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       totalCbm: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
         : (finalData.totalCbm === undefined ? deleteField() as any : finalData.totalCbm),
-
       originalBlQty: finalData.originalBlQty === undefined ? deleteField() as any : finalData.originalBlQty,
       copyBlQty: finalData.copyBlQty === undefined ? deleteField() as any : finalData.copyBlQty,
       originalCooQty: finalData.originalCooQty === undefined ? deleteField() as any : finalData.originalCooQty,
@@ -586,11 +584,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     };
 
     const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
-        if (value === undefined && key !== 'partialShipmentAllowed' && key !== 'trackingCourier') { // Allow undefined for optional enums to be handled by deleteField
-           // Do not add if value is undefined, unless it's one of the specific fields we might want to delete
-        } else {
-            acc[key as keyof typeof acc] = value;
-        }
+      // Keep deleteField sentinels, and other defined values
+      if (typeof value === 'object' && value !== null && Object.prototype.hasOwnProperty.call(value, '_methodName') && (value as any)._methodName === 'FieldValue.delete') {
+          acc[key as keyof typeof acc] = value;
+      } else if (value !== undefined) {
+          acc[key as keyof typeof acc] = value;
+      }
       return acc;
     }, {} as typeof dataToUpdate);
 
@@ -858,7 +857,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormItem>
                 <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? 0} />
+                  <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -960,7 +959,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>L/C Issue Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select L/C issue date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -971,7 +970,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Expire Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select expire date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -982,7 +981,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Latest Shipment Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select latest shipment date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -997,14 +996,15 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormLabel>Partial Shipment Allowed</FormLabel>
               <Select
                 onValueChange={field.onChange}
-                value={partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : partialShipmentAllowedOptions[1]}
+                value={field.value === undefined ? PLACEHOLDER_PSA_VALUE : (partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : PLACEHOLDER_PSA_VALUE)}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select option (Optional)" />
+                     <SelectValue placeholder="Select option (Optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>Select option (Optional)</SelectItem>
                   {partialShipmentAllowedOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -1019,7 +1019,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           <Card className="p-4 mt-4 border-dashed">
             <CardHeader className="p-2 pb-4"><CardTitle className="text-md font-medium text-foreground flex items-center"><Package className="mr-2 h-5 w-5 text-muted-foreground" />Partial Shipment Breakdown</CardTitle></CardHeader>
             <CardContent className="space-y-6 p-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1028,7 +1028,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1037,7 +1037,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1049,7 +1049,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </Card>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1123,7 +1123,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     </FormControl>
                 </FormItem>
                 <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({watch("currency") || 'USD'})</FormLabel>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount (USD)</FormLabel>
                     <FormControl>
                     <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                     </FormControl>
@@ -1144,10 +1144,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Shipment Mode*</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : shipmentModeOptions[0]}
-                >
+                <Select onValueChange={field.onChange} value={field.value || shipmentModeOptions[0]}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select shipment mode" />
@@ -1168,7 +1165,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={form.control}
+            control={control}
             name="vesselOrFlightName"
             render={({ field }) => (
               <FormItem>
@@ -1190,7 +1187,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         {watchedShipmentMode === 'Sea' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
             <FormField
-              control={form.control}
+              control={control}
               name="vesselImoNumber"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
@@ -1218,7 +1215,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         {watchedShipmentMode === 'Air' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
             <FormField
-              control={form.control}
+              control={control}
               name="flightNumber"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
@@ -1252,19 +1249,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         )}
         
         <div className="mt-6">
-          <h4 className="text-base font-semibold text-foreground flex items-center mb-2">
+          <h4 className="text-base font-bold text-foreground flex items-center mb-2">
             <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
             <FormField
-              control={form.control}
+              control={control}
               name="trackingCourier"
               render={({ field }) => (
                 <FormItem className="md:col-span-1">
                   <FormLabel>Courier By</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                    value={field.value === "" ? NONE_COURIER_VALUE : field.value}
+                     value={field.value === "" || field.value === undefined || field.value === null ? NONE_COURIER_VALUE : field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -1283,7 +1280,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               )}
             />
             <FormField
-              control={form.control}
+              control={control}
               name="trackingNumber"
               render={({ field }) => (
                 <FormItem className="md:col-span-1">
@@ -1311,7 +1308,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <FormField
-            control={form.control}
+            control={control}
             name="etd"
             render={({ field }) => (
               <FormItem className="flex flex-col">
@@ -1322,7 +1319,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={form.control}
+            control={control}
             name="eta"
             render={({ field }) => (
               <FormItem className="flex flex-col">
@@ -1340,7 +1337,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           Consignee Bank Details
         </h3>
         <FormField
-          control={form.control}
+          control={control}
           name="consigneeBankNameAddress"
           render={({ field }) => (
             <FormItem>
@@ -1359,7 +1356,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           Notify Details
         </h3>
         <FormField
-          control={form.control}
+          control={control}
           name="notifyPartyNameAndAddress"
           render={({ field }) => (
             <FormItem>
@@ -1373,7 +1370,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
-            control={form.control}
+            control={control}
             name="notifyPartyName"
             render={({ field }) => (
               <FormItem>
@@ -1386,7 +1383,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={form.control}
+            control={control}
             name="notifyPartyCell"
             render={({ field }) => (
               <FormItem>
@@ -1399,7 +1396,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={form.control}
+            control={control}
             name="notifyPartyEmail"
             render={({ field }) => (
               <FormItem>
@@ -1430,64 +1427,19 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField control={control} name="originalBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="copyBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="originalCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="copyCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="invoiceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="packingListQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Packing List Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="beneficiaryCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="brandNewCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Brand New Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="beneficiaryWarrantyCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Warranty Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="beneficiaryComplianceCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Compliance Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? 0} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="originalBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="copyBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="originalCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="copyCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="invoiceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="packingListQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Packing List Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="beneficiaryCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="brandNewCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Brand New Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="beneficiaryWarrantyCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Warranty Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="beneficiaryComplianceCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Compliance Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-              <FormField
-                control={control}
-                name="certificateOfOrigin"
-                render={() => (
-                  <FormItem>
-                    <FormLabel className="text-base font-semibold text-foreground flex items-center mb-2">
-                      <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
-                    </FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
-                      {certificateOfOriginCountries.map((country) => (
-                        <FormField
-                          key={country}
-                          control={control}
-                          name="certificateOfOrigin"
-                          render={({ field }) => {
-                            return (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(country)}
-                                    onCheckedChange={(checked) => {
-                                      const currentValue = field.value || [];
-                                      return checked
-                                        ? field.onChange([...currentValue, country])
-                                        : field.onChange(
-                                          currentValue.filter(
-                                            (value) => value !== country
-                                          )
-                                        );
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                                  {country}
-                                </FormLabel>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -1497,6 +1449,51 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
+        <FormField
+          control={control}
+          name="certificateOfOrigin"
+          render={() => (
+            <FormItem>
+              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
+              </FormLabel>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                {certificateOfOriginCountries.map((country) => (
+                  <FormField
+                    key={country}
+                    control={control}
+                    name="certificateOfOrigin"
+                    render={({ field }) => {
+                      return (
+                        <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(country)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value || [];
+                                return checked
+                                  ? field.onChange([...currentValue, country])
+                                  : field.onChange(
+                                    currentValue.filter(
+                                      (value) => value !== country
+                                    )
+                                  );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                            {country}
+                          </FormLabel>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={control}
           name="shippingMarks"
@@ -1627,8 +1624,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-               Save L/C Entry
+              <FileText className="mr-2 h-4 w-4" />
+              Save L/C Entry
             </>
           )}
         </Button>
@@ -1637,4 +1634,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   );
 }
 
-    
