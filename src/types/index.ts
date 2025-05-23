@@ -56,7 +56,6 @@ export interface LCEntry {
   eta?: Date | null;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed as per request
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -71,7 +70,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is contact person name
+  notifyPartyName?: string; 
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -107,6 +106,9 @@ export interface LCEntry {
   beneficiaryComplianceCertificateQty?: number | '';
   shipmentAdviceQty?: number | '';
   billOfExchangeQty?: number | '';
+  isFirstShipment?: boolean;
+  isSecondShipment?: boolean;
+  isThirdShipment?: boolean;
 }
 
 export interface LCEntryDocument {
@@ -136,7 +138,6 @@ export interface LCEntryDocument {
   eta?: string;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -189,6 +190,9 @@ export interface LCEntryDocument {
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
   billOfExchangeQty?: number;
+  isFirstShipment?: boolean;
+  isSecondShipment?: boolean;
+  isThirdShipment?: boolean;
 }
 
 export interface Customer {
@@ -306,8 +310,8 @@ export interface ProformaInvoice {
   totalPurchasePrice: number;
   totalSalesPrice: number;
   grandTotalSalesPrice: number;
-  totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
+  totalExtraNetCommission?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -337,4 +341,3 @@ export interface LcOption {
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
 }
-

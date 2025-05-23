@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Workflow, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -119,6 +119,9 @@ const lcEntrySchema = z.object({
   finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  isFirstShipment: z.boolean().optional().default(false),
+  isSecondShipment: z.boolean().optional().default(false),
+  isThirdShipment: z.boolean().optional().default(false),
 });
 
 type LCFormValues = z.infer<typeof lcEntrySchema>;
@@ -127,25 +130,26 @@ const defaultFormValues: Partial<LCFormValues> = {
   applicantId: '',
   beneficiaryId: '',
   currency: currencyOptions[0],
+  amount: undefined,
   termsOfPay: termsOfPayOptions[0],
-  status: 'Draft',
-  shipmentMode: shipmentModeOptions[0],
-  trackingCourier: '',
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
+  invoiceDate: undefined,
+  totalMachineQty: undefined,
   lcIssueDate: undefined,
   expireDate: undefined,
   latestShipmentDate: undefined,
-  etd: undefined,
-  eta: undefined,
-  invoiceDate: undefined,
   purchaseOrderUrl: '',
   finalPIUrl: '',
   finalLcUrl: '',
   shippingDocumentsUrl: '',
+  trackingCourier: '',
   trackingNumber: '',
+  etd: undefined,
+  eta: undefined,
   itemDescriptions: '',
   consigneeBankNameAddress: '',
+  shipmentMode: shipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -163,7 +167,8 @@ const defaultFormValues: Partial<LCFormValues> = {
   notifyPartyCell: '',
   notifyPartyEmail: '',
   numberOfAmendments: 0,
-  partialShipmentAllowed: undefined,
+  status: 'Draft',
+  partialShipmentAllowed: undefined, 
   firstPartialQty: 0,
   secondPartialQty: 0,
   thirdPartialQty: 0,
@@ -194,6 +199,9 @@ const defaultFormValues: Partial<LCFormValues> = {
   beneficiaryComplianceCertificateQty: 0,
   shipmentAdviceQty: 0,
   billOfExchangeQty: 0,
+  isFirstShipment: false,
+  isSecondShipment: false,
+  isThirdShipment: false,
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
@@ -377,6 +385,7 @@ export function NewLCEntryForm() {
       }
 
     } else {
+      // When partial shipment is "No", these are for display and should be 0 if not explicitly managed
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
     }
@@ -478,6 +487,9 @@ export function NewLCEntryForm() {
       beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
       shipmentAdviceQty: data.shipmentAdviceQty,
       billOfExchangeQty: data.billOfExchangeQty,
+      isFirstShipment: data.isFirstShipment,
+      isSecondShipment: data.isSecondShipment,
+      isThirdShipment: data.isThirdShipment,
     };
     
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
@@ -737,7 +749,7 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="numberOfAmendments"
             render={({ field }) => (
               <FormItem>
@@ -774,6 +786,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={control}
@@ -816,7 +829,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <FormField
+         <FormField
           control={control}
           name="itemDescriptions"
           render={({ field }) => (
@@ -830,7 +843,7 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-
+        
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -1130,10 +1143,10 @@ export function NewLCEntryForm() {
             </Button>
           </div>
         )}
-        
+
         <div className="mt-6">
-          <h4 className="text-base font-bold text-foreground flex items-center mb-2">
-            <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+          <h4 className="text-base font-medium text-foreground flex items-center mb-2">
+             Original Document Tracking
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
             <FormField
@@ -1188,6 +1201,52 @@ export function NewLCEntryForm() {
             </Button>
           </div>
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
+           <FormField
+              control={control}
+              name="isFirstShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                    1st shipment
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="isSecondShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                    2nd shipment
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="isThirdShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                    3rd shipment
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <FormField
@@ -1239,7 +1298,7 @@ export function NewLCEntryForm() {
           Notify Details
         </h3>
         <FormField
-          control={control}
+          control={form.control}
           name="notifyPartyNameAndAddress"
           render={({ field }) => (
             <FormItem>
@@ -1253,7 +1312,7 @@ export function NewLCEntryForm() {
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
-            control={control}
+            control={form.control}
             name="notifyPartyName"
             render={({ field }) => (
               <FormItem>
@@ -1266,7 +1325,7 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="notifyPartyCell"
             render={({ field }) => (
               <FormItem>
@@ -1279,7 +1338,7 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="notifyPartyEmail"
             render={({ field }) => (
               <FormItem>
@@ -1332,12 +1391,12 @@ export function NewLCEntryForm() {
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
-        <FormField
+         <FormField
           control={control}
           name="certificateOfOrigin"
           render={() => (
             <FormItem>
-              <FormLabel className="text-base font-bold text-foreground flex items-center mb-2">
+              <FormLabel className="text-base font-medium text-foreground flex items-center mb-2">
                 <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
               </FormLabel>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
@@ -1516,4 +1575,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
