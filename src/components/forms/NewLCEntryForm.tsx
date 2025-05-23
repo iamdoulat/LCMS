@@ -37,19 +37,18 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 const NONE_COURIER_VALUE = "__NONE_LC_NEW__";
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
+const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION_NEW__";
+
 
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
   currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
-  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of pay are required" }),
-  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required" }),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
   amount: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay are required" }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -57,38 +56,20 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
-  lcIssueDate: z.date({ required_error: "L/C issue date is required" }),
-  expireDate: z.date({ required_error: "Expire date is required" }),
-  latestShipmentDate: z.date({ required_error: "Latest shipment date is required" }),
-  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
+  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
+  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required" }),
   itemDescriptions: z.string().optional(),
-  consigneeBankNameAddress: z.string().optional(),
-  vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(),
-  flightNumber: z.string().optional(),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  shippingMarks: z.string().optional(),
-  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  consigneeBankNameAddress: z.string().optional(),
   notifyPartyNameAndAddress: z.string().optional(),
   notifyPartyName: z.string().optional(),
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  numberOfAmendments: z.preprocess(
-    toNumberOrUndefined,
-    z.number({ invalid_type_error: "Number of amendments must be a number" }).int().nonnegative("Number of amendments cannot be negative").optional()
-  ),
+  lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }),
+  expireDate: z.date({ required_error: "Expire Date is required." }),
+  latestShipmentDate: z.date({ required_error: "Latest Shipment Date is required." }),
   partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -108,18 +89,36 @@ const lcEntrySchema = z.object({
   thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
   thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
   thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
-  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional()),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required."}),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional().default(0)),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  shippingMarks: z.string().optional(),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
 });
 
 type LCFormValues = z.infer<typeof lcEntrySchema>;
@@ -134,9 +133,9 @@ const defaultFormValues: Partial<LCFormValues> = {
   trackingCourier: '',
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
-  lcIssueDate: new Date(),
-  expireDate: new Date(),
-  latestShipmentDate: new Date(),
+  lcIssueDate: undefined,
+  expireDate: undefined,
+  latestShipmentDate: undefined,
   purchaseOrderUrl: '',
   finalPIUrl: '',
   finalLcUrl: '',
@@ -208,9 +207,10 @@ export function NewLCEntryForm() {
   const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined>();
 
+
   const form = useForm<LCFormValues>({
     resolver: zodResolver(lcEntrySchema),
-    defaultValues: defaultFormValues as any,
+    defaultValues: defaultFormValues as any, // Cast as any to satisfy TS for complex default structure
   });
 
   const { control, setValue, watch, getValues, reset } = form;
@@ -254,6 +254,7 @@ export function NewLCEntryForm() {
   }, []);
 
   const watchedApplicantId = watch("applicantId");
+  const { setValue: setFormValueForNotify } = form; // Alias setValue for clarity in this effect
 
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
@@ -262,17 +263,17 @@ export function NewLCEntryForm() {
       console.log("NewLCEntryForm: Applicant Options for check:", applicantOptions);
       console.log("NewLCEntryForm: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
-        setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        setFormValueForNotify("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
         console.log("NewLCEntryForm: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
-        setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        setFormValueForNotify("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
         console.log("NewLCEntryForm: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
-        setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        setFormValueForNotify("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
         console.log("NewLCEntryForm: Setting notifyPartyCell to:", selectedApplicant.phone);
-        setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        setFormValueForNotify("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
         console.log("NewLCEntryForm: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
-  }, [watchedApplicantId, applicantOptions, setValue]);
+  }, [watchedApplicantId, applicantOptions, setFormValueForNotify]); // Added setFormValueForNotify to dependency array
 
 
   const watchedShipmentMode = watch("shipmentMode");
@@ -322,41 +323,57 @@ export function NewLCEntryForm() {
 
 
   React.useEffect(() => {
-    const qtys = [getValues("firstPartialQty"), getValues("secondPartialQty"), getValues("thirdPartialQty")].map(q => Number(q) || 0);
-    const amounts = [getValues("firstPartialAmount"), getValues("secondPartialAmount"), getValues("thirdPartialAmount")].map(a => Number(a) || 0);
+    const firstPartialQty = Number(getValues("firstPartialQty") || 0);
+    const secondPartialQty = Number(getValues("secondPartialQty") || 0);
+    const thirdPartialQty = Number(getValues("thirdPartialQty") || 0);
+    const newTotalQty = firstPartialQty + secondPartialQty + thirdPartialQty;
 
+    const firstPartialAmount = Number(getValues("firstPartialAmount") || 0);
+    const secondPartialAmount = Number(getValues("secondPartialAmount") || 0);
+    const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
+    const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
+    
     if (watchedPartialShipmentAllowed === "Yes") {
-      setTotalCalculatedPartialQty(qtys.reduce((sum, val) => sum + val, 0));
-      setTotalCalculatedPartialAmount(amounts.reduce((sum, val) => sum + val, 0));
+      setTotalCalculatedPartialQty(newTotalQty);
+      setTotalCalculatedPartialAmount(newTotalAmount);
 
-      const pkgs = [getValues("firstPartialPkgs"), getValues("secondPartialPkgs"), getValues("thirdPartialPkgs")].map(p => Number(p) || 0);
-      const netWeights = [getValues("firstPartialNetWeight"), getValues("secondPartialNetWeight"), getValues("thirdPartialNetWeight")].map(nw => Number(nw) || 0);
-      const grossWeights = [getValues("firstPartialGrossWeight"), getValues("secondPartialGrossWeight"), getValues("thirdPartialGrossWeight")].map(gw => Number(gw) || 0);
-      const cbms = [getValues("firstPartialCbm"), getValues("secondPartialCbm"), getValues("thirdPartialCbm")].map(c => Number(c) || 0);
-
-      const newTotalPkgs = pkgs.reduce((sum, val) => sum + val, 0);
+      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
       if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
-        setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+          setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
       }
-      const newTotalNetW = netWeights.reduce((sum, val) => sum + val, 0);
+
+      const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
+      const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
+      const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
+      const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
       if (Number(getValues("totalNetWeight") || 0) !== newTotalNetW) {
         setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
       }
-      const newTotalGrossW = grossWeights.reduce((sum, val) => sum + val, 0);
-      if (Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW) {
+
+      const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
+      const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
+      const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
+      const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
+       if (Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW) {
         setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
       }
-      const newTotalCbm = cbms.reduce((sum, val) => sum + val, 0);
+      
+      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
        if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
 
     } else {
       // If partial shipment is not allowed, these calculated totals should reflect zero
+      // or be hidden depending on further requirements. For now, set to 0.
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
-      // Main totals are user-editable, so we don't clear them here,
-      // but their descriptions will indicate they are not auto-calculated.
     }
   }, [watchedPartialShipmentAllowed, setValue, getValues, ...watchedPartialValues]);
 
@@ -370,96 +387,94 @@ export function NewLCEntryForm() {
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
 
-    const finalData = { ...data };
-
-    let dataToSave: Omit<LCEntry, 'id' | 'createdAt' | 'updatedAt' | 'year'> & { year: number, createdAt: any, updatedAt: any } = {
-      applicantId: finalData.applicantId,
+    let dataToSave: Partial<Omit<LCEntry, 'id' | 'createdAt' | 'updatedAt' | 'year'>> & { year: number, createdAt: any, updatedAt: any } = {
+      applicantId: data.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : '',
-      beneficiaryId: finalData.beneficiaryId,
+      beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : '',
-      currency: finalData.currency,
-      amount: finalData.amount,
-      termsOfPay: finalData.termsOfPay,
-      documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
-      invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      totalMachineQty: finalData.totalMachineQty,
-      numberOfAmendments: finalData.numberOfAmendments,
-      status: finalData.status || 'Draft',
-      itemDescriptions: finalData.itemDescriptions || undefined,
-      partialShipments: finalData.partialShipments || undefined,
-      portOfLoading: finalData.portOfLoading || undefined,
-      portOfDischarge: finalData.portOfDischarge || undefined,
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: finalData.notifyPartyName || undefined,
-      notifyPartyCell: finalData.notifyPartyCell || undefined,
-      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
-      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      expireDate: finalData.expireDate ? format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      partialShipmentAllowed: finalData.partialShipmentAllowed,
-      shipmentMode: finalData.shipmentMode,
-      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
-      vesselImoNumber: finalData.vesselImoNumber || undefined,
-      flightNumber: finalData.flightNumber || undefined,
-      trackingCourier: finalData.trackingCourier === NONE_COURIER_VALUE ? undefined : finalData.trackingCourier || undefined,
-      trackingNumber: (finalData.trackingCourier === "" || finalData.trackingCourier === NONE_COURIER_VALUE || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
-      shippingMarks: finalData.shippingMarks || undefined,
-      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
-      finalPIUrl: finalData.finalPIUrl || undefined,
-      finalLcUrl: finalData.finalLcUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
+      currency: data.currency,
+      amount: data.amount,
+      termsOfPay: data.termsOfPay,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      totalMachineQty: data.totalMachineQty,
+      numberOfAmendments: data.numberOfAmendments,
+      status: data.status || 'Draft',
+      itemDescriptions: data.itemDescriptions,
+      partialShipments: data.partialShipments,
+      portOfLoading: data.portOfLoading,
+      portOfDischarge: data.portOfDischarge,
+      consigneeBankNameAddress: data.consigneeBankNameAddress,
+      notifyPartyNameAndAddress: data.notifyPartyNameAndAddress,
+      notifyPartyName: data.notifyPartyName,
+      notifyPartyCell: data.notifyPartyCell,
+      notifyPartyEmail: data.notifyPartyEmail,
+      lcIssueDate: data.lcIssueDate ? format(new Date(data.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: data.expireDate ? format(new Date(data.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      latestShipmentDate: data.latestShipmentDate ? format(new Date(data.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      partialShipmentAllowed: data.partialShipmentAllowed,
+      shipmentMode: data.shipmentMode,
+      vesselOrFlightName: data.vesselOrFlightName,
+      vesselImoNumber: data.vesselImoNumber,
+      flightNumber: data.flightNumber,
+      trackingCourier: data.trackingCourier === NONE_COURIER_VALUE ? "" : data.trackingCourier,
+      trackingNumber: (data.trackingCourier === "" || data.trackingCourier === NONE_COURIER_VALUE || !data.trackingCourier) ? undefined : data.trackingNumber,
+      etd: data.etd ? format(new Date(data.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: data.eta ? format(new Date(data.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      certificateOfOrigin: data.certificateOfOrigin && data.certificateOfOrigin.length > 0 ? data.certificateOfOrigin : undefined,
+      shippingMarks: data.shippingMarks,
+      purchaseOrderUrl: data.purchaseOrderUrl,
+      finalPIUrl: data.finalPIUrl,
+      finalLcUrl: data.finalLcUrl,
+      shippingDocumentsUrl: data.shippingDocumentsUrl,
       year: extractedYear,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialQty : undefined,
-      secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialQty : undefined,
-      thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialQty : undefined,
-      firstPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialAmount : undefined,
-      secondPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialAmount : undefined,
-      thirdPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialAmount : undefined,
-      firstPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialPkgs : undefined,
-      secondPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialPkgs : undefined,
-      thirdPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialPkgs : undefined,
-      firstPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialNetWeight : undefined,
-      secondPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialNetWeight : undefined,
-      thirdPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialNetWeight : undefined,
-      firstPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialGrossWeight : undefined,
-      secondPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialGrossWeight : undefined,
-      thirdPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialGrossWeight : undefined,
-      firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialCbm : undefined,
-      secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialCbm : undefined,
-      thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialCbm : undefined,
-      totalPackageQty: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
-        : finalData.totalPackageQty,
-      totalNetWeight: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
-        : finalData.totalNetWeight,
-      totalGrossWeight: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
-        : finalData.totalGrossWeight,
-      totalCbm: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
-        : finalData.totalCbm,
-      originalBlQty: finalData.originalBlQty,
-      copyBlQty: finalData.copyBlQty,
-      originalCooQty: finalData.originalCooQty,
-      copyCooQty: finalData.copyCooQty,
-      invoiceQty: finalData.invoiceQty,
-      packingListQty: finalData.packingListQty,
-      beneficiaryCertificateQty: finalData.beneficiaryCertificateQty,
-      brandNewCertificateQty: finalData.brandNewCertificateQty,
-      beneficiaryWarrantyCertificateQty: finalData.beneficiaryWarrantyCertificateQty,
-      beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty,
-      shipmentAdviceQty: finalData.shipmentAdviceQty,
-      billOfExchangeQty: finalData.billOfExchangeQty,
+      firstPartialQty: data.partialShipmentAllowed === "Yes" ? data.firstPartialQty : undefined,
+      secondPartialQty: data.partialShipmentAllowed === "Yes" ? data.secondPartialQty : undefined,
+      thirdPartialQty: data.partialShipmentAllowed === "Yes" ? data.thirdPartialQty : undefined,
+      firstPartialAmount: data.partialShipmentAllowed === "Yes" ? data.firstPartialAmount : undefined,
+      secondPartialAmount: data.partialShipmentAllowed === "Yes" ? data.secondPartialAmount : undefined,
+      thirdPartialAmount: data.partialShipmentAllowed === "Yes" ? data.thirdPartialAmount : undefined,
+      firstPartialPkgs: data.partialShipmentAllowed === "Yes" ? data.firstPartialPkgs : undefined,
+      secondPartialPkgs: data.partialShipmentAllowed === "Yes" ? data.secondPartialPkgs : undefined,
+      thirdPartialPkgs: data.partialShipmentAllowed === "Yes" ? data.thirdPartialPkgs : undefined,
+      firstPartialNetWeight: data.partialShipmentAllowed === "Yes" ? data.firstPartialNetWeight : undefined,
+      secondPartialNetWeight: data.partialShipmentAllowed === "Yes" ? data.secondPartialNetWeight : undefined,
+      thirdPartialNetWeight: data.partialShipmentAllowed === "Yes" ? data.thirdPartialNetWeight : undefined,
+      firstPartialGrossWeight: data.partialShipmentAllowed === "Yes" ? data.firstPartialGrossWeight : undefined,
+      secondPartialGrossWeight: data.partialShipmentAllowed === "Yes" ? data.secondPartialGrossWeight : undefined,
+      thirdPartialGrossWeight: data.partialShipmentAllowed === "Yes" ? data.thirdPartialGrossWeight : undefined,
+      firstPartialCbm: data.partialShipmentAllowed === "Yes" ? data.firstPartialCbm : undefined,
+      secondPartialCbm: data.partialShipmentAllowed === "Yes" ? data.secondPartialCbm : undefined,
+      thirdPartialCbm: data.partialShipmentAllowed === "Yes" ? data.thirdPartialCbm : undefined,
+      totalPackageQty: data.partialShipmentAllowed === "Yes"
+        ? [data.firstPartialPkgs, data.secondPartialPkgs, data.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        : data.totalPackageQty,
+      totalNetWeight: data.partialShipmentAllowed === "Yes"
+        ? [data.firstPartialNetWeight, data.secondPartialNetWeight, data.thirdPartialNetWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        : data.totalNetWeight,
+      totalGrossWeight: data.partialShipmentAllowed === "Yes"
+        ? [data.firstPartialGrossWeight, data.secondPartialGrossWeight, data.thirdPartialGrossWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        : data.totalGrossWeight,
+      totalCbm: data.partialShipmentAllowed === "Yes"
+        ? [data.firstPartialCbm, data.secondPartialCbm, data.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        : data.totalCbm,
+      originalBlQty: data.originalBlQty,
+      copyBlQty: data.copyBlQty,
+      originalCooQty: data.originalCooQty,
+      copyCooQty: data.copyCooQty,
+      invoiceQty: data.invoiceQty,
+      packingListQty: data.packingListQty,
+      beneficiaryCertificateQty: data.beneficiaryCertificateQty,
+      brandNewCertificateQty: data.brandNewCertificateQty,
+      beneficiaryWarrantyCertificateQty: data.beneficiaryWarrantyCertificateQty,
+      beneficiaryComplianceCertificateQty: data.beneficiaryComplianceCertificateQty,
+      shipmentAdviceQty: data.shipmentAdviceQty,
+      billOfExchangeQty: data.billOfExchangeQty,
     };
-
+    
     // Remove undefined fields before saving to Firestore
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
@@ -724,7 +739,7 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Number of Amendments</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? ''} />
+                  <Input type="number" placeholder="e.g., 0" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -755,7 +770,6 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={control}
@@ -812,7 +826,7 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-        
+
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
             Important Dates & Partial Shipment Details
@@ -824,7 +838,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>L/C Issue Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select L/C issue date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -835,7 +849,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Expire Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select expire date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -846,7 +860,7 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Latest Shipment Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select latest shipment date" />
+                    <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
                 )}
@@ -860,15 +874,16 @@ export function NewLCEntryForm() {
             <FormItem>
               <FormLabel>Partial Shipment Allowed</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value === "" ? undefined : value)}
-                value={field.value ?? ""}
+                onValueChange={(value) => field.onChange(value === PLACEHOLDER_PSA_VALUE ? undefined : value as PartialShipmentAllowed)}
+                value={field.value || PLACEHOLDER_PSA_VALUE}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select option (Optional)" />
+                     <SelectValue placeholder="Select option (Optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>Select option (Optional)</SelectItem>
                   {partialShipmentAllowedOptions.map(option => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
                   ))}
@@ -881,12 +896,7 @@ export function NewLCEntryForm() {
 
         {watchedPartialShipmentAllowed === "Yes" && (
           <Card className="p-4 mt-4 border-dashed">
-            <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-md font-medium text-foreground flex items-center">
-                <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                Partial Shipment Breakdown
-              </CardTitle>
-            </CardHeader>
+            <CardHeader className="p-2 pb-4"><CardTitle className="text-md font-medium text-foreground flex items-center"><Package className="mr-2 h-5 w-5 text-muted-foreground" />Partial Shipment Breakdown</CardTitle></CardHeader>
             <CardContent className="space-y-6 p-2">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -928,7 +938,9 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
                     </FormControl>
-                    {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
+                    <FormDescription className="text-xs">
+                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated from partials.' : 'Enter total if no partials.'}
+                    </FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -942,7 +954,9 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
+                     <FormDescription className="text-xs">
+                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated from partials.' : 'Enter total if no partials.'}
+                    </FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -956,7 +970,9 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
+                     <FormDescription className="text-xs">
+                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated from partials.' : 'Enter total if no partials.'}
+                    </FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -970,7 +986,9 @@ export function NewLCEntryForm() {
                     <FormControl>
                     <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
                     </FormControl>
-                     {watchedPartialShipmentAllowed === 'Yes' && <FormDescription className="text-xs">Auto-calculated from partials.</FormDescription>}
+                     <FormDescription className="text-xs">
+                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated from partials.' : 'Enter total if no partials.'}
+                    </FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -1108,8 +1126,7 @@ export function NewLCEntryForm() {
             </Button>
           </div>
         )}
-        <Separator />
-
+        
         <div className="mt-6">
           <h4 className="text-base font-bold text-foreground flex items-center mb-2">
             <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
@@ -1495,5 +1512,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-    
