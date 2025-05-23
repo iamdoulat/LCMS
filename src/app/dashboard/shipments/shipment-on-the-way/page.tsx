@@ -32,7 +32,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default'; 
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done':
+    case 'Shipment Done': // Updated from "Done"
       return 'default';
     default:
       return 'outline';
@@ -207,7 +207,7 @@ export default function ShipmentOnTheWayPage() {
             <ul className="space-y-4">
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
-                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
+                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
                       className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' : ''}

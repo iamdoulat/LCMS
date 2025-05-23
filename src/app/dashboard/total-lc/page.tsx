@@ -648,7 +648,10 @@ export default function TotalLCPage() {
                                 <Button
                                     variant={lc.isFirstShipment ? "default" : "outline"}
                                     size="icon"
-                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    className={cn(
+                                      "h-7 w-7 rounded-full p-0 text-xs",
+                                      lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
                                     title="1st Shipment Status"
                                 >
                                     1st
@@ -658,7 +661,10 @@ export default function TotalLCPage() {
                                 <Button
                                     variant={lc.isSecondShipment ? "default" : "outline"}
                                     size="icon"
-                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    className={cn(
+                                      "h-7 w-7 rounded-full p-0 text-xs",
+                                      lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
                                     title="2nd Shipment Status"
                                 >
                                     2nd
@@ -668,7 +674,10 @@ export default function TotalLCPage() {
                                 <Button
                                     variant={lc.isThirdShipment ? "default" : "outline"}
                                     size="icon"
-                                    className="h-7 w-7 rounded-full p-0 text-xs"
+                                    className={cn(
+                                      "h-7 w-7 rounded-full p-0 text-xs",
+                                      lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
                                     title="3rd Shipment Status"
                                 >
                                     3rd

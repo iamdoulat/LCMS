@@ -33,7 +33,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done':
+    case 'Shipment Done': // Updated from "Done"
       return 'default';
     default:
       return 'outline';
@@ -208,60 +208,29 @@ export default function UpcomingLcShipmentDatesPage() {
                 const today = startOfDay(new Date());
                 const shipmentDate = startOfDay(lc.latestShipmentDateObj);
                 const isPastOrToday = isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
+                console.log({ id: lc.id, latestShipmentDateObj: lc.latestShipmentDateObj, isPastOrToday });
                 
                 return (
                   <li
                     key={lc.id}
                     className={cn(
-                        "p-4 rounded-lg hover:shadow-md transition-shadow relative", // Added relative for positioning context
+                        "p-4 rounded-lg hover:shadow-md transition-shadow relative", 
                         isPastOrToday
                             ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2"
                             : "border bg-card"
                     )}
                   >
-                    <div className="flex flex-col sm:flex-row justify-between items-start mb-2">
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
-                        {lc.documentaryCreditNumber || 'N/A'}
-                      </Link>
-                       <Badge
-                          variant={getStatusBadgeVariant(lc.status)}
-                          className={cn(
-                            lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
-                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                            lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
-                          )}
-                          >
-                          {lc.status || 'N/A'}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
-                        <div>
-                            <p className="text-muted-foreground">
-                              Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
-                            </p>
-                            <p className="text-muted-foreground">
-                              Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
-                            </p>
-                             <p className="text-muted-foreground">
-                                ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">
-                              Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
-                            </p>
-                             <p className="text-muted-foreground">
-                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
-                            </p>
-                            <p className="text-muted-foreground">
-                                ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                            </p>
-                        </div>
-                    </div>
-                    
-                    {/* Shipment Status Buttons & View Details Link Container */}
-                    <div className="mt-2 flex flex-col items-end space-y-1">
+                     <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
+                        <Badge
+                            variant={getStatusBadgeVariant(lc.status)}
+                            className={cn(
+                                lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
+                                lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
+                            )}
+                            >
+                            {lc.status || 'N/A'}
+                        </Badge>
                         <div className="flex gap-1.5">
                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                 <Button
@@ -303,6 +272,38 @@ export default function UpcomingLcShipmentDatesPage() {
                                 </Button>
                             </Link>
                         </div>
+                    </div>
+
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                      {lc.documentaryCreditNumber || 'N/A'}
+                    </Link>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
+                        <div>
+                            <p className="text-muted-foreground">
+                              Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
+                            </p>
+                            <p className="text-muted-foreground">
+                              Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                            </p>
+                             <p className="text-muted-foreground">
+                                ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-muted-foreground">
+                              Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
+                            </p>
+                             <p className="text-muted-foreground">
+                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                            </p>
+                            <p className="text-muted-foreground">
+                                ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-2 flex justify-end">
                          <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
                             View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
                         </Link>
@@ -356,4 +357,5 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
+
 

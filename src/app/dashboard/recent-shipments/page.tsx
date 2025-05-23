@@ -32,7 +32,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Done':
+    case 'Shipment Done': // Updated from "Done"
       return 'default';
     default:
       return 'outline';
@@ -68,7 +68,7 @@ export default function RecentShipmentsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Done"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "==", "Shipment Done"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -179,7 +179,7 @@ export default function RecentShipmentsPage() {
             Recently Completed L/Cs
           </CardTitle>
           <CardDescription>
-            List of Letters of Credit marked as &quot;Done&quot;, sorted by most recent completion date.
+            List of Letters of Credit marked as &quot;Shipment Done&quot;, sorted by most recent completion date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, completedLCs.length)} of {completedLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -200,7 +200,7 @@ export default function RecentShipmentsPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as &quot;Done&quot; in the database, or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as &quot;Shipment Done&quot; in the database, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
@@ -213,7 +213,7 @@ export default function RecentShipmentsPage() {
                     </Link>
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                      className={lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
@@ -295,4 +295,5 @@ export default function RecentShipmentsPage() {
     </div>
   );
 }
+
 

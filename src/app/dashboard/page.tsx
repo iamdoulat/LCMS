@@ -111,7 +111,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Done':
+    case 'Shipment Done': // Updated from "Done"
       return 'default';
     default:
       return 'outline';
@@ -149,7 +149,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
               scrollElement.scrollTop += 1;
             }
           }
-        }, 75);
+        }, 75); // Normal speed
       }
     };
 
@@ -179,7 +179,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...dependencies, scrollRef]); // Add scrollRef to dependencies
+  }, [...dependencies, scrollRef]); 
 };
 
 
@@ -271,12 +271,12 @@ export default function DashboardPage() {
           console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-
-      const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id)));
+      
+      const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30;
+        const BATCH_SIZE = 30; 
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -292,19 +292,11 @@ export default function DashboardPage() {
 
       if (lcEntriesForTheYear.length === 0 && !authLoading) {
         console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
-        setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0, });
-        setSupplierPieData([]);
-        setRecentlyCompletedLCs([]);
-        setDraftLCs([]);
-        setUpcomingEtdShipments([]);
-        // setYearlyLcValueData previously handled below
-        // setIsLoading(false); // Will be set in finally
-        // return; // Do not return early, allow yearly data fetch
       }
 
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
-      const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => !!id)).size;
+      const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
 
 
       const currentDate = new Date();
@@ -350,7 +342,7 @@ export default function DashboardPage() {
       setSupplierPieData(pieData);
 
       const completedLCs = lcEntriesForTheYear
-        .filter(lc => lc.status === 'Done')
+        .filter(lc => lc.status === 'Shipment Done') // Updated from 'Done'
         .map(lc => {
           return {
             id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
@@ -411,7 +403,7 @@ export default function DashboardPage() {
       today.setHours(0,0,0,0);
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
-            if (!lc.etd || lc.status === 'Done') return false;
+            if (!lc.etd || lc.status === 'Shipment Done') return false; // Updated from 'Done'
             try {
                 const etdDateSource = lc.etd;
                 let etdDate: Date;
@@ -483,7 +475,6 @@ export default function DashboardPage() {
         totalLinkedPIs: totalLinkedPIsCount,
       });
 
-      // Fetch data for bar chart (yearly values)
       const yearlyDataPromises = years.map(async chartYearStr => {
         const chartYearNum = parseInt(chartYearStr);
         const yearlyLcQuery = query(lcEntriesRef, where("year", "==", chartYearNum));
@@ -521,8 +512,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, authLoading, selectedYear]); // Removed fetchDashboardData from dependency array as it's defined within scope
+  }, [authUser, authLoading, selectedYear]); 
 
   useEffect(() => {
     console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
@@ -531,7 +521,6 @@ export default function DashboardPage() {
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       console.log("Dashboard: User not authenticated after auth load, clearing data.");
-      // Clear all dashboard specific data
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -620,6 +609,7 @@ export default function DashboardPage() {
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
+          className="lg:col-span-1 xl:col-span-1" 
         />
         <StatCard
           title="Active Beneficiaries"
@@ -638,6 +628,7 @@ export default function DashboardPage() {
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
+          className="lg:col-start-auto"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
@@ -682,7 +673,7 @@ export default function DashboardPage() {
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
-                L/Cs from {selectedYear} nearing ETD (Status not &quot;Done&quot;).
+                L/Cs from {selectedYear} nearing ETD (Status not &quot;Shipment Done&quot;).
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">
@@ -704,7 +695,7 @@ export default function DashboardPage() {
                              <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block mb-1">
                                     {shipment.documentaryCreditNumber || 'N/A'}
                             </Link>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                 <div>
                                     <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
                                     <p className="truncate">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
@@ -811,7 +802,7 @@ export default function DashboardPage() {
               Recently Completed L/Cs
             </CardTitle>
             <CardDescription>
-              L/Cs marked as &quot;Done&quot; in {selectedYear}, sorted by most recent update.
+              L/Cs marked as &quot;Shipment Done&quot; in {selectedYear}, sorted by most recent update.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] space-y-3">
@@ -821,7 +812,7 @@ export default function DashboardPage() {
                 </div>
               ) : recentlyCompletedLCs.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                    <p className="text-sm text-muted-foreground text-center">No L/Cs marked as &quot;Done&quot; found for {selectedYear}.</p>
+                    <p className="text-sm text-muted-foreground text-center">No L/Cs marked as &quot;Shipment Done&quot; found for {selectedYear}.</p>
                 </div>
               ) : (
               <div ref={completedLcScrollRef} className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -835,7 +826,7 @@ export default function DashboardPage() {
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
-                              lc.status === 'Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''
+                              lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''
                             }
                           >
                             {lc.status || 'N/A'}
@@ -863,3 +854,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
