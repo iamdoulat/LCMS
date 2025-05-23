@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta'> {
+interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
   updatedAtDate: Date;
 }
 
@@ -32,7 +32,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done': // Updated from "Done"
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -104,6 +104,9 @@ export default function RecentShipmentsPage() {
             eta: data.eta,
             updatedAtDate: updatedAtDate,
             status: data.status,
+            isFirstShipment: data.isFirstShipment,
+            isSecondShipment: data.isSecondShipment,
+            isThirdShipment: data.isThirdShipment,
           };
         });
         setCompletedLCs(fetchedLCs);
@@ -174,12 +177,12 @@ export default function RecentShipmentsPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <PackageCheck className="h-7 w-7 text-primary" />
             Recently Completed L/Cs
           </CardTitle>
           <CardDescription>
-            List of Letters of Credit marked as &quot;Shipment Done&quot;, sorted by most recent completion date.
+            List of Letters of Credit marked as "Shipment Done", sorted by most recent completion date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, completedLCs.length)} of {completedLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -200,24 +203,67 @@ export default function RecentShipmentsPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as &quot;Shipment Done&quot; in the database, or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as "Shipment Done" in the database, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
-                      {lc.documentaryCreditNumber || 'N/A'}
-                    </Link>
+                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
+                  <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
                       className={lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
+                    <div className="flex gap-1.5">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isFirstShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="1st Shipment Status"
+                          >
+                              1st
+                          </Button>
+                      </Link>
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isSecondShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="2nd Shipment Status"
+                          >
+                              2nd
+                          </Button>
+                      </Link>
+                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isThirdShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="3rd Shipment Status"
+                          >
+                              3rd
+                          </Button>
+                      </Link>
+                    </div>
                   </div>
+
+                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                    {lc.documentaryCreditNumber || 'N/A'}
+                  </Link>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
                     <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
@@ -295,5 +341,6 @@ export default function RecentShipmentsPage() {
     </div>
   );
 }
+    
 
-
+    
