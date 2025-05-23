@@ -14,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface OngoingShipmentLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta'> {
-  updatedAtDate: Date; // Or consider last relevant date like ETD/ETA if more pertinent
+interface OngoingShipmentLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
+  updatedAtDate: Date; 
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -29,8 +29,10 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
-      return 'default'; // Highlight for this page
-    case 'Done':
+      return 'default'; 
+    case 'Payment Done':
+      return 'default';
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -65,7 +67,6 @@ export default function ShipmentOnTheWayPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        // Query for L/Cs with status "Shipping going on", ordered by updatedAt
         const q = query(lcEntriesRef, where("status", "==", "Shipping going on"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
@@ -99,6 +100,9 @@ export default function ShipmentOnTheWayPage() {
             eta: data.eta,
             updatedAtDate: updatedAtDate,
             status: data.status,
+            isFirstShipment: data.isFirstShipment,
+            isSecondShipment: data.isSecondShipment,
+            isThirdShipment: data.isThirdShipment,
           };
         });
         setOngoingShipments(fetchedLCs);
@@ -168,7 +172,7 @@ export default function ShipmentOnTheWayPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Truck className="h-7 w-7 text-primary" />
             Shipments On The Way
           </CardTitle>
@@ -202,38 +206,81 @@ export default function ShipmentOnTheWayPage() {
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
-                      {lc.documentaryCreditNumber || 'N/A'}
-                    </Link>
+                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
+                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
                       className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
+                    <div className="flex gap-1.5">
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isFirstShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="1st Shipment Status"
+                          >
+                              1st
+                          </Button>
+                      </Link>
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isSecondShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="2nd Shipment Status"
+                          >
+                              2nd
+                          </Button>
+                      </Link>
+                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                          <Button
+                              variant={lc.isThirdShipment ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                  "h-7 w-7 rounded-full p-0 text-xs",
+                                  lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                              )}
+                              title="3rd Shipment Status"
+                          >
+                              3rd
+                          </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
-                    <p className="text-muted-foreground md:col-span-1">
+
+                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                    {lc.documentaryCreditNumber || 'N/A'}
+                  </Link>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
+                    <p className="text-muted-foreground">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
-                    <p className="text-muted-foreground md:col-span-1">
+                    <p className="text-muted-foreground">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
-                     <p className="text-muted-foreground md:col-span-1">
-                      Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
-                    <p className="text-muted-foreground md:col-span-1">
+                    <p className="text-muted-foreground">
                       Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
                     </p>
                     <p className="text-muted-foreground">
-                      ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                      Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
+                    <p className="text-muted-foreground">
+                       ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
                     </p>
                     <p className="text-muted-foreground">
-                      ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                       ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                     </p>
                   </div>
                   <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -292,3 +339,6 @@ export default function ShipmentOnTheWayPage() {
     </div>
   );
 }
+
+
+    
