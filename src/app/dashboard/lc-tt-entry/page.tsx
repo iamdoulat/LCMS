@@ -103,7 +103,8 @@ type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LCTTT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LCTTT_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__"; // Unique constant for this form
+const NONE_COURIER_VALUE = "__NONE_LC_TTT_COURIER__"; 
+const PLACEHOLDER_PSA_VALUE = "__SELECT_PSA_OPTION__"; // Placeholder for Partial Shipment Allowed
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -232,16 +233,24 @@ export default function LcTtEntryPage() {
   }, []);
 
   React.useEffect(() => {
+    console.log("LC T/T Entry Form: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
+      console.log("LC T/T Entry Form: Applicant Options for check:", applicantOptions);
+      console.log("LC T/T Entry Form: Selected Applicant for auto-fill:", selectedApplicant);
       if (selectedApplicant) {
         setValue("notifyPartyNameAndAddress", selectedApplicant.address || '', { shouldDirty: true, shouldValidate: true });
+        console.log("LC T/T Entry Form: Setting notifyPartyNameAndAddress to:", selectedApplicant.address);
         setValue("notifyPartyName", selectedApplicant.contactPersonName || '', { shouldDirty: true, shouldValidate: true });
+        console.log("LC T/T Entry Form: Setting notifyPartyName to:", selectedApplicant.contactPersonName);
         setValue("notifyPartyCell", selectedApplicant.phone || '', { shouldDirty: true, shouldValidate: true });
+        console.log("LC T/T Entry Form: Setting notifyPartyCell to:", selectedApplicant.phone);
         setValue("notifyPartyEmail", selectedApplicant.email || '', { shouldDirty: true, shouldValidate: true });
+        console.log("LC T/T Entry Form: Setting notifyPartyEmail to:", selectedApplicant.email);
       }
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
+
 
   React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
@@ -426,6 +435,7 @@ export default function LcTtEntryPage() {
                 <FormField control={control} name="expireDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Expire Date*</FormLabel><DatePickerField field={field} placeholder="Select Expire Date" /><FormMessage /></FormItem>)} />
                 <FormField control={control} name="latestShipmentDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Latest Shipment Date*</FormLabel><DatePickerField field={field} placeholder="Select Latest Shipment Date" /><FormMessage /></FormItem>)} />
               </div>
+              
               <FormField
                 control={control}
                 name="partialShipmentAllowed"
@@ -433,12 +443,18 @@ export default function LcTtEntryPage() {
                   <FormItem>
                     <FormLabel>Partial Shipment Allowed</FormLabel>
                     <Select
-                        onValueChange={(value) => field.onChange(value === "" ? undefined : value)}
-                        value={field.value ?? ""}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_PSA_VALUE ? undefined : value as PartialShipmentAllowed)}
+                      value={field.value || PLACEHOLDER_PSA_VALUE}
                     >
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select option (Optional)" /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue /> {/* Placeholder is handled by the first disabled SelectItem */}
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Select option (Optional)</SelectItem>
+                        <SelectItem value={PLACEHOLDER_PSA_VALUE} disabled>
+                          Select option (Optional)
+                        </SelectItem>
                         {partialShipmentAllowedOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -446,6 +462,7 @@ export default function LcTtEntryPage() {
                   </FormItem>
                 )}
               />
+
               {watchedPartialShipmentAllowed === "Yes" && (
                 <Card className="p-4 mt-4 border-dashed">
                   <CardHeader className="p-2 pb-4"><CardTitle className="text-md font-medium text-foreground flex items-center"><Package className="mr-2 h-5 w-5 text-muted-foreground" />Partial Shipment Breakdown</CardTitle></CardHeader>
@@ -476,8 +493,8 @@ export default function LcTtEntryPage() {
                   </CardContent>
                 </Card>
               )}
-
               <Separator />
+
               <h3 className={cn(sectionHeadingClass, "flex items-center")}>
                  <Ship className="mr-2 h-5 w-5 text-primary" />
                  Shipping Information
@@ -543,7 +560,7 @@ export default function LcTtEntryPage() {
                             <FormLabel>Courier By</FormLabel>
                             <Select
                                 onValueChange={(value) => field.onChange(value === NONE_COURIER_VALUE ? "" : value)}
-                                value={field.value === "" || field.value === undefined ? NONE_COURIER_VALUE : field.value}
+                                value={field.value && trackingCourierOptions.includes(field.value as TrackingCourier) ? field.value : NONE_COURIER_VALUE}
                             >
                                 <FormControl>
                                 <SelectTrigger>
@@ -571,7 +588,7 @@ export default function LcTtEntryPage() {
                     <FormField control={control} name="eta" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>ETA (Estimated Time of Arrival)</FormLabel><DatePickerField field={field} placeholder="Select ETA" /><FormMessage /></FormItem>)} />
                 </div>
                 <Separator />
-
+                
                 <h3 className={cn(sectionHeadingClass, "flex items-center")}>
                   <Landmark className="mr-2 h-5 w-5 text-primary" />
                   Consignee Bank Details
@@ -877,3 +894,4 @@ export default function LcTtEntryPage() {
   );
 }
 
+    
