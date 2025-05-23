@@ -2,25 +2,27 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed, ShipmentMode, TrackingCourier, ApplicantOption } from '@/types';
-import { currencyOptions, termsOfPayOptions, lcStatusOptions, partialShipmentAllowedOptions, shipmentModeOptions, trackingCourierOptions } from '@/types';
+import type { CustomerDocument, SupplierDocument, Currency, TermsOfPay, LCStatus, PartialShipmentAllowed, ShipmentMode, TrackingCourier, ApplicantOption, CertificateOfOriginCountry } from '@/types';
+import { currencyOptions, termsOfPayOptions, lcStatusOptions, partialShipmentAllowedOptions, shipmentModeOptions, trackingCourierOptions, certificateOfOriginCountries } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers, Ship, Plane, ExternalLink, Search, PackageCheck, Landmark, BellRing } from 'lucide-react';
+import { Loader2, FileText, Users, Building, Save, CalendarDays, Hash, Package, DollarSign, Layers, Ship, Plane, ExternalLink, Search, PackageCheck, Landmark, BellRing, FileSignature, Edit3, UploadCloud, FileIcon, Box, Weight, Scale, Link as LinkIcon, Plus, Minus } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { format, isValid, parseISO } from 'date-fns';
 
@@ -41,7 +43,7 @@ const lcTtEntrySchema = z.object({
     z.number({ invalid_type_error: "Amount must be a number." }).positive("Amount must be positive.")
   ),
   lcOrTtNumber: z.string().min(1, "L/C or T/T Number is required."),
-  amendmentsNumber: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional()),
+  amendmentsNumber: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
   totalMachineQty: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number." }).int().positive("Quantity must be a positive integer.")
@@ -74,9 +76,30 @@ const lcTtEntrySchema = z.object({
   eta: z.date().optional().nullable(),
   consigneeBankNameAddress: z.string().optional(),
   notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(), // For Notify Party Contact Person
+  notifyPartyName: z.string().optional(), 
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
+  // 46A Fields
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Bill of Exchange Qty cannot be negative").optional().default(0)),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
+  // 47A Field
+  shippingMarks: z.string().optional(),
+  // Document URLs
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
 });
 
 type LcTtEntryFormValues = z.infer<typeof lcTtEntrySchema>;
@@ -94,6 +117,7 @@ export default function LcTtEntryPage() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
+  const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
 
 
@@ -105,7 +129,7 @@ export default function LcTtEntryPage() {
       currency: currencyOptions[0],
       amount: undefined,
       lcOrTtNumber: '',
-      amendmentsNumber: undefined,
+      amendmentsNumber: 0,
       totalMachineQty: undefined,
       partialShipments: '',
       portOfLoading: '',
@@ -138,6 +162,24 @@ export default function LcTtEntryPage() {
       notifyPartyName: '',
       notifyPartyCell: '',
       notifyPartyEmail: '',
+      originalBlQty: 0,
+      copyBlQty: 0,
+      originalCooQty: 0,
+      copyCooQty: 0,
+      invoiceQty: 0,
+      packingListQty: 0,
+      beneficiaryCertificateQty: 0,
+      brandNewCertificateQty: 0,
+      beneficiaryWarrantyCertificateQty: 0,
+      beneficiaryComplianceCertificateQty: 0,
+      shipmentAdviceQty: 0,
+      billOfExchangeQty: 0,
+      certificateOfOrigin: [],
+      shippingMarks: '',
+      purchaseOrderUrl: '',
+      finalPIUrl: '',
+      finalLcUrl: '',
+      shippingDocumentsUrl: '',
     },
   });
 
@@ -282,6 +324,18 @@ export default function LcTtEntryPage() {
     window.open(`https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`, '_blank', 'noopener,noreferrer');
   };
 
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url); // Validate URL structure
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
 
   const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
   let viaLabel = "Vessel/Flight Name";
@@ -387,6 +441,7 @@ export default function LcTtEntryPage() {
                     >
                       <FormControl><SelectTrigger><SelectValue placeholder="Select option (Optional)" /></SelectTrigger></FormControl>
                       <SelectContent>
+                        <SelectItem value="">Select option (Optional)</SelectItem>
                         {partialShipmentAllowedOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -426,7 +481,7 @@ export default function LcTtEntryPage() {
               )}
 
               <Separator />
-              <h3 className={cn(sectionHeadingClass)}>
+              <h3 className={cn(sectionHeadingClass, "flex items-center")}>
                  <Ship className="mr-2 h-5 w-5 text-primary" />
                  Shipping Information
               </h3>
@@ -574,6 +629,210 @@ export default function LcTtEntryPage() {
                 </div>
                 <Separator />
 
+                <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+                  <AccordionItem value="section46A" className="border-none">
+                    <AccordionTrigger
+                      className={cn(
+                        "flex w-full items-center justify-between py-3 font-bold text-xl text-foreground hover:no-underline",
+                        sectionHeadingClass, "border-b-0 mb-0" 
+                      )}
+                    >
+                      <div className="flex items-center gap-2"> 
+                        <FileSignature className="mr-2 h-5 w-5 text-primary" />
+                        46A: Documents Required
+                      </div>
+                      {activeSection46A === "section46A" ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={control} name="originalBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="copyBlQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy BL Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="originalCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Original COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="copyCooQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Copy COO Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="invoiceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="packingListQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Packing List Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="beneficiaryCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="brandNewCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Brand New Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="beneficiaryWarrantyCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Warranty Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="beneficiaryComplianceCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Compliance Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                      </div>
+                      <FormField
+                        control={control}
+                        name="certificateOfOrigin"
+                        render={() => (
+                          <FormItem>
+                            <FormLabel className="text-base font-medium text-foreground flex items-center mb-2">
+                              <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Certificate of Origin (Country)
+                            </FormLabel>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3 p-4 border rounded-md shadow-sm">
+                              {certificateOfOriginCountries.map((country) => (
+                                <FormField
+                                  key={country}
+                                  control={control}
+                                  name="certificateOfOrigin"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(country)}
+                                            onCheckedChange={(checked) => {
+                                              const currentValue = field.value || [];
+                                              return checked
+                                                ? field.onChange([...currentValue, country])
+                                                : field.onChange(
+                                                  currentValue.filter(
+                                                    (value) => value !== country
+                                                  )
+                                                );
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
+                                          {country}
+                                        </FormLabel>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                <Separator />
+
+                <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+                  <Edit3 className="mr-2 h-5 w-5 text-primary" />
+                  47A: Additional Conditions
+                </h3>
+                <FormField
+                  control={control}
+                  name="shippingMarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Shipping Marks</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Separator />
+
+                <h3 className={cn(sectionHeadingClass, "flex items-center")}>
+                  <UploadCloud className="mr-2 h-5 w-5 text-primary" /> Document URLs
+                </h3>
+                <div className="space-y-6">
+                  <FormField
+                    control={control}
+                    name="purchaseOrderUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Purchase Order URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <FormControl className="flex-grow">
+                            <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="icon"
+                            onClick={() => handleViewUrl(field.value)}
+                            disabled={!field.value}
+                            title="View Purchase Order"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="finalPIUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Final PI URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <FormControl className="flex-grow">
+                            <Input type="url" placeholder="https://example.com/pi.pdf" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="icon"
+                            onClick={() => handleViewUrl(field.value)}
+                            disabled={!field.value}
+                            title="View Final PI"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={control}
+                    name="finalLcUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Final LC URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                            <FormControl className="flex-grow">
+                                <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <Button
+                                type="button"
+                                variant="default"
+                                size="icon"
+                                onClick={() => handleViewUrl(field.value)}
+                                disabled={!field.value}
+                                title="View Final LC"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="shippingDocumentsUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipping Documents URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                            <FormControl className="flex-grow">
+                                <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <Button
+                                type="button"
+                                variant="default"
+                                size="icon"
+                                onClick={() => handleViewUrl(field.value)}
+                                disabled={!field.value}
+                                title="View Shipping Documents"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Separator />
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
                 {isSubmitting ? (
