@@ -185,15 +185,14 @@ export default function NewInstallationReportPage() {
               label: data.commercialInvoiceNumber,
               lcData: { 
                 id: doc.id, ...data, 
-                commercialInvoiceDate: data.commercialInvoiceDate, // Ensure this is passed if available
+                commercialInvoiceDate: data.commercialInvoiceDate, 
                 packingListUrl: data.packingListUrl,
-                 // Include all partial shipment fields from LCEntryDocument
                 partialShipmentAllowed: data.partialShipmentAllowed,
                 firstPartialQty: data.firstPartialQty, firstPartialAmount: data.firstPartialAmount, firstPartialPkgs: data.firstPartialPkgs, firstPartialNetWeight: data.firstPartialNetWeight, firstPartialGrossWeight: data.firstPartialGrossWeight, firstPartialCbm: data.firstPartialCbm,
                 secondPartialQty: data.secondPartialQty, secondPartialAmount: data.secondPartialAmount, secondPartialPkgs: data.secondPartialPkgs, secondPartialNetWeight: data.secondPartialNetWeight, secondPartialGrossWeight: data.secondPartialGrossWeight, secondPartialCbm: data.secondPartialCbm,
                 thirdPartialQty: data.thirdPartialQty, thirdPartialAmount: data.thirdPartialAmount, thirdPartialPkgs: data.thirdPartialPkgs, thirdPartialNetWeight: data.thirdPartialNetWeight, thirdPartialGrossWeight: data.thirdPartialGrossWeight, thirdPartialCbm: data.thirdPartialCbm,
-
-              } as LCEntryDocument & { id: string }, // Cast to ensure all fields are available
+                currency: data.currency,
+              } as LCEntryDocument & { id: string },
             });
           }
         });
@@ -239,6 +238,7 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // Clear fields if no commercial invoice is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -322,7 +322,7 @@ export default function NewInstallationReportPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl")}>
+          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Wrench className="h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
@@ -414,7 +414,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -477,7 +477,7 @@ export default function NewInstallationReportPage() {
                  />
               </div>
                 <Separator className="my-2" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     {selectedLcDetails.lcIdForLink ? (
                         <div className="p-3 border rounded-md bg-muted/30">
                             <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
@@ -507,7 +507,7 @@ export default function NewInstallationReportPage() {
                                 ))}
                             </div>
                         </div>
-                    ) : <div className="min-h-[76px]"></div> }
+                    ) : <div className="min-h-[76px]"></div> } {/* Placeholder to maintain height if L/C not selected */}
 
                     <FormField
                     control={control}
@@ -549,7 +549,7 @@ export default function NewInstallationReportPage() {
                         <AccordionTrigger
                         className={cn(
                             "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
-                             "text-md font-semibold" // simplified from sectionHeadingClass
+                             "text-md font-semibold"
                         )}
                         >
                         <div className="flex items-center gap-2">
@@ -605,7 +605,7 @@ export default function NewInstallationReportPage() {
                             <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
                             <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
                             <TableHead className="text-foreground">Install Date*</TableHead>
-                            <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
+                            <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
                             <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -796,5 +796,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
-    
