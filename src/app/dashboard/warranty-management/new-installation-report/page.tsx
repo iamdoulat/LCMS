@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -31,14 +31,13 @@ const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
 
 interface LcForInvoiceDropdownOption extends ComboboxOption {
-  lcData: LCEntryDocument;
+  lcData: LCEntryDocument & { commercialInvoiceDate?: string }; // Ensure commercialInvoiceDate is included if used directly
 }
 
-// Define Zod schema for form validation
 const installationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
-  selectedCommercialInvoiceLcId: z.string().optional(), // This will hold the ID of the selected L/C
+  selectedCommercialInvoiceLcId: z.string().optional(),
   documentaryCreditNumber: z.string().optional(),
   totalMachineQty: z.preprocess(
     (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -52,7 +51,9 @@ const installationReportSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Packing List" }).optional()
   ),
-  // Add other installation report specific fields here
+  technicianName: z.string().min(1, "Technician Name is required."),
+  reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
+  installationNotes: z.string().optional(),
 });
 
 type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
@@ -85,24 +86,9 @@ export default function NewInstallationReportPage() {
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: PartialShipmentAllowed;
-    firstPartialQty?: number;
-    firstPartialAmount?: number;
-    firstPartialPkgs?: number;
-    firstPartialNetWeight?: number;
-    firstPartialGrossWeight?: number;
-    firstPartialCbm?: number;
-    secondPartialQty?: number;
-    secondPartialAmount?: number;
-    secondPartialPkgs?: number;
-    secondPartialNetWeight?: number;
-    secondPartialGrossWeight?: number;
-    secondPartialCbm?: number;
-    thirdPartialQty?: number;
-    thirdPartialAmount?: number;
-    thirdPartialPkgs?: number;
-    thirdPartialNetWeight?: number;
-    thirdPartialGrossWeight?: number;
-    thirdPartialCbm?: number;
+    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
     currency?: Currency;
   }>({
     lcIdForLink: null,
@@ -114,7 +100,6 @@ export default function NewInstallationReportPage() {
   });
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
-
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
@@ -129,6 +114,9 @@ export default function NewInstallationReportPage() {
       etdDate: undefined,
       etaDate: undefined,
       packingListUrl: '',
+      technicianName: '',
+      reportingEngineerName: '',
+      installationNotes: '',
     },
   });
 
@@ -225,7 +213,6 @@ export default function NewInstallationReportPage() {
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
-
   async function onSubmit(data: InstallationReportFormValues) {
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
@@ -235,7 +222,6 @@ export default function NewInstallationReportPage() {
       ...data,
       applicantName: selectedApplicant?.label,
       beneficiaryName: selectedBeneficiary?.label,
-      // Include other installation report specific fields from 'data' here
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
 
@@ -246,6 +232,8 @@ export default function NewInstallationReportPage() {
              <br/>Applicant: <strong>${selectedApplicant?.label || "N/A"}</strong>
              <br/>Beneficiary: <strong>${selectedBeneficiary?.label || "N/A"}</strong>
              <br/>Packing List URL: <strong>${data.packingListUrl || "N/A"}</strong>
+             <br/>Technician: <strong>${data.technicianName}</strong>
+             <br/>Reporting Engineer: <strong>${data.reportingEngineerName}</strong>
              <br/><br/>Actual saving to a database (e.g., 'installation_reports' collection in Firestore) is not yet implemented for this form.`,
       icon: "info",
     });
@@ -365,11 +353,10 @@ export default function NewInstallationReportPage() {
                   {selectedCommercialInvoiceDateDisplay && (
                      <FormItem>
                         <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel>
-                        <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                        <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
                     </FormItem>
                   )}
               </div>
-
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
@@ -440,6 +427,7 @@ export default function NewInstallationReportPage() {
                  />
               </div>
               <Separator className="my-2" />
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   {isLcSelected && selectedLcDetails.lcIdForLink ? (
                       <div className="p-3 border rounded-md bg-muted/30">
@@ -470,7 +458,7 @@ export default function NewInstallationReportPage() {
                               ))}
                           </div>
                       </div>
-                  ) : <div className="min-h-[76px]"></div> /* Placeholder to maintain grid structure */}
+                  ) : <div className="min-h-[76px]"></div> }
 
                   <FormField
                     control={control}
@@ -552,29 +540,44 @@ export default function NewInstallationReportPage() {
 
               <Separator className="my-6" />
               <h3 className={cn(sectionHeadingClass)}>
-                 <Wrench className="mr-2 h-5 w-5 text-primary" />
-                 Installation Details
+                 <UserCheck className="mr-2 h-5 w-5 text-primary" />
+                 Technician and Reporting Engineer Information
               </h3>
-               <FormField
-                  control={control} 
-                  name="invoiceDate" // Placeholder, replace with actual field name e.g., "installationDate"
-                  render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                      <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Installation Date*</FormLabel>
-                      <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select Installation Date" />
-                      <FormMessage />
-                      </FormItem>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={control}
+                    name="technicianName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><Wrench className="mr-2 h-4 w-4 text-muted-foreground" />Technician Name*</FormLabel>
+                        <FormControl><Input placeholder="Enter technician's name" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
                 />
+                <FormField
+                    control={control}
+                    name="reportingEngineerName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><Edit className="mr-2 h-4 w-4 text-muted-foreground" />Reporting Engineer Name*</FormLabel>
+                        <FormControl><Input placeholder="Enter reporting engineer's name" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+              <FormField
+                control={control} 
+                name="installationNotes"
+                render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Technician Name*</FormLabel>
-                    <Input placeholder="Enter technician's name" />
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
+                    <FormControl><Textarea placeholder="Enter any notes regarding the installation" rows={4} {...field} /></FormControl>
+                    <FormMessage />
                 </FormItem>
-                 <FormItem>
-                    <FormLabel>Installation Notes</FormLabel>
-                    <Textarea placeholder="Enter any notes regarding the installation" rows={4} />
-                </FormItem>
-
+                )}
+              />
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
                 {isSubmitting ? (
@@ -596,4 +599,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
