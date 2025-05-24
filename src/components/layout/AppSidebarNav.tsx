@@ -31,7 +31,6 @@ import {
   LogOut,
   Briefcase,
   Loader2,
-  Ship,
   UserPlus,
   Building,
   FileText,
@@ -48,7 +47,8 @@ import {
   FileEdit,
   Users as UsersIcon,
   ShieldCheck,
-  Truck, // Added Truck import
+  Ship, // Ensure Ship is imported
+  Truck, // Ensure Truck is imported
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -62,7 +62,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -71,7 +71,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -82,7 +82,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
+    icon: Truck,
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -90,7 +90,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from Building
+    icon: Factory,
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -98,7 +98,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
@@ -111,7 +111,7 @@ const managementNavItems: NavItemGroup[] = [
 const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
-    icon: BarChart3, // Using BarChart3 as a generic report icon
+    icon: BarChart3,
     subLinks: [
       // Add sub-links here later if needed
     ],
@@ -140,7 +140,7 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
@@ -176,7 +176,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems, ...reportingManagementNavItems, ...warrantyManagementNavItems];
+  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems, ...warrantyManagementNavItems, ...reportingManagementNavItems];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
@@ -249,7 +249,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromSettings}
+                src={companyLogoUrlFromContext}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -322,20 +322,20 @@ export function AppSidebarNav() {
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Reporting Management
+            Warranty Management
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-              {reportingManagementNavItems.map(renderNavGroup)}
+              {warrantyManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
         
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Warranty Management
+            Reporting Management
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-              {warrantyManagementNavItems.map(renderNavGroup)}
+              {reportingManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
 
