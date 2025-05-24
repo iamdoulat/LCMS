@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed } from '@/types'; // Assuming LCEntryDocument is needed for lcData
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Textarea } from '@/components/ui/textarea';
+
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -50,6 +52,7 @@ const installationReportSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Packing List" }).optional()
   ),
+  // Add other installation report specific fields here
 });
 
 type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
@@ -61,9 +64,6 @@ export default function NewInstallationReportPage() {
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
-  const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
-
-
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
     isSecondShipment?: boolean;
@@ -88,13 +88,17 @@ export default function NewInstallationReportPage() {
     thirdPartialNetWeight?: number;
     thirdPartialGrossWeight?: number;
     thirdPartialCbm?: number;
+    currency?: string; // To display currency with partial amounts
   }>({
     lcIdForLink: null,
     partialShipmentAllowed: "No",
     firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
     secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
     thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+    currency: 'USD',
   });
+  const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
+
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
@@ -170,6 +174,7 @@ export default function NewInstallationReportPage() {
         setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
         setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
+        
         setSelectedLcDetails({
             isFirstShipment: lc.isFirstShipment,
             isSecondShipment: lc.isSecondShipment,
@@ -179,9 +184,11 @@ export default function NewInstallationReportPage() {
             firstPartialQty: lc.firstPartialQty || 0, firstPartialAmount: lc.firstPartialAmount || 0, firstPartialPkgs: lc.firstPartialPkgs || 0, firstPartialNetWeight: lc.firstPartialNetWeight || 0, firstPartialGrossWeight: lc.firstPartialGrossWeight || 0, firstPartialCbm: lc.firstPartialCbm || 0,
             secondPartialQty: lc.secondPartialQty || 0, secondPartialAmount: lc.secondPartialAmount || 0, secondPartialPkgs: lc.secondPartialPkgs || 0, secondPartialNetWeight: lc.secondPartialNetWeight || 0, secondPartialGrossWeight: lc.secondPartialGrossWeight || 0, secondPartialCbm: lc.secondPartialCbm || 0,
             thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialAmount: lc.thirdPartialAmount || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
+            currency: lc.currency || 'USD',
         });
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // Clear auto-filled fields if C.I. No. is cleared
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -196,6 +203,7 @@ export default function NewInstallationReportPage() {
         firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
         secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
         thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+        currency: 'USD',
       });
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
@@ -210,6 +218,7 @@ export default function NewInstallationReportPage() {
       ...data,
       applicantName: selectedApplicant?.label,
       beneficiaryName: selectedBeneficiary?.label,
+      // Include other installation report specific fields from 'data' here
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
 
@@ -240,10 +249,12 @@ export default function NewInstallationReportPage() {
   };
 
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
-  const currencyFromSelectedLC = isLcSelected ? lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId)?.lcData.currency || 'USD' : 'USD';
 
-  const renderPartialDetail = (label: string, value?: number | string) => {
-    const displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+  const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: string) => {
+    let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+    if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
+        displayValue = `${currency} ${parseFloat(displayValue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
     return (
       <FormItem className="mb-2">
           <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -251,7 +262,6 @@ export default function NewInstallationReportPage() {
       </FormItem>
     );
   };
-
 
   return (
     <div className="container mx-auto py-8">
@@ -342,7 +352,7 @@ export default function NewInstallationReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
-                      <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -353,7 +363,7 @@ export default function NewInstallationReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
-                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -364,7 +374,7 @@ export default function NewInstallationReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Proforma Invoice Number</FormLabel>
-                      <FormControl><Input placeholder="PI Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormControl><Input placeholder="PI Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -404,10 +414,10 @@ export default function NewInstallationReportPage() {
                  />
               </div>
 
-              <Separator />
+              <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {isLcSelected && selectedLcDetails.lcIdForLink && (
-                    <div className="mt-2 p-3 border rounded-md bg-muted/30">
+                    <div className="p-3 border rounded-md bg-muted/30">
                         <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
                         <div className="flex items-center gap-3">
                             {[
@@ -436,6 +446,8 @@ export default function NewInstallationReportPage() {
                         </div>
                     </div>
                 )}
+                {!isLcSelected && <div className="min-h-[76px]"></div>} {/* Placeholder to maintain grid structure */}
+
                  <FormField
                   control={control}
                   name="packingListUrl"
@@ -462,7 +474,7 @@ export default function NewInstallationReportPage() {
                   )}
                 />
               </div>
-              <Separator />
+              <Separator className="my-2" />
 
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                 <Accordion
@@ -498,12 +510,12 @@ export default function NewInstallationReportPage() {
                                 <React.Fragment key={index}>
                                 {index > 0 && <Separator className="my-2" />}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 items-start">
-                                    {renderPartialDetail(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                    {renderPartialDetail(`${partial.labelPrefix} P. Amt (${currencyFromSelectedLC})`, partial.amount)}
-                                    {renderPartialDetail(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                    {renderPartialDetail(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                    {renderPartialDetail(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
-                                    {renderPartialDetail(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
                                 </div>
                                 </React.Fragment>
                             ) : null
@@ -513,6 +525,34 @@ export default function NewInstallationReportPage() {
                   </AccordionItem>
                 </Accordion>
               )}
+
+              {/* Installation report specific fields go here */}
+              <Separator className="my-6" />
+              <h3 className={cn(sectionHeadingClass)}>
+                 <Wrench className="mr-2 h-5 w-5 text-primary" />
+                 Installation Details
+              </h3>
+              {/* Example: Add installation date, technician name, notes etc. */}
+               <FormField
+                  control={control} // Assuming you add 'installationDate' to your schema
+                  name="invoiceDate" // Placeholder, replace with actual field name e.g., "installationDate"
+                  render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                      <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Installation Date*</FormLabel>
+                      <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select Installation Date" />
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                />
+                <FormItem>
+                    <FormLabel>Technician Name*</FormLabel>
+                    <Input placeholder="Enter technician's name" />
+                </FormItem>
+                 <FormItem>
+                    <FormLabel>Installation Notes</FormLabel>
+                    <Textarea placeholder="Enter any notes regarding the installation" rows={4} />
+                </FormItem>
+
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
                 {isSubmitting ? (
@@ -534,4 +574,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
