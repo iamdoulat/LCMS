@@ -4,12 +4,12 @@
 import * as React from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, InstallationDetailItem as InstallationDetailItemType, LcForInvoiceDropdownOption, InstallationReportFormValues as PageInstallationReportFormValues } from '@/types'; // Updated type import
+import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
+import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,44 +34,10 @@ const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
 
 
-const installationDetailItemSchema = z.object({
-  slNo: z.string().optional(),
-  machineModel: z.string().min(1, "Machine Model is required."),
-  serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
-  ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
-  installDate: z.date({ required_error: "Install Date is required." }),
-});
-
-const installationReportSchema = z.object({
-  applicantId: z.string().min(1, "Applicant Name is required"),
-  beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
-  selectedCommercialInvoiceLcId: z.string().optional(),
-  documentaryCreditNumber: z.string().optional(),
-  totalMachineQty: z.preprocess(
-    (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Qty must be a number" }).int().positive("Qty must be positive").optional()
-  ),
-  proformaInvoiceNumber: z.string().optional(),
-  invoiceDate: z.date().optional().nullable(),
-  etdDate: z.date().optional().nullable(),
-  etaDate: z.date().optional().nullable(),
-  packingListUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Packing List" }).optional()
-  ),
-  technicianName: z.string().min(1, "Technician Name is required."),
-  reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
-  installationDetails: z.array(installationDetailItemSchema).min(1, "At least one installation detail is required."),
-  missingItemInfo: z.string().optional(),
-  extraFoundInfo: z.string().optional(),
-  installationNotes: z.string().optional(),
-  missingItemsIssueResolved: z.boolean().optional().default(false),
-  extraItemsIssueResolved: z.boolean().optional().default(false),
-});
-
 // Use the imported type
 type InstallationReportFormValues = PageInstallationReportFormValues;
+type InstallationDetailItemType = PageInstallationDetailItemType;
+
 
 const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
@@ -83,13 +49,13 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   }
 };
 
-const renderPartialDetailReadOnly = (label: string, value?: number | string | null) => {
+const renderPartialDetailReadOnly = (label: string, value?: number | string | null, unit?: string) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
-  if (value === null || value === undefined) displayValue = "0"; // Ensure '0' for null/undefined for consistency
+  if (value === null || value === undefined) displayValue = "0"; 
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
-        <Input type="text" value={displayValue} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
+        <Input type="text" value={`${displayValue} ${unit || ''}`.trim()} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
     </FormItem>
   );
 };
@@ -108,7 +74,7 @@ export default function NewInstallationReportPage() {
     isSecondShipment?: boolean;
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
-    partialShipmentAllowed?: PartialShipmentAllowed;
+    partialShipmentAllowed?: LCEntryDocument['partialShipmentAllowed'];
     firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
     secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
     thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
@@ -123,12 +89,11 @@ export default function NewInstallationReportPage() {
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
-
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
 
   const form = useForm<InstallationReportFormValues>({
-    resolver: zodResolver(installationReportSchema),
+    resolver: zodResolver(InstallationReportSchema),
     defaultValues: {
       applicantId: '',
       beneficiaryId: '',
@@ -188,7 +153,7 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { id: doc.id, ...data } as LCEntryDocument & { id: string },
+              lcData: { ...data, id: doc.id } , // Ensure ID is included
             });
           }
         });
@@ -233,26 +198,9 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      setValue("applicantId", '', { shouldValidate: true });
-      setValue("beneficiaryId", '', { shouldValidate: true });
-      setValue("documentaryCreditNumber", '', { shouldValidate: true });
-      setValue("totalMachineQty", undefined, { shouldValidate: true });
-      setValue("proformaInvoiceNumber", '', { shouldValidate: true });
-      setValue("invoiceDate", undefined, { shouldValidate: true });
-      setValue("etdDate", undefined, { shouldValidate: true });
-      setValue("etaDate", undefined, { shouldValidate: true });
-      setValue("packingListUrl", '', { shouldValidate: true });
-      setSelectedLcDetails({
-        lcIdForLink: null,
-        isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
-        partialShipmentAllowed: "No",
-        firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-        secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-        thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
-      });
-      setSelectedCommercialInvoiceDateDisplay(null);
+      // Optionally reset fields if Commercial Invoice is deselected
+      // For now, we'll leave them as they are unless explicitly cleared by user or new selection
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
   React.useEffect(() => {
@@ -270,30 +218,97 @@ export default function NewInstallationReportPage() {
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
+    const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === data.selectedCommercialInvoiceLcId);
 
-    const dataToLog = {
-      ...data,
-      applicantName: selectedApplicant?.label,
-      beneficiaryName: selectedBeneficiary?.label,
+    const dataToSave = {
+      applicantId: data.applicantId,
+      applicantName: selectedApplicant?.label || 'N/A',
+      beneficiaryId: data.beneficiaryId,
+      beneficiaryName: selectedBeneficiary?.label || 'N/A',
+      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
+      commercialInvoiceNumber: selectedLcOption?.label || undefined, // Store the C.I. number for display
+      documentaryCreditNumber: data.documentaryCreditNumber || undefined,
+      totalMachineQtyFromLC: data.totalMachineQty || undefined,
+      proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
+      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etaDate: data.etaDate ? format(data.etaDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      packingListUrl: data.packingListUrl || undefined,
+      technicianName: data.technicianName,
+      reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        installDate: item.installDate ? format(item.installDate, 'yyyy-MM-dd') : 'N/A',
+        slNo: item.slNo || undefined,
+        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+        // warrantyRemaining is calculated on display, not stored
       })),
+      totalInstalledQty: installationDetailsFieldArray.fields.length,
+      pendingQty: pendingQty,
+      missingItemInfo: data.missingItemInfo || undefined,
+      extraFoundInfo: data.extraFoundInfo || undefined,
+      missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
+      extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
+      installationNotes: data.installationNotes || undefined,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
-    console.log("Installation Report Data (Simulated Save):", dataToLog);
 
-    Swal.fire({
-      title: "Form Submitted (Simulated)",
-      html: `Installation Report data has been logged to the console.
-             <br/><br/>Selected L/C ID (via C.I. No.): <strong>${data.selectedCommercialInvoiceLcId || "None"}</strong>
-             <br/>Applicant: <strong>${selectedApplicant?.label || "N/A"}</strong>
-             <br/>Beneficiary: <strong>${selectedBeneficiary?.label || "N/A"}</strong>
-             <br/>Technician: <strong>${data.technicianName}</strong>
-             <br/>Reporting Engineer: <strong>${data.reportingEngineerName}</strong>
-             <br/><br/>Actual saving to a database (e.g., 'installation_reports' collection in Firestore) is not yet implemented for this form.`,
-      icon: "info",
+    // Clean undefined fields
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+        delete dataToSave[key as keyof typeof dataToSave];
+      }
     });
-    setIsSubmitting(false);
+    
+    console.log("Installation Report Data to be saved to Firestore:", dataToSave);
+
+    try {
+      // Firestore security rules for 'installation_reports' collection:
+      // match /installation_reports/{reportId} {
+      //   allow read, write: if request.auth != null;
+      // }
+      const docRef = await addDoc(collection(firestore, "installation_reports"), dataToSave);
+      Swal.fire({
+        title: "Installation Report Saved!",
+        text: `Report successfully saved to Firestore with ID: ${docRef.id}`,
+        icon: "success",
+        timer: 2500,
+        showConfirmButton: true,
+      });
+      form.reset({ // Reset to default values, not clearing everything
+        applicantId: '',
+        beneficiaryId: '',
+        selectedCommercialInvoiceLcId: undefined,
+        documentaryCreditNumber: '',
+        totalMachineQty: undefined,
+        proformaInvoiceNumber: '',
+        invoiceDate: undefined,
+        etdDate: undefined,
+        etaDate: undefined,
+        packingListUrl: '',
+        technicianName: '',
+        reportingEngineerName: '',
+        installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
+        missingItemInfo: '',
+        extraFoundInfo: '',
+        installationNotes: '',
+        missingItemsIssueResolved: false,
+        extraItemsIssueResolved: false,
+      });
+      setSelectedCommercialInvoiceDateDisplay(null);
+      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
+      setActivePartialShipmentAccordion(undefined);
+
+    } catch (error: any) {
+      console.error("Error saving installation report: ", error);
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save installation report: ${error.message}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const handleViewUrl = (url: string | undefined | null) => {
@@ -315,7 +330,7 @@ export default function NewInstallationReportPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Wrench className="h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
@@ -568,8 +583,8 @@ export default function NewInstallationReportPage() {
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
                                     </div>
                                     </React.Fragment>
@@ -834,3 +849,5 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
+    
