@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit, ExternalLink } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -13,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy } from 'firebase/firestore'; // Added orderBy
-import type { InstallationReportDocument } from '@/types';
-import { format, parseISO, isValid, getYear, addDays, isBefore } from 'date-fns';
+import type { InstallationReportDocument, InstallationDetailItemType } from '@/types';
+import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays } from 'date-fns';
+import { Label } from '@/components/ui/label';
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
-const ITEMS_PER_PAGE = 5; // For search results pagination
+const ITEMS_PER_PAGE = 10; // For search results pagination
 
 const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';
@@ -31,13 +33,18 @@ const formatDisplayDate = (dateString?: string | null): string => {
   }
 };
 
-const formatReportValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return defaultValue;
-  }
-  return String(value);
-};
-
+interface WarrantySearchResultItem {
+  reportId: string;
+  commercialInvoiceNumber?: string;
+  applicantName?: string;
+  beneficiaryName?: string;
+  machineModel?: string;
+  serialNo?: string;
+  ctlBoxModel?: string;
+  ctlBoxSerial?: string;
+  installDate?: string; // ISO string
+  warrantyStatus: string;
+}
 
 export default function WarrantySearchPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +52,7 @@ export default function WarrantySearchPage() {
   const [selectedYear, setSelectedYear] = useState<string>("All Years");
 
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
-  const [searchResults, setSearchResults] = useState<InstallationReportDocument[]>([]);
+  const [searchResults, setSearchResults] = useState<WarrantySearchResultItem[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
@@ -66,14 +73,13 @@ export default function WarrantySearchPage() {
     setStatsError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
-      const reportsQuery = query(reportsCollectionRef, orderBy("createdAt", "desc")); // Fetch all for client-side year filter
+      const reportsQuery = query(reportsCollectionRef, orderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
         const data = docSnap.data();
          return {
             id: docSnap.id,
             ...data,
-            // Ensure dates are consistently strings or undefined from Firestore
             commercialInvoiceDate: data.commercialInvoiceDate instanceof Timestamp ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
             invoiceDate: data.invoiceDate instanceof Timestamp ? data.invoiceDate.toDate().toISOString() : data.invoiceDate,
@@ -81,20 +87,20 @@ export default function WarrantySearchPage() {
             etaDate: data.etaDate instanceof Timestamp ? data.etaDate.toDate().toISOString() : data.etaDate,
             installationDetails: data.installationDetails?.map((item: any) => ({
                 ...item,
-                installDate: item.installDate instanceof Timestamp ? item.installDate.toDate().toISOString() : item.installDate,
+                installDate: item.installDate instanceof Timestamp ? item.installDate.toDate().toISOString() : (item.installDate && isValid(parseISO(item.installDate)) ? item.installDate : undefined),
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); // Store all reports for searching
+      setAllReports(fetchedReports);
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
         const numericYear = parseInt(year);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || report.createdAt;
+          const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
           if (reportDateString) {
             try {
-              const reportDate = parseISO(reportDateString as string);
+              const reportDate = parseISO(reportDateString);
               return isValid(reportDate) && getYear(reportDate) === numericYear;
             } catch { return false; }
           }
@@ -156,7 +162,7 @@ export default function WarrantySearchPage() {
     setDisplayedSearchTerm(searchTerm);
     setIsSearching(true);
     setSearchError(null);
-    setCurrentSearchPage(1); // Reset to first page on new search
+    setCurrentSearchPage(1);
 
     if (!searchTerm.trim()) {
       setSearchResults([]);
@@ -165,15 +171,15 @@ export default function WarrantySearchPage() {
     }
 
     const lowerSearchTerm = searchTerm.toLowerCase();
-    let filteredReports = allReports;
+    let yearFilteredReports = allReports;
 
     if (selectedYear !== "All Years") {
         const numericYear = parseInt(selectedYear);
-        filteredReports = allReports.filter(report => {
-            const reportDateString = report.commercialInvoiceDate || report.createdAt;
+        yearFilteredReports = allReports.filter(report => {
+            const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
             if (reportDateString) {
                 try {
-                    const reportDate = parseISO(reportDateString as string);
+                    const reportDate = parseISO(reportDateString);
                     return isValid(reportDate) && getYear(reportDate) === numericYear;
                 } catch { return false; }
             }
@@ -181,27 +187,62 @@ export default function WarrantySearchPage() {
         });
     }
 
-    const results = filteredReports.filter(report => {
-      return (
-        report.commercialInvoiceNumber?.toLowerCase().includes(lowerSearchTerm) ||
-        report.documentaryCreditNumber?.toLowerCase().includes(lowerSearchTerm) ||
-        report.applicantName?.toLowerCase().includes(lowerSearchTerm) ||
-        report.beneficiaryName?.toLowerCase().includes(lowerSearchTerm) ||
-        report.missingItemInfo?.toLowerCase().includes(lowerSearchTerm) ||
-        report.extraFoundInfo?.toLowerCase().includes(lowerSearchTerm) ||
-        (report.installationDetails && report.installationDetails.some(detail =>
-          detail.machineModel?.toLowerCase().includes(lowerSearchTerm) ||
-          detail.serialNo?.toLowerCase().includes(lowerSearchTerm) ||
-          detail.ctlBoxModel?.toLowerCase().includes(lowerSearchTerm) ||
-          detail.ctlBoxSerial?.toLowerCase().includes(lowerSearchTerm)
-        ))
-      );
+    const results: WarrantySearchResultItem[] = [];
+    const today = new Date();
+
+    yearFilteredReports.forEach(report => {
+        let reportMatches = false;
+        // Check report-level fields
+        if (
+            report.commercialInvoiceNumber?.toLowerCase().includes(lowerSearchTerm) ||
+            report.documentaryCreditNumber?.toLowerCase().includes(lowerSearchTerm) ||
+            report.applicantName?.toLowerCase().includes(lowerSearchTerm) ||
+            report.beneficiaryName?.toLowerCase().includes(lowerSearchTerm) ||
+            report.missingItemInfo?.toLowerCase().includes(lowerSearchTerm) ||
+            report.extraFoundInfo?.toLowerCase().includes(lowerSearchTerm)
+        ) {
+            reportMatches = true;
+        }
+
+        // Check installation details
+        report.installationDetails?.forEach(detail => {
+            let detailMatches = false;
+            if (
+                detail.machineModel?.toLowerCase().includes(lowerSearchTerm) ||
+                detail.serialNo?.toLowerCase().includes(lowerSearchTerm) ||
+                detail.ctlBoxModel?.toLowerCase().includes(lowerSearchTerm) ||
+                detail.ctlBoxSerial?.toLowerCase().includes(lowerSearchTerm)
+            ) {
+                detailMatches = true;
+            }
+
+            if (reportMatches || detailMatches) { // If report level matched OR detail matched
+                let warrantyStatus = "N/A";
+                if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
+                    const installDateObj = parseISO(detail.installDate as string);
+                    const expiryDate = addDays(installDateObj, 365);
+                    const diff = differenceInDays(expiryDate, today);
+                    warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
+                }
+                results.push({
+                    reportId: report.id,
+                    commercialInvoiceNumber: report.commercialInvoiceNumber,
+                    applicantName: report.applicantName,
+                    beneficiaryName: report.beneficiaryName,
+                    machineModel: detail.machineModel,
+                    serialNo: detail.serialNo,
+                    ctlBoxModel: detail.ctlBoxModel,
+                    ctlBoxSerial: detail.ctlBoxSerial,
+                    installDate: detail.installDate as string, // Already ensured it's string or undefined
+                    warrantyStatus,
+                });
+            }
+        });
     });
     setSearchResults(results);
     setIsSearching(false);
   };
   
-  // Pagination for search results
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
@@ -274,7 +315,7 @@ export default function WarrantySearchPage() {
           {displayedSearchTerm && !isSearching && searchResults.length === 0 && !searchError && (
             <div className="text-center text-muted-foreground py-10">
                 <Info className="mx-auto h-12 w-12 mb-4" />
-                <p className="text-lg">No warranty-related installation reports found for &quot;{displayedSearchTerm}&quot; in {selectedYear}.</p>
+                <p className="text-lg">No warranty-related installation report details found for &quot;{displayedSearchTerm}&quot; in {selectedYear}.</p>
             </div>
           )}
           {searchError && (
@@ -287,64 +328,59 @@ export default function WarrantySearchPage() {
           {!displayedSearchTerm && !isSearching && !searchError && (
             <div className="text-center text-muted-foreground py-10">
                 <SearchIcon className="mx-auto h-12 w-12 mb-4" />
-                <p className="text-lg">Enter terms above to search warranty-related installation reports for {selectedYear}.</p>
+                <p className="text-lg">Enter terms above to search warranty-related details from installation reports for {selectedYear}.</p>
             </div>
           )}
 
           {currentSearchItems.length > 0 && !isSearching && (
             <div className="space-y-6">
                  <h3 className="text-lg font-semibold text-foreground mt-6 mb-2">
-                    Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length}):
+                    Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries):
                  </h3>
-                {currentSearchItems.map((report) => (
-                    <Card key={report.id} className="shadow-md hover:shadow-lg transition-shadow">
-                        <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle className="text-base font-semibold text-primary mb-1">
-                                      {report.commercialInvoiceNumber && (
-                                        <>
-                                          C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                                          {report.commercialInvoiceDate && ` (Date: ${formatDisplayDate(report.commercialInvoiceDate)})`}
-                                        </>
-                                      )}
-                                      {report.commercialInvoiceNumber && report.documentaryCreditNumber && " | "}
-                                      {report.documentaryCreditNumber && `L/C: ${formatReportValue(report.documentaryCreditNumber)}`}
-                                      {(!report.commercialInvoiceNumber && !report.documentaryCreditNumber) && `Report ID: ${report.id.substring(0,8)}...`}
-                                    </CardTitle>
-                                    <p className="text-xs text-muted-foreground">
-                                        Applicant: <span className="font-medium text-foreground">{formatReportValue(report.applicantName)}</span>
-                                        {" | "}Beneficiary: <span className="font-medium text-foreground">{formatReportValue(report.beneficiaryName)}</span>
-                                    </p>
-                                </div>
-                                <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} passHref>
-                                    <Button variant="default" size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 px-2 py-1 text-xs">
-                                        <FileEdit className="mr-1.5 h-3.5 w-3.5" /> Edit Report
-                                    </Button>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Machine Model</TableHead>
+                          <TableHead>Machine S/N</TableHead>
+                          <TableHead>Ctl. Box Model</TableHead>
+                          <TableHead>Ctl. Box S/N</TableHead>
+                          <TableHead>Warranty</TableHead>
+                          <TableHead>Applicant</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentSearchItems.map((item, idx) => (
+                          <TableRow key={`${item.reportId}-${item.serialNo || idx}`}>
+                            <TableCell>{item.machineModel || 'N/A'}</TableCell>
+                            <TableCell>{item.serialNo || 'N/A'}</TableCell>
+                            <TableCell>{item.ctlBoxModel || 'N/A'}</TableCell>
+                            <TableCell>{item.ctlBoxSerial || 'N/A'}</TableCell>
+                            <TableCell
+                              className={cn(
+                                item.warrantyStatus === "Expired" ? "text-destructive" : "text-green-600"
+                              )}
+                            >
+                              {item.warrantyStatus}
+                            </TableCell>
+                            <TableCell className="truncate max-w-xs">{item.applicantName || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/dashboard/warranty-management/edit-installation-report/${item.reportId}`}>
+                                  <FileEdit className="mr-1.5 h-3.5 w-3.5" /> View Report
                                 </Link>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-1 pt-0">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4">
-                                <p><strong className="text-muted-foreground">Total L/C Machine Qty:</strong> {formatReportValue(report.totalMachineQtyFromLC)}</p>
-                                <p><strong className="text-muted-foreground">Machine Installed:</strong> {formatReportValue(report.totalInstalledQty)}</p>
-                                <p><strong className={cn("font-medium", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>Machine Pending:</strong> {formatReportValue(report.pendingQty)}</p>
-                            </div>
-                             {report.installationDetails && report.installationDetails.length > 0 && (
-                                <details className="text-xs mt-2">
-                                    <summary className="cursor-pointer text-primary hover:underline">View Machine Details ({report.installationDetails.length})</summary>
-                                    <ul className="list-disc pl-5 mt-1 space-y-0.5 bg-muted/50 p-2 rounded-md">
-                                        {report.installationDetails.map((detail, idx) => (
-                                            <li key={idx}>
-                                                Model: {detail.machineModel || 'N/A'}, Serial: {detail.serialNo || 'N/A'}, Ctl. Box Model: {detail.ctlBoxModel || 'N/A'}, Ctl. Box Serial: {detail.ctlBoxSerial || 'N/A'}, Installed: {formatDisplayDate(detail.installDate as string)}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </details>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                      <TableCaption>
+                        Displaying {indexOfFirstSearchItem + 1} - {Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries.
+                      </TableCaption>
+                    </Table>
+                  </div>
+
                 {totalSearchPages > 1 && (
                     <div className="flex items-center justify-center space-x-2 py-4 mt-4">
                     <Button variant="outline" size="sm" onClick={() => handleSearchPageChange(Math.max(1, currentSearchPage - 1))} disabled={currentSearchPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
@@ -417,4 +453,3 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
