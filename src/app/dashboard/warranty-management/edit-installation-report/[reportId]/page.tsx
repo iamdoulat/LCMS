@@ -89,10 +89,12 @@ export default function EditInstallationReportPage() {
     firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
     secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
     thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    packingListUrl?: string;
   }>({
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
+    packingListUrl: '',
   });
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
@@ -167,7 +169,11 @@ export default function EditInstallationReportPage() {
             technicianName: initialData.technicianName || '',
             reportingEngineerName: initialData.reportingEngineerName || '',
             installationDetails: initialData.installationDetails?.map(item => ({
-              ...item,
+              slNo: item.slNo || '',
+              machineModel: item.machineModel || '',
+              serialNo: item.serialNo || '',
+              ctlBoxModel: item.ctlBoxModel || '',
+              ctlBoxSerial: item.ctlBoxSerial || '',
               installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : undefined as any,
             })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
             missingItemInfo: initialData.missingItemInfo || '',
@@ -177,25 +183,7 @@ export default function EditInstallationReportPage() {
             installationNotes: initialData.installationNotes || '',
           };
           reset(formValuesToSet);
-          // Trigger re-calculation of warranty counts based on loaded initialData
-          if (formValuesToSet.installationDetails) {
-              let expired = 0;
-              let remaining = 0;
-              const today = new Date();
-              formValuesToSet.installationDetails.forEach(item => {
-                  if (item.installDate && isValid(item.installDate)) {
-                      const expiryDate = addDays(new Date(item.installDate), 365); // Assuming 365 days warranty
-                      if (differenceInDays(expiryDate, today) < 0) {
-                          expired++;
-                      } else {
-                          remaining++;
-                      }
-                  }
-              });
-              setWarrantyExpiredCount(expired);
-              setWarrantyRemainingCount(remaining);
-          }
-
+         
           if (initialData.selectedCommercialInvoiceLcId) {
              setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: false });
           }
@@ -263,7 +251,6 @@ export default function EditInstallationReportPage() {
         const lc = selectedOption.lcData;
         const formValues = getValues();
 
-        // Only update form if values actually differ from what's already set or initial LC data
         if (formValues.applicantId !== lc.applicantId || formValues.beneficiaryId !== lc.beneficiaryId || !formValues.applicantId) {
             setValue("applicantId", lc.applicantId || '', { shouldValidate: true, shouldDirty: true });
             setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
@@ -289,8 +276,10 @@ export default function EditInstallationReportPage() {
         if ((formValues.etaDate ? formValues.etaDate.getTime() : null) !== (newEtaDate ? newEtaDate.getTime() : null) || (formValues.etaDate === undefined && newEtaDate)) {
             setValue("etaDate", newEtaDate, { shouldValidate: true, shouldDirty: true });
         }
+        
+        // Update packingListUrl from selected LC data
         if (formValues.packingListUrl !== lc.packingListUrl || !formValues.packingListUrl) {
-            setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
+           setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
         }
 
         setSelectedLcDetails({
@@ -302,12 +291,10 @@ export default function EditInstallationReportPage() {
             firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
+            packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) {
-        // User cleared the C.I. selection, potentially clear auto-filled fields
-        // This logic needs to be careful not to erase user's manual edits if they intend to decouple from L/C
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues]);
@@ -320,15 +307,13 @@ export default function EditInstallationReportPage() {
     } else {
       setPendingQty('N/A');
     }
-  }, [watchedTotalLcMachineQty, installationDetailsFieldArray.fields.length]);
 
-  React.useEffect(() => {
     if (watchedInstallationDetails && Array.isArray(watchedInstallationDetails)) {
       let expired = 0;
       let remaining = 0;
       const today = new Date();
       watchedInstallationDetails.forEach(item => {
-        if (item.installDate && isValid(item.installDate)) {
+        if (item.installDate && isValid(new Date(item.installDate))) { 
           const expiryDate = addDays(new Date(item.installDate), 365);
           if (differenceInDays(expiryDate, today) < 0) {
             expired++;
@@ -340,7 +325,8 @@ export default function EditInstallationReportPage() {
       setWarrantyExpiredCount(expired);
       setWarrantyRemainingCount(remaining);
     }
-  }, [watchedInstallationDetails]);
+  }, [watchedTotalLcMachineQty, watchedInstallationDetails, installationDetailsFieldArray.fields.length]);
+
 
 
   async function onSubmit(data: InstallationReportFormValues) {
@@ -355,9 +341,9 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"),
+      applicantName: selectedApplicant?.label || getValues("applicantId"), 
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"),
+      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), 
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
@@ -376,10 +362,10 @@ export default function EditInstallationReportPage() {
         serialNo: item.serialNo,
         ctlBoxModel: item.ctlBoxModel,
         ctlBoxSerial: item.ctlBoxSerial,
-        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any,
+        installDate: item.installDate ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any, 
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: pendingQty,
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
       missingItemInfo: data.missingItemInfo || undefined,
       extraFoundInfo: data.extraFoundInfo || undefined,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
@@ -388,7 +374,6 @@ export default function EditInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // Clean undefined fields
     Object.keys(dataToUpdate).forEach(key => {
         const typedKey = key as keyof typeof dataToUpdate;
         if (dataToUpdate[typedKey] === undefined) {
@@ -483,7 +468,7 @@ export default function EditInstallationReportPage() {
       </div>
       <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Edit className="h-7 w-7 text-primary" />
             Edit Installation Report
           </CardTitle>
@@ -637,7 +622,6 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
-
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   <div className="p-3 border rounded-md bg-muted/30">
@@ -772,7 +756,7 @@ export default function EditInstallationReportPage() {
                           {installationDetailsFieldArray.fields.map((field, index) => {
                               const installDateValue = watch(`installationDetails.${index}.installDate`);
                               let warrantyDisplay = "N/A";
-                              if (installDateValue && isValid(installDateValue)) {
+                              if (installDateValue && isValid(new Date(installDateValue))) { 
                                   const expiryDate = addDays(new Date(installDateValue), 365);
                                   const diffDays = differenceInDays(expiryDate, new Date());
                                   warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
@@ -840,7 +824,7 @@ export default function EditInstallationReportPage() {
                                               )}
                                           />
                                       </TableCell>
-                                      <TableCell className="text-xs text-muted-foreground w-[150px]">{warrantyDisplay}</TableCell>
+                                      <TableCell className="text-foreground w-[150px]">{warrantyDisplay}</TableCell>
                                       <TableCell className="text-right">
                                           <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
                                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -1012,3 +996,5 @@ export default function EditInstallationReportPage() {
     </div>
   );
 }
+
+    
