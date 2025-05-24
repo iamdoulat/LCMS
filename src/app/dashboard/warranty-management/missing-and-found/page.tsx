@@ -4,13 +4,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Archive, Info, AlertTriangle, Edit } from 'lucide-react';
+import { Loader2, Archive, Info, AlertTriangle, Edit, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import type { InstallationReportDocument } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Swal from 'sweetalert2';
 
 const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';
@@ -20,6 +21,13 @@ const formatDisplayDate = (dateString?: string | null): string => {
   } catch (e) {
     return 'N/A';
   }
+};
+
+const formatReportValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return defaultValue;
+  }
+  return String(value);
 };
 
 export default function MissingAndFoundPage() {
@@ -37,16 +45,17 @@ export default function MissingAndFoundPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          // Convert Firestore Timestamps to ISO strings if they exist
           const createdAtISO = data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt;
-          const invoiceDateISO = data.invoiceDate instanceof Timestamp ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
-          const commercialInvoiceDateISO = data.commercialInvoiceDate instanceof Timestamp ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
-          const etdDateISO = data.etdDate instanceof Timestamp ? data.etdDate.toDate().toISOString() : data.etdDate;
-          const etaDateISO = data.etaDate instanceof Timestamp ? data.etaDate.toDate().toISOString() : data.etaDate;
+          
+          const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
+          const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
+          const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
+          const etaDateISO = data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
+
           const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
             ...item,
-            installDate: item.installDate instanceof Timestamp ? item.installDate.toDate().toISOString() : item.installDate,
+            installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
           })) || [];
 
           return {
@@ -70,7 +79,16 @@ export default function MissingAndFoundPage() {
 
       } catch (error: any) {
         console.error("Error fetching installation reports for missing/found page: ", error);
-        setFetchError(`Failed to fetch reports: ${error.message}. Please check Firestore rules and connectivity.`);
+        let errorMessage = `Failed to fetch reports. Please check Firestore rules and connectivity.`;
+         if (error.message && error.message.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch reports: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+           errorMessage = `Could not fetch reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
@@ -82,7 +100,7 @@ export default function MissingAndFoundPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Archive className="h-7 w-7 text-primary" />
             Missing and Found Items
           </CardTitle>
@@ -111,7 +129,7 @@ export default function MissingAndFoundPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
               {reportsWithIssues.map((report) => (
                 <Card key={report.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3">
@@ -168,6 +186,3 @@ export default function MissingAndFoundPage() {
     </div>
   );
 }
-
-
-    
