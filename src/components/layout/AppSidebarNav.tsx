@@ -32,7 +32,7 @@ import {
   Briefcase,
   Loader2,
   UserPlus,
-  Building,
+  Building, // Keep for Company Setup
   FileText,
   Package,
   History,
@@ -41,9 +41,9 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory,
-  Truck,
-  Ship,
+  Factory, // Keep for Customers/Applicants group icon
+  Truck,   // Keep for Suppliers/Beneficiary group icon
+  Ship,    // Keep for Shipment Management group icon
   ShieldCheck,
   BarChart3,
   Users as UsersIcon,
@@ -52,7 +52,7 @@ import {
   Archive,
   FileEdit,
   PackageCheck,
-  CreditCard, // Example alternative if DollarSign is heavily used
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -60,7 +60,7 @@ import Image from 'next/image';
 import type { UserRole } from '@/types';
 import React from 'react';
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard };
+const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search };
 
 interface NavItem {
@@ -86,7 +86,7 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -96,7 +96,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -108,7 +108,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -117,7 +117,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from UsersIcon to Building then to Factory
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -126,7 +126,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -138,7 +138,7 @@ const managementNavItems: NavItemGroup[] = [
 ];
 
 const warrantyManagementNavItems: NavItemGroup[] = [
-  {
+ {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
     roles: ["Super Admin", "Admin", "Service"],
@@ -164,10 +164,10 @@ const reportingManagementNavItems: NavItemGroup[] = [
 
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
 
 export function AppSidebarNav() {
@@ -222,13 +222,13 @@ export function AppSidebarNav() {
       .filter(item => item.subLinks && isGroupActive(item.subLinks))
       .map(item => item.groupLabel || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, userRole]); // Add userRole if menu structure changes based on it
+  }, [pathname, userRole]);
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
     if (item.roles && userRole && !item.roles.includes(userRole)) {
-      return null; // Don't render group if user role not allowed
+      return null;
     }
 
     return (
@@ -260,7 +260,7 @@ export function AppSidebarNav() {
             <SidebarMenu className="gap-0 py-1">
               {item.subLinks.map((subLink) => {
                 if (subLink.roles && userRole && !subLink.roles.includes(userRole)) {
-                  return null; // Don't render sub-link if user role not allowed
+                  return null; 
                 }
                 return (
                   <SidebarMenuItem key={subLink.href}>

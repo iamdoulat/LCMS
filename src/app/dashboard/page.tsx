@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 
 const SupplierPieChart = dynamic(() =>
@@ -58,6 +59,20 @@ interface YearlyLcValue {
   totalValue: number | null;
 }
 
+interface UpcomingEtdShipment {
+  id: string;
+  documentaryCreditNumber?: string;
+  beneficiaryName?: string;
+  applicantName?: string;
+  etdDate: Date;
+  etaDate?: Date;
+  currency?: Currency;
+  amount?: number;
+  isFirstShipment?: boolean;
+  isSecondShipment?: boolean;
+  isThirdShipment?: boolean;
+}
+
 interface RecentlyCompletedLC {
   id: string;
   documentaryCreditNumber?: string;
@@ -79,20 +94,6 @@ interface DraftLC {
   status?: LCStatus;
   currency?: Currency;
   amount?: number;
-}
-
-interface UpcomingEtdShipment {
-  id: string;
-  documentaryCreditNumber?: string;
-  beneficiaryName?: string;
-  applicantName?: string;
-  etdDate: Date;
-  etaDate?: Date;
-  currency?: Currency;
-  amount?: number;
-  isFirstShipment?: boolean;
-  isSecondShipment?: boolean;
-  isThirdShipment?: boolean;
 }
 
 
@@ -148,13 +149,13 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
         if (intervalRef.current) clearInterval(intervalRef.current);
         intervalRef.current = setInterval(() => {
           if (!isPaused && scrollElement) {
-            if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) { // -1 for safety margin
+            if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) {
               scrollElement.scrollTop = 0;
             } else {
               scrollElement.scrollTop += 1;
             }
           }
-        }, 75); // Normal speed
+        }, 75);
       }
     };
 
@@ -173,7 +174,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
       scrollElement.addEventListener('mouseenter', handleMouseEnter);
       scrollElement.addEventListener('mouseleave', handleMouseLeave);
     } else {
-      stopScrolling(); // Stop if not scrollable
+      stopScrolling();
     }
 
     return () => {
@@ -189,7 +190,8 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 
 
 export default function DashboardPage() {
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, loading: authLoading, userRole } = useAuth();
+  const router = useRouter();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
@@ -213,6 +215,12 @@ export default function DashboardPage() {
   const upcomingEtdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const draftLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const completedLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && userRole === "Service") {
+      router.push('/dashboard/warranty-management/search');
+    }
+  }, [userRole, authLoading, router]);
 
 
   useEffect(() => {
@@ -521,8 +529,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, authLoading]); // Removed selectedYear from deps to avoid re-fetch on just year change, use explicit call.
+  }, [authUser, authLoading]);
 
   useEffect(() => {
     console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
@@ -547,11 +554,11 @@ export default function DashboardPage() {
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
-  if (authLoading) {
+  if (authLoading || (!authLoading && userRole === "Service")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
+        <p className="ml-3 text-muted-foreground">Loading dashboard or redirecting...</p>
       </div>
     );
   }
@@ -613,38 +620,42 @@ export default function DashboardPage() {
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
+          className="animatedGradientClasses"
         />
         <StatCard
           title="Total L/Cs Values"
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-1 xl:col-span-1"
+          className="lg:col-span-1 xl:col-span-2 animatedGradientClasses"
         />
         <StatCard
           title="Active Beneficiaries"
           value={dashboardStats.activeSuppliers.toLocaleString()}
           icon={<Truck className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
+          className="animatedGradientClasses"
         />
         <StatCard
           title="Active Applicants"
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Factory className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
+          className="animatedGradientClasses"
         />
         <StatCard
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-auto"
+          className="animatedGradientClasses"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
           icon={<Layers className="h-7 w-7 text-primary" />}
           description={`Proforma Invoices connected to LCs issued in ${selectedYear}`}
+          className="animatedGradientClasses"
         />
       </div>
 
@@ -675,8 +686,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <CardHeader>
               <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Ship className="h-6 w-6 text-primary" />
@@ -702,38 +712,38 @@ export default function DashboardPage() {
                     >
                         {upcomingEtdShipments.map((shipment) => (
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
-                            <div className="flex justify-between items-start mb-1">
-                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block pr-20">
-                                        {shipment.documentaryCreditNumber || 'N/A'}
+                           <div className="flex justify-between items-start mb-1">
+                            <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block pr-20">
+                                {shipment.documentaryCreditNumber || 'N/A'}
+                            </Link>
+                            <div className="flex gap-1.5 items-center">
+                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                    <Button
+                                        variant={shipment.isFirstShipment ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                        title="1st Shipment Status"
+                                    >1st</Button>
                                 </Link>
-                                <div className="flex gap-1.5 items-center">
-                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                        <Button
-                                            variant={shipment.isFirstShipment ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                            title="1st Shipment Status"
-                                        >1st</Button>
-                                    </Link>
-                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                        <Button
-                                            variant={shipment.isSecondShipment ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                            title="2nd Shipment Status"
-                                        >2nd</Button>
-                                    </Link>
-                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                        <Button
-                                            variant={shipment.isThirdShipment ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                            title="3rd Shipment Status"
-                                        >3rd</Button>
-                                    </Link>
-                                </div>
+                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                    <Button
+                                        variant={shipment.isSecondShipment ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                        title="2nd Shipment Status"
+                                    >2nd</Button>
+                                </Link>
+                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                    <Button
+                                        variant={shipment.isThirdShipment ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                        title="3rd Shipment Status"
+                                    >3rd</Button>
+                                </Link>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                 <div>
                                     <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
                                     <p className="truncate">Value: <span className="font-medium text-foreground">{formatCurrencyValue(shipment.currency, shipment.amount)}</span></p>
@@ -750,7 +760,6 @@ export default function DashboardPage() {
                 )}
             </CardContent>
           </Card>
-        </div>
       </div>
 
       <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
@@ -892,5 +901,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
 
