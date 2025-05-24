@@ -206,7 +206,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number;
+  billOfExchangeQty?: number | '';
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -235,7 +235,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string; // Ensure this matches the property name in the form
+  contactPersonName?: string;
   email?: string;
   phone?: string;
 }
@@ -297,14 +297,14 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Keep as is for form, convert to number on save
-  purchasePrice: number | ''; // Keep as is for form, convert to number on save
-  salesPrice: number | ''; // Keep as is for form, convert to number on save
-  netCommissionPercentage?: number | ''; // Keep as is for form, convert to number on save
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
-// export type FreightChargeOption = typeof freightChargeOptions[number]; // Already defined type
+export type FreightChargeOption = typeof freightChargeOptions[number];
 
 export interface ProformaInvoice {
   id?: string;
@@ -368,17 +368,16 @@ export const InstallationDetailItemSchema = z.object({
   ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
   ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
   installDate: z.date({ required_error: "Installation Date is required." }),
-  // warrantyRemaining is calculated, not part of schema for form input
 });
-export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required."),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required."),
-  selectedCommercialInvoiceLcId: z.string().optional(), // Store L/C ID
+  selectedCommercialInvoiceLcId: z.string().optional(),
   documentaryCreditNumber: z.string().optional(),
-  totalMachineQty: z.preprocess(toNumberOrUndefined, z.number().int().positive("Qty must be positive").optional()),
+  totalMachineQtyFromLC: z.preprocess(toNumberOrUndefined, z.number().int().positive("Qty must be positive").optional()),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().nullable().optional(),
   etdDate: z.date().nullable().optional(),
@@ -389,7 +388,26 @@ export const InstallationReportSchema = z.object({
   ),
   technicianName: z.string().min(1, "Technician Name is required."),
   reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
-  installationDetails: z.array(InstallationDetailItemSchema).min(1, "At least one installation detail item is required."),
+  installationDetails: z.array(InstallationDetailItemSchema)
+    .min(1, "At least one installation detail item is required.")
+    .refine(items => {
+      const seenSerials = new Set<string>();
+      for (const item of items) {
+        const combinedSerial = `${(item.serialNo || '').trim()}-${(item.ctlBoxSerial || '').trim()}`;
+        if ((item.serialNo && item.serialNo.trim() !== "") || (item.ctlBoxSerial && item.ctlBoxSerial.trim() !== "")) { // Only check if at least one is not empty
+          if (seenSerials.has(combinedSerial)) {
+            return false; // Found a duplicate combination
+          }
+          seenSerials.add(combinedSerial);
+        }
+      }
+      return true;
+    }, {
+      message: "Each combination of Machine Serial No. and Ctl. Box Serial must be unique within this report. Please check for duplicates if both are entered.",
+      // Path for error reporting. We can't easily point to specific duplicate items here,
+      // so the error will be associated with the 'installationDetails' array itself.
+      path: ["installationDetails"], 
+    }),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
   missingItemsIssueResolved: z.boolean().optional().default(false),
@@ -399,17 +417,16 @@ export const InstallationReportSchema = z.object({
 
 export type InstallationReportFormValues = z.infer<typeof InstallationReportSchema>;
 
-// Firestore document structure for Installation Reports
 export interface InstallationReportDocument {
   id: string;
   applicantId: string;
-  applicantName: string; // Store name for easier display
+  applicantName: string;
   beneficiaryId: string;
-  beneficiaryName: string; // Store name for easier display
+  beneficiaryName: string;
   selectedCommercialInvoiceLcId?: string;
-  commercialInvoiceNumber?: string; // Store for display
+  commercialInvoiceNumber?: string;
   documentaryCreditNumber?: string;
-  totalMachineQtyFromLC?: number; // Renamed for clarity in DB
+  totalMachineQtyFromLC?: number;
   proformaInvoiceNumber?: string;
   invoiceDate?: string; // ISO string
   etdDate?: string; // ISO string
@@ -417,16 +434,16 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string }>;
   totalInstalledQty: number;
-  pendingQty: number | string; // Can be 'N/A' if L/C Qty unknown
+  pendingQty: number | string;
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
   extraItemsIssueResolved: boolean;
   installationNotes?: string;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any;
+  updatedAt: any;
 }
 
 
@@ -437,3 +454,5 @@ export interface LcForInvoiceDropdownOption {
 }
 
 // --- END Installation Report Types ---
+
+    

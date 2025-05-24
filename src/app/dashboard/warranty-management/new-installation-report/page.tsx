@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -96,7 +96,7 @@ export default function NewInstallationReportPage() {
       beneficiaryId: '',
       selectedCommercialInvoiceLcId: undefined,
       documentaryCreditNumber: '',
-      totalMachineQty: undefined,
+      totalMachineQtyFromLC: undefined,
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
       etdDate: undefined,
@@ -113,9 +113,9 @@ export default function NewInstallationReportPage() {
     },
   });
 
-  const { control, setValue, watch, formState } = form;
+  const { control, setValue, watch, formState, getValues } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
-  const watchedTotalLcMachineQty = watch("totalMachineQty");
+  const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
 
@@ -150,7 +150,7 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: doc.id } ,
+              lcData: { ...data, id: doc.id } , // Ensure all LCEntryDocument fields are here
             });
           }
         });
@@ -175,7 +175,7 @@ export default function NewInstallationReportPage() {
         setValue("applicantId", lc.applicantId || '', { shouldValidate: true });
         setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true });
         setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
-        setValue("totalMachineQty", lc.totalMachineQty || undefined, { shouldValidate: true });
+        setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true });
         setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
         setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
@@ -198,7 +198,7 @@ export default function NewInstallationReportPage() {
         setValue("applicantId", '', { shouldValidate: true });
         setValue("beneficiaryId", '', { shouldValidate: true });
         setValue("documentaryCreditNumber", '', { shouldValidate: true });
-        setValue("totalMachineQty", undefined, { shouldValidate: true });
+        setValue("totalMachineQtyFromLC", undefined, { shouldValidate: true });
         setValue("proformaInvoiceNumber", '', { shouldValidate: true });
         setValue("invoiceDate", undefined, { shouldValidate: true });
         setValue("etdDate", undefined, { shouldValidate: true });
@@ -233,9 +233,9 @@ export default function NewInstallationReportPage() {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined,
+      commercialInvoiceNumber: selectedLcOption?.label || undefined, // Get C.I. No. from selected L/C option
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
-      totalMachineQtyFromLC: data.totalMachineQty || undefined,
+      totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -245,7 +245,7 @@ export default function NewInstallationReportPage() {
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        slNo: item.slNo || undefined,
+        slNo: item.slNo || undefined, 
         installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
@@ -259,6 +259,7 @@ export default function NewInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
+    // Remove undefined fields before saving
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof typeof dataToSave] === undefined) {
         delete dataToSave[key as keyof typeof dataToSave];
@@ -281,7 +282,7 @@ export default function NewInstallationReportPage() {
         beneficiaryId: '',
         selectedCommercialInvoiceLcId: undefined,
         documentaryCreditNumber: '',
-        totalMachineQty: undefined,
+        totalMachineQtyFromLC: undefined,
         proformaInvoiceNumber: '',
         invoiceDate: undefined,
         etdDate: undefined,
@@ -435,7 +436,7 @@ export default function NewInstallationReportPage() {
                 />
                 <FormField
                   control={control}
-                  name="totalMachineQty"
+                  name="totalMachineQtyFromLC"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
@@ -491,36 +492,37 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                 <div className="p-3 border rounded-md bg-muted/30">
-                    <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                    {selectedLcDetails.lcIdForLink ? (
-                        <div className="flex items-center gap-3">
-                            {[
-                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                            ].map((shipment, index) => (
-                                <Button
-                                    key={index}
-                                    type="button"
-                                    variant={shipment.flag ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                    shipment.flag
-                                        ? "bg-green-500 hover:bg-green-600 text-white"
-                                        : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`${shipment.label} Shipment Status`}
-                                    onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
-                                >
-                                    {shipment.label}
-                                </Button>
-                            ))}
-                        </div>
-                    ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
-                </div>
-                <FormField
+                  <div className="p-3 border rounded-md bg-muted/30">
+                      <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                      {selectedLcDetails.lcIdForLink ? (
+                          <div className="flex items-center gap-3">
+                              {[
+                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                              ].map((shipment, index) => (
+                                  <Button
+                                      key={index}
+                                      type="button"
+                                      variant={shipment.flag ? "default" : "outline"}
+                                      size="icon"
+                                      className={cn(
+                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                      shipment.flag
+                                          ? "bg-green-500 hover:bg-green-600 text-white"
+                                          : "border-destructive text-destructive hover:bg-destructive/10"
+                                      )}
+                                      title={`${shipment.label} Shipment Status`}
+                                      onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
+                                  >
+                                      {shipment.label}
+                                  </Button>
+                              ))}
+                          </div>
+                      ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
+                  </div>
+
+                  <FormField
                   control={control}
                   name="packingListUrl"
                   render={({ field }) => (
@@ -544,7 +546,7 @@ export default function NewInstallationReportPage() {
                       <FormMessage />
                       </FormItem>
                   )}
-                />
+                  />
               </div>
               
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
@@ -624,7 +626,7 @@ export default function NewInstallationReportPage() {
                               let warrantyDisplay = "N/A";
                               if (installDateValue && isValid(installDateValue)) {
                                   const expiryDate = addDays(installDateValue, 365);
-                                  const remainingDays = differenceInDays(new Date(), expiryDate); // Corrected: current date first
+                                  const remainingDays = differenceInDays(new Date(), expiryDate);
                                   warrantyDisplay = remainingDays <= 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
                               }
                               return (
@@ -702,8 +704,12 @@ export default function NewInstallationReportPage() {
                       </TableBody>
                   </Table>
             </div>
-            {formState.errors.installationDetails && !formState.errors.installationDetails.message && typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root && (
-              <p className="text-sm font-medium text-destructive">{(formState.errors.installationDetails as any).root?.message || "Please ensure all installation details are valid."}</p>
+            {formState.errors.installationDetails && (
+                <FormMessage>
+                {formState.errors.installationDetails.message || 
+                 (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
+                 "Please ensure all installation details are valid and serial combinations are unique."}
+                </FormMessage>
             )}
              <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
@@ -852,3 +858,4 @@ export default function NewInstallationReportPage() {
   );
 }
 
+    
