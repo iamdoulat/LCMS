@@ -42,13 +42,15 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Factory,
-  PackageCheck,
-  BarChart3,
-  FileEdit,
-  Users as UsersIcon,
+  Truck,
+  Ship,
   ShieldCheck,
-  Ship, // Ensure Ship is imported
-  Truck, // Ensure Truck is imported
+  BarChart3,
+  Users as UsersIcon,
+  Wrench,
+  ClipboardList,
+  ShieldOff,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -108,6 +110,20 @@ const managementNavItems: NavItemGroup[] = [
   },
 ];
 
+const warrantyManagementNavItems: NavItemGroup[] = [
+  {
+    groupLabel: 'Warranty Management',
+    icon: ShieldCheck,
+    subLinks: [
+      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench },
+      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
+      { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck },
+      { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machine Out of Warranty', icon: ShieldOff },
+      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
+    ],
+  },
+];
+
 const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
@@ -118,15 +134,6 @@ const reportingManagementNavItems: NavItemGroup[] = [
   },
 ];
 
-const warrantyManagementNavItems: NavItemGroup[] = [
-  {
-    groupLabel: 'Warranty Management',
-    icon: ShieldCheck,
-    subLinks: [
-      // Add sub-links here later if needed
-    ],
-  },
-];
 
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
@@ -402,4 +409,3 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
-
