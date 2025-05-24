@@ -7,13 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type {
   CustomerDocument,
   SupplierDocument,
   LCEntryDocument,
-  InstallationDetailItem as PageInstallationDetailItemType, // Renamed to avoid conflict
-  InstallationReportFormValues as PageInstallationReportFormValues, // Renamed to avoid conflict
+  InstallationDetailItem as PageInstallationDetailItemType,
+  InstallationReportFormValues as PageInstallationReportFormValues,
+  InstallationReportDocument, // For fetching
   LcForInvoiceDropdownOption
 } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
@@ -24,7 +25,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -32,16 +33,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-
+import { useParams, useRouter } from 'next/navigation';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
-const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
+const PLACEHOLDER_APPLICANT_VALUE = "__EDIT_INSTALL_REPORT_APPLICANT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__EDIT_INSTALL_REPORT_BENEFICIARY__";
+const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__EDIT_INSTALL_REPORT_COMM_INV__";
 
-
-// Use the imported type
 type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
 
@@ -58,7 +57,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, unit?: string) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
-  if (value === null || value === undefined) displayValue = "0"; // Default to "0" if null or undefined
+  if (value === null || value === undefined) displayValue = "0";
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -67,14 +66,19 @@ const renderPartialDetailReadOnly = (label: string, value?: number | string | nu
   );
 };
 
+export default function EditInstallationReportPage() {
+  const params = useParams();
+  const router = useRouter();
+  const reportId = params.reportId as string;
 
-export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLoadingReportData, setIsLoadingReportData] = React.useState(true);
+  const [reportDataError, setReportDataError] = React.useState<string | null>(null);
+
   const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
 
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
@@ -89,15 +93,12 @@ export default function NewInstallationReportPage() {
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
-    firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-    secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-    thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+    // ... other partial fields initialized to 0 or undefined
   });
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
-
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
@@ -129,17 +130,71 @@ export default function NewInstallationReportPage() {
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
 
-
   const installationDetailsFieldArray = useFieldArray({
     control,
     name: "installationDetails",
   });
 
   React.useEffect(() => {
-    const fetchOptions = async () => {
-      setIsLoadingDropdowns(true);
-      setIsLoadingLcOptions(true);
+    const fetchInitialReportData = async () => {
+      if (!reportId) {
+        setReportDataError("No Report ID provided.");
+        setIsLoadingReportData(false);
+        return;
+      }
+      setIsLoadingReportData(true);
       try {
+        const reportDocRef = doc(firestore, "installation_reports", reportId);
+        const reportDocSnap = await getDoc(reportDocRef);
+
+        if (reportDocSnap.exists()) {
+          const initialData = reportDocSnap.data() as InstallationReportDocument;
+          // Prepare form values from the Firestore document structure
+          const formValuesToSet: Partial<InstallationReportFormValues> = {
+            applicantId: initialData.applicantId,
+            beneficiaryId: initialData.beneficiaryId,
+            selectedCommercialInvoiceLcId: initialData.selectedCommercialInvoiceLcId,
+            documentaryCreditNumber: initialData.documentaryCreditNumber,
+            totalMachineQty: initialData.totalMachineQtyFromLC, // Map from DB field name
+            proformaInvoiceNumber: initialData.proformaInvoiceNumber,
+            invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+            etdDate: initialData.etdDate && isValid(parseISO(initialData.etdDate)) ? parseISO(initialData.etdDate) : undefined,
+            etaDate: initialData.etaDate && isValid(parseISO(initialData.etaDate)) ? parseISO(initialData.etaDate) : undefined,
+            packingListUrl: initialData.packingListUrl,
+            technicianName: initialData.technicianName,
+            reportingEngineerName: initialData.reportingEngineerName,
+            installationDetails: initialData.installationDetails?.map(item => ({
+              ...item,
+              installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : undefined,
+            })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
+            missingItemInfo: initialData.missingItemInfo,
+            extraFoundInfo: initialData.extraFoundInfo,
+            missingItemsIssueResolved: initialData.missingItemsIssueResolved,
+            extraItemsIssueResolved: initialData.extraItemsIssueResolved,
+            installationNotes: initialData.installationNotes,
+          };
+          reset(formValuesToSet);
+          // Trigger effect to load LC details if selectedCommercialInvoiceLcId is present
+          if (initialData.selectedCommercialInvoiceLcId) {
+            setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: true });
+          }
+        } else {
+          setReportDataError("Installation Report not found.");
+          Swal.fire("Error", `Report with ID ${reportId} not found.`, "error");
+        }
+      } catch (err: any) {
+        console.error("Error fetching installation report data: ", err);
+        setReportDataError(`Failed to fetch report data: ${err.message}`);
+        Swal.fire("Error", `Failed to fetch report data: ${err.message}`, "error");
+      } finally {
+        setIsLoadingReportData(false);
+      }
+    };
+
+    const fetchDropdownOptions = async () => {
+      setIsLoadingDropdowns(true);
+      try {
+        // Fetch Customers, Suppliers, LCs for Commercial Invoice
         const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
@@ -160,30 +215,37 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: doc.id } , // Ensure ID is included
+              lcData: { ...data, id: doc.id } ,
             });
           }
         });
         setLcOptionsForCommercialInvoice(fetchedLcOptions);
 
       } catch (error: any) {
-        console.error("Error fetching dropdown options for Installation Report form: ", error);
-        Swal.fire("Error", `Could not load supporting data. Error: ${error.message}`, "error");
+        console.error("Error fetching dropdown options for Edit Installation Report form: ", error);
+        Swal.fire("Error", `Could not load supporting data for dropdowns. Error: ${error.message}`, "error");
       } finally {
         setIsLoadingDropdowns(false);
-        setIsLoadingLcOptions(false);
       }
     };
-    fetchOptions();
-  }, []);
+
+    fetchDropdownOptions().then(() => {
+        // Only fetch report data after dropdowns are potentially ready, especially if LC options are needed for initial fill
+        fetchInitialReportData();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportId, reset, setValue]);
+
 
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
       if (selectedOption) {
         const lc = selectedOption.lcData;
-        setValue("applicantId", lc.applicantId || '', { shouldValidate: true });
-        setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true });
+        // Only set these if they are not already set by initialData or if user explicitly selects a new C.I.
+        if(form.getValues("applicantId") !== lc.applicantId) setValue("applicantId", lc.applicantId || '', { shouldValidate: true });
+        if(form.getValues("beneficiaryId") !== lc.beneficiaryId) setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true });
+
         setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
         setValue("totalMachineQty", lc.totalMachineQty || undefined, { shouldValidate: true });
         setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
@@ -198,28 +260,19 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
+            // ... (set all partial fields for display)
             firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Reset related fields if C.I. is deselected
-        setValue("applicantId", '', { shouldValidate: true });
-        setValue("beneficiaryId", '', { shouldValidate: true });
-        setValue("documentaryCreditNumber", '', { shouldValidate: true });
-        setValue("totalMachineQty", undefined, { shouldValidate: true });
-        setValue("proformaInvoiceNumber", '', { shouldValidate: true });
-        setValue("invoiceDate", undefined, { shouldValidate: true });
-        setValue("etdDate", undefined, { shouldValidate: true });
-        setValue("etaDate", undefined, { shouldValidate: true });
-        setValue("packingListUrl", '', { shouldValidate: true });
-        setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
-        setSelectedCommercialInvoiceDateDisplay(null);
+    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) {
+        // Optionally clear if C.I. is deselected and form wasn't just loading
+        // This part might need refinement based on desired UX on deselection.
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, form, isLoadingReportData]);
 
   React.useEffect(() => {
     const totalLcQty = Number(watchedTotalLcMachineQty || 0);
@@ -233,20 +286,24 @@ export default function NewInstallationReportPage() {
 
 
   async function onSubmit(data: InstallationReportFormValues) {
+    if (!reportId) {
+      Swal.fire("Error", "Report ID is missing. Cannot update.", "error");
+      return;
+    }
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === data.selectedCommercialInvoiceLcId);
 
-    const dataToSave = {
+    const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || 'N/A',
+      applicantName: selectedApplicant?.label || form.getValues("applicantId"), // Fallback to ID if label not found
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || 'N/A',
+      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), // Fallback
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined, // Store the C.I. number for display
+      commercialInvoiceNumber: selectedLcOption?.label || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
-      totalMachineQtyFromLC: data.totalMachineQty || undefined, // Renamed for clarity in DB
+      totalMachineQtyFromLC: data.totalMachineQty || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -256,7 +313,11 @@ export default function NewInstallationReportPage() {
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        slNo: item.slNo || undefined,
+        slNo: item.slNo || undefined, // Ensure optional string fields that are empty become undefined
+        machineModel: item.machineModel,
+        serialNo: item.serialNo,
+        ctlBoxModel: item.ctlBoxModel,
+        ctlBoxSerial: item.ctlBoxSerial,
         installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
@@ -266,57 +327,32 @@ export default function NewInstallationReportPage() {
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
       extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
       installationNotes: data.installationNotes || undefined,
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    // Clean undefined fields
-    Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-        delete dataToSave[key as keyof typeof dataToSave];
+    Object.keys(dataToUpdate).forEach(key => {
+      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
+        delete dataToUpdate[key as keyof typeof dataToUpdate];
       }
     });
 
-    console.log("Installation Report Data to be saved to Firestore:", dataToSave);
+    console.log("Installation Report Data to be updated in Firestore:", dataToUpdate);
 
     try {
-      const docRef = await addDoc(collection(firestore, "installation_reports"), dataToSave);
+      const reportDocRef = doc(firestore, "installation_reports", reportId);
+      await updateDoc(reportDocRef, dataToUpdate);
       Swal.fire({
-        title: "Installation Report Saved!",
-        text: `Report successfully saved to Firestore with ID: ${docRef.id}`,
+        title: "Installation Report Updated!",
+        text: `Report ID: ${reportId} successfully updated.`,
         icon: "success",
-        timer: 2500,
-        showConfirmButton: true,
+        timer: 2000,
+        showConfirmButton: false,
       });
-      form.reset({
-        applicantId: '',
-        beneficiaryId: '',
-        selectedCommercialInvoiceLcId: undefined,
-        documentaryCreditNumber: '',
-        totalMachineQty: undefined,
-        proformaInvoiceNumber: '',
-        invoiceDate: undefined,
-        etdDate: undefined,
-        etaDate: undefined,
-        packingListUrl: '',
-        technicianName: '',
-        reportingEngineerName: '',
-        installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
-        missingItemInfo: '',
-        extraFoundInfo: '',
-        installationNotes: '',
-        missingItemsIssueResolved: false,
-        extraItemsIssueResolved: false,
-      });
-      setSelectedCommercialInvoiceDateDisplay(null);
-      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
-      setActivePartialShipmentAccordion(undefined);
-
     } catch (error: any) {
-      console.error("Error saving installation report: ", error);
+      console.error("Error updating installation report: ", error);
       Swal.fire({
-        title: "Save Failed",
-        text: `Failed to save installation report: ${error.message}`,
+        title: "Update Failed",
+        text: `Failed to update report: ${error.message}`,
         icon: "error",
       });
     } finally {
@@ -339,16 +375,58 @@ export default function NewInstallationReportPage() {
 
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
+  if (isLoadingReportData || isLoadingDropdowns) {
+    return (
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading report details...</p>
+      </div>
+    );
+  }
+
+  if (reportDataError) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card className="max-w-4xl mx-auto shadow-xl border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
+              <AlertTriangle className="h-7 w-7" />
+              Error Loading Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive-foreground">{reportDataError}</p>
+             <Button variant="outline" asChild className="mt-4">
+                <Link href="/dashboard/warranty-management/installation-reports-view"> {/* Adjust this link as needed */}
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Reports List
+                </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+
   return (
     <div className="container mx-auto py-8">
+      <div className="mb-6">
+          <Link href="/dashboard/warranty-management/installation-reports-view" passHref> {/* Assuming this is the list page */}
+              <Button variant="outline">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Installation Reports List
+              </Button>
+          </Link>
+      </div>
       <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <Wrench className="h-7 w-7 text-primary" />
-            New Installation Report
+            <Edit className="h-7 w-7 text-primary" />
+            Edit Installation Report
           </CardTitle>
           <CardDescription>
-            Fill in the details below. Select a Commercial Invoice Number to auto-fill L/C details.
+            Modify the details for Report ID: <span className="font-semibold text-foreground">{reportId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -413,9 +491,9 @@ export default function NewInstallationReportPage() {
                           value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
                           onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
                           placeholder="Search by C.I. No..."
-                          selectPlaceholder={isLoadingLcOptions ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                          selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
                           emptyStateMessage="No L/C found with that C.I. No."
-                          disabled={isLoadingLcOptions}
+                          disabled={isLoadingDropdowns}
                         />
                         <FormMessage />
                       </FormItem>
@@ -844,16 +922,16 @@ export default function NewInstallationReportPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingReportData}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting Report...
+                    Saving Report...
                   </>
                 ) : (
                   <>
-                    <Wrench className="mr-2 h-4 w-4" />
-                    Submit Installation Report
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Installation Report
                   </>
                 )}
               </Button>

@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export const termsOfPayOptions = [
   "T/T In Advance",
   "L/C AT SIGHT",
@@ -29,6 +31,14 @@ export const certificateOfOriginCountries = [
   "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
+
+const toNumberOrUndefined = (val: unknown): number | undefined => {
+  if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+    return undefined;
+  }
+  const num = Number(String(val).trim());
+  return isNaN(num) ? undefined : num;
+};
 
 
 export interface LCEntry {
@@ -74,7 +84,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is for Contact Person Name
+  notifyPartyName?: string; // Contact Person Name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -225,7 +235,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string;
+  contactPersonName?: string; // Ensure this matches the property name in the form
   email?: string;
   phone?: string;
 }
@@ -287,14 +297,14 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Keep as is for form, convert to number on save
+  purchasePrice: number | ''; // Keep as is for form, convert to number on save
+  salesPrice: number | ''; // Keep as is for form, convert to number on save
+  netCommissionPercentage?: number | ''; // Keep as is for form, convert to number on save
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
-// export type FreightChargeOption = typeof freightChargeOptions[number]; // This was duplicated
+// export type FreightChargeOption = typeof freightChargeOptions[number]; // Already defined type
 
 export interface ProformaInvoice {
   id?: string;
@@ -307,7 +317,7 @@ export interface ProformaInvoice {
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string;
+  connectedLcIssueDate?: string; // ISO string
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
@@ -347,71 +357,83 @@ export interface LcOption {
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
-  commercialInvoiceNumber?: string;
-  commercialInvoiceDate?: string;
-  totalMachineQty?: number;
-  proformaInvoiceNumber?: string;
-  invoiceDate?: string;
-  etd?: string;
-  eta?: string;
-  applicantId?: string;
-  beneficiaryId?: string;
+}
+
+
+// --- Installation Report Types ---
+export const InstallationDetailItemSchema = z.object({
+  slNo: z.string().optional(),
+  machineModel: z.string().min(1, "Machine Model is required."),
+  serialNo: z.string().min(1, "Machine Serial No. is required."),
+  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
+  ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
+  installDate: z.date({ required_error: "Installation Date is required." }),
+  // warrantyRemaining is calculated, not part of schema for form input
+});
+export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
+
+
+export const InstallationReportSchema = z.object({
+  applicantId: z.string().min(1, "Applicant Name is required."),
+  beneficiaryId: z.string().min(1, "Beneficiary Name is required."),
+  selectedCommercialInvoiceLcId: z.string().optional(), // Store L/C ID
+  documentaryCreditNumber: z.string().optional(),
+  totalMachineQty: z.preprocess(toNumberOrUndefined, z.number().int().positive("Qty must be positive").optional()),
+  proformaInvoiceNumber: z.string().optional(),
+  invoiceDate: z.date().nullable().optional(),
+  etdDate: z.date().nullable().optional(),
+  etaDate: z.date().nullable().optional(),
+  packingListUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Packing List URL" }).optional()
+  ),
+  technicianName: z.string().min(1, "Technician Name is required."),
+  reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
+  installationDetails: z.array(InstallationDetailItemSchema).min(1, "At least one installation detail item is required."),
+  missingItemInfo: z.string().optional(),
+  extraFoundInfo: z.string().optional(),
+  missingItemsIssueResolved: z.boolean().optional().default(false),
+  extraItemsIssueResolved: z.boolean().optional().default(false),
+  installationNotes: z.string().optional(),
+});
+
+export type InstallationReportFormValues = z.infer<typeof InstallationReportSchema>;
+
+// Firestore document structure for Installation Reports
+export interface InstallationReportDocument {
+  id: string;
+  applicantId: string;
+  applicantName: string; // Store name for easier display
+  beneficiaryId: string;
+  beneficiaryName: string; // Store name for easier display
+  selectedCommercialInvoiceLcId?: string;
+  commercialInvoiceNumber?: string; // Store for display
   documentaryCreditNumber?: string;
-  isFirstShipment?: boolean;
-  isSecondShipment?: boolean;
-  isThirdShipment?: boolean;
-  partialShipmentAllowed?: PartialShipmentAllowed;
-  firstPartialQty?: number;
-  firstPartialAmount?: number;
-  firstPartialPkgs?: number;
-  firstPartialNetWeight?: number;
-  firstPartialGrossWeight?: number;
-  firstPartialCbm?: number;
-  secondPartialQty?: number;
-  secondPartialAmount?: number;
-  secondPartialPkgs?: number;
-  secondPartialNetWeight?: number;
-  secondPartialGrossWeight?: number;
-  secondPartialCbm?: number;
-  thirdPartialQty?: number;
-  thirdPartialAmount?: number;
-  thirdPartialPkgs?: number;
-  thirdPartialNetWeight?: number;
-  thirdPartialGrossWeight?: number;
-  thirdPartialCbm?: number;
+  totalMachineQtyFromLC?: number; // Renamed for clarity in DB
+  proformaInvoiceNumber?: string;
+  invoiceDate?: string; // ISO string
+  etdDate?: string; // ISO string
+  etaDate?: string; // ISO string
+  packingListUrl?: string;
+  technicianName: string;
+  reportingEngineerName: string;
+  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string }>; // installDate as ISO string
+  totalInstalledQty: number;
+  pendingQty: number | string; // Can be 'N/A' if L/C Qty unknown
+  missingItemInfo?: string;
+  extraFoundInfo?: string;
+  missingItemsIssueResolved: boolean;
+  extraItemsIssueResolved: boolean;
+  installationNotes?: string;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }
 
 
-export interface InstallationDetailItem {
-    slNo?: string;
-    machineModel: string;
-    serialNo: string;
-    ctlBoxModel?: string;
-    ctlBoxSerial?: string;
-    installDate?: Date;
+export interface LcForInvoiceDropdownOption {
+  value: string; // L/C document ID
+  label: string; // Commercial Invoice Number
+  lcData: LCEntryDocument & { id: string }; // Full L/C document data
 }
 
-export interface InstallationReportFormValues {
-    applicantId: string;
-    beneficiaryId: string;
-    selectedCommercialInvoiceLcId?: string;
-    documentaryCreditNumber?: string;
-    totalMachineQty?: number;
-    proformaInvoiceNumber?: string;
-    invoiceDate?: Date | null;
-    etdDate?: Date | null;
-    etaDate?: Date | null;
-    packingListUrl?: string;
-    technicianName: string;
-    reportingEngineerName: string;
-    installationNotes?: string;
-    installationDetails: InstallationDetailItem[];
-    missingItemInfo?: string;
-    extraFoundInfo?: string;
-    missingItemsIssueResolved?: boolean; // Added
-    extraItemsIssueResolved?: boolean;   // Added
-}
-
-export interface LcForInvoiceDropdownOption extends ComboboxOption {
-  lcData: LCEntryDocument & { id: string };
-}
+// --- END Installation Report Types ---
