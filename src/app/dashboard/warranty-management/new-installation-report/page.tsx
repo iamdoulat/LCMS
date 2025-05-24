@@ -37,10 +37,9 @@ const installationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
+  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
   ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Install Date is required." }),
-  // warrantyRemaining is display-only, not part of schema for submission
 });
 
 const installationReportSchema = z.object({
@@ -82,7 +81,6 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
-  // Currency formatting for amount is not needed here as amounts are hidden
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -180,7 +178,11 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { id: doc.id, ...data } as LcForInvoiceDropdownOption['lcData'],
+              lcData: { 
+                id: doc.id, ...data, 
+                commercialInvoiceDate: data.commercialInvoiceDate, // ensure this is passed
+                packingListUrl: data.packingListUrl, // ensure this is passed
+              } as LcForInvoiceDropdownOption['lcData'],
             });
           }
         });
@@ -288,7 +290,6 @@ export default function NewInstallationReportPage() {
       icon: "info",
     });
     setIsSubmitting(false);
-    // reset(); 
   }
 
   const handleViewUrl = (url: string | undefined | null) => {
@@ -564,6 +565,7 @@ export default function NewInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                        {/* Amount fields are hidden {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)} */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
@@ -591,7 +593,7 @@ export default function NewInstallationReportPage() {
                             <TableHead className="w-[50px] text-foreground">SL</TableHead>
                             <TableHead className="text-foreground">Machine Model*</TableHead>
                             <TableHead className="text-foreground">Serial No.*</TableHead>
-                            <TableHead className="text-foreground">Ctl. BOX Model</TableHead>
+                            <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
                             <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
                             <TableHead className="text-foreground">Install Date*</TableHead>
                             <TableHead className="text-foreground">Warranty Remaining</TableHead>
@@ -785,6 +787,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
-
-    
