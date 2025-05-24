@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -88,7 +88,13 @@ export default function NewInstallationReportPage() {
     thirdPartialNetWeight?: number;
     thirdPartialGrossWeight?: number;
     thirdPartialCbm?: number;
-  }>({ lcIdForLink: null });
+  }>({ 
+    lcIdForLink: null,
+    partialShipmentAllowed: "No",
+    firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
+    secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
+    thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+  });
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
@@ -170,24 +176,24 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty,
-            firstPartialAmount: lc.firstPartialAmount,
-            firstPartialPkgs: lc.firstPartialPkgs,
-            firstPartialNetWeight: lc.firstPartialNetWeight,
-            firstPartialGrossWeight: lc.firstPartialGrossWeight,
-            firstPartialCbm: lc.firstPartialCbm,
-            secondPartialQty: lc.secondPartialQty,
-            secondPartialAmount: lc.secondPartialAmount,
-            secondPartialPkgs: lc.secondPartialPkgs,
-            secondPartialNetWeight: lc.secondPartialNetWeight,
-            secondPartialGrossWeight: lc.secondPartialGrossWeight,
-            secondPartialCbm: lc.secondPartialCbm,
-            thirdPartialQty: lc.thirdPartialQty,
-            thirdPartialAmount: lc.thirdPartialAmount,
-            thirdPartialPkgs: lc.thirdPartialPkgs,
-            thirdPartialNetWeight: lc.thirdPartialNetWeight,
-            thirdPartialGrossWeight: lc.thirdPartialGrossWeight,
-            thirdPartialCbm: lc.thirdPartialCbm,
+            firstPartialQty: lc.firstPartialQty || 0,
+            firstPartialAmount: lc.firstPartialAmount || 0,
+            firstPartialPkgs: lc.firstPartialPkgs || 0,
+            firstPartialNetWeight: lc.firstPartialNetWeight || 0,
+            firstPartialGrossWeight: lc.firstPartialGrossWeight || 0,
+            firstPartialCbm: lc.firstPartialCbm || 0,
+            secondPartialQty: lc.secondPartialQty || 0,
+            secondPartialAmount: lc.secondPartialAmount || 0,
+            secondPartialPkgs: lc.secondPartialPkgs || 0,
+            secondPartialNetWeight: lc.secondPartialNetWeight || 0,
+            secondPartialGrossWeight: lc.secondPartialGrossWeight || 0,
+            secondPartialCbm: lc.secondPartialCbm || 0,
+            thirdPartialQty: lc.thirdPartialQty || 0,
+            thirdPartialAmount: lc.thirdPartialAmount || 0,
+            thirdPartialPkgs: lc.thirdPartialPkgs || 0,
+            thirdPartialNetWeight: lc.thirdPartialNetWeight || 0,
+            thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0,
+            thirdPartialCbm: lc.thirdPartialCbm || 0,
         });
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
@@ -201,7 +207,7 @@ export default function NewInstallationReportPage() {
       setValue("etaDate", undefined, { shouldValidate: true });
       setSelectedLcDetails({ 
         lcIdForLink: null,
-        partialShipmentAllowed: "No", // Reset to default
+        partialShipmentAllowed: "No",
         firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
         secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
         thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
@@ -251,12 +257,16 @@ export default function NewInstallationReportPage() {
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
   const currencyFromSelectedLC = isLcSelected ? lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId)?.lcData.currency || 'USD' : 'USD';
 
-  const renderPartialDetail = (label: string, value?: number) => (
-    <FormItem className="mb-2">
-        <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
-        <Input type="text" value={value?.toString() || "0"} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
-    </FormItem>
-  );
+  const renderPartialDetail = (label: string, value?: number | string) => {
+    const displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+    return (
+      <FormItem className="mb-2">
+          <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
+          <Input type="text" value={displayValue} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
+      </FormItem>
+    );
+  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -346,7 +356,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -357,7 +367,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
+                      <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -438,40 +448,8 @@ export default function NewInstallationReportPage() {
                         </div>
                     </div>
                 )}
-
-              {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-                <Card className="mt-4 bg-muted/20">
-                    <CardHeader className="pb-2 pt-4">
-                        <CardTitle className="text-md font-semibold text-foreground flex items-center">
-                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                            Partial Shipment Breakdown (from L/C)
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-2 pb-4">
-                        <div className="text-xs text-muted-foreground">(Read-only values from selected L/C)</div>
-                        {[
-                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, amount: selectedLcDetails.firstPartialAmount, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
-                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, amount: selectedLcDetails.secondPartialAmount, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
-                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, amount: selectedLcDetails.thirdPartialAmount, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
-                        ].map((partial, index) => (
-                            <React.Fragment key={index}>
-                            {index > 0 && <Separator className="my-2" />}
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 items-start">
-                                {renderPartialDetail(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                {renderPartialDetail(`${partial.labelPrefix} P. Amt (${currencyFromSelectedLC})`, partial.amount)}
-                                {renderPartialDetail(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                {renderPartialDetail(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                {renderPartialDetail(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
-                                {renderPartialDetail(`${partial.labelPrefix} P. CBM`, partial.cbm)}
-                            </div>
-                            </React.Fragment>
-                        ))}
-                    </CardContent>
-                </Card>
-              )}
-              
-              <Separator />
-
+               
+                <Separator />
                 <FormField
                   control={control}
                   name="packingListUrl"
@@ -497,9 +475,41 @@ export default function NewInstallationReportPage() {
                     </FormItem>
                   )}
                 />
-              
               <Separator />
 
+              {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
+                <Card className="mt-4 bg-muted/20">
+                    <CardHeader className="pb-2 pt-4">
+                        <CardTitle className="text-md font-semibold text-foreground flex items-center">
+                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                            Partial Shipment Breakdown (from L/C)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-2 pb-4">
+                        <div className="text-xs text-muted-foreground">(Read-only values from selected L/C)</div>
+                        {[
+                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, amount: selectedLcDetails.firstPartialAmount, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
+                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, amount: selectedLcDetails.secondPartialAmount, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
+                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, amount: selectedLcDetails.thirdPartialAmount, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
+                        ].map((partial, index) => (
+                            (partial.qty || 0) > 0 || (partial.amount || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
+                                <React.Fragment key={index}>
+                                {index > 0 && <Separator className="my-2" />}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 items-start">
+                                    {renderPartialDetail(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                    {renderPartialDetail(`${partial.labelPrefix} P. Amt (${currencyFromSelectedLC})`, partial.amount)}
+                                    {renderPartialDetail(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                    {renderPartialDetail(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
+                                    {renderPartialDetail(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                    {renderPartialDetail(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                </div>
+                                </React.Fragment>
+                            ) : null
+                        ))}
+                    </CardContent>
+                </Card>
+              )}
+              
               {/* Add other installation report sections and fields here */}
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
