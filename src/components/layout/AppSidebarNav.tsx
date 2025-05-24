@@ -52,7 +52,8 @@ import {
   ShieldOff,
   Archive,
   FileEdit,
-  PackageCheck, // Added PackageCheck here
+  PackageCheck,
+  Microscope, // Added Microscope for consistency if used elsewhere
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -117,6 +118,7 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
     subLinks: [
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
       { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
       { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck },
@@ -168,7 +170,8 @@ export function AppSidebarNav() {
         '/dashboard/customers',
         '/dashboard/total-lc',
         '/dashboard/commission-management/issued-pi-list',
-        '/dashboard/settings/users'
+        '/dashboard/settings/users',
+        '/dashboard/warranty-management/installation-reports-view',
       ];
       if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
         return true;
@@ -382,6 +385,7 @@ export function AppSidebarNav() {
           className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           onClick={logout}
           disabled={authLoading}
+          title="Logout"
         >
           {authLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -411,4 +415,3 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
-
