@@ -28,7 +28,6 @@ const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
 
-
 interface LcForInvoiceDropdownOption extends ComboboxOption {
   lcData: LCEntryDocument;
 }
@@ -176,27 +175,13 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty || 0,
-            firstPartialAmount: lc.firstPartialAmount || 0,
-            firstPartialPkgs: lc.firstPartialPkgs || 0,
-            firstPartialNetWeight: lc.firstPartialNetWeight || 0,
-            firstPartialGrossWeight: lc.firstPartialGrossWeight || 0,
-            firstPartialCbm: lc.firstPartialCbm || 0,
-            secondPartialQty: lc.secondPartialQty || 0,
-            secondPartialAmount: lc.secondPartialAmount || 0,
-            secondPartialPkgs: lc.secondPartialPkgs || 0,
-            secondPartialNetWeight: lc.secondPartialNetWeight || 0,
-            secondPartialGrossWeight: lc.secondPartialGrossWeight || 0,
-            secondPartialCbm: lc.secondPartialCbm || 0,
-            thirdPartialQty: lc.thirdPartialQty || 0,
-            thirdPartialAmount: lc.thirdPartialAmount || 0,
-            thirdPartialPkgs: lc.thirdPartialPkgs || 0,
-            thirdPartialNetWeight: lc.thirdPartialNetWeight || 0,
-            thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0,
-            thirdPartialCbm: lc.thirdPartialCbm || 0,
+            firstPartialQty: lc.firstPartialQty || 0, firstPartialAmount: lc.firstPartialAmount || 0, firstPartialPkgs: lc.firstPartialPkgs || 0, firstPartialNetWeight: lc.firstPartialNetWeight || 0, firstPartialGrossWeight: lc.firstPartialGrossWeight || 0, firstPartialCbm: lc.firstPartialCbm || 0,
+            secondPartialQty: lc.secondPartialQty || 0, secondPartialAmount: lc.secondPartialAmount || 0, secondPartialPkgs: lc.secondPartialPkgs || 0, secondPartialNetWeight: lc.secondPartialNetWeight || 0, secondPartialGrossWeight: lc.secondPartialGrossWeight || 0, secondPartialCbm: lc.secondPartialCbm || 0,
+            thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialAmount: lc.thirdPartialAmount || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
         });
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // Clear fields if no C.I. is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -367,7 +352,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -418,8 +403,12 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {isLcSelected && selectedLcDetails.lcIdForLink && (
-                    <div className="mt-4 p-3 border rounded-md bg-muted/30">
+                    <div className="mt-2 p-3 border rounded-md bg-muted/30">
                         <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
                         <div className="flex items-center gap-3">
                             {[
@@ -448,9 +437,7 @@ export default function NewInstallationReportPage() {
                         </div>
                     </div>
                 )}
-               
-                <Separator />
-                <FormField
+                 <FormField
                   control={control}
                   name="packingListUrl"
                   render={({ field }) => (
@@ -475,8 +462,9 @@ export default function NewInstallationReportPage() {
                     </FormItem>
                   )}
                 />
+              </div>
               <Separator />
-
+              
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                 <Card className="mt-4 bg-muted/20">
                     <CardHeader className="pb-2 pt-4">
@@ -532,4 +520,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
