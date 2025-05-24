@@ -10,7 +10,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { addDoc, serverTimestamp, collection, getDocs, doc, deleteField } from 'firebase/firestore';
+import { addDoc, serverTimestamp, collection, getDocs, doc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +118,7 @@ const lcEntrySchema = z.object({
   finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  packingListUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   isFirstShipment: z.boolean().optional().default(true),
   isSecondShipment: z.boolean().optional().default(false),
   isThirdShipment: z.boolean().optional().default(false),
@@ -200,12 +201,13 @@ const defaultFormValues: NewLCFormValues = {
   finalPIUrl: '',
   finalLcUrl: '',
   shippingDocumentsUrl: '',
+  packingListUrl: '',
   isFirstShipment: true,
   isSecondShipment: false,
   isThirdShipment: false,
 };
 
-const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
+const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -235,7 +237,7 @@ export function NewLCEntryForm() {
       try {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
         const fetchedApplicants = customersSnapshot.docs.map(docSnap => {
-          const data = docSnap.data() as CustomerDocument; // Assuming CustomerDocument type
+          const data = docSnap.data();
           return {
             value: docSnap.id,
             label: data.applicantName || 'Unnamed Applicant',
@@ -269,7 +271,6 @@ export function NewLCEntryForm() {
 
   React.useEffect(() => {
     console.log("NewLCEntryForm: Auto-populate effect triggered. Watched Applicant ID:", watchedApplicantId);
-    console.log("NewLCEntryForm: Available applicantOptions:", applicantOptions);
     if (watchedApplicantId && applicantOptions.length > 0) {
       const selectedApplicant = applicantOptions.find(opt => opt.value === watchedApplicantId);
       console.log("NewLCEntryForm: Selected Applicant for auto-populate:", selectedApplicant);
@@ -345,8 +346,12 @@ export function NewLCEntryForm() {
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
     if (watchedPartialShipmentAllowed === "Yes") {
-      setTotalCalculatedPartialQty(newTotalQty);
-      setTotalCalculatedPartialAmount(newTotalAmount);
+      if (totalCalculatedPartialQty !== newTotalQty) {
+        setTotalCalculatedPartialQty(newTotalQty);
+      }
+      if (totalCalculatedPartialAmount !== newTotalAmount) {
+        setTotalCalculatedPartialAmount(newTotalAmount);
+      }
 
       const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
       const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
@@ -379,9 +384,6 @@ export function NewLCEntryForm() {
        if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
-    } else {
-        if (totalCalculatedPartialQty !== 0) setTotalCalculatedPartialQty(0);
-        if (totalCalculatedPartialAmount !== 0) setTotalCalculatedPartialAmount(0);
     }
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
@@ -438,6 +440,7 @@ export function NewLCEntryForm() {
       finalPIUrl: finalData.finalPIUrl,
       finalLcUrl: finalData.finalLcUrl,
       shippingDocumentsUrl: finalData.shippingDocumentsUrl,
+      packingListUrl: finalData.packingListUrl,
       year: extractedYear,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -490,7 +493,18 @@ export function NewLCEntryForm() {
 
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
-        acc[key as keyof typeof acc] = value;
+        // Ensure empty strings for optional fields are not sent if we intend them to be omitted
+        if (typeof value === 'string' && value.trim() === '' && 
+            ['proformaInvoiceNumber', 'commercialInvoiceNumber', 'itemDescriptions', 'partialShipments', 
+             'portOfLoading', 'portOfDischarge', 'consigneeBankNameAddress', 'notifyPartyNameAndAddress', 
+             'notifyPartyName', 'notifyPartyCell', 'notifyPartyEmail', 'vesselOrFlightName', 
+             'vesselImoNumber', 'flightNumber', 'trackingNumber', 'shippingMarks', 'purchaseOrderUrl', 
+             'finalPIUrl', 'finalLcUrl', 'shippingDocumentsUrl', 'packingListUrl'].includes(key)
+           ) {
+            // Do not add these empty strings to the object for Firestore
+        } else {
+            acc[key as keyof typeof acc] = value;
+        }
       }
       return acc;
     }, {} as typeof dataToSave);
@@ -771,7 +785,6 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
             control={control}
@@ -925,11 +938,11 @@ export function NewLCEntryForm() {
           name="partialShipmentAllowed"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Partial Shipment Allowed</FormLabel> {/* Removed asterisk */}
+              <FormLabel>Partial Shipment Allowed*</FormLabel> {/* Removed N/A from label */}
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={field.value || "No"} // Default to "No" if undefined
+                  value={field.value || "No"} 
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
                   {partialShipmentAllowedOptions.map((option) => (
@@ -1049,7 +1062,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-            {watchedPartialShipmentAllowed === "Yes" && (
+             {watchedPartialShipmentAllowed === "Yes" && (
                 <>
                     <FormItem>
                         <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1193,7 +1206,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                        <RadioGroup
                           onValueChange={field.onChange}
-                          value={field.value || "DHL"}
+                          value={field.value || "DHL"} // Default to DHL
                           className="flex flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {trackingCourierOptions.map((courier) => (
@@ -1235,7 +1248,7 @@ export function NewLCEntryForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
             control={control}
             name="isFirstShipment"
@@ -1279,6 +1292,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <FormField
@@ -1417,7 +1431,7 @@ export function NewLCEntryForm() {
                 <FormField control={control} name="beneficiaryWarrantyCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Warranty Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="beneficiaryComplianceCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Compliance Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                 <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -1594,6 +1608,31 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
+           <FormField
+            control={control}
+            name="packingListUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Packing List URL</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Packing List"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <Separator />
 
@@ -1614,3 +1653,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+

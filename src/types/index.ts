@@ -1,7 +1,7 @@
 
 export const termsOfPayOptions = [
-  "T/T In Advance", // Changed from "TT in Advance"
-  "L/C AT SIGHT",   // Changed from "LC at sight"
+  "T/T In Advance",
+  "L/C AT SIGHT",
   "UPAS",
   "Deffered 120days",
   "Deffered 180days",
@@ -52,6 +52,7 @@ export interface LCEntry {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
+  packingListUrl?: string; // Added this
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null | undefined;
@@ -101,7 +102,7 @@ export interface LCEntry {
   originalCooQty?: number | '';
   copyCooQty?: number | '';
   invoiceQty?: number | '';
-  packingListQty?: number | '';
+  packingListQty?: number | ''; // This was already here, ensure it's distinct from the new URL
   beneficiaryCertificateQty?: number | '';
   brandNewCertificateQty?: number | '';
   beneficiaryWarrantyCertificateQty?: number | '';
@@ -136,6 +137,7 @@ export interface LCEntryDocument {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
+  packingListUrl?: string; // Added this
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // ISO string
@@ -187,7 +189,7 @@ export interface LCEntryDocument {
   originalCooQty?: number;
   copyCooQty?: number;
   invoiceQty?: number;
-  packingListQty?: number;
+  packingListQty?: number; // This was already here
   beneficiaryCertificateQty?: number;
   brandNewCertificateQty?: number;
   beneficiaryWarrantyCertificateQty?: number;
@@ -269,8 +271,8 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string;
-  uid?: string;
+  id: string; // Firestore document ID
+  uid?: string; // Firebase Auth UID
   displayName: string;
   email: string;
   contactNumber?: string;
@@ -287,7 +289,7 @@ export interface ProformaInvoiceLineItem {
   qty: number | '';
   purchasePrice: number | '';
   salesPrice: number | '';
-  netCommissionPercentage?: number | ''; // Added
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -313,9 +315,9 @@ export interface ProformaInvoice {
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number;
-  totalExtraNetCommission?: number; // Added
+  totalExtraNetCommission?: number;
   grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number; // Added
+  grandTotalCommissionUSD?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -323,8 +325,8 @@ export interface ProformaInvoice {
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
   id: string;
-  piDate: string;
-  connectedLcIssueDate?: string;
+  piDate: string; // ISO string
+  connectedLcIssueDate?: string; // ISO string
   lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
     qty: number;
     purchasePrice: number;
@@ -335,13 +337,41 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   miscellaneousExpenses?: number;
   totalExtraNetCommission?: number;
   grandTotalCommissionUSD?: number;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 };
 
 export interface LcOption {
-  value: string;
-  label: string;
-  issueDate?: string;
+  value: string; // L/C document ID
+  label: string; // L/C Number (documentaryCreditNumber)
+  issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
+}
+
+
+export interface InstallationReportFormValues {
+    applicantId: string;
+    beneficiaryId: string;
+    selectedCommercialInvoiceLcId?: string;
+    documentaryCreditNumber?: string;
+    totalMachineQty?: number;
+    proformaInvoiceNumber?: string;
+    invoiceDate?: Date | null;
+    etdDate?: Date | null;
+    etaDate?: Date | null;
+    packingListUrl?: string;
+    technicianName: string;
+    reportingEngineerName: string;
+    installationNotes?: string;
+    installationDetails: InstallationDetailItem[];
+    missingItemInfo?: string;
+    extraFoundInfo?: string;
+}
+
+export interface InstallationDetailItem {
+    slNo: string;
+    machineModel: string;
+    serialNo: string;
+    installDate?: Date;
+    // warrantyRemaining is now calculated, not stored directly
 }
