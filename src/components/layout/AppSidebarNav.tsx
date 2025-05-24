@@ -43,10 +43,11 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Factory,
-  Truck,
   PackageCheck,
   BarChart3,
-  FileEdit, // Added FileEdit here
+  FileEdit,
+  Users as UsersIcon,
+  ShieldCheck, // Added ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -116,6 +117,16 @@ const reportingManagementNavItems: NavItemGroup[] = [
   },
 ];
 
+const warrantyManagementNavItems: NavItemGroup[] = [ // New Section
+  {
+    groupLabel: 'Warranty Management',
+    icon: ShieldCheck,
+    subLinks: [
+      // Add sub-links here later if needed
+    ],
+  },
+];
+
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus },
@@ -164,7 +175,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems, ...reportingManagementNavItems];
+  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems, ...reportingManagementNavItems, ...warrantyManagementNavItems];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
@@ -316,6 +327,17 @@ export function AppSidebarNav() {
               {reportingManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
+        
+        <SidebarSeparator />
+        <SidebarGroup className="p-0">
+          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Warranty Management
+          </SidebarGroupLabel>
+          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+              {warrantyManagementNavItems.map(renderNavGroup)}
+          </Accordion>
+        </SidebarGroup>
+
 
         <SidebarSeparator />
         <SidebarGroup className="p-0">
@@ -379,3 +401,4 @@ interface NavItemGroup {
     icon?: React.ElementType;
   }>;
 }
+
