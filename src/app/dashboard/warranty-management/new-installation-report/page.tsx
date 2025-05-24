@@ -40,6 +40,7 @@ const installationDetailItemSchema = z.object({
   ctlBoxModel: z.string().optional(),
   ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Install Date is required." }),
+  // warrantyRemaining is display-only, not part of schema for submission
 });
 
 const installationReportSchema = z.object({
@@ -87,7 +88,7 @@ const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) =>
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
   if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
-      displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue));
+      // displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue)); // Amount field hidden, no need to format currency
   }
   return (
     <FormItem className="mb-2">
@@ -242,6 +243,7 @@ export default function NewInstallationReportPage() {
       setValue("packingListUrl", '', { shouldValidate: true });
       setSelectedLcDetails({
         lcIdForLink: null,
+        isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
         partialShipmentAllowed: "No",
         firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
         secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
@@ -275,7 +277,7 @@ export default function NewInstallationReportPage() {
       beneficiaryName: selectedBeneficiary?.label,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        installDate: item.installDate ? format(item.installDate, 'PPP') : 'N/A',
+        installDate: item.installDate ? format(item.installDate, 'yyyy-MM-dd') : 'N/A',
       })),
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
@@ -314,7 +316,7 @@ export default function NewInstallationReportPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", sectionHeadingClass.replace('border-b pb-2 mb-6', '').replace('font-bold text-xl lg:text-2xl', 'font-bold text-2xl lg:text-3xl'))}>
+          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl")}>
             <Wrench className="h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
@@ -406,7 +408,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -417,7 +419,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -468,9 +470,9 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-              <Separator className="my-2" />
               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <Separator className="my-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {isLcSelected && selectedLcDetails.lcIdForLink ? (
                     <div className="p-3 border rounded-md bg-muted/30">
                         <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
@@ -529,58 +531,56 @@ export default function NewInstallationReportPage() {
                 />
               </div>
               <Separator className="my-2" />
-
+               
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-                <Accordion
-                  type="single"
-                  collapsible
-                  className="w-full"
-                  value={activePartialShipmentAccordion}
-                  onValueChange={setActivePartialShipmentAccordion}
+                 <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full"
+                    value={activePartialShipmentAccordion}
+                    onValueChange={setActivePartialShipmentAccordion}
                 >
-                  <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
-                    <AccordionTrigger
-                      className={cn(
-                        "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
-                        sectionHeadingClass.replace('font-bold text-xl lg:text-2xl', 'text-md font-semibold').replace('border-b pb-2 mb-6', '')
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                        Partial Shipment Breakdown (from L/C)
-                      </div>
-                      {activePartialShipmentAccordion === "partialShipmentDetails" ? (
-                        <Minus className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Plus className="h-5 w-5 text-primary" />
-                      )}
-                    </AccordionTrigger>
-                    <AccordionContent className="px-4 pt-2 pb-4">
-                      <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
-                      <div className="space-y-3">
-                        {[
-                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
-                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
-                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
-                        ].map((partial, index) => (
-                            (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
-                                <React.Fragment key={index}>
-                                {index > 0 && <Separator className="my-2" />}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                    {/* Amount fields are hidden as per user request */}
-                                    {/* {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)} */}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
-                                </div>
-                                </React.Fragment>
-                            ) : null
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
+                    <AccordionItem value="partialShipmentDetailsAccordion" className="border rounded-md shadow-sm bg-muted/20">
+                        <AccordionTrigger
+                        className={cn(
+                            "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
+                            sectionHeadingClass.replace('font-bold text-xl lg:text-2xl', 'text-md font-semibold').replace('border-b pb-2 mb-6', '')
+                        )}
+                        >
+                        <div className="flex items-center gap-2">
+                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                            Partial Shipment Breakdown (from L/C)
+                        </div>
+                        {activePartialShipmentAccordion === "partialShipmentDetailsAccordion" ? (
+                            <Minus className="h-5 w-5 text-primary" />
+                        ) : (
+                            <Plus className="h-5 w-5 text-primary" />
+                        )}
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pt-2 pb-4">
+                        <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
+                        <div className="space-y-3">
+                            {[
+                                { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
+                                { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
+                                { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
+                            ].map((partial, index) => (
+                                (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
+                                    <React.Fragment key={index}>
+                                    {index > 0 && <Separator className="my-2" />}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                    </div>
+                                    </React.Fragment>
+                                ) : null
+                            ))}
+                        </div>
+                        </AccordionContent>
+                    </AccordionItem>
                 </Accordion>
               )}
 
@@ -722,7 +722,7 @@ export default function NewInstallationReportPage() {
                     name="extraFoundInfo"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found Information</FormLabel>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found and Return Information</FormLabel>
                         <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
