@@ -80,16 +80,9 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   }
 };
 
-const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
-  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
-  if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
-      // displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue)); // Amount field hidden
-  }
+  // Currency formatting for amount is not needed here as amounts are hidden
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -106,24 +99,27 @@ export default function NewInstallationReportPage() {
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
+  
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
     isSecondShipment?: boolean;
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: PartialShipmentAllowed;
-    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
     currency?: Currency;
   }>({
     lcIdForLink: null,
+    isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
-    firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-    secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-    thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+    firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
+    secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
+    thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
     currency: 'USD',
   });
+  
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
@@ -222,13 +218,12 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty || 0, firstPartialPkgs: lc.firstPartialPkgs || 0, firstPartialNetWeight: lc.firstPartialNetWeight || 0, firstPartialGrossWeight: lc.firstPartialGrossWeight || 0, firstPartialCbm: lc.firstPartialCbm || 0,
-            secondPartialQty: lc.secondPartialQty || 0, secondPartialPkgs: lc.secondPartialPkgs || 0, secondPartialNetWeight: lc.secondPartialNetWeight || 0, secondPartialGrossWeight: lc.secondPartialGrossWeight || 0, secondPartialCbm: lc.secondPartialCbm || 0,
-            thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
+            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
+            secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
+            thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
             currency: lc.currency || 'USD',
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
       setValue("applicantId", '', { shouldValidate: true });
@@ -593,14 +588,14 @@ export default function NewInstallationReportPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[50px]">SL</TableHead>
-                            <TableHead>Machine Model*</TableHead>
-                            <TableHead>Serial No.*</TableHead>
-                            <TableHead>Ctl. BOX Model</TableHead>
-                            <TableHead>Ctl. Box Serial</TableHead>
-                            <TableHead>Install Date*</TableHead>
-                            <TableHead>Warranty Remaining</TableHead>
-                            <TableHead className="w-[80px] text-right">Action</TableHead>
+                            <TableHead className="w-[50px] text-foreground">SL</TableHead>
+                            <TableHead className="text-foreground">Machine Model*</TableHead>
+                            <TableHead className="text-foreground">Serial No.*</TableHead>
+                            <TableHead className="text-foreground">Ctl. BOX Model</TableHead>
+                            <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
+                            <TableHead className="text-foreground">Install Date*</TableHead>
+                            <TableHead className="text-foreground">Warranty Remaining</TableHead>
+                            <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -791,3 +786,5 @@ export default function NewInstallationReportPage() {
   );
 }
 
+
+    
