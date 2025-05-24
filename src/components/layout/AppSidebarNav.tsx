@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -53,7 +52,7 @@ import {
   Archive,
   FileEdit,
   PackageCheck,
-  Microscope, // Added Microscope for consistency if used elsewhere
+  // Microscope, // Not used yet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -67,7 +66,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -76,7 +75,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -87,7 +86,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -95,7 +94,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -103,7 +102,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
@@ -121,8 +120,8 @@ const warrantyManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
       { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
-      { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck },
-      { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machine Out of Warranty', icon: ShieldOff },
+      // { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck }, // Removed
+      // { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machine Out of Warranty', icon: ShieldOff }, // Removed
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
     ],
   },
@@ -151,12 +150,12 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+       // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -261,7 +260,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext}
+                src={companyLogoUrlFromSettings}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -330,7 +329,7 @@ export function AppSidebarNav() {
             {managementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
-
+        
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -340,7 +339,7 @@ export function AppSidebarNav() {
               {warrantyManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
-        
+
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -385,7 +384,6 @@ export function AppSidebarNav() {
           className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           onClick={logout}
           disabled={authLoading}
-          title="Logout"
         >
           {authLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
