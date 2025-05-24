@@ -8,14 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type {
-  CustomerDocument,
-  SupplierDocument,
-  LCEntryDocument,
-  InstallationDetailItem as PageInstallationDetailItemType, // Renamed to avoid conflict
-  InstallationReportFormValues as PageInstallationReportFormValues, // Renamed to avoid conflict
-  LcForInvoiceDropdownOption
-} from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,7 +20,6 @@ import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,12 +28,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
-const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
+const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_NEW_APPLICANT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_NEW_BENEFICIARY__";
+const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_NEW_COMM_INV__";
 
-
-// Use the imported type
 type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
 
@@ -58,7 +48,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, unit?: string) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
-  if (value === null || value === undefined) displayValue = "0"; // Default to "0" if null or undefined
+  if (value === null || value === undefined) displayValue = "0";
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -123,7 +113,7 @@ export default function NewInstallationReportPage() {
     },
   });
 
-  const { control, setValue, watch, reset, formState } = form;
+  const { control, setValue, watch, formState } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQty");
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
@@ -160,7 +150,7 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: doc.id } , // Ensure ID is included
+              lcData: { ...data, id: doc.id } ,
             });
           }
         });
@@ -205,7 +195,6 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Reset related fields if C.I. is deselected
         setValue("applicantId", '', { shouldValidate: true });
         setValue("beneficiaryId", '', { shouldValidate: true });
         setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -244,9 +233,9 @@ export default function NewInstallationReportPage() {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined, // Store the C.I. number for display
+      commercialInvoiceNumber: selectedLcOption?.label || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
-      totalMachineQtyFromLC: data.totalMachineQty || undefined, // Renamed for clarity in DB
+      totalMachineQtyFromLC: data.totalMachineQty || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
       invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -270,7 +259,6 @@ export default function NewInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // Clean undefined fields
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof typeof dataToSave] === undefined) {
         delete dataToSave[key as keyof typeof dataToSave];
@@ -314,9 +302,13 @@ export default function NewInstallationReportPage() {
 
     } catch (error: any) {
       console.error("Error saving installation report: ", error);
+      let errorMessage = `Failed to save installation report: ${error.message}`;
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+        errorMessage = `Failed to save installation report: Missing or insufficient permissions. Please check your Firestore security rules for the 'installation_reports' collection.`;
+      }
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save installation report: ${error.message}`,
+        text: errorMessage,
         icon: "error",
       });
     } finally {
@@ -343,8 +335,8 @@ export default function NewInstallationReportPage() {
     <div className="container mx-auto py-8">
       <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <Wrench className="h-7 w-7 text-primary" />
+          <CardTitle className={cn(sectionHeadingClass, "flex items-center text-primary")}>
+            <Wrench className="mr-2 h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
           <CardDescription>
@@ -499,38 +491,36 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {selectedLcDetails.lcIdForLink ? (
-                      <div className="p-3 border rounded-md bg-muted/30">
-                          <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                          <div className="flex items-center gap-3">
-                              {[
-                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                              ].map((shipment, index) => (
-                                  <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
-                                  <Button
-                                      asChild
-                                      type="button"
-                                      variant={shipment.flag ? "default" : "outline"}
-                                      size="icon"
-                                      className={cn(
-                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                      shipment.flag
-                                          ? "bg-green-500 hover:bg-green-600 text-white"
-                                          : "border-destructive text-destructive hover:bg-destructive/10"
-                                      )}
-                                      title={`${shipment.label} Shipment Status`}
-                                  >
-                                      <a>{shipment.label}</a>
-                                  </Button>
-                                  </Link>
-                              ))}
-                          </div>
-                      </div>
-                  ) : <div className="min-h-[76px]"></div> }
-
-                  <FormField
+                 <div className="p-3 border rounded-md bg-muted/30">
+                    <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                    {selectedLcDetails.lcIdForLink ? (
+                        <div className="flex items-center gap-3">
+                            {[
+                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                            ].map((shipment, index) => (
+                                <Button
+                                    key={index}
+                                    type="button"
+                                    variant={shipment.flag ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                    shipment.flag
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`${shipment.label} Shipment Status`}
+                                    onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
+                                >
+                                    {shipment.label}
+                                </Button>
+                            ))}
+                        </div>
+                    ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
+                </div>
+                <FormField
                   control={control}
                   name="packingListUrl"
                   render={({ field }) => (
@@ -554,10 +544,9 @@ export default function NewInstallationReportPage() {
                       <FormMessage />
                       </FormItem>
                   )}
-                  />
+                />
               </div>
-              <Separator className="my-2" />
-
+              
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -596,7 +585,6 @@ export default function NewInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {/* Amount fields are intentionally hidden */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
@@ -612,7 +600,6 @@ export default function NewInstallationReportPage() {
               )}
               <Separator className="my-6" />
 
-              {/* Installation Details Section Moved */}
               <h3 className={cn(sectionHeadingClass)}>
                 <ClipboardList className="mr-2 h-5 w-5 text-primary" />
                 Installation Details
@@ -637,8 +624,8 @@ export default function NewInstallationReportPage() {
                               let warrantyDisplay = "N/A";
                               if (installDateValue && isValid(installDateValue)) {
                                   const expiryDate = addDays(installDateValue, 365);
-                                  const remainingDays = differenceInDays(expiryDate, new Date());
-                                  warrantyDisplay = remainingDays >= 0 ? `${remainingDays} days remaining` : "Expired";
+                                  const remainingDays = differenceInDays(new Date(), expiryDate); // Corrected: current date first
+                                  warrantyDisplay = remainingDays <= 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
                               }
                               return (
                                   <TableRow key={field.id}>
