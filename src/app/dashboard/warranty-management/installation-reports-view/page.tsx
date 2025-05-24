@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Added CardContent
 import { Button } from '@/components/ui/button';
 import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -126,12 +126,13 @@ export default function InstallationReportsViewPage() {
     });
   };
 
-  const totalPages = Math.ceil(allReports.length / ITEMS_PER_PAGE);
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return allReports.slice(startIndex, endIndex);
   }, [allReports, currentPage]);
+  
+  const totalPages = Math.ceil(allReports.length / ITEMS_PER_PAGE);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
   const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -223,7 +224,7 @@ export default function InstallationReportsViewPage() {
                     </Button>
                   </div>
                   
-                  <div className="mb-2 text-sm pr-16"> {/* Added pr-16 to avoid overlap with action buttons */}
+                  <div className="mb-2 text-sm pr-16">
                     <div className="flex flex-wrap items-baseline gap-x-3">
                       <span className="font-semibold text-primary">
                         C.I.: {formatReportValue(report.commercialInvoiceNumber)}
@@ -233,7 +234,7 @@ export default function InstallationReportsViewPage() {
                           (Date: {formatDisplayDate(report.commercialInvoiceDate)})
                         </span>
                       )}
-                      <span className="font-semibold text-primary">
+                      <span className="font-semibold text-primary ml-2"> 
                         L/C: {formatReportValue(report.documentaryCreditNumber)}
                       </span>
                     </div>
@@ -269,7 +270,7 @@ export default function InstallationReportsViewPage() {
                   
                   <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed">
                     {report.createdAt && (
-                      <span>Created: {format(new Date(report.createdAt as string), 'PPP p')}</span>
+                      <span>Created: {isValid(new Date(report.createdAt as string)) ? format(new Date(report.createdAt as string), 'PPP p') : 'N/A'}</span>
                     )}
                   </div>
                 </li>
@@ -306,4 +307,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-
