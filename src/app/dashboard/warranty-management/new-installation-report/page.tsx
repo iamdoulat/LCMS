@@ -2,14 +2,14 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency, InstallationDetailItem as InstallationDetailItemType } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -31,8 +33,15 @@ const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
 
 interface LcForInvoiceDropdownOption extends ComboboxOption {
-  lcData: LCEntryDocument & { commercialInvoiceDate?: string }; // Ensure commercialInvoiceDate is included if used directly
+  lcData: LCEntryDocument & { commercialInvoiceDate?: string };
 }
+
+const installationDetailItemSchema = z.object({
+  slNo: z.string().optional(),
+  machineModel: z.string().min(1, "Machine Model is required."),
+  serialNo: z.string().min(1, "Serial No. is required."),
+  installDate: z.date({ required_error: "Install Date is required." }),
+});
 
 const installationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
@@ -53,6 +62,9 @@ const installationReportSchema = z.object({
   ),
   technicianName: z.string().min(1, "Technician Name is required."),
   reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
+  installationDetails: z.array(installationDetailItemSchema).min(1, "At least one installation detail is required."),
+  missingItemInfo: z.string().optional(),
+  extraFoundInfo: z.string().optional(),
   installationNotes: z.string().optional(),
 });
 
@@ -100,6 +112,7 @@ export default function NewInstallationReportPage() {
   });
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
+  const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
@@ -116,12 +129,21 @@ export default function NewInstallationReportPage() {
       packingListUrl: '',
       technicianName: '',
       reportingEngineerName: '',
+      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', installDate: undefined }],
+      missingItemInfo: '',
+      extraFoundInfo: '',
       installationNotes: '',
     },
   });
 
   const { control, setValue, watch, reset } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
+  const watchedTotalLcMachineQty = watch("totalMachineQty");
+
+  const { fields: installationDetailsFields, append: appendInstallationDetail, remove: removeInstallationDetail } = useFieldArray({
+    control,
+    name: "installationDetails",
+  });
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -193,6 +215,7 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // Clear fields if no Commercial Invoice is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -213,6 +236,17 @@ export default function NewInstallationReportPage() {
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
+  React.useEffect(() => {
+    const totalLcQty = Number(watchedTotalLcMachineQty || 0);
+    const installedQty = installationDetailsFields.length;
+    if (watchedTotalLcMachineQty !== undefined) {
+      setPendingQty(totalLcQty - installedQty);
+    } else {
+      setPendingQty('N/A');
+    }
+  }, [watchedTotalLcMachineQty, installationDetailsFields.length]);
+
+
   async function onSubmit(data: InstallationReportFormValues) {
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
@@ -222,6 +256,11 @@ export default function NewInstallationReportPage() {
       ...data,
       applicantName: selectedApplicant?.label,
       beneficiaryName: selectedBeneficiary?.label,
+      installationDetails: data.installationDetails.map(item => ({
+        ...item,
+        installDate: item.installDate ? format(item.installDate, 'PPP') : 'N/A',
+        // warrantyRemaining is now calculated on the fly, not submitted
+      })),
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
 
@@ -231,7 +270,6 @@ export default function NewInstallationReportPage() {
              <br/><br/>Selected L/C ID (via C.I. No.): <strong>${data.selectedCommercialInvoiceLcId || "None"}</strong>
              <br/>Applicant: <strong>${selectedApplicant?.label || "N/A"}</strong>
              <br/>Beneficiary: <strong>${selectedBeneficiary?.label || "N/A"}</strong>
-             <br/>Packing List URL: <strong>${data.packingListUrl || "N/A"}</strong>
              <br/>Technician: <strong>${data.technicianName}</strong>
              <br/>Reporting Engineer: <strong>${data.reportingEngineerName}</strong>
              <br/><br/>Actual saving to a database (e.g., 'installation_reports' collection in Firestore) is not yet implemented for this form.`,
@@ -330,8 +368,8 @@ export default function NewInstallationReportPage() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                <FormField
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                 <FormField
                     control={control}
                     name="selectedCommercialInvoiceLcId"
                     render={({ field }) => (
@@ -356,7 +394,8 @@ export default function NewInstallationReportPage() {
                         <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
                     </FormItem>
                   )}
-              </div>
+               </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
@@ -364,7 +403,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -375,7 +414,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -428,7 +467,7 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-2" />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   {isLcSelected && selectedLcDetails.lcIdForLink ? (
                       <div className="p-3 border rounded-md bg-muted/30">
                           <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
@@ -488,55 +527,176 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-2" />
 
-              {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-                <Accordion
-                  type="single"
-                  collapsible
-                  className="w-full"
-                  value={activePartialShipmentAccordion}
-                  onValueChange={setActivePartialShipmentAccordion}
-                >
-                  <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center text-md font-semibold text-foreground">
-                          <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                          Partial Shipment Breakdown (from L/C)
+                {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
+                    <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full"
+                    value={activePartialShipmentAccordion}
+                    onValueChange={setActivePartialShipmentAccordion}
+                    >
+                    <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center text-md font-semibold text-foreground">
+                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                            Partial Shipment Breakdown (from L/C)
+                            </div>
+                            {activePartialShipmentAccordion === "partialShipmentDetails" ? (
+                            <Minus className="h-5 w-5 text-primary" />
+                            ) : (
+                            <Plus className="h-5 w-5 text-primary" />
+                            )}
                         </div>
-                        {activePartialShipmentAccordion === "partialShipmentDetails" ? (
-                          <Minus className="h-5 w-5 text-primary" />
-                        ) : (
-                          <Plus className="h-5 w-5 text-primary" />
-                        )}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-4 pt-2 pb-4">
-                      <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
-                      <div className="space-y-3">
-                        {[
-                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, amount: selectedLcDetails.firstPartialAmount, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
-                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, amount: selectedLcDetails.secondPartialAmount, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
-                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, amount: selectedLcDetails.thirdPartialAmount, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
-                        ].map((partial, index) => (
-                            (partial.qty || 0) > 0 || (partial.amount || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
-                                <React.Fragment key={index}>
-                                {index > 0 && <Separator className="my-2" />}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 items-start">
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
-                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
-                                </div>
-                                </React.Fragment>
-                            ) : null
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pt-2 pb-4">
+                        <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
+                        <div className="space-y-3">
+                            {[
+                                { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
+                                { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
+                                { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
+                            ].map((partial, index) => (
+                                (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
+                                    <React.Fragment key={index}>
+                                    {index > 0 && <Separator className="my-2" />}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                    </div>
+                                    </React.Fragment>
+                                ) : null
+                            ))}
+                        </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                    </Accordion>
+                )}
+
+              <Separator className="my-6" />
+              <h3 className={cn(sectionHeadingClass)}>
+                 <ClipboardList className="mr-2 h-5 w-5 text-primary" />
+                 Installation Details
+              </h3>
+
+              <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]">SL</TableHead>
+                            <TableHead>Machine Model*</TableHead>
+                            <TableHead>Serial No.*</TableHead>
+                            <TableHead>Install Date*</TableHead>
+                            <TableHead>Warranty Remaining</TableHead>
+                            <TableHead className="w-[80px] text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {installationDetailsFields.map((field, index) => {
+                            const installDateValue = watch(`installationDetails.${index}.installDate`);
+                            let warrantyDisplay = "N/A";
+                            if (installDateValue && isValid(installDateValue)) {
+                                const expiryDate = addDays(installDateValue, 365);
+                                const remainingDays = differenceInDays(expiryDate, new Date());
+                                warrantyDisplay = remainingDays > 0 ? `${remainingDays} days remaining` : "Expired";
+                            }
+                            return (
+                                <TableRow key={field.id}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>
+                                        <FormField
+                                            control={control}
+                                            name={`installationDetails.${index}.machineModel`}
+                                            render={({ field: itemField }) => (
+                                                <FormItem>
+                                                    <FormControl><Input placeholder="Enter model" {...itemField} className="h-9" /></FormControl>
+                                                    <FormMessage className="text-xs" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                            control={control}
+                                            name={`installationDetails.${index}.serialNo`}
+                                            render={({ field: itemField }) => (
+                                                <FormItem>
+                                                    <FormControl><Input placeholder="Enter serial no." {...itemField} className="h-9" /></FormControl>
+                                                    <FormMessage className="text-xs" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                            control={control}
+                                            name={`installationDetails.${index}.installDate`}
+                                            render={({ field: itemField }) => (
+                                                <FormItem>
+                                                    <DatePickerField field={itemField} placeholder="Select date" />
+                                                    <FormMessage className="text-xs" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{warrantyDisplay}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeInstallationDetail(index)} disabled={installationDetailsFields.length <= 1}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+              </div>
+              {form.formState.errors.installationDetails && !form.formState.errors.installationDetails.message && typeof form.formState.errors.installationDetails === 'object' && form.formState.errors.installationDetails.root && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.installationDetails.root?.message || "Please ensure all installation details are valid."}</p>
               )}
+              <Button type="button" variant="outline" onClick={() => appendInstallationDetail({ slNo: (installationDetailsFields.length + 1).toString(), machineModel: '', serialNo: '', installDate: undefined })} className="mt-2">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
+              </Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <FormItem>
+                    <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
+                    <Input type="text" value={installationDetailsFields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                </FormItem>
+                 <FormItem>
+                    <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
+                    <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                </FormItem>
+              </div>
+              <Separator className="my-6" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={control} 
+                    name="missingItemInfo"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing Item Information</FormLabel>
+                        <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control} 
+                    name="extraFoundInfo"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found Information</FormLabel>
+                        <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
 
               <Separator className="my-6" />
               <h3 className={cn(sectionHeadingClass)}>
@@ -599,3 +759,4 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
