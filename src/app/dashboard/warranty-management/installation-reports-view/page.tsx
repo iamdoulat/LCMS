@@ -50,9 +50,10 @@ export default function InstallationReportsViewPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          // Ensure dates are consistently strings if they come from Firestore Timestamps
           const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
+          
+          // Safely access nested date fields if they exist
           const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
           const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
           const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
@@ -126,7 +127,7 @@ export default function InstallationReportsViewPage() {
       }
     });
   };
-
+  
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
@@ -139,6 +140,7 @@ export default function InstallationReportsViewPage() {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
   };
+
 
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -179,7 +181,7 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
                 View Installation Reports
               </CardTitle>
@@ -238,22 +240,22 @@ export default function InstallationReportsViewPage() {
                     </Button>
                   </div>
 
-                  <div className="mb-2 text-sm pr-16">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline">
-                        C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                      </Link>
-                      {report.commercialInvoiceNumber && report.commercialInvoiceDate && (
-                        <span className="text-xs text-muted-foreground">
-                          (C.I. Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                  <div className="mb-2 text-sm pr-16"> {/* Added pr-16 for spacing from action buttons */}
+                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline">
+                            C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                        </Link>
+                        {report.commercialInvoiceNumber && report.commercialInvoiceDate && (
+                            <span className="text-xs text-muted-foreground">
+                            (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                            </span>
+                        )}
+                        <span className="font-medium text-foreground">
+                            L/C: {formatReportValue(report.documentaryCreditNumber)}
                         </span>
-                      )}
-                      <span className="font-medium text-foreground">
-                        L/C: {formatReportValue(report.documentaryCreditNumber)}
-                      </span>
-                    </div>
+                     </div>
                   </div>
-
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Applicant: </span>
@@ -267,15 +269,15 @@ export default function InstallationReportsViewPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-3">
                     <div>
-                      <span className="text-muted-foreground">Total L/C Qty: </span>
+                      <span className="text-muted-foreground">Total L/C Machine Qty: </span>
                       <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Installed: </span>
+                      <span className="text-muted-foreground">Machine Installed: </span>
                       <span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Pending: </span>
+                      <span className="text-muted-foreground">Machine Pending: </span>
                       <span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>
                         {formatReportValue(report.pendingQty)}
                       </span>
@@ -288,7 +290,7 @@ export default function InstallationReportsViewPage() {
                     )}
                     {report.packingListUrl && (
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
                         className="h-7 px-2 py-1 text-xs"
                         onClick={() => handleViewUrl(report.packingListUrl)}
@@ -331,5 +333,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-
-    
