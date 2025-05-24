@@ -12,12 +12,12 @@ import type {
   CustomerDocument,
   SupplierDocument,
   LCEntryDocument,
-  InstallationDetailItem as PageInstallationDetailItemType,
   InstallationReportFormValues as PageInstallationReportFormValues,
-  InstallationReportDocument, // For fetching
-  LcForInvoiceDropdownOption
+  InstallationReportDocument, 
+  LcForInvoiceDropdownOption,
+  InstallationDetailItem as PageInstallationDetailItemType
 } from '@/types';
-import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
+import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; 
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,6 @@ export default function EditInstallationReportPage() {
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
-    // ... other partial fields initialized to 0 or undefined
   });
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
@@ -149,13 +148,12 @@ export default function EditInstallationReportPage() {
 
         if (reportDocSnap.exists()) {
           const initialData = reportDocSnap.data() as InstallationReportDocument;
-          // Prepare form values from the Firestore document structure
           const formValuesToSet: Partial<InstallationReportFormValues> = {
             applicantId: initialData.applicantId,
             beneficiaryId: initialData.beneficiaryId,
             selectedCommercialInvoiceLcId: initialData.selectedCommercialInvoiceLcId,
             documentaryCreditNumber: initialData.documentaryCreditNumber,
-            totalMachineQty: initialData.totalMachineQtyFromLC, // Map from DB field name
+            totalMachineQty: initialData.totalMachineQtyFromLC,
             proformaInvoiceNumber: initialData.proformaInvoiceNumber,
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
             etdDate: initialData.etdDate && isValid(parseISO(initialData.etdDate)) ? parseISO(initialData.etdDate) : undefined,
@@ -174,9 +172,10 @@ export default function EditInstallationReportPage() {
             installationNotes: initialData.installationNotes,
           };
           reset(formValuesToSet);
-          // Trigger effect to load LC details if selectedCommercialInvoiceLcId is present
           if (initialData.selectedCommercialInvoiceLcId) {
-            setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: true });
+             // Trigger effect to load LC details
+             // Need to ensure lcOptionsForCommercialInvoice is loaded before this runs ideally, or handle it inside the effect
+             setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: false });
           }
         } else {
           setReportDataError("Installation Report not found.");
@@ -194,7 +193,6 @@ export default function EditInstallationReportPage() {
     const fetchDropdownOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        // Fetch Customers, Suppliers, LCs for Commercial Invoice
         const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
@@ -230,7 +228,6 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-        // Only fetch report data after dropdowns are potentially ready, especially if LC options are needed for initial fill
         fetchInitialReportData();
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,7 +257,6 @@ export default function EditInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            // ... (set all partial fields for display)
             firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
@@ -268,8 +264,16 @@ export default function EditInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) {
-        // Optionally clear if C.I. is deselected and form wasn't just loading
-        // This part might need refinement based on desired UX on deselection.
+        // If C.I. selection is cleared, also clear related L/C details
+        setValue("documentaryCreditNumber", '', { shouldValidate: true });
+        setValue("totalMachineQty", undefined, { shouldValidate: true });
+        setValue("proformaInvoiceNumber", '', { shouldValidate: true });
+        setValue("invoiceDate", undefined, { shouldValidate: true });
+        setValue("etdDate", undefined, { shouldValidate: true });
+        setValue("etaDate", undefined, { shouldValidate: true });
+        setValue("packingListUrl", '', { shouldValidate: true });
+        setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
+        setSelectedCommercialInvoiceDateDisplay(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, form, isLoadingReportData]);
@@ -297,9 +301,9 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || form.getValues("applicantId"), // Fallback to ID if label not found
+      applicantName: selectedApplicant?.label || form.getValues("applicantId"), 
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), // Fallback
+      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), 
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
@@ -313,7 +317,7 @@ export default function EditInstallationReportPage() {
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        slNo: item.slNo || undefined, // Ensure optional string fields that are empty become undefined
+        slNo: item.slNo || undefined, 
         machineModel: item.machineModel,
         serialNo: item.serialNo,
         ctlBoxModel: item.ctlBoxModel,
@@ -345,14 +349,18 @@ export default function EditInstallationReportPage() {
         title: "Installation Report Updated!",
         text: `Report ID: ${reportId} successfully updated.`,
         icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+      }).then(() => {
+        router.push('/dashboard/warranty-management/installation-reports-view');
       });
     } catch (error: any) {
       console.error("Error updating installation report: ", error);
+      let errorMessage = `Failed to update report: ${error.message}`;
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+        errorMessage = `Failed to update report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
+      }
       Swal.fire({
         title: "Update Failed",
-        text: `Failed to update report: ${error.message}`,
+        text: errorMessage,
         icon: "error",
       });
     } finally {
@@ -387,7 +395,7 @@ export default function EditInstallationReportPage() {
   if (reportDataError) {
     return (
       <div className="container mx-auto py-8">
-        <Card className="max-w-4xl mx-auto shadow-xl border-destructive">
+        <Card className="max-w-6xl mx-auto shadow-xl border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
               <AlertTriangle className="h-7 w-7" />
@@ -397,7 +405,7 @@ export default function EditInstallationReportPage() {
           <CardContent>
             <p className="text-destructive-foreground">{reportDataError}</p>
              <Button variant="outline" asChild className="mt-4">
-                <Link href="/dashboard/warranty-management/installation-reports-view"> {/* Adjust this link as needed */}
+                <Link href="/dashboard/warranty-management/installation-reports-view">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Reports List
                 </Link>
@@ -412,7 +420,7 @@ export default function EditInstallationReportPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-          <Link href="/dashboard/warranty-management/installation-reports-view" passHref> {/* Assuming this is the list page */}
+          <Link href="/dashboard/warranty-management/installation-reports-view" passHref>
               <Button variant="outline">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Installation Reports List
@@ -577,9 +585,9 @@ export default function EditInstallationReportPage() {
               </div>
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {selectedLcDetails.lcIdForLink ? (
-                      <div className="p-3 border rounded-md bg-muted/30">
-                          <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                  <div className="p-3 border rounded-md bg-muted/30">
+                      <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                      {selectedLcDetails.lcIdForLink ? (
                           <div className="flex items-center gap-3">
                               {[
                                   { flag: selectedLcDetails.isFirstShipment, label: "1st" },
@@ -605,8 +613,8 @@ export default function EditInstallationReportPage() {
                                   </Link>
                               ))}
                           </div>
-                      </div>
-                  ) : <div className="min-h-[76px]"></div> }
+                      ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
+                  </div>
 
                   <FormField
                   control={control}
@@ -634,8 +642,7 @@ export default function EditInstallationReportPage() {
                   )}
                   />
               </div>
-              <Separator className="my-2" />
-
+              
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -674,7 +681,6 @@ export default function EditInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {/* Amount fields are intentionally hidden */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
@@ -690,7 +696,6 @@ export default function EditInstallationReportPage() {
               )}
               <Separator className="my-6" />
 
-              {/* Installation Details Section Moved */}
               <h3 className={cn(sectionHeadingClass)}>
                 <ClipboardList className="mr-2 h-5 w-5 text-primary" />
                 Installation Details
@@ -715,8 +720,8 @@ export default function EditInstallationReportPage() {
                               let warrantyDisplay = "N/A";
                               if (installDateValue && isValid(installDateValue)) {
                                   const expiryDate = addDays(installDateValue, 365);
-                                  const remainingDays = differenceInDays(expiryDate, new Date());
-                                  warrantyDisplay = remainingDays >= 0 ? `${remainingDays} days remaining` : "Expired";
+                                  const remainingDays = differenceInDays(new Date(), expiryDate);
+                                  warrantyDisplay = remainingDays <= 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
                               }
                               return (
                                   <TableRow key={field.id}>
@@ -942,4 +947,3 @@ export default function EditInstallationReportPage() {
     </div>
   );
 }
-
