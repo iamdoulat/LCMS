@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed } from '@/types'; // Assuming LCEntryDocument is needed for lcData
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,6 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
 
-
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
@@ -35,10 +34,11 @@ interface LcForInvoiceDropdownOption extends ComboboxOption {
   lcData: LCEntryDocument;
 }
 
+// Define Zod schema for form validation
 const installationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
-  selectedCommercialInvoiceLcId: z.string().optional(),
+  selectedCommercialInvoiceLcId: z.string().optional(), // This will hold the ID of the selected L/C
   documentaryCreditNumber: z.string().optional(),
   totalMachineQty: z.preprocess(
     (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
@@ -56,6 +56,21 @@ const installationReportSchema = z.object({
 });
 
 type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
+
+const formatDisplayDate = (dateString?: string | Date): string => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
+const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
+  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -88,7 +103,7 @@ export default function NewInstallationReportPage() {
     thirdPartialNetWeight?: number;
     thirdPartialGrossWeight?: number;
     thirdPartialCbm?: number;
-    currency?: string; // To display currency with partial amounts
+    currency?: Currency;
   }>({
     lcIdForLink: null,
     partialShipmentAllowed: "No",
@@ -98,6 +113,7 @@ export default function NewInstallationReportPage() {
     currency: 'USD',
   });
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
+  const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
 
 
   const form = useForm<InstallationReportFormValues>({
@@ -186,9 +202,9 @@ export default function NewInstallationReportPage() {
             thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialAmount: lc.thirdPartialAmount || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
             currency: lc.currency || 'USD',
         });
+        setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Clear auto-filled fields if C.I. No. is cleared
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -205,6 +221,7 @@ export default function NewInstallationReportPage() {
         thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
         currency: 'USD',
       });
+      setSelectedCommercialInvoiceDateDisplay(null);
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
@@ -250,10 +267,10 @@ export default function NewInstallationReportPage() {
 
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
-  const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: string) => {
+  const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: Currency) => {
     let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
     if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
-        displayValue = `${currency} ${parseFloat(displayValue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue));
     }
     return (
       <FormItem className="mb-2">
@@ -324,26 +341,35 @@ export default function NewInstallationReportPage() {
                   )}
                 />
               </div>
-
-              <FormField
-                  control={control}
-                  name="selectedCommercialInvoiceLcId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number (to auto-fill)</FormLabel>
-                      <Combobox
-                        options={lcOptionsForCommercialInvoice}
-                        value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
-                        placeholder="Search by C.I. No..."
-                        selectPlaceholder={isLoadingLcOptions ? "Loading C.I. Numbers..." : "Select C.I. Number"}
-                        emptyStateMessage="No L/C found with that C.I. No."
-                        disabled={isLoadingLcOptions}
-                      />
-                      <FormMessage />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <FormField
+                    control={control}
+                    name="selectedCommercialInvoiceLcId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number (to auto-fill)</FormLabel>
+                        <Combobox
+                          options={lcOptionsForCommercialInvoice}
+                          value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
+                          onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
+                          placeholder="Search by C.I. No..."
+                          selectPlaceholder={isLoadingLcOptions ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                          emptyStateMessage="No L/C found with that C.I. No."
+                          disabled={isLoadingLcOptions}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {selectedCommercialInvoiceDateDisplay && (
+                     <FormItem>
+                        <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel>
+                        <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                     </FormItem>
                   )}
-                />
+              </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
@@ -413,66 +439,64 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {isLcSelected && selectedLcDetails.lcIdForLink && (
-                    <div className="p-3 border rounded-md bg-muted/30">
-                        <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                        <div className="flex items-center gap-3">
-                            {[
-                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                            ].map((shipment, index) => (
-                                <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
-                                <Button
-                                    asChild
-                                    type="button"
-                                    variant={shipment.flag ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                    shipment.flag
-                                        ? "bg-green-500 hover:bg-green-600 text-white"
-                                        : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`${shipment.label} Shipment Status`}
-                                >
-                                    <a>{shipment.label}</a>
-                                </Button>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                {!isLcSelected && <div className="min-h-[76px]"></div>} {/* Placeholder to maintain grid structure */}
-
-                 <FormField
-                  control={control}
-                  name="packingListUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl className="flex-grow">
-                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="default"
-                          size="icon"
-                          onClick={() => handleViewUrl(field.value)}
-                          disabled={!field.value}
-                          title="View Packing List"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
+                  {isLcSelected && selectedLcDetails.lcIdForLink ? (
+                      <div className="p-3 border rounded-md bg-muted/30">
+                          <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                          <div className="flex items-center gap-3">
+                              {[
+                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                              ].map((shipment, index) => (
+                                  <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
+                                  <Button
+                                      asChild
+                                      type="button"
+                                      variant={shipment.flag ? "default" : "outline"}
+                                      size="icon"
+                                      className={cn(
+                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                      shipment.flag
+                                          ? "bg-green-500 hover:bg-green-600 text-white"
+                                          : "border-destructive text-destructive hover:bg-destructive/10"
+                                      )}
+                                      title={`${shipment.label} Shipment Status`}
+                                  >
+                                      <a>{shipment.label}</a>
+                                  </Button>
+                                  </Link>
+                              ))}
+                          </div>
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  ) : <div className="min-h-[76px]"></div> /* Placeholder to maintain grid structure */}
+
+                  <FormField
+                    control={control}
+                    name="packingListUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <FormControl className="flex-grow">
+                            <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="icon"
+                            onClick={() => handleViewUrl(field.value)}
+                            disabled={!field.value}
+                            title="View Packing List"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               </div>
               <Separator className="my-2" />
 
@@ -526,15 +550,13 @@ export default function NewInstallationReportPage() {
                 </Accordion>
               )}
 
-              {/* Installation report specific fields go here */}
               <Separator className="my-6" />
               <h3 className={cn(sectionHeadingClass)}>
                  <Wrench className="mr-2 h-5 w-5 text-primary" />
                  Installation Details
               </h3>
-              {/* Example: Add installation date, technician name, notes etc. */}
                <FormField
-                  control={control} // Assuming you add 'installationDate' to your schema
+                  control={control} 
                   name="invoiceDate" // Placeholder, replace with actual field name e.g., "installationDate"
                   render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -574,3 +596,4 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
