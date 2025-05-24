@@ -2,14 +2,14 @@
 "use client";
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency, InstallationDetailItem as InstallationDetailItemType } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency, InstallationDetailItem as InstallationDetailItemType, LcForInvoiceDropdownOption } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,14 +32,13 @@ const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
 
-interface LcForInvoiceDropdownOption extends ComboboxOption {
-  lcData: LCEntryDocument & { commercialInvoiceDate?: string };
-}
 
 const installationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Serial No. is required."),
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Install Date is required." }),
 });
 
@@ -85,6 +84,20 @@ const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) =>
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: Currency) => {
+  let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+  if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
+      displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue));
+  }
+  return (
+    <FormItem className="mb-2">
+        <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
+        <Input type="text" value={displayValue} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
+    </FormItem>
+  );
+};
+
+
 export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
@@ -129,14 +142,14 @@ export default function NewInstallationReportPage() {
       packingListUrl: '',
       technicianName: '',
       reportingEngineerName: '',
-      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', installDate: undefined }],
+      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
       missingItemInfo: '',
       extraFoundInfo: '',
       installationNotes: '',
     },
   });
 
-  const { control, setValue, watch, reset } = form;
+  const { control, setValue, watch, reset, formState } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQty");
 
@@ -170,7 +183,7 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { id: doc.id, ...data } as LCEntryDocument,
+              lcData: { id: doc.id, ...data } as LcForInvoiceDropdownOption['lcData'],
             });
           }
         });
@@ -213,6 +226,7 @@ export default function NewInstallationReportPage() {
             currency: lc.currency || 'USD',
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
       // Clear fields if no Commercial Invoice is selected
@@ -234,6 +248,7 @@ export default function NewInstallationReportPage() {
       });
       setSelectedCommercialInvoiceDateDisplay(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
   React.useEffect(() => {
@@ -259,7 +274,6 @@ export default function NewInstallationReportPage() {
       installationDetails: data.installationDetails.map(item => ({
         ...item,
         installDate: item.installDate ? format(item.installDate, 'PPP') : 'N/A',
-        // warrantyRemaining is now calculated on the fly, not submitted
       })),
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
@@ -293,24 +307,11 @@ export default function NewInstallationReportPage() {
 
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
-  const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: Currency) => {
-    let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
-    if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
-        displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue));
-    }
-    return (
-      <FormItem className="mb-2">
-          <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
-          <Input type="text" value={displayValue} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
-      </FormItem>
-    );
-  };
-
   return (
     <div className="container mx-auto py-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", sectionHeadingClass.replace('border-b pb-2 mb-6', ''))}>
+          <CardTitle className={cn("flex items-center gap-2", sectionHeadingClass.replace('border-b pb-2 mb-6', '').replace('font-bold text-xl lg:text-2xl', 'font-bold text-2xl lg:text-3xl'))}>
             <Wrench className="h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
@@ -468,113 +469,116 @@ export default function NewInstallationReportPage() {
               <Separator className="my-2" />
               
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {isLcSelected && selectedLcDetails.lcIdForLink ? (
-                      <div className="p-3 border rounded-md bg-muted/30">
-                          <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                          <div className="flex items-center gap-3">
-                              {[
-                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                              ].map((shipment, index) => (
-                                  <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
-                                  <Button
-                                      asChild
-                                      type="button"
-                                      variant={shipment.flag ? "default" : "outline"}
-                                      size="icon"
-                                      className={cn(
-                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                      shipment.flag
-                                          ? "bg-green-500 hover:bg-green-600 text-white"
-                                          : "border-destructive text-destructive hover:bg-destructive/10"
-                                      )}
-                                      title={`${shipment.label} Shipment Status`}
-                                  >
-                                      <a>{shipment.label}</a>
-                                  </Button>
-                                  </Link>
-                              ))}
-                          </div>
-                      </div>
-                  ) : <div className="min-h-[76px]"></div> }
-
-                  <FormField
-                    control={control}
-                    name="packingListUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <FormControl className="flex-grow">
-                            <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="default"
-                            size="icon"
-                            onClick={() => handleViewUrl(field.value)}
-                            disabled={!field.value}
-                            title="View Packing List"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                {isLcSelected && selectedLcDetails.lcIdForLink ? (
+                    <div className="p-3 border rounded-md bg-muted/30">
+                        <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                        <div className="flex items-center gap-3">
+                            {[
+                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                            ].map((shipment, index) => (
+                                <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
+                                <Button
+                                    asChild
+                                    type="button"
+                                    variant={shipment.flag ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                    shipment.flag
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`${shipment.label} Shipment Status`}
+                                >
+                                    <a>{shipment.label}</a>
+                                </Button>
+                                </Link>
+                            ))}
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    </div>
+                ) : <div className="min-h-[76px]"></div> }
+
+                <FormField
+                  control={control}
+                  name="packingListUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="icon"
+                          onClick={() => handleViewUrl(field.value)}
+                          disabled={!field.value}
+                          title="View Packing List"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               <Separator className="my-2" />
 
-                {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-                    <Accordion
-                    type="single"
-                    collapsible
-                    className="w-full"
-                    value={activePartialShipmentAccordion}
-                    onValueChange={setActivePartialShipmentAccordion}
+              {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  value={activePartialShipmentAccordion}
+                  onValueChange={setActivePartialShipmentAccordion}
+                >
+                  <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
+                    <AccordionTrigger
+                      className={cn(
+                        "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
+                        sectionHeadingClass.replace('font-bold text-xl lg:text-2xl', 'text-md font-semibold').replace('border-b pb-2 mb-6', '')
+                      )}
                     >
-                    <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center text-md font-semibold text-foreground">
-                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                            Partial Shipment Breakdown (from L/C)
-                            </div>
-                            {activePartialShipmentAccordion === "partialShipmentDetails" ? (
-                            <Minus className="h-5 w-5 text-primary" />
-                            ) : (
-                            <Plus className="h-5 w-5 text-primary" />
-                            )}
-                        </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pt-2 pb-4">
-                        <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
-                        <div className="space-y-3">
-                            {[
-                                { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
-                                { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
-                                { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
-                            ].map((partial, index) => (
-                                (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
-                                    <React.Fragment key={index}>
-                                    {index > 0 && <Separator className="my-2" />}
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
-                                        {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
-                                    </div>
-                                    </React.Fragment>
-                                ) : null
-                            ))}
-                        </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                    </Accordion>
-                )}
+                      <div className="flex items-center gap-2">
+                        <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                        Partial Shipment Breakdown (from L/C)
+                      </div>
+                      {activePartialShipmentAccordion === "partialShipmentDetails" ? (
+                        <Minus className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Plus className="h-5 w-5 text-primary" />
+                      )}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pt-2 pb-4">
+                      <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
+                      <div className="space-y-3">
+                        {[
+                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
+                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
+                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
+                        ].map((partial, index) => (
+                            (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
+                                <React.Fragment key={index}>
+                                {index > 0 && <Separator className="my-2" />}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                </div>
+                                </React.Fragment>
+                            ) : null
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
 
               <Separator className="my-6" />
               <h3 className={cn(sectionHeadingClass)}>
@@ -589,6 +593,8 @@ export default function NewInstallationReportPage() {
                             <TableHead className="w-[50px]">SL</TableHead>
                             <TableHead>Machine Model*</TableHead>
                             <TableHead>Serial No.*</TableHead>
+                            <TableHead>Ctl. BOX Model</TableHead>
+                            <TableHead>Ctl. Box Serial</TableHead>
                             <TableHead>Install Date*</TableHead>
                             <TableHead>Warranty Remaining</TableHead>
                             <TableHead className="w-[80px] text-right">Action</TableHead>
@@ -633,6 +639,30 @@ export default function NewInstallationReportPage() {
                                     <TableCell>
                                         <FormField
                                             control={control}
+                                            name={`installationDetails.${index}.ctlBoxModel`}
+                                            render={({ field: itemField }) => (
+                                                <FormItem>
+                                                    <FormControl><Input placeholder="Ctl. Box Model" {...itemField} className="h-9" /></FormControl>
+                                                    <FormMessage className="text-xs" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                            control={control}
+                                            name={`installationDetails.${index}.ctlBoxSerial`}
+                                            render={({ field: itemField }) => (
+                                                <FormItem>
+                                                    <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} className="h-9" /></FormControl>
+                                                    <FormMessage className="text-xs" />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <FormField
+                                            control={control}
                                             name={`installationDetails.${index}.installDate`}
                                             render={({ field: itemField }) => (
                                                 <FormItem>
@@ -644,7 +674,7 @@ export default function NewInstallationReportPage() {
                                     </TableCell>
                                     <TableCell className="text-xs text-muted-foreground">{warrantyDisplay}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeInstallationDetail(index)} disabled={installationDetailsFields.length <= 1}>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeInstallationDetail(index)} disabled={installationDetailsFields.length <= 1} title="Remove Installation Item">
                                             <Trash2 className="h-4 w-4 text-destructive" />
                                         </Button>
                                     </TableCell>
@@ -654,10 +684,10 @@ export default function NewInstallationReportPage() {
                     </TableBody>
                 </Table>
               </div>
-              {form.formState.errors.installationDetails && !form.formState.errors.installationDetails.message && typeof form.formState.errors.installationDetails === 'object' && form.formState.errors.installationDetails.root && (
-                <p className="text-sm font-medium text-destructive">{form.formState.errors.installationDetails.root?.message || "Please ensure all installation details are valid."}</p>
+              {formState.errors.installationDetails && !formState.errors.installationDetails.message && typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root && (
+                <p className="text-sm font-medium text-destructive">{(formState.errors.installationDetails as any).root?.message || "Please ensure all installation details are valid."}</p>
               )}
-              <Button type="button" variant="outline" onClick={() => appendInstallationDetail({ slNo: (installationDetailsFields.length + 1).toString(), machineModel: '', serialNo: '', installDate: undefined })} className="mt-2">
+              <Button type="button" variant="outline" onClick={() => appendInstallationDetail({ slNo: (installationDetailsFields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
               </Button>
 
@@ -671,9 +701,7 @@ export default function NewInstallationReportPage() {
                     <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                 </FormItem>
               </div>
-              <Separator className="my-6" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <FormField
                     control={control} 
                     name="missingItemInfo"
@@ -697,8 +725,8 @@ export default function NewInstallationReportPage() {
                     )}
                 />
               </div>
-
               <Separator className="my-6" />
+
               <h3 className={cn(sectionHeadingClass)}>
                  <UserCheck className="mr-2 h-5 w-5 text-primary" />
                  Technician and Reporting Engineer Information

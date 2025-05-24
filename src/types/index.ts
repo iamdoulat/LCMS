@@ -52,7 +52,7 @@ export interface LCEntry {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  packingListUrl?: string; // Added this
+  packingListUrl?: string; 
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null | undefined;
@@ -102,7 +102,7 @@ export interface LCEntry {
   originalCooQty?: number | '';
   copyCooQty?: number | '';
   invoiceQty?: number | '';
-  packingListQty?: number | ''; // This was already here, ensure it's distinct from the new URL
+  packingListQty?: number | '';
   beneficiaryCertificateQty?: number | '';
   brandNewCertificateQty?: number | '';
   beneficiaryWarrantyCertificateQty?: number | '';
@@ -137,7 +137,7 @@ export interface LCEntryDocument {
   finalPIUrl?: string;
   shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  packingListUrl?: string; // Added this
+  packingListUrl?: string; 
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // ISO string
@@ -189,7 +189,7 @@ export interface LCEntryDocument {
   originalCooQty?: number;
   copyCooQty?: number;
   invoiceQty?: number;
-  packingListQty?: number; // This was already here
+  packingListQty?: number;
   beneficiaryCertificateQty?: number;
   brandNewCertificateQty?: number;
   beneficiaryWarrantyCertificateQty?: number;
@@ -346,6 +346,38 @@ export interface LcOption {
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
+  commercialInvoiceNumber?: string; // Added this
+  commercialInvoiceDate?: string; // Added this
+  totalMachineQty?: number;
+  proformaInvoiceNumber?: string;
+  invoiceDate?: string;
+  etd?: string;
+  eta?: string;
+  applicantId?: string;
+  beneficiaryId?: string;
+  documentaryCreditNumber?: string;
+  isFirstShipment?: boolean;
+  isSecondShipment?: boolean;
+  isThirdShipment?: boolean;
+  partialShipmentAllowed?: PartialShipmentAllowed;
+  firstPartialQty?: number;
+  firstPartialAmount?: number;
+  firstPartialPkgs?: number;
+  firstPartialNetWeight?: number;
+  firstPartialGrossWeight?: number;
+  firstPartialCbm?: number;
+  secondPartialQty?: number;
+  secondPartialAmount?: number;
+  secondPartialPkgs?: number;
+  secondPartialNetWeight?: number;
+  secondPartialGrossWeight?: number;
+  secondPartialCbm?: number;
+  thirdPartialQty?: number;
+  thirdPartialAmount?: number;
+  thirdPartialPkgs?: number;
+  thirdPartialNetWeight?: number;
+  thirdPartialGrossWeight?: number;
+  thirdPartialCbm?: number;
 }
 
 
@@ -369,9 +401,15 @@ export interface InstallationReportFormValues {
 }
 
 export interface InstallationDetailItem {
-    slNo: string;
+    slNo?: string; // Optional because it's auto-generated for display
     machineModel: string;
     serialNo: string;
+    ctlBoxModel?: string; // Added
+    ctlBoxSerial?: string; // Added
     installDate?: Date;
-    // warrantyRemaining is now calculated, not stored directly
+}
+
+// Make sure LcForInvoiceDropdownOption uses the updated LcOption
+export interface LcForInvoiceDropdownOption extends ComboboxOption {
+  lcData: LcOption & LCEntryDocument; // Ensure lcData can hold all fields from LCEntryDocument for safety
 }
