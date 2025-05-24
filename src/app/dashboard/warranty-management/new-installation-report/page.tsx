@@ -6,52 +6,100 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument } from '@/types';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed } from '@/types'; // Ensure LCEntryDocument is imported
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, Wrench, Users, Building, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { DatePickerField } from '@/components/forms/DatePickerField';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
+
+const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
+const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_COMM_INV__";
+
+
+interface LcForInvoiceDropdownOption {
+  value: string; // L/C document ID
+  label: string; // Commercial Invoice Number
+  lcData: LCEntryDocument;
+}
 
 const installationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
-  // Add other installation report fields here later
+  selectedCommercialInvoiceLcId: z.string().optional(),
+  documentaryCreditNumber: z.string().optional(),
+  totalMachineQty: z.preprocess(
+    (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Qty must be a number" }).int().positive("Qty must be positive").optional()
+  ),
+  proformaInvoiceNumber: z.string().optional(),
+  invoiceDate: z.date().optional().nullable(),
+  etdDate: z.date().optional().nullable(),
+  etaDate: z.date().optional().nullable(),
+  packingListUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Packing List" }).optional()
+  ),
+  // Add other installation report specific fields here later
 });
 
 type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
-
-const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_BENEFICIARY__";
 
 export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
+  const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
+
+  const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
+    isFirstShipment?: boolean;
+    isSecondShipment?: boolean;
+    isThirdShipment?: boolean;
+    lcIdForLink: string | null;
+  }>({ lcIdForLink: null });
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
     defaultValues: {
       applicantId: '',
       beneficiaryId: '',
+      selectedCommercialInvoiceLcId: undefined,
+      documentaryCreditNumber: '',
+      totalMachineQty: undefined,
+      proformaInvoiceNumber: '',
+      invoiceDate: undefined,
+      etdDate: undefined,
+      etaDate: undefined,
+      packingListUrl: '',
     },
   });
+
+  const { control, setValue, watch, reset } = form;
+  const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
 
   React.useEffect(() => {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
+      setIsLoadingLcOptions(true);
       try {
-        const [customersSnap, suppliersSnap] = await Promise.all([
+        const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "suppliers"))
+          getDocs(collection(firestore, "suppliers")),
+          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))) // Fetch only LCs with a C.I. Number
         ]);
 
         setApplicantOptions(
@@ -61,52 +109,117 @@ export default function NewInstallationReportPage() {
           suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
 
-      } catch (error) {
+        const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
+        lcsSnap.forEach(doc => {
+          const data = doc.data() as LCEntryDocument;
+          if (data.commercialInvoiceNumber) { // Ensure it has one
+            fetchedLcOptions.push({
+              value: doc.id,
+              label: data.commercialInvoiceNumber,
+              lcData: { id: doc.id, ...data } as LCEntryDocument,
+            });
+          }
+        });
+        setLcOptionsForCommercialInvoice(fetchedLcOptions);
+
+      } catch (error: any) {
         console.error("Error fetching dropdown options for Installation Report form: ", error);
-        Swal.fire("Error", "Could not load supporting data (Applicants/Beneficiaries). Please try again.", "error");
+        Swal.fire("Error", `Could not load supporting data. Error: ${error.message}`, "error");
       } finally {
         setIsLoadingDropdowns(false);
+        setIsLoadingLcOptions(false);
       }
     };
     fetchOptions();
   }, []);
 
+  React.useEffect(() => {
+    if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
+      const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
+      if (selectedOption) {
+        const lc = selectedOption.lcData;
+        setValue("applicantId", lc.applicantId || '', { shouldValidate: true });
+        setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true });
+        setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
+        setValue("totalMachineQty", lc.totalMachineQty || undefined, { shouldValidate: true });
+        setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
+        setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
+        setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
+        setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
+        setSelectedLcDetails({
+            isFirstShipment: lc.isFirstShipment,
+            isSecondShipment: lc.isSecondShipment,
+            isThirdShipment: lc.isThirdShipment,
+            lcIdForLink: lc.id
+        });
+      }
+    } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // Clear auto-filled fields if C.I. No. is deselected
+      setValue("applicantId", '', { shouldValidate: true });
+      setValue("beneficiaryId", '', { shouldValidate: true });
+      setValue("documentaryCreditNumber", '', { shouldValidate: true });
+      setValue("totalMachineQty", undefined, { shouldValidate: true });
+      setValue("proformaInvoiceNumber", '', { shouldValidate: true });
+      setValue("invoiceDate", undefined, { shouldValidate: true });
+      setValue("etdDate", undefined, { shouldValidate: true });
+      setValue("etaDate", undefined, { shouldValidate: true });
+      setSelectedLcDetails({ lcIdForLink: null });
+    }
+  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
+
+
   async function onSubmit(data: InstallationReportFormValues) {
     setIsSubmitting(true);
-    console.log("Installation Report Data (Simulated Save):", data);
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     
-    // TODO: Implement saving to Firestore (e.g., to an 'installation_reports' collection)
-    // const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
-    // const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    // const dataToSave = {
-    //   ...data,
-    //   applicantName: selectedApplicant?.label,
-    //   beneficiaryName: selectedBeneficiary?.label,
-    //   createdAt: serverTimestamp(),
-    //   updatedAt: serverTimestamp(),
-    // };
-    // await addDoc(collection(firestore, "installation_reports"), dataToSave);
-
+    const dataToLog = {
+      ...data,
+      applicantName: selectedApplicant?.label,
+      beneficiaryName: selectedBeneficiary?.label,
+    };
+    console.log("Installation Report Data (Simulated Save):", dataToLog);
+    
     Swal.fire({
       title: "Form Submitted (Simulated)",
-      html: `Data for Applicant ID: <strong>${data.applicantId}</strong> and Beneficiary ID: <strong>${data.beneficiaryId}</strong> has been logged to the console.
+      html: `Installation Report data has been logged to the console. 
+             <br/><br/>Selected L/C ID (via C.I. No.): <strong>${data.selectedCommercialInvoiceLcId || "None"}</strong>
+             <br/>Applicant: <strong>${selectedApplicant?.label || "N/A"}</strong>
+             <br/>Beneficiary: <strong>${selectedBeneficiary?.label || "N/A"}</strong>
+             <br/>Packing List URL: <strong>${data.packingListUrl || "N/A"}</strong>
              <br/><br/>Actual saving to a database (e.g., 'installation_reports' collection in Firestore) is not yet implemented for this form.`,
       icon: "info",
     });
-    form.reset();
+    // reset(); // Reset form to default values after submission
     setIsSubmitting(false);
   }
 
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
+
+  const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
+
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-3xl mx-auto shadow-xl">
+      <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2 text-primary", sectionHeadingClass.replace('border-b pb-2 mb-6', ''))}>
             <Wrench className="h-7 w-7 text-primary" />
             New Installation Report
           </CardTitle>
           <CardDescription>
-            Fill in the details below to create a new installation report. Fields marked with an asterisk (*) are required.
+            Fill in the details below. Select a Commercial Invoice Number to auto-fill L/C details.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -115,11 +228,11 @@ export default function NewInstallationReportPage() {
               
               <h3 className={cn(sectionHeadingClass)}>
                 <FileText className="mr-2 h-5 w-5 text-primary" />
-                L/C &amp; Invoice Details
+                L/C & Invoice Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
-                  control={form.control}
+                  control={control}
                   name="applicantId"
                   render={({ field }) => (
                     <FormItem>
@@ -131,7 +244,7 @@ export default function NewInstallationReportPage() {
                         placeholder="Search Applicant..."
                         selectPlaceholder={isLoadingDropdowns ? "Loading Applicants..." : "Select Applicant"}
                         emptyStateMessage="No applicant found."
-                        disabled={isLoadingDropdowns}
+                        disabled={isLoadingDropdowns || isLcSelected}
                       />
                       <FormMessage />
                     </FormItem>
@@ -139,7 +252,7 @@ export default function NewInstallationReportPage() {
                 />
 
                 <FormField
-                  control={form.control}
+                  control={control}
                   name="beneficiaryId"
                   render={({ field }) => (
                     <FormItem>
@@ -151,20 +264,166 @@ export default function NewInstallationReportPage() {
                         placeholder="Search Beneficiary..."
                         selectPlaceholder={isLoadingDropdowns ? "Loading Beneficiaries..." : "Select Beneficiary"}
                         emptyStateMessage="No beneficiary found."
-                        disabled={isLoadingDropdowns}
+                        disabled={isLoadingDropdowns || isLcSelected}
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+              
+              <FormField
+                  control={control}
+                  name="selectedCommercialInvoiceLcId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number (to auto-fill)</FormLabel>
+                      <Combobox
+                        options={lcOptionsForCommercialInvoice}
+                        value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
+                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
+                        placeholder="Search by C.I. No..."
+                        selectPlaceholder={isLoadingLcOptions ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                        emptyStateMessage="No L/C found with that C.I. No."
+                        disabled={isLoadingLcOptions}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Add other L/C & Invoice related fields here later if needed */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <FormField
+                  control={control}
+                  name="documentaryCreditNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
+                      <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="totalMachineQty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="proformaInvoiceNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Proforma Invoice Number</FormLabel>
+                      <FormControl><Input placeholder="PI Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                    control={control}
+                    name="invoiceDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel>
+                        <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select Invoice Date" disabled={isLcSelected} />
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+                <FormField
+                    control={control}
+                    name="etdDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />ETD Date</FormLabel>
+                        <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select ETD Date" disabled={isLcSelected} />
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control}
+                    name="etaDate"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />ETA Date</FormLabel>
+                        <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select ETA Date" disabled={isLcSelected} />
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                 />
+              </div>
+                {isLcSelected && selectedLcDetails.lcIdForLink && (
+                    <div className="mt-4 p-3 border rounded-md bg-muted/30">
+                        <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                        <div className="flex items-center gap-3">
+                            {[
+                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                            ].map((shipment, index) => (
+                                <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
+                                <Button
+                                    type="button"
+                                    variant={shipment.flag ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                    shipment.flag
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`${shipment.label} Shipment Status`}
+                                >
+                                    {shipment.label}
+                                </Button>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
+              
               <Separator />
+
+                <FormField
+                  control={control}
+                  name="packingListUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="icon"
+                          onClick={() => handleViewUrl(field.value)}
+                          disabled={!field.value}
+                          title="View Packing List"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              
+              <Separator />
+
 
               {/* Add other installation report sections and fields here */}
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
