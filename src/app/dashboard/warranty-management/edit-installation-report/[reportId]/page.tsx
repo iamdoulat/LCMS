@@ -13,11 +13,11 @@ import type {
   SupplierDocument,
   LCEntryDocument,
   InstallationReportFormValues as PageInstallationReportFormValues,
-  InstallationReportDocument, 
+  InstallationReportDocument,
   LcForInvoiceDropdownOption,
   InstallationDetailItemType as PageInstallationDetailItemType
 } from '@/types';
-import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; 
+import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -104,7 +104,7 @@ export default function EditInstallationReportPage() {
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
-    defaultValues: { 
+    defaultValues: {
       applicantId: '',
       beneficiaryId: '',
       selectedCommercialInvoiceLcId: undefined,
@@ -126,7 +126,7 @@ export default function EditInstallationReportPage() {
     },
   });
 
-  const { control, setValue, watch, reset, formState } = form;
+  const { control, setValue, watch, reset, formState, getValues } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
   const watchedInstallationDetails = watch("installationDetails");
@@ -177,6 +177,25 @@ export default function EditInstallationReportPage() {
             installationNotes: initialData.installationNotes || '',
           };
           reset(formValuesToSet);
+          // Trigger re-calculation of warranty counts based on loaded initialData
+          if (formValuesToSet.installationDetails) {
+              let expired = 0;
+              let remaining = 0;
+              const today = new Date();
+              formValuesToSet.installationDetails.forEach(item => {
+                  if (item.installDate && isValid(item.installDate)) {
+                      const expiryDate = addDays(new Date(item.installDate), 365); // Assuming 365 days warranty
+                      if (differenceInDays(expiryDate, today) < 0) {
+                          expired++;
+                      } else {
+                          remaining++;
+                      }
+                  }
+              });
+              setWarrantyExpiredCount(expired);
+              setWarrantyRemainingCount(remaining);
+          }
+
           if (initialData.selectedCommercialInvoiceLcId) {
              setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: false });
           }
@@ -231,7 +250,7 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-        fetchInitialReportData(); 
+        fetchInitialReportData();
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId, reset, setValue]);
@@ -242,17 +261,37 @@ export default function EditInstallationReportPage() {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
       if (selectedOption) {
         const lc = selectedOption.lcData;
-        if (form.formState.isDirty || !form.getValues("selectedCommercialInvoiceLcId")) {
+        const formValues = getValues();
+
+        // Only update form if values actually differ from what's already set or initial LC data
+        if (formValues.applicantId !== lc.applicantId || formValues.beneficiaryId !== lc.beneficiaryId || !formValues.applicantId) {
             setValue("applicantId", lc.applicantId || '', { shouldValidate: true, shouldDirty: true });
             setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
         }
-        setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
-        setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true });
-        setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
-        setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
-        setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
-        setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
-        setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
+        if (formValues.documentaryCreditNumber !== lc.documentaryCreditNumber || !formValues.documentaryCreditNumber) {
+            setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true, shouldDirty: true });
+        }
+        if (formValues.totalMachineQtyFromLC !== lc.totalMachineQty || formValues.totalMachineQtyFromLC === undefined) {
+            setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true, shouldDirty: true });
+        }
+        if (formValues.proformaInvoiceNumber !== lc.proformaInvoiceNumber || !formValues.proformaInvoiceNumber) {
+            setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true, shouldDirty: true });
+        }
+        const newInvoiceDate = lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined;
+        if ((formValues.invoiceDate ? formValues.invoiceDate.getTime() : null) !== (newInvoiceDate ? newInvoiceDate.getTime() : null) || (formValues.invoiceDate === undefined && newInvoiceDate)) {
+            setValue("invoiceDate", newInvoiceDate, { shouldValidate: true, shouldDirty: true });
+        }
+        const newEtdDate = lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined;
+        if ((formValues.etdDate ? formValues.etdDate.getTime() : null) !== (newEtdDate ? newEtdDate.getTime() : null) || (formValues.etdDate === undefined && newEtdDate)) {
+            setValue("etdDate", newEtdDate, { shouldValidate: true, shouldDirty: true });
+        }
+        const newEtaDate = lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined;
+        if ((formValues.etaDate ? formValues.etaDate.getTime() : null) !== (newEtaDate ? newEtaDate.getTime() : null) || (formValues.etaDate === undefined && newEtaDate)) {
+            setValue("etaDate", newEtaDate, { shouldValidate: true, shouldDirty: true });
+        }
+        if (formValues.packingListUrl !== lc.packingListUrl || !formValues.packingListUrl) {
+            setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
+        }
 
         setSelectedLcDetails({
             isFirstShipment: lc.isFirstShipment,
@@ -266,19 +305,12 @@ export default function EditInstallationReportPage() {
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData && form.formState.isDirty) { 
-        setValue("documentaryCreditNumber", '', { shouldValidate: true });
-        setValue("totalMachineQtyFromLC", undefined, { shouldValidate: true });
-        setValue("proformaInvoiceNumber", '', { shouldValidate: true });
-        setValue("invoiceDate", undefined, { shouldValidate: true });
-        setValue("etdDate", undefined, { shouldValidate: true });
-        setValue("etaDate", undefined, { shouldValidate: true });
-        setValue("packingListUrl", '', { shouldValidate: true });
-        setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
-        setSelectedCommercialInvoiceDateDisplay(null);
+    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) {
+        // User cleared the C.I. selection, potentially clear auto-filled fields
+        // This logic needs to be careful not to erase user's manual edits if they intend to decouple from L/C
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, form.formState.isDirty, form.getValues]);
+  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues]);
 
   React.useEffect(() => {
     const totalLcQty = Number(watchedTotalLcMachineQty || 0);
@@ -323,9 +355,9 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || form.getValues("applicantId"), 
+      applicantName: selectedApplicant?.label || getValues("applicantId"),
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), 
+      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"),
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
@@ -339,12 +371,12 @@ export default function EditInstallationReportPage() {
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
-        slNo: item.slNo || undefined, 
+        slNo: item.slNo || undefined,
         machineModel: item.machineModel,
         serialNo: item.serialNo,
         ctlBoxModel: item.ctlBoxModel,
         ctlBoxSerial: item.ctlBoxSerial,
-        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any, // Zod ensures this is a Date, so format will work
+        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: pendingQty,
@@ -356,10 +388,12 @@ export default function EditInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
+    // Clean undefined fields
     Object.keys(dataToUpdate).forEach(key => {
-      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-        delete dataToUpdate[key as keyof typeof dataToUpdate];
-      }
+        const typedKey = key as keyof typeof dataToUpdate;
+        if (dataToUpdate[typedKey] === undefined) {
+            delete dataToUpdate[typedKey];
+        }
     });
 
     console.log("Installation Report Data to be updated in Firestore:", dataToUpdate);
@@ -603,8 +637,9 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start my-2">
+
+              <Separator className="my-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   <div className="p-3 border rounded-md bg-muted/30">
                       <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
                       {selectedLcDetails.lcIdForLink ? (
@@ -661,7 +696,7 @@ export default function EditInstallationReportPage() {
                   )}
                   />
               </div>
-              
+
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -819,7 +854,7 @@ export default function EditInstallationReportPage() {
             </div>
             {formState.errors.installationDetails && (
                 <FormMessage>
-                {formState.errors.installationDetails.message || 
+                {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
                  "Please ensure all installation details are valid and serial combinations are unique."}
                 </FormMessage>
@@ -828,7 +863,7 @@ export default function EditInstallationReportPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -916,7 +951,6 @@ export default function EditInstallationReportPage() {
             </div>
             <Separator className="my-6" />
 
-
               <h3 className={cn(sectionHeadingClass)}>
                  <UserCheck className="mr-2 h-5 w-5 text-primary" />
                  Technician and Reporting Engineer Information
@@ -978,5 +1012,3 @@ export default function EditInstallationReportPage() {
     </div>
   );
 }
-
-    
