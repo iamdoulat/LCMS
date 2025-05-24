@@ -39,15 +39,11 @@ export default function InstallationReportsViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [warrantyExpiredCount, setWarrantyExpiredCount] = useState(0);
-  const [warrantyRemainingCount, setWarrantyRemainingCount] = useState(0);
 
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true);
       setFetchError(null);
-      let localExpiredCount = 0;
-      let localRemainingCount = 0;
       const today = new Date();
 
       try {
@@ -66,17 +62,6 @@ export default function InstallationReportsViewPage() {
 
           const installationDetailsProcessed = data.installationDetails?.map((item: any) => {
             const installDateStr = item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate;
-            if (installDateStr) {
-              const installDateObj = parseISO(installDateStr);
-              if (isValid(installDateObj)) {
-                const expiryDate = addDays(installDateObj, 365);
-                if (isBefore(expiryDate, today)) {
-                  localExpiredCount++;
-                } else {
-                  localRemainingCount++;
-                }
-              }
-            }
             return {
               ...item,
               installDate: installDateStr,
@@ -96,8 +81,6 @@ export default function InstallationReportsViewPage() {
           } as InstallationReportDocument;
         });
         setAllReports(fetchedReports);
-        setWarrantyExpiredCount(localExpiredCount);
-        setWarrantyRemainingCount(localRemainingCount);
       } catch (error: any) {
         console.error("Error fetching installation reports: ", error);
         let errorMessage = `Could not fetch installation reports. Please ensure Firestore rules allow reads.`;
@@ -135,31 +118,8 @@ export default function InstallationReportsViewPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "installation_reports", reportId));
-          
-          // Re-calculate warranty counts after deletion
-          let localExpiredCount = 0;
-          let localRemainingCount = 0;
-          const today = new Date();
           const updatedReports = allReports.filter(report => report.id !== reportId);
-          updatedReports.forEach(report => {
-            report.installationDetails?.forEach(detailItem => {
-              if (detailItem.installDate) {
-                const installDateObj = parseISO(detailItem.installDate);
-                if (isValid(installDateObj)) {
-                  const expiryDate = addDays(installDateObj, 365);
-                  if (isBefore(expiryDate, today)) {
-                    localExpiredCount++;
-                  } else {
-                    localRemainingCount++;
-                  }
-                }
-              }
-            });
-          });
-          setAllReports(updatedReports); // Update the main list first
-          setWarrantyExpiredCount(localExpiredCount);
-          setWarrantyRemainingCount(localRemainingCount);
-          
+          setAllReports(updatedReports);
           Swal.fire(
             'Deleted!',
             `Installation report "${reportIdentifier || reportId}" has been removed.`,
@@ -185,7 +145,6 @@ export default function InstallationReportsViewPage() {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
   };
-
 
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -233,10 +192,6 @@ export default function InstallationReportsViewPage() {
               <CardDescription>
                 Browse and manage existing installation reports. Showing {currentItems.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-{Math.min(currentPage * ITEMS_PER_PAGE, allReports.length)} of {allReports.length} entries.
               </CardDescription>
-               <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <p><strong>Warranty Expired:</strong> <span className="text-destructive font-semibold">{warrantyExpiredCount} sets</span></p>
-                <p><strong>Warranty Remaining:</strong> <span className="text-green-600 font-semibold">{warrantyRemainingCount} sets</span></p>
-              </div>
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
               <Button>
@@ -269,87 +224,111 @@ export default function InstallationReportsViewPage() {
             </div>
           ) : (
             <ul className="space-y-4">
-              {currentItems.map((report) => (
-                <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
-                  <div className="absolute top-3 right-3 flex gap-1 z-10">
-                    <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-                      <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
-                        <FileEdit className="h-4 w-4" />
-                        <span className="sr-only">Edit Report</span>
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
-                      onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete Report</span>
-                    </Button>
-                  </div>
+              {currentItems.map((report) => {
+                let reportExpiredCount = 0;
+                let reportRemainingCount = 0;
+                const today = new Date();
+                report.installationDetails?.forEach(item => {
+                  if (item.installDate) {
+                    const installDateObj = parseISO(item.installDate);
+                    if (isValid(installDateObj)) {
+                      const expiryDate = addDays(installDateObj, 365);
+                      if (isBefore(expiryDate, today)) {
+                        reportExpiredCount++;
+                      } else {
+                        reportRemainingCount++;
+                      }
+                    }
+                  }
+                });
 
-                  <div className="mb-2 text-sm pr-16">
-                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline">
-                            C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                return (
+                  <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                    <div className="absolute top-3 right-3 flex gap-1 z-10">
+                      <Button variant="outline" size="icon" className="h-7 w-7" asChild>
+                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
+                          <FileEdit className="h-4 w-4" />
+                          <span className="sr-only">Edit Report</span>
                         </Link>
-                        {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
-                            <span className="text-xs text-muted-foreground">
-                            (Date: {formatDisplayDate(report.commercialInvoiceDate)})
-                            </span>
-                        )}
-                        <span className="font-medium text-foreground">
-                            L/C: {formatReportValue(report.documentaryCreditNumber)}
-                        </span>
-                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Applicant: </span>
-                      <span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Beneficiary: </span>
-                      <span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-3">
-                    <div>
-                      <span className="text-muted-foreground">Total L/C Machine Qty: </span>
-                      <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Machine Installed: </span>
-                      <span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Machine Pending: </span>
-                      <span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>
-                        {formatReportValue(report.pendingQty)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
-                    {report.createdAt && (
-                      <span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>
-                    )}
-                    {report.packingListUrl && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="h-7 px-2 py-1 text-xs"
-                        onClick={() => handleViewUrl(report.packingListUrl)}
-                      >
-                        <FileText className="mr-1.5 h-3 w-3" /> Packing List
                       </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
+                        onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete Report</span>
+                      </Button>
+                    </div>
+
+                    <div className="mb-2 text-sm pr-20"> {/* Added pr-20 for spacing */}
+                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                          <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
+                              C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                          </Link>
+                          {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
+                              <span className="text-xs text-muted-foreground">
+                              (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                              </span>
+                          )}
+                          <span className="font-medium text-foreground text-base">
+                              L/C: {formatReportValue(report.documentaryCreditNumber)}
+                          </span>
+                       </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-1 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Applicant: </span>
+                        <span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Beneficiary: </span>
+                        <span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
+                      <div>
+                        <span className="text-muted-foreground">Total L/C Machine Qty: </span>
+                        <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Machine Installed: </span>
+                        <span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Machine Pending: </span>
+                        <span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>
+                          {formatReportValue(report.pendingQty)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
+                        <p><strong className="text-muted-foreground">Warranty Expired:</strong> <span className="font-medium text-destructive">{reportExpiredCount} sets</span></p>
+                        <p><strong className="text-muted-foreground">Warranty Remaining:</strong> <span className="font-medium text-green-600">{reportRemainingCount} sets</span></p>
+                    </div>
+
+                    <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
+                      {report.createdAt && (
+                        <span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>
+                      )}
+                      {report.packingListUrl && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 px-2 py-1 text-xs"
+                          onClick={() => handleViewUrl(report.packingListUrl)}
+                        >
+                          <FileText className="mr-1.5 h-3 w-3" /> Packing List
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {totalPages > 1 && (
@@ -382,5 +361,6 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+    
 
     
