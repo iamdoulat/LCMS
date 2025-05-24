@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label'; // Added import
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
@@ -18,12 +19,12 @@ import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear } from 'date-fns';
 
 const ITEMS_PER_PAGE = 9;
-const ALL_YEARS_VALUE = "__ALL_YEARS__";
+const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
 
 
 const formatDisplayDate = (dateString?: string | null) => {
@@ -165,7 +166,7 @@ export default function InstallationReportsViewPage() {
             return isValid(ciDate) && getYear(ciDate) === yearNum;
           } catch { return false; }
         }
-        return false; // Or fallback to report.createdAt year if desired
+        return false; 
       });
     }
 
@@ -304,7 +305,7 @@ export default function InstallationReportsViewPage() {
                 <div>
                   <Label htmlFor="yearFilterInstall" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (C.I. Date)</Label>
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
                       {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                     </SelectContent>
@@ -373,20 +374,20 @@ export default function InstallationReportsViewPage() {
                       </Button>
                     </div>
 
-                    <div className="mb-2 text-sm pr-20">
-                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                          <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
-                              C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                          </Link>
-                          {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
-                              <span className="text-xs text-muted-foreground">
-                              (Date: {formatDisplayDate(report.commercialInvoiceDate)})
-                              </span>
-                          )}
-                          <span className="font-medium text-foreground text-base">
-                              L/C: {formatReportValue(report.documentaryCreditNumber)}
+                     <div className="mb-2 text-sm pr-20">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
+                          C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                        </Link>
+                        {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
+                          <span className="text-xs text-muted-foreground">
+                            (Date: {formatDisplayDate(report.commercialInvoiceDate)})
                           </span>
-                       </div>
+                        )}
+                        <span className="font-medium text-foreground text-base">
+                          L/C: {formatReportValue(report.documentaryCreditNumber)}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-1 text-sm">
@@ -400,7 +401,7 @@ export default function InstallationReportsViewPage() {
                       <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
                         <p><strong className="text-muted-foreground">Warranty Expired:</strong> <span className="font-medium text-destructive">{reportExpiredCount} sets</span></p>
                         <p><strong className="text-muted-foreground">Warranty Remaining:</strong> <span className="font-medium text-green-600">{reportRemainingCount} sets</span></p>
                     </div>
@@ -434,6 +435,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-    
-
-    
