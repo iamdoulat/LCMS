@@ -38,7 +38,7 @@ const installationDetailItemSchema = z.object({
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Serial No. is required."),
   ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
   installDate: z.date({ required_error: "Install Date is required." }),
 });
 
@@ -81,6 +81,11 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+  if (currency && typeof value === 'number' && !isNaN(value)) {
+    displayValue = `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  } else if (currency) {
+    displayValue = `${currency} N/A`;
+  }
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -180,8 +185,8 @@ export default function NewInstallationReportPage() {
               label: data.commercialInvoiceNumber,
               lcData: { 
                 id: doc.id, ...data, 
-                commercialInvoiceDate: data.commercialInvoiceDate, // ensure this is passed
-                packingListUrl: data.packingListUrl, // ensure this is passed
+                commercialInvoiceDate: data.commercialInvoiceDate,
+                packingListUrl: data.packingListUrl,
               } as LcForInvoiceDropdownOption['lcData'],
             });
           }
@@ -403,7 +408,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -414,7 +419,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -565,7 +570,6 @@ export default function NewInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {/* Amount fields are hidden {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)} */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
@@ -580,7 +584,7 @@ export default function NewInstallationReportPage() {
                 </Accordion>
               )}
 
-              <Separator className="my-6" />
+              <Separator className="my-2" />
               <h3 className={cn(sectionHeadingClass)}>
                  <ClipboardList className="mr-2 h-5 w-5 text-primary" />
                  Installation Details
@@ -594,7 +598,7 @@ export default function NewInstallationReportPage() {
                             <TableHead className="text-foreground">Machine Model*</TableHead>
                             <TableHead className="text-foreground">Serial No.*</TableHead>
                             <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
-                            <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
+                            <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
                             <TableHead className="text-foreground">Install Date*</TableHead>
                             <TableHead className="text-foreground">Warranty Remaining</TableHead>
                             <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
@@ -666,7 +670,7 @@ export default function NewInstallationReportPage() {
                                             name={`installationDetails.${index}.installDate`}
                                             render={({ field: itemField }) => (
                                                 <FormItem>
-                                                    <DatePickerField field={itemField} placeholder="Select date" />
+                                                    <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
                                                     <FormMessage className="text-xs" />
                                                 </FormItem>
                                             )}
@@ -725,7 +729,7 @@ export default function NewInstallationReportPage() {
                     )}
                 />
               </div>
-              <Separator className="my-6" />
+              <Separator className="my-2" />
 
               <h3 className={cn(sectionHeadingClass)}>
                  <UserCheck className="mr-2 h-5 w-5 text-primary" />
@@ -787,3 +791,4 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
