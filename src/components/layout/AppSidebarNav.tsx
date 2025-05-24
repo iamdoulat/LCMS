@@ -44,9 +44,8 @@ import {
   PanelRightClose,
   Factory,
   Truck,
-  FileEdit,
   PackageCheck,
-  BarChart3, // Added BarChart3 for Reporting
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -73,17 +72,6 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
-    ],
-  },
-];
-
-const reportingManagementNavItems: NavItemGroup[] = [ // New Reporting Section
-  {
-    groupLabel: 'Reporting Management',
-    icon: BarChart3, // Using BarChart3 as a "reports" icon
-    subLinks: [
-      // Add sub-links here later if needed
-      // Example: { href: '/dashboard/reports/sales', label: 'Sales Reports', icon: ListChecks },
     ],
   },
 ];
@@ -117,6 +105,16 @@ const managementNavItems: NavItemGroup[] = [
   },
 ];
 
+const reportingManagementNavItems: NavItemGroup[] = [
+  {
+    groupLabel: 'Reporting Management',
+    icon: BarChart3,
+    subLinks: [
+      // Add sub-links here later if needed
+    ],
+  },
+];
+
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
   { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus },
@@ -129,7 +127,7 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyName = companyName || "Smart Solution";
 
   React.useEffect(() => {
@@ -178,27 +176,6 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    if (!item.subLinks || item.subLinks.length === 0) {
-      // Render as a direct link if no subLinks (useful for single-item groups or future expansion)
-      return (
-        <SidebarMenuItem key={item.groupLabel || `group-${index}`}>
-          <Link href={item.href || '#'} passHref legacyBehavior>
-            <SidebarMenuButton
-              asChild
-              isActive={item.href ? isActive(item.href) : false}
-              className={cn(item.href && isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-              tooltip={{children: item.groupLabel!, side: "right", className: "ml-2"}}
-            >
-              <a>
-                {IconComponent && <IconComponent className="h-5 w-5 text-primary" />}
-                <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
-              </a>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      );
-    }
-
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -223,30 +200,32 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <SidebarMenu className="gap-0 py-1">
-            {item.subLinks.map((subLink) => (
-              <SidebarMenuItem key={subLink.href}>
-                <Link href={subLink.href} passHref legacyBehavior>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === subLink.href}
-                    className={cn(
-                      pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                      "h-8 text-xs"
-                    )}
-                    tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
-                  >
-                    <a>
-                      {subLink.icon && <subLink.icon className="h-4 w-4" />}
-                      <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </AccordionContent>
+        {item.subLinks && item.subLinks.length > 0 && (
+          <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+            <SidebarMenu className="gap-0 py-1">
+              {item.subLinks.map((subLink) => (
+                <SidebarMenuItem key={subLink.href}>
+                  <Link href={subLink.href} passHref legacyBehavior>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === subLink.href}
+                      className={cn(
+                        pathname === subLink.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                        "h-8 text-xs"
+                      )}
+                      tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
+                    >
+                      <a>
+                        {subLink.icon && <subLink.icon className="h-4 w-4" />}
+                        <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </AccordionContent>
+        )}
       </AccordionItem>
     )
   };
@@ -257,7 +236,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext}
+                src={companyLogoUrlFromSettings}
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -279,6 +258,7 @@ export function AppSidebarNav() {
                     size="icon"
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
+                    aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
                  >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
@@ -317,16 +297,6 @@ export function AppSidebarNav() {
         </Accordion>
 
         <SidebarSeparator />
-        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Reporting Management
-        </SidebarGroupLabel>
-        <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-            {reportingManagementNavItems.map(renderNavGroup)}
-        </Accordion>
-
-
-        <SidebarSeparator />
-
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Management
@@ -337,7 +307,14 @@ export function AppSidebarNav() {
         </SidebarGroup>
 
         <SidebarSeparator />
+        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Reporting Management
+        </SidebarGroupLabel>
+        <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+            {reportingManagementNavItems.map(renderNavGroup)}
+        </Accordion>
 
+        <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Settings
@@ -392,7 +369,6 @@ interface NavItem {
 
 interface NavItemGroup {
   groupLabel?: string;
-  href?: string; // Added for top-level non-accordion groups
   icon: React.ElementType;
   subLinks?: Array<{
     href: string;
