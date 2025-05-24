@@ -84,7 +84,7 @@ const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) =>
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const renderPartialDetailReadOnly = (label: string, value?: number | string, currency?: Currency) => {
+const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
   if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
       displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue));
@@ -213,6 +213,7 @@ export default function NewInstallationReportPage() {
         setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
         setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
+        setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
         
         setSelectedLcDetails({
             isFirstShipment: lc.isFirstShipment,
@@ -238,6 +239,7 @@ export default function NewInstallationReportPage() {
       setValue("invoiceDate", undefined, { shouldValidate: true });
       setValue("etdDate", undefined, { shouldValidate: true });
       setValue("etaDate", undefined, { shouldValidate: true });
+      setValue("packingListUrl", '', { shouldValidate: true });
       setSelectedLcDetails({
         lcIdForLink: null,
         partialShipmentAllowed: "No",
@@ -290,6 +292,7 @@ export default function NewInstallationReportPage() {
       icon: "info",
     });
     setIsSubmitting(false);
+    // reset(); // Consider if form should reset after simulated submission
   }
 
   const handleViewUrl = (url: string | undefined | null) => {
@@ -396,7 +399,6 @@ export default function NewInstallationReportPage() {
                     </FormItem>
                   )}
                </div>
-
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
@@ -566,6 +568,8 @@ export default function NewInstallationReportPage() {
                                 {index > 0 && <Separator className="my-2" />}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                     {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                    {/* Amount fields are hidden as per user request */}
+                                    {/* {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Amt`, partial.amount, selectedLcDetails.currency)} */}
                                     {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                     {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W. (KGS)`, partial.netW)}
                                     {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W. (KGS)`, partial.grossW)}
@@ -606,8 +610,8 @@ export default function NewInstallationReportPage() {
                             let warrantyDisplay = "N/A";
                             if (installDateValue && isValid(installDateValue)) {
                                 const expiryDate = addDays(installDateValue, 365);
-                                const remainingDays = differenceInDays(expiryDate, new Date());
-                                warrantyDisplay = remainingDays > 0 ? `${remainingDays} days remaining` : "Expired";
+                                const remainingDays = differenceInDays(new Date(), expiryDate); // Corrected calculation
+                                warrantyDisplay = remainingDays < 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
                             }
                             return (
                                 <TableRow key={field.id}>
@@ -707,8 +711,8 @@ export default function NewInstallationReportPage() {
                     name="missingItemInfo"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing Item Information</FormLabel>
-                        <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} /></FormControl>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing and Short Shipment Item Information</FormLabel>
+                        <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -719,7 +723,7 @@ export default function NewInstallationReportPage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found Information</FormLabel>
-                        <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} /></FormControl>
+                        <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -761,7 +765,7 @@ export default function NewInstallationReportPage() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
-                    <FormControl><Textarea placeholder="Enter any notes regarding the installation" rows={4} {...field} /></FormControl>
+                    <FormControl><Textarea placeholder="Enter any notes regarding the installation" rows={4} {...field} value={field.value ?? ""} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
