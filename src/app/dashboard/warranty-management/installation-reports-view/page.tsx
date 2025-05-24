@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -12,9 +12,19 @@ import type { InstallationReportDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 const ITEMS_PER_PAGE = 9;
+
+const formatDisplayDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
+  } catch (e) {
+    return 'N/A';
+  }
+};
 
 const formatReportValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
   if (value === undefined || value === null || String(value).trim() === '') {
@@ -40,18 +50,17 @@ export default function InstallationReportsViewPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          // Convert Firestore Timestamps to ISO strings for dates if they exist
           const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
-          const invoiceDateISO = data.invoiceDate?.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
-          const etdDateISO = data.etdDate?.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
-          const etaDateISO = data.etaDate?.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
+          const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
+          const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
+          const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
+          const etaDateISO = data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
 
           const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
             ...item,
-            installDate: item.installDate?.toDate ? item.installDate.toDate().toISOString() : item.installDate,
+            installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
           })) || [];
-
 
           return {
             id: docSnap.id,
@@ -59,6 +68,7 @@ export default function InstallationReportsViewPage() {
             createdAt: createdAtISO,
             updatedAt: updatedAtISO,
             invoiceDate: invoiceDateISO,
+            commercialInvoiceDate: commercialInvoiceDateISO,
             etdDate: etdDateISO,
             etaDate: etaDateISO,
             installationDetails: installationDetailsProcessed,
@@ -192,62 +202,79 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
               {currentItems.map((report) => (
-                <Card key={report.id} className="flex flex-col justify-between shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-primary truncate" title={report.commercialInvoiceNumber || report.documentaryCreditNumber || 'Report'}>
-                      C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      L/C: {formatReportValue(report.documentaryCreditNumber)}
-                      {report.createdAt && (
-                        <span className="block mt-1">Created: {format(new Date(report.createdAt as string), 'PPP')}</span>
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-sm flex-grow">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2">
-                      <div>
-                        <p className="font-medium text-muted-foreground">Applicant:</p>
-                        <p className="truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-muted-foreground">Beneficiary:</p>
-                        <p className="truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-muted-foreground">L/C Qty:</p>
-                        <p>{formatReportValue(report.totalMachineQtyFromLC)}</p>
-                      </div>
-                       <div>
-                        <p className="font-medium text-muted-foreground">Installed:</p>
-                        <p>{formatReportValue(report.totalInstalledQty)}</p>
-                      </div>
-                      <div className="col-span-2 sm:col-span-1">
-                        <p className="font-medium text-muted-foreground">Pending:</p>
-                        <p className="font-bold text-destructive">{formatReportValue(report.pendingQty)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-end gap-2 border-t pt-3">
-                    <Button variant="outline" size="sm" asChild>
+                <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                  <div className="absolute top-3 right-3 flex gap-1 z-10">
+                    <Button variant="outline" size="icon" className="h-7 w-7" asChild>
                       <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
-                        <FileEdit className="mr-1.5 h-4 w-4" /> Edit
+                        <FileEdit className="h-4 w-4" />
+                        <span className="sr-only">Edit Report</span>
                       </Link>
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
                       onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}
                     >
-                      <Trash2 className="mr-1.5 h-4 w-4" /> Delete
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete Report</span>
                     </Button>
-                  </CardFooter>
-                </Card>
+                  </div>
+                  
+                  <div className="mb-2 text-sm pr-16"> {/* Added pr-16 to avoid overlap with action buttons */}
+                    <div className="flex flex-wrap items-baseline gap-x-3">
+                      <span className="font-semibold text-primary">
+                        C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                      </span>
+                      {report.commercialInvoiceNumber && report.commercialInvoiceDate && (
+                        <span className="text-xs text-muted-foreground">
+                          (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                        </span>
+                      )}
+                      <span className="font-semibold text-primary">
+                        L/C: {formatReportValue(report.documentaryCreditNumber)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Applicant: </span>
+                      <span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Beneficiary: </span>
+                      <span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-2">
+                    <div>
+                      <span className="text-muted-foreground">Total L/C Qty: </span>
+                      <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Installed: </span>
+                      <span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Pending: </span>
+                      <span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>
+                        {formatReportValue(report.pendingQty)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed">
+                    {report.createdAt && (
+                      <span>Created: {format(new Date(report.createdAt as string), 'PPP p')}</span>
+                    )}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-6">
