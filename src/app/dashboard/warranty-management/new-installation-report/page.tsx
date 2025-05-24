@@ -17,10 +17,11 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, DollarSign, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -49,7 +50,6 @@ const installationReportSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Packing List" }).optional()
   ),
-  // Add other installation report specific fields here later
 });
 
 type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
@@ -61,6 +61,8 @@ export default function NewInstallationReportPage() {
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
+  const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
+
 
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
@@ -68,7 +70,6 @@ export default function NewInstallationReportPage() {
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: PartialShipmentAllowed;
-    // Partial Shipment Details for Display
     firstPartialQty?: number;
     firstPartialAmount?: number;
     firstPartialPkgs?: number;
@@ -87,7 +88,7 @@ export default function NewInstallationReportPage() {
     thirdPartialNetWeight?: number;
     thirdPartialGrossWeight?: number;
     thirdPartialCbm?: number;
-  }>({ 
+  }>({
     lcIdForLink: null,
     partialShipmentAllowed: "No",
     firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
@@ -181,7 +182,6 @@ export default function NewInstallationReportPage() {
         });
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Clear fields if no C.I. is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -190,7 +190,7 @@ export default function NewInstallationReportPage() {
       setValue("invoiceDate", undefined, { shouldValidate: true });
       setValue("etdDate", undefined, { shouldValidate: true });
       setValue("etaDate", undefined, { shouldValidate: true });
-      setSelectedLcDetails({ 
+      setSelectedLcDetails({
         lcIdForLink: null,
         partialShipmentAllowed: "No",
         firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
@@ -205,17 +205,17 @@ export default function NewInstallationReportPage() {
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    
+
     const dataToLog = {
       ...data,
       applicantName: selectedApplicant?.label,
       beneficiaryName: selectedBeneficiary?.label,
     };
     console.log("Installation Report Data (Simulated Save):", dataToLog);
-    
+
     Swal.fire({
       title: "Form Submitted (Simulated)",
-      html: `Installation Report data has been logged to the console. 
+      html: `Installation Report data has been logged to the console.
              <br/><br/>Selected L/C ID (via C.I. No.): <strong>${data.selectedCommercialInvoiceLcId || "None"}</strong>
              <br/>Applicant: <strong>${selectedApplicant?.label || "N/A"}</strong>
              <br/>Beneficiary: <strong>${selectedBeneficiary?.label || "N/A"}</strong>
@@ -268,7 +268,7 @@ export default function NewInstallationReportPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              
+
               <h3 className={cn(sectionHeadingClass)}>
                 <FileText className="mr-2 h-5 w-5 text-primary" />
                 L/C & Invoice Details
@@ -314,7 +314,7 @@ export default function NewInstallationReportPage() {
                   )}
                 />
               </div>
-              
+
               <FormField
                   control={control}
                   name="selectedCommercialInvoiceLcId"
@@ -405,7 +405,6 @@ export default function NewInstallationReportPage() {
               </div>
 
               <Separator />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {isLcSelected && selectedLcDetails.lcIdForLink && (
                     <div className="mt-2 p-3 border rounded-md bg-muted/30">
@@ -464,17 +463,32 @@ export default function NewInstallationReportPage() {
                 />
               </div>
               <Separator />
-              
+
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-                <Card className="mt-4 bg-muted/20">
-                    <CardHeader className="pb-2 pt-4">
-                        <CardTitle className="text-md font-semibold text-foreground flex items-center">
-                            <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                            Partial Shipment Breakdown (from L/C)
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-2 pb-4">
-                        <div className="text-xs text-muted-foreground">(Read-only values from selected L/C)</div>
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  value={activePartialShipmentAccordion}
+                  onValueChange={setActivePartialShipmentAccordion}
+                >
+                  <AccordionItem value="partialShipmentDetails" className="border rounded-md shadow-sm bg-muted/20">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center text-md font-semibold text-foreground">
+                          <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                          Partial Shipment Breakdown (from L/C)
+                        </div>
+                        {activePartialShipmentAccordion === "partialShipmentDetails" ? (
+                          <Minus className="h-5 w-5 text-primary" />
+                        ) : (
+                          <Plus className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pt-2 pb-4">
+                      <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
+                      <div className="space-y-3">
                         {[
                             { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, amount: selectedLcDetails.firstPartialAmount, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
                             { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, amount: selectedLcDetails.secondPartialAmount, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
@@ -494,11 +508,11 @@ export default function NewInstallationReportPage() {
                                 </React.Fragment>
                             ) : null
                         ))}
-                    </CardContent>
-                </Card>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               )}
-              
-              {/* Add other installation report sections and fields here */}
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
                 {isSubmitting ? (
@@ -520,3 +534,4 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
