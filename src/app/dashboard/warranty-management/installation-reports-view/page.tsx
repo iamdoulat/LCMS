@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label'; // Added import
+import { Label } from '@/components/ui/label';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
@@ -14,17 +14,17 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { InstallationReportDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear } from 'date-fns';
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 9; // Display 9 cards per page
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
 
 const formatDisplayDate = (dateString?: string | null) => {
@@ -78,29 +78,22 @@ export default function InstallationReportsViewPage() {
         const reportsSnapshot = await getDocs(reportsQuery);
         const fetchedReports = reportsSnapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
-          const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
+          const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt && isValid(parseISO(data.createdAt)) ? parseISO(data.createdAt) : new Date(0));
           
-          const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
-          const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
-          const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
-          const etaDateISO = data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
-
-          const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
-            ...item,
-            installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
-          })) || [];
-
           return {
             id: docSnap.id,
             ...data,
-            createdAt: createdAtISO,
-            updatedAt: updatedAtISO,
-            invoiceDate: invoiceDateISO,
-            commercialInvoiceDate: commercialInvoiceDateISO,
-            etdDate: etdDateISO,
-            etaDate: etaDateISO,
-            installationDetails: installationDetailsProcessed,
+            // Ensure dates are consistently strings for initial state, form handling will convert if needed
+            createdAt: isValid(createdAt) ? format(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A',
+            updatedAt: data.updatedAt instanceof Timestamp ? format(data.updatedAt.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : (data.updatedAt && isValid(parseISO(data.updatedAt)) ? format(parseISO(data.updatedAt), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A'),
+            invoiceDate: data.invoiceDate && isValid(parseISO(data.invoiceDate)) ? data.invoiceDate : undefined,
+            commercialInvoiceDate: data.commercialInvoiceDate && isValid(parseISO(data.commercialInvoiceDate)) ? data.commercialInvoiceDate : undefined,
+            etdDate: data.etdDate && isValid(parseISO(data.etdDate)) ? data.etdDate : undefined,
+            etaDate: data.etaDate && isValid(parseISO(data.etaDate)) ? data.etaDate : undefined,
+            installationDetails: data.installationDetails?.map((item: any) => ({
+                ...item,
+                installDate: item.installDate && isValid(parseISO(item.installDate)) ? item.installDate : undefined,
+            })) || [],
           } as InstallationReportDocument;
         });
         setAllReports(fetchedReports);
@@ -215,12 +208,9 @@ export default function InstallationReportsViewPage() {
     setCurrentPage(1);
   };
 
-  const currentItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return displayedReports.slice(startIndex, endIndex);
-  }, [displayedReports, currentPage]);
-
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = displayedReports.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(displayedReports.length / ITEMS_PER_PAGE);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -253,7 +243,7 @@ export default function InstallationReportsViewPage() {
               </CardTitle>
               <CardDescription>
                 Browse, filter, and manage existing installation reports. 
-                Showing {currentItems.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-{Math.min(currentPage * ITEMS_PER_PAGE, displayedReports.length)} of {displayedReports.length} entries.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedReports.length)} of {displayedReports.length} entries.
               </CardDescription>
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
@@ -307,7 +297,7 @@ export default function InstallationReportsViewPage() {
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
                     <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
-                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year === ALL_YEARS_VALUE ? "All Years" : year}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -374,7 +364,7 @@ export default function InstallationReportsViewPage() {
                       </Button>
                     </div>
 
-                     <div className="mb-2 text-sm pr-20">
+                    <div className="mb-2 text-sm pr-20">
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
                           C.I.: {formatReportValue(report.commercialInvoiceNumber)}
@@ -395,7 +385,7 @@ export default function InstallationReportsViewPage() {
                       <div><span className="text-muted-foreground">Beneficiary: </span><span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span></div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
                       <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
                       <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
                       <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
@@ -435,3 +425,6 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
+
+    
