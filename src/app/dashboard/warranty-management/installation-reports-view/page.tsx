@@ -8,11 +8,11 @@ import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronL
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { InstallationReportDocument } from '@/types';
+import type { InstallationReportDocument, InstallationDetailItem } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, addDays, isBefore } from 'date-fns';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -39,11 +39,17 @@ export default function InstallationReportsViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [warrantyExpiredCount, setWarrantyExpiredCount] = useState(0);
+  const [warrantyRemainingCount, setWarrantyRemainingCount] = useState(0);
 
   useEffect(() => {
     const fetchReports = async () => {
       setIsLoading(true);
       setFetchError(null);
+      let localExpiredCount = 0;
+      let localRemainingCount = 0;
+      const today = new Date();
+
       try {
         const reportsCollectionRef = collection(firestore, "installation_reports");
         const q = query(reportsCollectionRef, orderBy("createdAt", "desc"));
@@ -53,16 +59,29 @@ export default function InstallationReportsViewPage() {
           const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
           
-          // Safely access nested date fields if they exist
           const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
           const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
           const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
           const etaDateISO = data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
 
-          const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
-            ...item,
-            installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
-          })) || [];
+          const installationDetailsProcessed = data.installationDetails?.map((item: any) => {
+            const installDateStr = item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate;
+            if (installDateStr) {
+              const installDateObj = parseISO(installDateStr);
+              if (isValid(installDateObj)) {
+                const expiryDate = addDays(installDateObj, 365);
+                if (isBefore(expiryDate, today)) {
+                  localExpiredCount++;
+                } else {
+                  localRemainingCount++;
+                }
+              }
+            }
+            return {
+              ...item,
+              installDate: installDateStr,
+            };
+          }) || [];
 
           return {
             id: docSnap.id,
@@ -77,6 +96,8 @@ export default function InstallationReportsViewPage() {
           } as InstallationReportDocument;
         });
         setAllReports(fetchedReports);
+        setWarrantyExpiredCount(localExpiredCount);
+        setWarrantyRemainingCount(localRemainingCount);
       } catch (error: any) {
         console.error("Error fetching installation reports: ", error);
         let errorMessage = `Could not fetch installation reports. Please ensure Firestore rules allow reads.`;
@@ -114,7 +135,31 @@ export default function InstallationReportsViewPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "installation_reports", reportId));
-          setAllReports(prevReports => prevReports.filter(report => report.id !== reportId));
+          
+          // Re-calculate warranty counts after deletion
+          let localExpiredCount = 0;
+          let localRemainingCount = 0;
+          const today = new Date();
+          const updatedReports = allReports.filter(report => report.id !== reportId);
+          updatedReports.forEach(report => {
+            report.installationDetails?.forEach(detailItem => {
+              if (detailItem.installDate) {
+                const installDateObj = parseISO(detailItem.installDate);
+                if (isValid(installDateObj)) {
+                  const expiryDate = addDays(installDateObj, 365);
+                  if (isBefore(expiryDate, today)) {
+                    localExpiredCount++;
+                  } else {
+                    localRemainingCount++;
+                  }
+                }
+              }
+            });
+          });
+          setAllReports(updatedReports); // Update the main list first
+          setWarrantyExpiredCount(localExpiredCount);
+          setWarrantyRemainingCount(localRemainingCount);
+          
           Swal.fire(
             'Deleted!',
             `Installation report "${reportIdentifier || reportId}" has been removed.`,
@@ -188,6 +233,10 @@ export default function InstallationReportsViewPage() {
               <CardDescription>
                 Browse and manage existing installation reports. Showing {currentItems.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-{Math.min(currentPage * ITEMS_PER_PAGE, allReports.length)} of {allReports.length} entries.
               </CardDescription>
+               <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <p><strong>Warranty Expired:</strong> <span className="text-destructive font-semibold">{warrantyExpiredCount} sets</span></p>
+                <p><strong>Warranty Remaining:</strong> <span className="text-green-600 font-semibold">{warrantyRemainingCount} sets</span></p>
+              </div>
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
               <Button>
@@ -240,12 +289,12 @@ export default function InstallationReportsViewPage() {
                     </Button>
                   </div>
 
-                  <div className="mb-2 text-sm pr-16"> {/* Added pr-16 for spacing from action buttons */}
+                  <div className="mb-2 text-sm pr-16">
                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline">
                             C.I.: {formatReportValue(report.commercialInvoiceNumber)}
                         </Link>
-                        {report.commercialInvoiceNumber && report.commercialInvoiceDate && (
+                        {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
                             <span className="text-xs text-muted-foreground">
                             (Date: {formatDisplayDate(report.commercialInvoiceDate)})
                             </span>
@@ -286,7 +335,7 @@ export default function InstallationReportsViewPage() {
 
                   <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
                     {report.createdAt && (
-                      <span>Created: {isValid(new Date(report.createdAt as string)) ? format(new Date(report.createdAt as string), 'PPP p') : 'N/A'}</span>
+                      <span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>
                     )}
                     {report.packingListUrl && (
                       <Button
@@ -333,3 +382,5 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
+    
