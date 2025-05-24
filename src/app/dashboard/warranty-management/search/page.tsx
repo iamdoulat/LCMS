@@ -47,7 +47,7 @@ export default function WarrantySearchPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <Card className="shadow-xl max-w-4xl mx-auto">
+      <Card className="shadow-xl max-w-6xl mx-auto"> {/* Changed from max-w-4xl */}
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -105,7 +105,7 @@ export default function WarrantySearchPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl max-w-4xl mx-auto">
+      <Card className="shadow-xl max-w-6xl mx-auto"> {/* Changed from max-w-4xl */}
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
              <BarChart3 className="h-6 w-6 text-primary"/>
