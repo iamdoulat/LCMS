@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -12,9 +12,9 @@ import type { InstallationReportDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns'; // For createdAt/updatedAt if needed for display
+import { format } from 'date-fns';
 
-const ITEMS_PER_PAGE = 9; // Adjusted for card layout, e.g., 3x3 grid
+const ITEMS_PER_PAGE = 9;
 
 const formatReportValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
   if (value === undefined || value === null || String(value).trim() === '') {
@@ -40,7 +40,6 @@ export default function InstallationReportsViewPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
-          // Ensure createdAt and updatedAt are serializable if they are Timestamps
           return {
             id: docSnap.id,
             ...data,
@@ -54,6 +53,8 @@ export default function InstallationReportsViewPage() {
         let errorMessage = `Could not fetch installation reports. Please ensure Firestore rules allow reads.`;
         if (error.message && (error.message.toLowerCase().includes("index") || error.message.toLowerCase().includes("create_composite"))) {
             errorMessage = `Could not fetch installation reports: A Firestore index might be required. Please check the browser console for a link to create it if prompted. The query orders by 'createdAt' (descending).`;
+        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+           errorMessage = `Could not fetch installation reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
