@@ -4,19 +4,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { InstallationReportDocument, InstallationDetailItem } from '@/types';
+import type { InstallationReportDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format, parseISO, isValid, addDays, isBefore } from 'date-fns';
+import { format, parseISO, isValid, addDays, isBefore, getYear } from 'date-fns';
 
 const ITEMS_PER_PAGE = 9;
+const ALL_YEARS_VALUE = "__ALL_YEARS__";
+const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
+const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
-const formatDisplayDate = (dateString?: string) => {
+const currentSystemYear = new Date().getFullYear();
+const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
+
+
+const formatDisplayDate = (dateString?: string | null) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
@@ -36,21 +46,36 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
 export default function InstallationReportsViewPage() {
   const router = useRouter();
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
+  const [displayedReports, setDisplayedReports] = useState<InstallationReportDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Filter states
+  const [filterCommercialInvoiceNumber, setFilterCommercialInvoiceNumber] = useState('');
+  const [filterApplicantId, setFilterApplicantId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
+  const [filterLcNumber, setFilterLcNumber] = useState('');
+  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
+
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchReportsAndOptions = async () => {
       setIsLoading(true);
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
       setFetchError(null);
-      const today = new Date();
 
       try {
+        // Fetch Installation Reports
         const reportsCollectionRef = collection(firestore, "installation_reports");
-        const q = query(reportsCollectionRef, orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        const fetchedReports = querySnapshot.docs.map(docSnap => {
+        const reportsQuery = query(reportsCollectionRef, orderBy("createdAt", "desc"));
+        const reportsSnapshot = await getDocs(reportsQuery);
+        const fetchedReports = reportsSnapshot.docs.map(docSnap => {
           const data = docSnap.data();
           const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
@@ -60,13 +85,10 @@ export default function InstallationReportsViewPage() {
           const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
           const etaDateISO = data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
 
-          const installationDetailsProcessed = data.installationDetails?.map((item: any) => {
-            const installDateStr = item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate;
-            return {
-              ...item,
-              installDate: installDateStr,
-            };
-          }) || [];
+          const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
+            ...item,
+            installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
+          })) || [];
 
           return {
             id: docSnap.id,
@@ -81,28 +103,75 @@ export default function InstallationReportsViewPage() {
           } as InstallationReportDocument;
         });
         setAllReports(fetchedReports);
+
+        // Fetch Applicants (Customers)
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        setIsLoadingApplicants(false);
+
+        // Fetch Beneficiaries (Suppliers)
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+        setIsLoadingBeneficiaries(false);
+
       } catch (error: any) {
-        console.error("Error fetching installation reports: ", error);
-        let errorMessage = `Could not fetch installation reports. Please ensure Firestore rules allow reads.`;
-        if (error.message && (error.message.toLowerCase().includes("index") || error.message.toLowerCase().includes("create_composite"))) {
-            errorMessage = `Could not fetch installation reports: A Firestore index might be required. Please check the browser console for a link to create it if prompted. The query orders by 'createdAt' (descending).`;
-        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-           errorMessage = `Could not fetch installation reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
+        console.error("Error fetching installation reports or options: ", error);
+        let errorMessage = `Could not fetch data. Please ensure Firestore rules allow reads.`;
+        if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
+           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
-        Swal.fire({
-          title: "Fetch Error",
-          html: errorMessage.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>'),
-          icon: "error",
-        });
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchReports();
+    fetchReportsAndOptions();
   }, []);
+
+  useEffect(() => {
+    let filtered = [...allReports];
+
+    if (filterCommercialInvoiceNumber) {
+      filtered = filtered.filter(report => 
+        report.commercialInvoiceNumber?.toLowerCase().includes(filterCommercialInvoiceNumber.toLowerCase())
+      );
+    }
+    if (filterApplicantId && filterApplicantId !== ALL_APPLICANTS_VALUE) {
+      filtered = filtered.filter(report => report.applicantId === filterApplicantId);
+    }
+    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
+      filtered = filtered.filter(report => report.beneficiaryId === filterBeneficiaryId);
+    }
+    if (filterLcNumber) {
+      filtered = filtered.filter(report => 
+        report.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase())
+      );
+    }
+    if (filterYear && filterYear !== ALL_YEARS_VALUE) {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(report => {
+        if (report.commercialInvoiceDate) {
+          try {
+            const ciDate = parseISO(report.commercialInvoiceDate);
+            return isValid(ciDate) && getYear(ciDate) === yearNum;
+          } catch { return false; }
+        }
+        return false; // Or fallback to report.createdAt year if desired
+      });
+    }
+
+    setDisplayedReports(filtered);
+    setCurrentPage(1);
+  }, [allReports, filterCommercialInvoiceNumber, filterApplicantId, filterBeneficiaryId, filterLcNumber, filterYear]);
 
   const handleDeleteReport = (reportId: string, reportIdentifier?: string) => {
     Swal.fire({
@@ -118,13 +187,8 @@ export default function InstallationReportsViewPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "installation_reports", reportId));
-          const updatedReports = allReports.filter(report => report.id !== reportId);
-          setAllReports(updatedReports);
-          Swal.fire(
-            'Deleted!',
-            `Installation report "${reportIdentifier || reportId}" has been removed.`,
-            'success'
-          );
+          setAllReports(prevReports => prevReports.filter(report => report.id !== reportId));
+          Swal.fire('Deleted!', `Installation report "${reportIdentifier || reportId}" has been removed.`, 'success');
         } catch (error: any) {
           console.error("Error deleting installation report: ", error);
           Swal.fire("Error", `Could not delete report: ${error.message}`, "error");
@@ -136,47 +200,44 @@ export default function InstallationReportsViewPage() {
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
-        new URL(url);
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } catch (e) {
-        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
-      }
-    } else {
-      Swal.fire("No URL", "No URL provided to view.", "info");
-    }
+        new URL(url); window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) { Swal.fire("Invalid URL", "The provided URL is not valid.", "error"); }
+    } else { Swal.fire("No URL", "No URL provided to view.", "info"); }
+  };
+
+  const clearFilters = () => {
+    setFilterCommercialInvoiceNumber('');
+    setFilterApplicantId('');
+    setFilterBeneficiaryId('');
+    setFilterLcNumber('');
+    setFilterYear(ALL_YEARS_VALUE);
+    setCurrentPage(1);
   };
 
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return allReports.slice(startIndex, endIndex);
-  }, [allReports, currentPage]);
+    return displayedReports.slice(startIndex, endIndex);
+  }, [displayedReports, currentPage]);
 
-  const totalPages = Math.ceil(allReports.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(displayedReports.length / ITEMS_PER_PAGE);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
   const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
 
   const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
-    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
-
-    if (totalPages <= maxPagesToShow + 2) {
-      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
-    } else {
-      pageNumbers.push(1);
-      let startPage = Math.max(2, currentPage - halfPagesToShow);
-      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+    const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+    if (totalPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalPages; i++) pageNumbers.push(i); }
+    else {
+      pageNumbers.push(1); let startPage = Math.max(2, currentPage - halfPagesToShow); let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
       if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
       pageNumbers.push(totalPages);
-    }
-    return pageNumbers;
+    } return pageNumbers;
   };
 
   return (
@@ -185,12 +246,13 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
                 View Installation Reports
               </CardTitle>
               <CardDescription>
-                Browse and manage existing installation reports. Showing {currentItems.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-{Math.min(currentPage * ITEMS_PER_PAGE, allReports.length)} of {allReports.length} entries.
+                Browse, filter, and manage existing installation reports. 
+                Showing {currentItems.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-{Math.min(currentPage * ITEMS_PER_PAGE, displayedReports.length)} of {displayedReports.length} entries.
               </CardDescription>
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
@@ -201,6 +263,62 @@ export default function InstallationReportsViewPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label htmlFor="ciNoFilter" className="text-sm font-medium">C.I. Number</Label>
+                  <Input id="ciNoFilter" placeholder="Search by C.I. No..." value={filterCommercialInvoiceNumber} onChange={(e) => setFilterCommercialInvoiceNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="lcNoFilter" className="text-sm font-medium">L/C Number</Label>
+                  <Input id="lcNoFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="applicantFilterInstall" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId || ALL_APPLICANTS_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
+                    disabled={isLoadingApplicants}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="beneficiaryFilterInstall" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
+                    disabled={isLoadingBeneficiaries}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="yearFilterInstall" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (C.I. Date)</Label>
+                  <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="lg:col-start-3">
+                  <Button onClick={clearFilters} variant="outline" className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -219,7 +337,7 @@ export default function InstallationReportsViewPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Installation Reports Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no installation reports in the database yet, or an index is still building.
+                There are no installation reports matching your criteria, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
@@ -247,22 +365,15 @@ export default function InstallationReportsViewPage() {
                     <div className="absolute top-3 right-3 flex gap-1 z-10">
                       <Button variant="outline" size="icon" className="h-7 w-7" asChild>
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
-                          <FileEdit className="h-4 w-4" />
-                          <span className="sr-only">Edit Report</span>
+                          <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Report</span>
                         </Link>
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
-                        onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete Report</span>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}>
+                        <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Report</span>
                       </Button>
                     </div>
 
-                    <div className="mb-2 text-sm pr-20"> {/* Added pr-20 for spacing */}
+                    <div className="mb-2 text-sm pr-20">
                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                           <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
                               C.I.: {formatReportValue(report.commercialInvoiceNumber)}
@@ -279,31 +390,14 @@ export default function InstallationReportsViewPage() {
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-1 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Applicant: </span>
-                        <span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Beneficiary: </span>
-                        <span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span>
-                      </div>
+                      <div><span className="text-muted-foreground">Applicant: </span><span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span></div>
+                      <div><span className="text-muted-foreground">Beneficiary: </span><span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span></div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
-                      <div>
-                        <span className="text-muted-foreground">Total L/C Machine Qty: </span>
-                        <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Machine Installed: </span>
-                        <span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Machine Pending: </span>
-                        <span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>
-                          {formatReportValue(report.pendingQty)}
-                        </span>
-                      </div>
+                      <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
+                      <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
+                      <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
@@ -312,16 +406,9 @@ export default function InstallationReportsViewPage() {
                     </div>
 
                     <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
-                      {report.createdAt && (
-                        <span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>
-                      )}
+                      {report.createdAt && (<span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>)}
                       {report.packingListUrl && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="h-7 px-2 py-1 text-xs"
-                          onClick={() => handleViewUrl(report.packingListUrl)}
-                        >
+                        <Button variant="default" size="sm" className="h-7 px-2 py-1 text-xs" onClick={() => handleViewUrl(report.packingListUrl)}>
                           <FileText className="mr-1.5 h-3 w-3" /> Packing List
                         </Button>
                       )}
@@ -333,27 +420,13 @@ export default function InstallationReportsViewPage() {
           )}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-6">
-              <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>
-                <ChevronLeft className="h-4 w-4" /> Previous
-              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
               {getPageNumbers().map((page, index) =>
                 typeof page === 'number' ? (
-                  <Button
-                    key={`report-page-${page}`}
-                    variant={currentPage === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handlePageChange(page)}
-                    className="w-9 h-9 p-0"
-                  >
-                    {page}
-                  </Button>
-                ) : (
-                  <span key={`ellipsis-report-${index}`} className="px-2 py-1 text-sm">{page}</span>
-                )
+                  <Button key={`report-page-${page}`} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)} className="w-9 h-9 p-0">{page}</Button>
+                ) : (<span key={`ellipsis-report-${index}`} className="px-2 py-1 text-sm">{page}</span>)
               )}
-              <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
-                Next <ChevronRight className="h-4 w-4" />
-              </Button>
+              <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
             </div>
           )}
         </CardContent>
