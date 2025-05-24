@@ -1,49 +1,54 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, DollarSign, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types';
+import { Loader2, DollarSign, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building, CalendarDays, Hash } from 'lucide-react';
+import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, getYear } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
-interface PaymentDoneLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
-  updatedAtDate: Date;
+// Extended interface for LCs on this page to ensure IDs are present for filtering
+interface PaymentDoneLC extends LCEntryDocument {
+  updatedAtDate: Date; // Keep this if you use it for display
 }
 
 const ITEMS_PER_PAGE = 10;
+const ALL_YEARS_VALUE = "__ALL_YEARS_PAYMENT_DONE__";
+const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_PAYMENT_DONE__";
+const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_PAYMENT_DONE__";
+
+const currentSystemYear = new Date().getFullYear();
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
-    case 'Draft':
-      return 'outline';
-    case 'Transmitted':
-      return 'secondary';
-    case 'Shipment Pending':
-      return 'default';
-    case 'Shipping going on':
-      return 'default'; 
-    case 'Payment Done':
-      return 'default'; // Highlight for this page
-    case 'Shipment Done':
-      return 'default';
-    default:
-      return 'outline';
+    case 'Draft': return 'outline';
+    case 'Transmitted': return 'secondary';
+    case 'Shipment Pending': return 'default';
+    case 'Shipping going on': return 'default';
+    case 'Payment Done': return 'default';
+    case 'Shipment Done': return 'default';
+    default: return 'outline';
   }
 };
 
-const formatDisplayDate = (dateString?: string) => {
+const formatDisplayDate = (dateString?: string | Date) => {
   if (!dateString) return 'N/A';
   try {
-    const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -56,10 +61,23 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 
 export default function LCPaymentDonePage() {
-  const [paymentDoneLCs, setPaymentDoneLCs] = useState<PaymentDoneLC[]>([]);
+  const [allPaymentDoneLCs, setAllPaymentDoneLCs] = useState<PaymentDoneLC[]>([]);
+  const [displayedPaymentDoneLCs, setDisplayedPaymentDoneLCs] = useState<PaymentDoneLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterLcNumber, setFilterLcNumber] = useState('');
+  const [filterApplicantId, setFilterApplicantId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
+  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
+
 
   useEffect(() => {
     const fetchPaymentDoneLCs = async () => {
@@ -67,7 +85,7 @@ export default function LCPaymentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Payment Done"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "==", "Payment Done"), firestoreOrderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -81,32 +99,16 @@ export default function LCPaymentDonePage() {
               const parsed = parseISO(data.updatedAt);
               if (isValid(parsed)) {
                 updatedAtDate = parsed;
-              } else {
-                console.warn(`Invalid date string for updatedAt: ${data.updatedAt} for L/C ID: ${doc.id}`);
               }
-            } else {
-               console.warn(`Unexpected type for updatedAt for L/C ID: ${doc.id}`, data.updatedAt);
             }
-          } else {
-            console.warn(`Missing updatedAt for L/C ID: ${doc.id}`);
           }
-
           return {
-            id: doc.id,
-            documentaryCreditNumber: data.documentaryCreditNumber,
-            beneficiaryName: data.beneficiaryName,
-            applicantName: data.applicantName,
-            currency: data.currency,
-            amount: data.amount,
-            lcIssueDate: data.lcIssueDate,
+            ...data, // Spread all fields from LCEntryDocument
+            id: doc.id, // Ensure ID is part of the object
             updatedAtDate: updatedAtDate,
-            status: data.status,
-            isFirstShipment: data.isFirstShipment,
-            isSecondShipment: data.isSecondShipment,
-            isThirdShipment: data.isThirdShipment,
           };
         });
-        setPaymentDoneLCs(fetchedLCs);
+        setAllPaymentDoneLCs(fetchedLCs);
       } catch (error: any) {
         console.error("Error fetching 'Payment Done' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data for 'Payment Done' status. Please ensure Firestore rules allow reads.`;
@@ -126,13 +128,73 @@ export default function LCPaymentDonePage() {
       }
     };
 
+    const fetchFilterOptions = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+      } catch (error: any) {
+        console.error("Error fetching filter options for L/C Payment Done page:", error);
+        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+
     fetchPaymentDoneLCs();
+    fetchFilterOptions();
   }, []);
 
-  const totalPages = Math.ceil(paymentDoneLCs.length / ITEMS_PER_PAGE);
+  useEffect(() => {
+    let filtered = [...allPaymentDoneLCs];
+
+    if (filterLcNumber) {
+      filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
+    }
+    if (filterApplicantId && filterApplicantId !== ALL_APPLICANTS_VALUE) {
+      filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
+    }
+    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
+      filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
+    }
+    if (filterYear && filterYear !== ALL_YEARS_VALUE) {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(lc => {
+        // Assuming 'year' field is stored directly in LCEntryDocument from lcIssueDate
+        // Or derive it here if not stored:
+        // if (!lc.lcIssueDate) return false;
+        // try {
+        //   const issueDate = parseISO(lc.lcIssueDate);
+        //   return isValid(issueDate) && getYear(issueDate) === yearNum;
+        // } catch { return false; }
+        return lc.year === yearNum;
+      });
+    }
+    setDisplayedPaymentDoneLCs(filtered);
+    setCurrentPage(1);
+  }, [allPaymentDoneLCs, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterYear]);
+
+
+  const clearFilters = () => {
+    setFilterLcNumber('');
+    setFilterApplicantId('');
+    setFilterBeneficiaryId('');
+    setFilterYear(ALL_YEARS_VALUE);
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(displayedPaymentDoneLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = paymentDoneLCs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedPaymentDoneLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -173,16 +235,68 @@ export default function LCPaymentDonePage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("text-primary font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <DollarSign className="h-7 w-7 text-primary" />
             L/Cs with Payment Done
           </CardTitle>
           <CardDescription>
             List of Letters of Credit marked as "Payment Done", sorted by most recent update.
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, paymentDoneLCs.length)} of {paymentDoneLCs.length} entries.
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedPaymentDoneLCs.length)} of {displayedPaymentDoneLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label htmlFor="lcNoFilterPaymentDone" className="text-sm font-medium">L/C Number</Label>
+                  <Input id="lcNoFilterPaymentDone" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="applicantFilterPaymentDone" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId || ALL_APPLICANTS_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
+                    disabled={isLoadingApplicants}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="beneficiaryFilterPaymentDone" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
+                    disabled={isLoadingBeneficiaries}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="yearFilterPaymentDone" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (L/C Issue)</Label>
+                  <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
+                    <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
+                    <SelectContent>
+                      {yearFilterOptions.map(yearOpt => <SelectItem key={yearOpt} value={yearOpt}>{yearOpt === ALL_YEARS_VALUE ? "All Years" : yearOpt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="lg:col-span-3"> {/* Adjust if more filters are added */}
+                  <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -201,14 +315,14 @@ export default function LCPaymentDonePage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as "Payment Done", or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as "Payment Done" matching your criteria, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
-                  <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
+                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
+                  <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
                        className={lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
@@ -258,7 +372,7 @@ export default function LCPaymentDonePage() {
                     </div>
                   </div>
 
-                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28">
                     {lc.documentaryCreditNumber || 'N/A'}
                   </Link>
                   
@@ -334,6 +448,3 @@ export default function LCPaymentDonePage() {
     </div>
   );
 }
-    
-
-    
