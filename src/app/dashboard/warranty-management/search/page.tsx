@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, Microscope, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays } from 'lucide-react';
+import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -47,7 +47,7 @@ export default function WarrantySearchPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <Card className="shadow-xl max-w-6xl mx-auto"> {/* Changed from max-w-4xl */}
+      <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -80,7 +80,7 @@ export default function WarrantySearchPage() {
           <form onSubmit={handleSearchSubmit} className="flex w-full items-center space-x-2 mb-8">
             <Input
               type="search"
-              placeholder="Enter machine serial, model, C.I. no, etc..."
+              placeholder="Search by Machine Model/Serial, Ctl. Box Model/Serial, L/C No, Applicant, Beneficiary..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
@@ -105,7 +105,7 @@ export default function WarrantySearchPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl max-w-6xl mx-auto"> {/* Changed from max-w-4xl */}
+      <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
              <BarChart3 className="h-6 w-6 text-primary"/>
