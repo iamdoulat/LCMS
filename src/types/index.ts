@@ -60,10 +60,10 @@ export interface LCEntry {
   expireDate?: Date | null | undefined;
   latestShipmentDate?: Date | null | undefined;
   purchaseOrderUrl?: string;
+  packingListUrl?: string;
   finalPIUrl?: string;
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
-  packingListUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null | undefined;
@@ -84,7 +84,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; 
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -145,10 +145,10 @@ export interface LCEntryDocument {
   expireDate?: string; // ISO string
   latestShipmentDate?: string; // ISO string
   purchaseOrderUrl?: string;
+  packingListUrl?: string;
   finalPIUrl?: string;
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
-  packingListUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // ISO string
@@ -169,7 +169,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; 
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -267,7 +267,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export type UserRole = "Super Admin" | "Admin" | "User";
+export type UserRole = "Super Admin" | "Admin" | "User" | "Service";
 
 export interface CompanyProfile {
   companyName?: string;
@@ -391,30 +391,26 @@ export const InstallationReportSchema = z.object({
   installationDetails: z.array(InstallationDetailItemSchema)
     .min(1, "At least one installation detail item is required.")
     .refine(items => {
-      const seenMachineSerials = new Set<string>();
+      const machineSerials = new Set<string>();
       for (const item of items) {
-        const serial = (item.serialNo || '').trim();
-        if (serial !== "") { // Only consider non-empty serials
-          if (seenMachineSerials.has(serial)) {
-            return false; // Duplicate found
-          }
-          seenMachineSerials.add(serial);
+        const serial = (item.serialNo || '').trim().toUpperCase(); // Normalize for uniqueness check
+        if (serial !== "") {
+          if (machineSerials.has(serial)) return false;
+          machineSerials.add(serial);
         }
       }
       return true;
     }, {
       message: "Each Machine Serial No. must be unique within this report.",
-      path: ["installationDetails"], 
+      path: ["installationDetails"],
     })
     .refine(items => {
-      const seenCtlBoxSerials = new Set<string>();
+      const ctlBoxSerials = new Set<string>();
       for (const item of items) {
-        const serial = (item.ctlBoxSerial || '').trim();
-        if (serial !== "") { // Only consider non-empty serials
-          if (seenCtlBoxSerials.has(serial)) {
-            return false; // Duplicate found
-          }
-          seenCtlBoxSerials.add(serial);
+        const serial = (item.ctlBoxSerial || '').trim().toUpperCase(); // Normalize
+        if (serial !== "") {
+          if (ctlBoxSerials.has(serial)) return false;
+          ctlBoxSerials.add(serial);
         }
       }
       return true;
@@ -465,9 +461,7 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { id: string }; 
+  lcData: LCEntryDocument & { id: string };
 }
 
 // --- END Installation Report Types ---
-
-    

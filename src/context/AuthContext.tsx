@@ -19,9 +19,10 @@ const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
 const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
-// Hardcoded emails for simulated roles
+// Simulated roles based on email
 const SIMULATED_SUPER_ADMIN_EMAILS = ['mddoulat@gmail.com', 'smswayapp@gmail.com'];
 const SIMULATED_ADMIN_EMAIL = 'commercial@smartsolution-bd.com';
+const SIMULATED_SERVICE_EMAILS = ['service@smartsolution-bd.com'];
 
 
 interface AuthContextType {
@@ -98,6 +99,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      setLoading(true); // Set loading true while processing auth state and Firestore profile
+
       if (currentUser) {
         try {
           const userDocRef = doc(firestore, "users", currentUser.uid);
@@ -105,25 +108,28 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           if (userDocSnap.exists()) {
             const userProfileData = userDocSnap.data() as UserDocumentForAdmin;
             setFirestoreUser(userProfileData);
-            // Prioritize Firestore role, then simulated email-based role
             if (userProfileData.role) {
               setUserRole(userProfileData.role);
             } else if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || '')) {
               setUserRole("Super Admin");
-            } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
+            } else if (SIMULATED_ADMIN_EMAIL === (currentUser.email || '')) {
               setUserRole("Admin");
+            } else if (SIMULATED_SERVICE_EMAILS.includes(currentUser.email || '')) {
+              setUserRole("Service");
             } else {
               setUserRole("User");
             }
           } else {
-            console.warn(`AuthContext: No Firestore profile found for user UID: ${currentUser.uid}. Defaulting role.`);
+            console.warn(`AuthContext: No Firestore profile found for user UID: ${currentUser.uid}. Simulating role.`);
             setFirestoreUser(null);
             if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || '')) {
               setUserRole("Super Admin");
-            } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
+            } else if (SIMULATED_ADMIN_EMAIL === (currentUser.email || '')) {
               setUserRole("Admin");
+            } else if (SIMULATED_SERVICE_EMAILS.includes(currentUser.email || '')) {
+              setUserRole("Service");
             } else {
-              setUserRole("User"); // Default to "User" if no Firestore profile and no email match
+              setUserRole("User");
             }
           }
         } catch (error) {
@@ -132,48 +138,32 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           // Fallback to email simulation if Firestore fetch fails
             if (SIMULATED_SUPER_ADMIN_EMAILS.includes(currentUser.email || '')) {
               setUserRole("Super Admin");
-            } else if (currentUser.email === SIMULATED_ADMIN_EMAIL) {
+            } else if (SIMULATED_ADMIN_EMAIL === (currentUser.email || '')) {
               setUserRole("Admin");
+            } else if (SIMULATED_SERVICE_EMAILS.includes(currentUser.email || '')) {
+              setUserRole("Service");
             } else {
               setUserRole("User");
             }
+        } finally {
+          setLoading(false); // Set loading false after all async operations are done
         }
       } else {
         setFirestoreUser(null);
         setUserRole(null);
+        setLoading(false); // Set loading false if no user
       }
-      setLoading(false);
     });
     return () => unsubscribe();
-  }, [fetchInitialCompanyProfile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fetchInitialCompanyProfile is stable due to useCallback
 
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       const firebaseUser = userCredential.user;
-
-      // Fetch Firestore profile to get the role after Firebase Auth login
-      const userDocRef = doc(firestore, "users", firebaseUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        const userProfileData = userDocSnap.data() as UserDocumentForAdmin;
-        setFirestoreUser(userProfileData);
-        setUserRole(userProfileData.role || "User"); // Default to "User" if role not set in Firestore
-      } else {
-        // If no Firestore profile, simulate role based on email
-        console.warn(`AuthContext: No Firestore profile found for user UID: ${firebaseUser.uid} after login. Simulating role.`);
-        if (SIMULATED_SUPER_ADMIN_EMAILS.includes(email)) {
-          setUserRole("Super Admin");
-        } else if (email === SIMULATED_ADMIN_EMAIL) {
-          setUserRole("Admin");
-        } else {
-          setUserRole("User");
-        }
-        setFirestoreUser(null); // No specific firestore profile data
-      }
-
-      // The onAuthStateChanged listener will also update the main user state
+      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and final loading state
       Swal.fire({
         title: "Login Successful",
         text: `Welcome back, ${firebaseUser.displayName || email}!`,
@@ -183,7 +173,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      console.error("Error logging in:", error);
+      console.error("Error logging in: ", error);
       let errorMessage = "Failed to login. Please check your credentials.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password.";
@@ -195,8 +185,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = `Login failed: ${error.message} (Code: ${error.code})`;
       }
       Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      setLoading(false);
-      throw error;
+      setLoading(false); // Ensure loading is false on login error
+      throw error; // Re-throw to be caught by form if needed
     }
   }, [router]);
 
@@ -212,9 +202,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         assignedRole = "Super Admin";
       } else if (email === SIMULATED_ADMIN_EMAIL) {
         assignedRole = "Admin";
+      } else if (SIMULATED_SERVICE_EMAILS.includes(email)) {
+        assignedRole = "Service";
       }
 
-      // Create user profile in Firestore
       const userProfileData: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
         uid: firebaseUser.uid,
         displayName: displayName,
@@ -235,7 +226,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         timer: 2000,
         showConfirmButton: false,
       });
-      // onAuthStateChanged will handle setting user, firestoreUser, userRole
+      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and final loading state
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Error registering user:", error);
@@ -244,8 +235,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         text: error.message || "Could not register user.",
         icon: "error",
       });
-      setLoading(false);
-      throw error;
+      setLoading(false); // Ensure loading is false on registration error
+      throw error; // Re-throw to be caught by form if needed
     }
   }, [router]);
 
@@ -254,7 +245,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setLoading(true);
     try {
       await firebaseSignOut(auth);
-      // User state will be cleared by onAuthStateChanged
+      // User state will be cleared by onAuthStateChanged, which also sets loading to false
       Swal.fire({
         title: "Logged Out",
         text: "You have been successfully logged out.",
@@ -270,7 +261,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         text: error.message || "Failed to log out. Please try again.",
         icon: "error",
       });
-      setLoading(false); // Ensure loading is false on error
+      setLoading(false); // Ensure loading is false on logout error
     }
   }, [router]);
 
@@ -288,7 +279,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         assignedRole = "Super Admin";
       } else if (firebaseUser.email === SIMULATED_ADMIN_EMAIL) {
         assignedRole = "Admin";
+      } else if (SIMULATED_SERVICE_EMAILS.includes(firebaseUser.email || '')) {
+        assignedRole = "Service";
       }
+
 
       if (!userDocSnap.exists()) {
         const userProfileData: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -305,8 +299,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         });
       } else {
         const existingProfile = userDocSnap.data() as UserDocumentForAdmin;
-        // Update existing Firestore profile if needed (e.g., if display name/photo changed in Google)
-        // Or update role if it wasn't set or needs to align with simulated roles
         const updates: Partial<UserDocumentForAdmin> & {updatedAt: any} = { updatedAt: serverTimestamp() };
         if (firebaseUser.displayName && existingProfile.displayName !== firebaseUser.displayName) {
             updates.displayName = firebaseUser.displayName;
@@ -314,10 +306,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         if (firebaseUser.photoURL && existingProfile.photoURL !== firebaseUser.photoURL) {
             updates.photoURL = firebaseUser.photoURL;
         }
-        if (assignedRole !== existingProfile.role && (!existingProfile.role || SIMULATED_SUPER_ADMIN_EMAILS.includes(firebaseUser.email || '') || firebaseUser.email === SIMULATED_ADMIN_EMAIL) ) {
-            // Only override if existing role is not set, or if email matches a simulated admin/superadmin
-            updates.role = assignedRole;
+        
+        let roleToSet = existingProfile.role || "User"; // Start with existing or default
+        if (SIMULATED_SUPER_ADMIN_EMAILS.includes(firebaseUser.email || '')) roleToSet = "Super Admin";
+        else if (SIMULATED_ADMIN_EMAIL === (firebaseUser.email || '')) roleToSet = "Admin";
+        else if (SIMULATED_SERVICE_EMAILS.includes(firebaseUser.email || '')) roleToSet = "Service";
+        // Only update role if it changed based on simulated emails or if it wasn't set
+        if (roleToSet !== existingProfile.role) {
+            updates.role = roleToSet;
         }
+
         if (Object.keys(updates).length > 1) { // Check if there's more than just updatedAt
             await updateDoc(userDocRef, updates);
         }
@@ -330,7 +328,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         timer: 2000,
         showConfirmButton: false,
       });
-      // onAuthStateChanged will handle setting user, firestoreUser, userRole
+      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and final loading state
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Error signing in with Google: ", error);
@@ -343,7 +341,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = `Google Sign-In error: ${error.message} (Code: ${error.code})`;
       }
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
-      setLoading(false);
+      setLoading(false); // Ensure loading is false on Google Sign-In error
     }
   }, [router]);
 
@@ -375,4 +373,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
