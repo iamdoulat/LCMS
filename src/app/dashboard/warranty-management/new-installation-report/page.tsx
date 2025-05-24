@@ -40,16 +40,17 @@ const installationDetailItemSchema = z.object({
   ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
   ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
   installDate: z.date({ required_error: "Install Date is required." }),
+  // warrantyRemaining is calculated, not part of schema for input
 });
 
 const installationReportSchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
   selectedCommercialInvoiceLcId: z.string().optional(),
-  documentaryCreditNumber: z.string().optional(), // Made optional as it's auto-filled
+  documentaryCreditNumber: z.string().optional(),
   totalMachineQty: z.preprocess(
     (val) => (String(val).trim() === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Qty must be a number" }).int().positive("Qty must be positive").optional() // Made optional as it's auto-filled
+    z.number({ invalid_type_error: "Qty must be a number" }).int().positive("Qty must be positive").optional()
   ),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -125,7 +126,9 @@ export default function NewInstallationReportPage() {
   
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
+  
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
+
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(installationReportSchema),
@@ -238,7 +241,6 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Clear fields if no commercial invoice is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -320,7 +322,7 @@ export default function NewInstallationReportPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-6xl mx-auto shadow-xl"> {/* Increased width */}
+      <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2 text-primary", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Wrench className="h-7 w-7 text-primary" />
@@ -414,7 +416,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel> {/* Not mandatory for this form if auto-filled */}
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -425,7 +427,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel> {/* Not mandatory for this form if auto-filled */}
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -476,67 +478,68 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
+              
               <Separator className="my-2" />
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    {selectedLcDetails.lcIdForLink ? (
-                        <div className="p-3 border rounded-md bg-muted/30">
-                            <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                            <div className="flex items-center gap-3">
-                                {[
-                                    { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                    { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                    { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                                ].map((shipment, index) => (
-                                    <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
-                                    <Button
-                                        asChild
-                                        type="button"
-                                        variant={shipment.flag ? "default" : "outline"}
-                                        size="icon"
-                                        className={cn(
-                                        "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                        shipment.flag
-                                            ? "bg-green-500 hover:bg-green-600 text-white"
-                                            : "border-destructive text-destructive hover:bg-destructive/10"
-                                        )}
-                                        title={`${shipment.label} Shipment Status`}
-                                    >
-                                        <a>{shipment.label}</a>
-                                    </Button>
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-                    ) : <div className="min-h-[76px]"></div> } 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  {selectedLcDetails.lcIdForLink ? (
+                      <div className="p-3 border rounded-md bg-muted/30">
+                          <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                          <div className="flex items-center gap-3">
+                              {[
+                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                              ].map((shipment, index) => (
+                                  <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
+                                  <Button
+                                      asChild
+                                      type="button"
+                                      variant={shipment.flag ? "default" : "outline"}
+                                      size="icon"
+                                      className={cn(
+                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                      shipment.flag
+                                          ? "bg-green-500 hover:bg-green-600 text-white"
+                                          : "border-destructive text-destructive hover:bg-destructive/10"
+                                      )}
+                                      title={`${shipment.label} Shipment Status`}
+                                  >
+                                      <a>{shipment.label}</a>
+                                  </Button>
+                                  </Link>
+                              ))}
+                          </div>
+                      </div>
+                  ) : <div className="min-h-[76px]"></div> } 
 
-                    <FormField
-                    control={control}
-                    name="packingListUrl"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
-                        <div className="flex items-center gap-2">
-                            <FormControl className="flex-grow">
-                            <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
-                            </FormControl>
-                            <Button
-                            type="button"
-                            variant="default"
-                            size="icon"
-                            onClick={() => handleViewUrl(field.value)}
-                            disabled={!field.value}
-                            title="View Packing List"
-                            >
-                            <ExternalLink className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
+                  <FormField
+                  control={control}
+                  name="packingListUrl"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                      <div className="flex items-center gap-2">
+                          <FormControl className="flex-grow">
+                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <Button
+                          type="button"
+                          variant="default"
+                          size="icon"
+                          onClick={() => handleViewUrl(field.value)}
+                          disabled={!field.value}
+                          title="View Packing List"
+                          >
+                          <ExternalLink className="h-4 w-4" />
+                          </Button>
+                      </div>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+              </div>
               <Separator className="my-2" />
-               
+
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -588,7 +591,6 @@ export default function NewInstallationReportPage() {
                     </AccordionItem>
                 </Accordion>
               )}
-
               <Separator className="my-2" />
                 <h3 className={cn(sectionHeadingClass)}>
                     <ClipboardList className="mr-2 h-5 w-5 text-primary" />
@@ -605,7 +607,7 @@ export default function NewInstallationReportPage() {
                                 <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
                                 <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
                                 <TableHead className="text-foreground">Install Date*</TableHead>
-                                <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
+                                <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
                                 <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -681,7 +683,7 @@ export default function NewInstallationReportPage() {
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">{warrantyDisplay}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground w-[50px]">{warrantyDisplay}</TableCell>
                                         <TableCell className="text-right">
                                             <Button type="button" variant="ghost" size="icon" onClick={() => removeInstallationDetail(index)} disabled={installationDetailsFields.length <= 1} title="Remove Installation Item">
                                                 <Trash2 className="h-4 w-4 text-destructive" />
