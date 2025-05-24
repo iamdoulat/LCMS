@@ -99,9 +99,12 @@ export default function EditInstallationReportPage() {
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
+  const [warrantyExpiredCount, setWarrantyExpiredCount] = React.useState(0);
+  const [warrantyRemainingCount, setWarrantyRemainingCount] = React.useState(0);
+
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
-    defaultValues: { // Default values will be overridden by fetched data
+    defaultValues: { 
       applicantId: '',
       beneficiaryId: '',
       selectedCommercialInvoiceLcId: undefined,
@@ -117,17 +120,19 @@ export default function EditInstallationReportPage() {
       installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
       missingItemInfo: '',
       extraFoundInfo: '',
-      installationNotes: '',
       missingItemsIssueResolved: false,
       extraItemsIssueResolved: false,
+      installationNotes: '',
     },
   });
 
   const { control, setValue, watch, reset, formState } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
+  const watchedInstallationDetails = watch("installationDetails");
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
+
 
   const installationDetailsFieldArray = useFieldArray({
     control,
@@ -172,7 +177,6 @@ export default function EditInstallationReportPage() {
             installationNotes: initialData.installationNotes || '',
           };
           reset(formValuesToSet);
-          // Trigger effect to load LC details if selectedCommercialInvoiceLcId is present
           if (initialData.selectedCommercialInvoiceLcId) {
              setValue("selectedCommercialInvoiceLcId", initialData.selectedCommercialInvoiceLcId, { shouldDirty: false });
           }
@@ -227,10 +231,10 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-        fetchInitialReportData(); // Fetch report data AFTER dropdown options are loaded
+        fetchInitialReportData(); 
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportId, reset, setValue]); // Only re-run if reportId, reset, or setValue changes
+  }, [reportId, reset, setValue]);
 
 
   React.useEffect(() => {
@@ -238,20 +242,17 @@ export default function EditInstallationReportPage() {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
       if (selectedOption) {
         const lc = selectedOption.lcData;
-        // We don't want to overwrite applicantId/beneficiaryId if they were part of initialData
-        // Only set these if the user explicitly selects a *new* C.I. after the form is loaded
         if (form.formState.isDirty || !form.getValues("selectedCommercialInvoiceLcId")) {
             setValue("applicantId", lc.applicantId || '', { shouldValidate: true, shouldDirty: true });
             setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
         }
-
-        setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true, shouldDirty: true });
-        setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true, shouldDirty: true });
-        setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
+        setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
+        setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true });
+        setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
+        setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
+        setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
+        setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
+        setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
 
         setSelectedLcDetails({
             isFirstShipment: lc.isFirstShipment,
@@ -265,14 +266,14 @@ export default function EditInstallationReportPage() {
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData && form.formState.isDirty) { // Only clear if user manually deselects
-        setValue("documentaryCreditNumber", '', { shouldValidate: true, shouldDirty: true });
-        setValue("totalMachineQtyFromLC", undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("proformaInvoiceNumber", '', { shouldValidate: true, shouldDirty: true });
-        setValue("invoiceDate", undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("etdDate", undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("etaDate", undefined, { shouldValidate: true, shouldDirty: true });
-        setValue("packingListUrl", '', { shouldValidate: true, shouldDirty: true });
+    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData && form.formState.isDirty) { 
+        setValue("documentaryCreditNumber", '', { shouldValidate: true });
+        setValue("totalMachineQtyFromLC", undefined, { shouldValidate: true });
+        setValue("proformaInvoiceNumber", '', { shouldValidate: true });
+        setValue("invoiceDate", undefined, { shouldValidate: true });
+        setValue("etdDate", undefined, { shouldValidate: true });
+        setValue("etaDate", undefined, { shouldValidate: true });
+        setValue("packingListUrl", '', { shouldValidate: true });
         setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
         setSelectedCommercialInvoiceDateDisplay(null);
     }
@@ -289,6 +290,26 @@ export default function EditInstallationReportPage() {
     }
   }, [watchedTotalLcMachineQty, installationDetailsFieldArray.fields.length]);
 
+  React.useEffect(() => {
+    if (watchedInstallationDetails && Array.isArray(watchedInstallationDetails)) {
+      let expired = 0;
+      let remaining = 0;
+      const today = new Date();
+      watchedInstallationDetails.forEach(item => {
+        if (item.installDate && isValid(item.installDate)) {
+          const expiryDate = addDays(new Date(item.installDate), 365);
+          if (differenceInDays(expiryDate, today) < 0) {
+            expired++;
+          } else {
+            remaining++;
+          }
+        }
+      });
+      setWarrantyExpiredCount(expired);
+      setWarrantyRemainingCount(remaining);
+    }
+  }, [watchedInstallationDetails]);
+
 
   async function onSubmit(data: InstallationReportFormValues) {
     if (!reportId) {
@@ -302,11 +323,12 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || form.getValues("applicantId"), // Fallback if label not found
+      applicantName: selectedApplicant?.label || form.getValues("applicantId"), 
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), // Fallback
+      beneficiaryName: selectedBeneficiary?.label || form.getValues("beneficiaryId"), 
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
+      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -317,13 +339,12 @@ export default function EditInstallationReportPage() {
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
-        ...item,
         slNo: item.slNo || undefined, 
         machineModel: item.machineModel,
         serialNo: item.serialNo,
         ctlBoxModel: item.ctlBoxModel,
         ctlBoxSerial: item.ctlBoxSerial,
-        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any, // Zod ensures this is a Date, so format will work
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: pendingQty,
@@ -350,9 +371,6 @@ export default function EditInstallationReportPage() {
         title: "Installation Report Updated!",
         text: `Report ID: ${reportId} successfully updated.`,
         icon: "success",
-      }).then(() => {
-        // Optionally, redirect or refetch data here
-        // router.push('/dashboard/warranty-management/installation-reports-view');
       });
     } catch (error: any) {
       console.error("Error updating installation report: ", error);
@@ -535,7 +553,7 @@ export default function EditInstallationReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
-                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
+                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -585,8 +603,8 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
-              <Separator className="my-2" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start my-2">
                   <div className="p-3 border rounded-md bg-muted/30">
                       <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
                       {selectedLcDetails.lcIdForLink ? (
@@ -720,9 +738,9 @@ export default function EditInstallationReportPage() {
                               const installDateValue = watch(`installationDetails.${index}.installDate`);
                               let warrantyDisplay = "N/A";
                               if (installDateValue && isValid(installDateValue)) {
-                                  const expiryDate = addDays(installDateValue, 365);
-                                  const remainingDays = differenceInDays(new Date(), expiryDate);
-                                  warrantyDisplay = remainingDays <= 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
+                                  const expiryDate = addDays(new Date(installDateValue), 365);
+                                  const diffDays = differenceInDays(expiryDate, new Date());
+                                  warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
                               }
                               return (
                                   <TableRow key={field.id}>
@@ -810,7 +828,7 @@ export default function EditInstallationReportPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -818,6 +836,14 @@ export default function EditInstallationReportPage() {
                <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
                   <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-destructive" />Warranty Expired:</FormLabel>
+                <Input type="text" value={`${warrantyExpiredCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-destructive" />
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-green-600" />Warranty Remaining:</FormLabel>
+                <Input type="text" value={`${warrantyRemainingCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-green-600" />
               </FormItem>
             </div>
             <Separator className="my-6" />

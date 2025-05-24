@@ -84,7 +84,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // Contact Person Name
+  notifyPartyName?: string; 
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -169,7 +169,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // Contact Person Name
+  notifyPartyName?: string; 
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -206,7 +206,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number | '';
+  billOfExchangeQty?: number;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -235,7 +235,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string;
+  contactPersonName?: string; // Derived from contactPerson
   email?: string;
   phone?: string;
 }
@@ -391,22 +391,36 @@ export const InstallationReportSchema = z.object({
   installationDetails: z.array(InstallationDetailItemSchema)
     .min(1, "At least one installation detail item is required.")
     .refine(items => {
-      const seenSerials = new Set<string>();
+      const seenMachineSerials = new Set<string>();
       for (const item of items) {
-        const combinedSerial = `${(item.serialNo || '').trim()}-${(item.ctlBoxSerial || '').trim()}`;
-        if ((item.serialNo && item.serialNo.trim() !== "") || (item.ctlBoxSerial && item.ctlBoxSerial.trim() !== "")) { // Only check if at least one is not empty
-          if (seenSerials.has(combinedSerial)) {
-            return false; // Found a duplicate combination
+        const serial = (item.serialNo || '').trim();
+        if (serial !== "") { // Only consider non-empty serials
+          if (seenMachineSerials.has(serial)) {
+            return false; // Duplicate found
           }
-          seenSerials.add(combinedSerial);
+          seenMachineSerials.add(serial);
         }
       }
       return true;
     }, {
-      message: "Each combination of Machine Serial No. and Ctl. Box Serial must be unique within this report. Please check for duplicates if both are entered.",
-      // Path for error reporting. We can't easily point to specific duplicate items here,
-      // so the error will be associated with the 'installationDetails' array itself.
+      message: "Each Machine Serial No. must be unique within this report.",
       path: ["installationDetails"], 
+    })
+    .refine(items => {
+      const seenCtlBoxSerials = new Set<string>();
+      for (const item of items) {
+        const serial = (item.ctlBoxSerial || '').trim();
+        if (serial !== "") { // Only consider non-empty serials
+          if (seenCtlBoxSerials.has(serial)) {
+            return false; // Duplicate found
+          }
+          seenCtlBoxSerials.add(serial);
+        }
+      }
+      return true;
+    }, {
+      message: "Each Ctl. Box Serial must be unique within this report.",
+      path: ["installationDetails"],
     }),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
@@ -425,6 +439,7 @@ export interface InstallationReportDocument {
   beneficiaryName: string;
   selectedCommercialInvoiceLcId?: string;
   commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: string; // ISO String
   documentaryCreditNumber?: string;
   totalMachineQtyFromLC?: number;
   proformaInvoiceNumber?: string;
@@ -434,9 +449,9 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string }>;
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string }>; // installDate as ISO string
   totalInstalledQty: number;
-  pendingQty: number | string;
+  pendingQty: number | string; // Can be string 'N/A'
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
@@ -450,7 +465,7 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { id: string }; // Full L/C document data
+  lcData: LCEntryDocument & { id: string }; 
 }
 
 // --- END Installation Report Types ---
