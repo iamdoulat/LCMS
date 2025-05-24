@@ -47,7 +47,8 @@ import {
   BarChart3,
   FileEdit,
   Users as UsersIcon,
-  ShieldCheck, // Added ShieldCheck
+  ShieldCheck,
+  Truck, // Added Truck import
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -61,7 +62,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -70,7 +71,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -81,7 +82,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -89,7 +90,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -97,7 +98,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
@@ -110,14 +111,14 @@ const managementNavItems: NavItemGroup[] = [
 const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
-    icon: BarChart3,
+    icon: BarChart3, // Using BarChart3 as a generic report icon
     subLinks: [
       // Add sub-links here later if needed
     ],
   },
 ];
 
-const warrantyManagementNavItems: NavItemGroup[] = [ // New Section
+const warrantyManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
