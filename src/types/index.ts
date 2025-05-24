@@ -18,6 +18,7 @@ export type Currency = typeof currencyOptions[number] | "";
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number];
 
+
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Done", "Shipment Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
@@ -50,9 +51,9 @@ export interface LCEntry {
   latestShipmentDate?: Date | null | undefined;
   purchaseOrderUrl?: string;
   finalPIUrl?: string;
-  shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  packingListUrl?: string; 
+  shippingDocumentsUrl?: string;
+  packingListUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null | undefined;
@@ -73,7 +74,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is for Contact Person Name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -135,9 +136,9 @@ export interface LCEntryDocument {
   latestShipmentDate?: string; // ISO string
   purchaseOrderUrl?: string;
   finalPIUrl?: string;
-  shippingDocumentsUrl?: string;
   finalLcUrl?: string;
-  packingListUrl?: string; 
+  shippingDocumentsUrl?: string;
+  packingListUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // ISO string
@@ -158,7 +159,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // Contact Person Name
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -293,7 +294,7 @@ export interface ProformaInvoiceLineItem {
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
-export type FreightChargeOption = typeof freightChargeOptions[number];
+// export type FreightChargeOption = typeof freightChargeOptions[number]; // This was duplicated
 
 export interface ProformaInvoice {
   id?: string;
@@ -346,8 +347,8 @@ export interface LcOption {
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
-  commercialInvoiceNumber?: string; // Added this
-  commercialInvoiceDate?: string; // Added this
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: string;
   totalMachineQty?: number;
   proformaInvoiceNumber?: string;
   invoiceDate?: string;
@@ -381,6 +382,15 @@ export interface LcOption {
 }
 
 
+export interface InstallationDetailItem {
+    slNo?: string;
+    machineModel: string;
+    serialNo: string;
+    ctlBoxModel?: string;
+    ctlBoxSerial?: string;
+    installDate?: Date;
+}
+
 export interface InstallationReportFormValues {
     applicantId: string;
     beneficiaryId: string;
@@ -398,18 +408,10 @@ export interface InstallationReportFormValues {
     installationDetails: InstallationDetailItem[];
     missingItemInfo?: string;
     extraFoundInfo?: string;
+    missingItemsIssueResolved?: boolean; // Added
+    extraItemsIssueResolved?: boolean;   // Added
 }
 
-export interface InstallationDetailItem {
-    slNo?: string; // Optional because it's auto-generated for display
-    machineModel: string;
-    serialNo: string;
-    ctlBoxModel?: string; // Added
-    ctlBoxSerial?: string; // Added
-    installDate?: Date;
-}
-
-// Make sure LcForInvoiceDropdownOption uses the updated LcOption
 export interface LcForInvoiceDropdownOption extends ComboboxOption {
-  lcData: LcOption & LCEntryDocument; // Ensure lcData can hold all fields from LCEntryDocument for safety
+  lcData: LCEntryDocument & { id: string };
 }

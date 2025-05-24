@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, Currency, InstallationDetailItem as InstallationDetailItemType, LcForInvoiceDropdownOption } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, PartialShipmentAllowed, InstallationDetailItem as InstallationDetailItemType, LcForInvoiceDropdownOption, InstallationReportFormValues as PageInstallationReportFormValues } from '@/types'; // Updated type import
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -65,9 +66,12 @@ const installationReportSchema = z.object({
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
   installationNotes: z.string().optional(),
+  missingItemsIssueResolved: z.boolean().optional().default(false),
+  extraItemsIssueResolved: z.boolean().optional().default(false),
 });
 
-type InstallationReportFormValues = z.infer<typeof installationReportSchema>;
+// Use the imported type
+type InstallationReportFormValues = PageInstallationReportFormValues;
 
 const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
@@ -81,6 +85,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
+  if (value === null || value === undefined) displayValue = "0"; // Ensure '0' for null/undefined for consistency
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -97,7 +102,7 @@ export default function NewInstallationReportPage() {
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
-  
+
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
     isSecondShipment?: boolean;
@@ -115,10 +120,10 @@ export default function NewInstallationReportPage() {
     secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
     thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
   });
-  
+
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
-  
+
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
 
@@ -141,12 +146,17 @@ export default function NewInstallationReportPage() {
       missingItemInfo: '',
       extraFoundInfo: '',
       installationNotes: '',
+      missingItemsIssueResolved: false,
+      extraItemsIssueResolved: false,
     },
   });
 
   const { control, setValue, watch, reset, formState } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQty");
+  const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
+  const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
+
 
   const installationDetailsFieldArray = useFieldArray({
     control,
@@ -174,7 +184,7 @@ export default function NewInstallationReportPage() {
         const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
         lcsSnap.forEach(doc => {
           const data = doc.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) { 
+          if (data.commercialInvoiceNumber) {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
@@ -209,7 +219,7 @@ export default function NewInstallationReportPage() {
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
         setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
         setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
-        
+
         setSelectedLcDetails({
             isFirstShipment: lc.isFirstShipment,
             isSecondShipment: lc.isSecondShipment,
@@ -362,7 +372,7 @@ export default function NewInstallationReportPage() {
                   )}
                 />
               </div>
-              
+
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                  <FormField
                     control={control}
@@ -459,9 +469,7 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-              
               <Separator className="my-2" />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   {selectedLcDetails.lcIdForLink ? (
                       <div className="p-3 border rounded-md bg-muted/30">
@@ -492,7 +500,7 @@ export default function NewInstallationReportPage() {
                               ))}
                           </div>
                       </div>
-                  ) : <div className="min-h-[76px]"></div> } 
+                  ) : <div className="min-h-[76px]"></div> }
 
                   <FormField
                   control={control}
@@ -520,12 +528,12 @@ export default function NewInstallationReportPage() {
                   )}
                   />
               </div>
-              
+
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
                     collapsible
-                    className="w-full mt-4" 
+                    className="w-full mt-2"
                     value={activePartialShipmentAccordion}
                     onValueChange={setActivePartialShipmentAccordion}
                 >
@@ -572,158 +580,199 @@ export default function NewInstallationReportPage() {
                     </AccordionItem>
                 </Accordion>
               )}
-              {/* Separator removed here */}
-                <h3 className={cn(sectionHeadingClass)}>
-                    <ClipboardList className="mr-2 h-5 w-5 text-primary" />
-                    Installation Details
-                </h3>
 
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px] text-foreground">SL</TableHead>
-                                <TableHead className="text-foreground">Machine Model*</TableHead>
-                                <TableHead className="text-foreground">Machine Serial No.*</TableHead>
-                                <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
-                                <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
-                                <TableHead className="text-foreground">Install Date*</TableHead>
-                                <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
-                                <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {installationDetailsFieldArray.fields.map((field, index) => {
-                                const installDateValue = watch(`installationDetails.${index}.installDate`);
-                                let warrantyDisplay = "N/A";
-                                if (installDateValue && isValid(installDateValue)) {
-                                    const expiryDate = addDays(installDateValue, 365);
-                                    const remainingDays = differenceInDays(expiryDate, new Date());
-                                    warrantyDisplay = remainingDays >= 0 ? `${remainingDays} days remaining` : "Expired";
-                                }
-                                return (
-                                    <TableRow key={field.id}>
-                                        <TableCell>{index + 1}</TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={control}
-                                                name={`installationDetails.${index}.machineModel`}
-                                                render={({ field: itemField }) => (
-                                                    <FormItem>
-                                                        <FormControl><Input placeholder="Enter model" {...itemField} className="h-9" /></FormControl>
-                                                        <FormMessage className="text-xs" />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={control}
-                                                name={`installationDetails.${index}.serialNo`}
-                                                render={({ field: itemField }) => (
-                                                    <FormItem>
-                                                        <FormControl><Input placeholder="Enter serial no." {...itemField} className="h-9" /></FormControl>
-                                                        <FormMessage className="text-xs" />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={control}
-                                                name={`installationDetails.${index}.ctlBoxModel`}
-                                                render={({ field: itemField }) => (
-                                                    <FormItem>
-                                                        <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                        <FormMessage className="text-xs" />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={control}
-                                                name={`installationDetails.${index}.ctlBoxSerial`}
-                                                render={({ field: itemField }) => (
-                                                    <FormItem>
-                                                        <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                        <FormMessage className="text-xs" />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={control}
-                                                name={`installationDetails.${index}.installDate`}
-                                                render={({ field: itemField }) => (
-                                                    <FormItem>
-                                                        <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
-                                                        <FormMessage className="text-xs" />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground w-[50px]">{warrantyDisplay}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-              </div>
-              {formState.errors.installationDetails && !formState.errors.installationDetails.message && typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root && (
-                <p className="text-sm font-medium text-destructive">{(formState.errors.installationDetails as any).root?.message || "Please ensure all installation details are valid."}</p>
-              )}
-               <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
-              </Button>
+              <Separator className="my-6" />
+              <h3 className={cn(sectionHeadingClass)}>
+                <ClipboardList className="mr-2 h-5 w-5 text-primary" />
+                Installation Details
+              </h3>
+              <div className="rounded-md border">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead className="w-[50px] text-foreground">SL</TableHead>
+                              <TableHead className="text-foreground">Machine Model*</TableHead>
+                              <TableHead className="text-foreground">Machine Serial No.*</TableHead>
+                              <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
+                              <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
+                              <TableHead className="text-foreground">Install Date*</TableHead>
+                              <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
+                              <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {installationDetailsFieldArray.fields.map((field, index) => {
+                              const installDateValue = watch(`installationDetails.${index}.installDate`);
+                              let warrantyDisplay = "N/A";
+                              if (installDateValue && isValid(installDateValue)) {
+                                  const expiryDate = addDays(installDateValue, 365);
+                                  const remainingDays = differenceInDays(expiryDate, new Date());
+                                  warrantyDisplay = remainingDays >= 0 ? `${remainingDays} days remaining` : "Expired";
+                              }
+                              return (
+                                  <TableRow key={field.id}>
+                                      <TableCell>{index + 1}</TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={control}
+                                              name={`installationDetails.${index}.machineModel`}
+                                              render={({ field: itemField }) => (
+                                                  <FormItem>
+                                                      <FormControl><Input placeholder="Enter model" {...itemField} className="h-9" /></FormControl>
+                                                      <FormMessage className="text-xs" />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={control}
+                                              name={`installationDetails.${index}.serialNo`}
+                                              render={({ field: itemField }) => (
+                                                  <FormItem>
+                                                      <FormControl><Input placeholder="Enter serial no." {...itemField} className="h-9" /></FormControl>
+                                                      <FormMessage className="text-xs" />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={control}
+                                              name={`installationDetails.${index}.ctlBoxModel`}
+                                              render={({ field: itemField }) => (
+                                                  <FormItem>
+                                                      <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                      <FormMessage className="text-xs" />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={control}
+                                              name={`installationDetails.${index}.ctlBoxSerial`}
+                                              render={({ field: itemField }) => (
+                                                  <FormItem>
+                                                      <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                      <FormMessage className="text-xs" />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={control}
+                                              name={`installationDetails.${index}.installDate`}
+                                              render={({ field: itemField }) => (
+                                                  <FormItem>
+                                                      <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
+                                                      <FormMessage className="text-xs" />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell className="text-xs text-muted-foreground w-[50px]">{warrantyDisplay}</TableCell>
+                                      <TableCell className="text-right">
+                                          <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
+                                              <Trash2 className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                      </TableCell>
+                                  </TableRow>
+                              );
+                          })}
+                      </TableBody>
+                  </Table>
+            </div>
+            {formState.errors.installationDetails && !formState.errors.installationDetails.message && typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root && (
+              <p className="text-sm font-medium text-destructive">{(formState.errors.installationDetails as any).root?.message || "Please ensure all installation details are valid."}</p>
+            )}
+             <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
+            </Button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <FormItem>
+                  <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
+                  <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+              </FormItem>
+               <FormItem>
+                  <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
+                  <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+              </FormItem>
+            </div>
+
+            <Separator className="my-6" />
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <FormItem>
-                    <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
-                    <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                    <FormField
+                        control={control}
+                        name="missingItemInfo"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing And Short Shipment Item Information</FormLabel>
+                                <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedMissingItemsIssueResolved} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="missingItemsIssueResolved"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm mt-2 bg-card">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel className="hover:cursor-pointer">
+                                Issues Resolved for Missing/Short Items
+                                </FormLabel>
+                            </div>
+                            </FormItem>
+                        )}
+                     />
                 </FormItem>
-                 <FormItem>
-                    <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
-                    <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                <FormItem>
+                    <FormField
+                        control={control}
+                        name="extraFoundInfo"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found and Return Information</FormLabel>
+                                <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedExtraItemsIssueResolved} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="extraItemsIssueResolved"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm mt-2 bg-card">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel className="hover:cursor-pointer">
+                                Issues Resolved for Extra/Found Items
+                                </FormLabel>
+                            </div>
+                            </FormItem>
+                        )}
+                    />
                 </FormItem>
-              </div>
-              
-              <Separator className="my-6" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <FormField
-                    control={control} 
-                    name="missingItemInfo"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing And Short Shipment Item Information</FormLabel>
-                        <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={control} 
-                    name="extraFoundInfo"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found and Return Information</FormLabel>
-                        <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              </div>
-              
-              <Separator className="my-6" />
+            </div>
 
 
+            <Separator className="my-6" />
               <h3 className={cn(sectionHeadingClass)}>
                  <UserCheck className="mr-2 h-5 w-5 text-primary" />
                  Technician and Reporting Engineer Information
@@ -754,7 +803,7 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-6" />
               <FormField
-                control={control} 
+                control={control}
                 name="installationNotes"
                 render={({ field }) => (
                 <FormItem>
