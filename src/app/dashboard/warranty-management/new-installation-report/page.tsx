@@ -419,7 +419,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -470,8 +470,8 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-              
-              <Separator className="my-2" />
+
+                <Separator className="my-2" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     {selectedLcDetails.lcIdForLink ? (
                         <div className="p-3 border rounded-md bg-muted/30">
@@ -596,11 +596,11 @@ export default function NewInstallationReportPage() {
                         <TableRow>
                             <TableHead className="w-[50px] text-foreground">SL</TableHead>
                             <TableHead className="text-foreground">Machine Model*</TableHead>
-                            <TableHead className="text-foreground">Serial No.*</TableHead>
+                            <TableHead className="text-foreground">Machine Serial No.*</TableHead>
                             <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
                             <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
                             <TableHead className="text-foreground">Install Date*</TableHead>
-                            <TableHead className="text-foreground">Warranty Remaining</TableHead>
+                            <TableHead className="text-foreground w-[180px]">Warranty Remaining</TableHead>
                             <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -791,4 +791,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
