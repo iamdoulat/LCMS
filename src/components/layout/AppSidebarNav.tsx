@@ -78,7 +78,7 @@ interface NavItemGroup {
     href: string;
     label: string;
     icon?: React.ElementType;
-    roles?: UserRole[];
+    roles?: UserRole[]; // Sub-links can also have roles if needed for more granular control
   }>;
   roles?: UserRole[];
 }
@@ -87,7 +87,7 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -97,7 +97,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -109,7 +109,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -118,7 +118,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -127,7 +127,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -158,6 +158,7 @@ const reportingManagementNavItems: NavItemGroup[] = [
     icon: BarChart3,
     roles: ["Super Admin", "Admin"],
     subLinks: [
+      // Add sub-links here as needed
     ],
   },
 ];
@@ -176,7 +177,6 @@ export function AppSidebarNav() {
   const sidebar = useSidebar();
   
   // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-
 
   const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
@@ -223,23 +223,21 @@ export function AppSidebarNav() {
       .filter(item => item.subLinks && isGroupActive(item.subLinks) && (!item.roles || (userRole && item.roles.includes(userRole))))
       .map(item => item.groupLabel || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, userRole]); // Removed allAccordionGroups as it's stable
+  }, [pathname, userRole]); 
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
-    // Hide group if userRole is not in item.roles
     if (item.roles && (!userRole || !item.roles.includes(userRole))) {
       return null;
     }
 
     const visibleSubLinks = item.subLinks?.filter(subLink => !subLink.roles || (userRole && subLink.roles.includes(userRole))) || [];
 
-    // If the group itself is visible but has no visible sub-links for the current user, don't render it.
-    if (item.subLinks && visibleSubLinks.length === 0) {
+    if (item.subLinks && visibleSubLinks.length === 0 && item.groupLabel) { // Ensure groups without visible sublinks aren't rendered if they have a label
         return null;
     }
-
+    
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -250,7 +248,7 @@ export function AppSidebarNav() {
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                    (defaultOpenAccordions.includes(item.groupLabel || '') && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
+                    (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -300,7 +298,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext}
+                src={companyLogoUrlFromContext} 
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -333,7 +331,6 @@ export function AppSidebarNav() {
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
             {[mainDashboardLink, globalSearchLink].map((item) => {
-               // Hide dashboard link for 'Service' role
               if (item.href === '/dashboard' && userRole === "Service") {
                 return null;
               }
