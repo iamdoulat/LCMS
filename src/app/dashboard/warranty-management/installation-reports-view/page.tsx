@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Added CardContent
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Added Label import
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react';
+import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react'; // Added PlusCircle
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -18,14 +18,13 @@ import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from '
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear } from 'date-fns';
 
-const ITEMS_PER_PAGE = 9; // Display 9 cards per page
+const ITEMS_PER_PAGE = 9;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
-
 
 const formatDisplayDate = (dateString?: string | null) => {
   if (!dateString) return 'N/A';
@@ -52,7 +51,6 @@ export default function InstallationReportsViewPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter states
   const [filterCommercialInvoiceNumber, setFilterCommercialInvoiceNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
@@ -72,7 +70,6 @@ export default function InstallationReportsViewPage() {
       setFetchError(null);
 
       try {
-        // Fetch Installation Reports
         const reportsCollectionRef = collection(firestore, "installation_reports");
         const reportsQuery = query(reportsCollectionRef, orderBy("createdAt", "desc"));
         const reportsSnapshot = await getDocs(reportsQuery);
@@ -83,7 +80,6 @@ export default function InstallationReportsViewPage() {
           return {
             id: docSnap.id,
             ...data,
-            // Ensure dates are consistently strings for initial state, form handling will convert if needed
             createdAt: isValid(createdAt) ? format(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A',
             updatedAt: data.updatedAt instanceof Timestamp ? format(data.updatedAt.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : (data.updatedAt && isValid(parseISO(data.updatedAt)) ? format(parseISO(data.updatedAt), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A'),
             invoiceDate: data.invoiceDate && isValid(parseISO(data.invoiceDate)) ? data.invoiceDate : undefined,
@@ -98,14 +94,12 @@ export default function InstallationReportsViewPage() {
         });
         setAllReports(fetchedReports);
 
-        // Fetch Applicants (Customers)
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
         setApplicantOptions(
           customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
         );
         setIsLoadingApplicants(false);
 
-        // Fetch Beneficiaries (Suppliers)
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
         setBeneficiaryOptions(
           suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
@@ -237,7 +231,7 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
                 View Installation Reports
               </CardTitle>
@@ -253,13 +247,13 @@ export default function InstallationReportsViewPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent> {/* Added CardContent wrapper */}
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div>
                   <Label htmlFor="ciNoFilter" className="text-sm font-medium">C.I. Number</Label>
                   <Input id="ciNoFilter" placeholder="Search by C.I. No..." value={filterCommercialInvoiceNumber} onChange={(e) => setFilterCommercialInvoiceNumber(e.target.value)} />
@@ -301,8 +295,8 @@ export default function InstallationReportsViewPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="lg:col-start-3">
-                  <Button onClick={clearFilters} variant="outline" className="w-full">
+                <div className="lg:col-span-4 md:col-span-2">
+                  <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters
                   </Button>
                 </div>
@@ -332,7 +326,7 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6"> {/* Responsive grid for report cards */}
               {currentItems.map((report) => {
                 let reportExpiredCount = 0;
                 let reportRemainingCount = 0;
@@ -352,9 +346,9 @@ export default function InstallationReportsViewPage() {
                 });
 
                 return (
-                  <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                  <div key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
                     <div className="absolute top-3 right-3 flex gap-1 z-10">
-                      <Button variant="outline" size="icon" className="h-7 w-7" asChild>
+                      <Button size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
                           <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Report</span>
                         </Link>
@@ -364,7 +358,7 @@ export default function InstallationReportsViewPage() {
                       </Button>
                     </div>
 
-                    <div className="mb-2 text-sm pr-20">
+                     <div className="mb-2 text-sm pr-20"> {/* Added pr-20 for spacing */}
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
                           C.I.: {formatReportValue(report.commercialInvoiceNumber)}
@@ -404,10 +398,10 @@ export default function InstallationReportsViewPage() {
                         </Button>
                       )}
                     </div>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-6">
@@ -425,6 +419,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-
-
-    
