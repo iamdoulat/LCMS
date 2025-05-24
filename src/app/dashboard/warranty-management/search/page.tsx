@@ -5,10 +5,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, Microscope, Package, Wrench, ClipboardList, ShieldCheck, ShieldOff, Layers, CheckCircle2, Hourglass } from 'lucide-react';
+import { Search as SearchIcon, Microscope, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3 } from 'lucide-react'; // Added BarChart3
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
-import { StatCard } from '@/components/dashboard/StatCard'; // Import StatCard
+import { StatCard } from '@/components/dashboard/StatCard'; 
 
 export default function WarrantySearchPage() {
   const [searchTerm, setSearchTerm] = useState('');
