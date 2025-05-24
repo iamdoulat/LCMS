@@ -51,6 +51,7 @@ import {
   ClipboardList,
   ShieldOff,
   Archive,
+  FileEdit, // Added FileEdit here
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -152,7 +153,7 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && userRole) {
-      console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
     }
   }, [userRole]);
 
@@ -279,6 +280,7 @@ export function AppSidebarNav() {
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
                     aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+                    
                  >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
