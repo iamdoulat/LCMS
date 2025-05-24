@@ -32,7 +32,7 @@ import {
   Briefcase,
   Loader2,
   UserPlus,
-  Building, // Keep for Company Setup
+  Building,
   FileText,
   Package,
   History,
@@ -41,9 +41,9 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory, // Keep for Customers/Applicants group icon
-  Truck,   // Keep for Suppliers/Beneficiary group icon
-  Ship,    // Keep for Shipment Management group icon
+  Factory,
+  Truck,
+  Ship,
   ShieldCheck,
   BarChart3,
   Users as UsersIcon,
@@ -53,6 +53,7 @@ import {
   FileEdit,
   PackageCheck,
   CreditCard,
+  Microscope,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -60,8 +61,8 @@ import Image from 'next/image';
 import type { UserRole } from '@/types';
 import React from 'react';
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] };
-const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search };
+const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin"] };
+const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin"] };
 
 interface NavItem {
   href?: string;
@@ -86,8 +87,8 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
-    roles: ["Super Admin", "Admin"],
+    icon: FileText,
+    roles: ["Super Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
@@ -96,8 +97,8 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
-    roles: ["Super Admin", "Admin"],
+    icon: Briefcase,
+    roles: ["Super Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -108,8 +109,8 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
-    roles: ["Super Admin", "Admin"],
+    icon: Truck,
+    roles: ["Super Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
       { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
@@ -117,8 +118,8 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from UsersIcon to Building then to Factory
-    roles: ["Super Admin", "Admin"],
+    icon: Factory,
+    roles: ["Super Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
       { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
@@ -126,8 +127,8 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
-    roles: ["Super Admin", "Admin"],
+    icon: Ship,
+    roles: ["Super Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
       { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
@@ -141,12 +142,12 @@ const warrantyManagementNavItems: NavItemGroup[] = [
  {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service"],
+    roles: ["Super Admin"], // Service role access controlled at page level or specific sub-links
     subLinks: [
-      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
-      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench },
-      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
-      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Service"] }, // Service user lands here
+      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
     ],
   },
 ];
@@ -155,19 +156,18 @@ const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
     icon: BarChart3,
-    roles: ["Super Admin", "Admin"],
+    roles: ["Super Admin"],
     subLinks: [
-      // Add sub-links here later if needed
     ],
   },
 ];
 
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
 export function AppSidebarNav() {
@@ -193,6 +193,7 @@ export function AppSidebarNav() {
         '/dashboard/commission-management/issued-pi-list',
         '/dashboard/settings/users',
         '/dashboard/warranty-management/installation-reports-view',
+        '/dashboard/warranty-management/search',
       ];
       if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
         return true;
@@ -219,7 +220,7 @@ export function AppSidebarNav() {
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
-      .filter(item => item.subLinks && isGroupActive(item.subLinks))
+      .filter(item => item.subLinks && isGroupActive(item.subLinks) && (!item.roles || (userRole && item.roles.includes(userRole))))
       .map(item => item.groupLabel || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
