@@ -88,7 +88,7 @@ const formatCurrencyDisplay = (currency?: Currency | string, amount?: number) =>
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null, currency?: Currency) => {
   let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
   if (currency && (label.toLowerCase().includes("amount") || label.toLowerCase().includes("amt"))) {
-      // displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue)); // Amount field hidden, no need to format currency
+      // displayValue = formatCurrencyDisplay(currency, parseFloat(displayValue)); // Amount field hidden
   }
   return (
     <FormItem className="mb-2">
@@ -222,16 +222,15 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty || 0, firstPartialAmount: lc.firstPartialAmount || 0, firstPartialPkgs: lc.firstPartialPkgs || 0, firstPartialNetWeight: lc.firstPartialNetWeight || 0, firstPartialGrossWeight: lc.firstPartialGrossWeight || 0, firstPartialCbm: lc.firstPartialCbm || 0,
-            secondPartialQty: lc.secondPartialQty || 0, secondPartialAmount: lc.secondPartialAmount || 0, secondPartialPkgs: lc.secondPartialPkgs || 0, secondPartialNetWeight: lc.secondPartialNetWeight || 0, secondPartialGrossWeight: lc.secondPartialGrossWeight || 0, secondPartialCbm: lc.secondPartialCbm || 0,
-            thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialAmount: lc.thirdPartialAmount || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
+            firstPartialQty: lc.firstPartialQty || 0, firstPartialPkgs: lc.firstPartialPkgs || 0, firstPartialNetWeight: lc.firstPartialNetWeight || 0, firstPartialGrossWeight: lc.firstPartialGrossWeight || 0, firstPartialCbm: lc.firstPartialCbm || 0,
+            secondPartialQty: lc.secondPartialQty || 0, secondPartialPkgs: lc.secondPartialPkgs || 0, secondPartialNetWeight: lc.secondPartialNetWeight || 0, secondPartialGrossWeight: lc.secondPartialGrossWeight || 0, secondPartialCbm: lc.secondPartialCbm || 0,
+            thirdPartialQty: lc.thirdPartialQty || 0, thirdPartialPkgs: lc.thirdPartialPkgs || 0, thirdPartialNetWeight: lc.thirdPartialNetWeight || 0, thirdPartialGrossWeight: lc.thirdPartialGrossWeight || 0, thirdPartialCbm: lc.thirdPartialCbm || 0,
             currency: lc.currency || 'USD',
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
 
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Clear fields if no Commercial Invoice is selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -245,9 +244,9 @@ export default function NewInstallationReportPage() {
         lcIdForLink: null,
         isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
         partialShipmentAllowed: "No",
-        firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-        secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-        thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+        firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
+        secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
+        thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
         currency: 'USD',
       });
       setSelectedCommercialInvoiceDateDisplay(null);
@@ -294,7 +293,7 @@ export default function NewInstallationReportPage() {
       icon: "info",
     });
     setIsSubmitting(false);
-    // reset(); // Consider if form should reset after simulated submission
+    // reset(); 
   }
 
   const handleViewUrl = (url: string | undefined | null) => {
@@ -472,64 +471,64 @@ export default function NewInstallationReportPage() {
               </div>
               
               <Separator className="my-2" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {isLcSelected && selectedLcDetails.lcIdForLink ? (
-                    <div className="p-3 border rounded-md bg-muted/30">
-                        <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                        <div className="flex items-center gap-3">
-                            {[
-                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                            ].map((shipment, index) => (
-                                <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
-                                <Button
-                                    asChild
-                                    type="button"
-                                    variant={shipment.flag ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                    shipment.flag
-                                        ? "bg-green-500 hover:bg-green-600 text-white"
-                                        : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`${shipment.label} Shipment Status`}
-                                >
-                                    <a>{shipment.label}</a>
-                                </Button>
-                                </Link>
-                            ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {selectedLcDetails.lcIdForLink ? (
+                        <div className="p-3 border rounded-md bg-muted/30">
+                            <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                            <div className="flex items-center gap-3">
+                                {[
+                                    { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                    { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                    { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                                ].map((shipment, index) => (
+                                    <Link key={index} href={`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`} passHref legacyBehavior>
+                                    <Button
+                                        asChild
+                                        type="button"
+                                        variant={shipment.flag ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn(
+                                        "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                        shipment.flag
+                                            ? "bg-green-500 hover:bg-green-600 text-white"
+                                            : "border-destructive text-destructive hover:bg-destructive/10"
+                                        )}
+                                        title={`${shipment.label} Shipment Status`}
+                                    >
+                                        <a>{shipment.label}</a>
+                                    </Button>
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ) : <div className="min-h-[76px]"></div> }
+                    ) : <div className="min-h-[76px]"></div> }
 
-                <FormField
-                  control={control}
-                  name="packingListUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
-                      <div className="flex items-center gap-2">
-                        <FormControl className="flex-grow">
-                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="default"
-                          size="icon"
-                          onClick={() => handleViewUrl(field.value)}
-                          disabled={!field.value}
-                          title="View Packing List"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    <FormField
+                    control={control}
+                    name="packingListUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                        <div className="flex items-center gap-2">
+                            <FormControl className="flex-grow">
+                            <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <Button
+                            type="button"
+                            variant="default"
+                            size="icon"
+                            onClick={() => handleViewUrl(field.value)}
+                            disabled={!field.value}
+                            title="View Packing List"
+                            >
+                            <ExternalLink className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
               <Separator className="my-2" />
                
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
@@ -610,8 +609,8 @@ export default function NewInstallationReportPage() {
                             let warrantyDisplay = "N/A";
                             if (installDateValue && isValid(installDateValue)) {
                                 const expiryDate = addDays(installDateValue, 365);
-                                const remainingDays = differenceInDays(new Date(), expiryDate); // Corrected calculation
-                                warrantyDisplay = remainingDays < 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
+                                const remainingDays = differenceInDays(expiryDate, new Date());
+                                warrantyDisplay = remainingDays >= 0 ? `${remainingDays} days remaining` : "Expired";
                             }
                             return (
                                 <TableRow key={field.id}>
@@ -646,7 +645,7 @@ export default function NewInstallationReportPage() {
                                             name={`installationDetails.${index}.ctlBoxModel`}
                                             render={({ field: itemField }) => (
                                                 <FormItem>
-                                                    <FormControl><Input placeholder="Ctl. Box Model" {...itemField} className="h-9" /></FormControl>
+                                                    <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
                                                     <FormMessage className="text-xs" />
                                                 </FormItem>
                                             )}
@@ -658,7 +657,7 @@ export default function NewInstallationReportPage() {
                                             name={`installationDetails.${index}.ctlBoxSerial`}
                                             render={({ field: itemField }) => (
                                                 <FormItem>
-                                                    <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} className="h-9" /></FormControl>
+                                                    <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
                                                     <FormMessage className="text-xs" />
                                                 </FormItem>
                                             )}
@@ -711,7 +710,7 @@ export default function NewInstallationReportPage() {
                     name="missingItemInfo"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing and Short Shipment Item Information</FormLabel>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing And Short Shipment Item Information</FormLabel>
                         <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} /></FormControl>
                         <FormMessage />
                     </FormItem>
