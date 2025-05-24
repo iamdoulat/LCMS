@@ -40,11 +40,28 @@ export default function InstallationReportsViewPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
+          // Convert Firestore Timestamps to ISO strings for dates if they exist
+          const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
+          const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
+          const invoiceDateISO = data.invoiceDate?.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
+          const etdDateISO = data.etdDate?.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
+          const etaDateISO = data.etaDate?.toDate ? data.etaDate.toDate().toISOString() : data.etaDate;
+
+          const installationDetailsProcessed = data.installationDetails?.map((item: any) => ({
+            ...item,
+            installDate: item.installDate?.toDate ? item.installDate.toDate().toISOString() : item.installDate,
+          })) || [];
+
+
           return {
             id: docSnap.id,
             ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+            createdAt: createdAtISO,
+            updatedAt: updatedAtISO,
+            invoiceDate: invoiceDateISO,
+            etdDate: etdDateISO,
+            etaDate: etaDateISO,
+            installationDetails: installationDetailsProcessed,
           } as InstallationReportDocument;
         });
         setAllReports(fetchedReports);
@@ -137,7 +154,7 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
                 View Installation Reports
               </CardTitle>
@@ -175,7 +192,7 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
               {currentItems.map((report) => (
                 <Card key={report.id} className="flex flex-col justify-between shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3">
@@ -190,7 +207,7 @@ export default function InstallationReportsViewPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm flex-grow">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2">
                       <div>
                         <p className="font-medium text-muted-foreground">Applicant:</p>
                         <p className="truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</p>
@@ -207,7 +224,7 @@ export default function InstallationReportsViewPage() {
                         <p className="font-medium text-muted-foreground">Installed:</p>
                         <p>{formatReportValue(report.totalInstalledQty)}</p>
                       </div>
-                      <div className="col-span-2 md:col-span-1">
+                      <div className="col-span-2 sm:col-span-1">
                         <p className="font-medium text-muted-foreground">Pending:</p>
                         <p className="font-bold text-destructive">{formatReportValue(report.pendingQty)}</p>
                       </div>
