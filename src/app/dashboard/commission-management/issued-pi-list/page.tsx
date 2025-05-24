@@ -296,7 +296,7 @@ export default function IssuedPIListPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary")}>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
                 Issued Proforma Invoice (PI) List
               </CardTitle>
@@ -318,7 +318,7 @@ export default function IssuedPIListPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter & Sort Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1">
                   <label htmlFor="piNoFilter" className="text-sm font-medium">PI Number</label>
                   <Input
@@ -395,7 +395,7 @@ export default function IssuedPIListPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="pt-5 xl:col-start-4">
+                 <div className="pt-5 md:col-span-2 lg:col-span-1 lg:col-start-4"> {/* Adjust for 4 column layout */}
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -534,3 +534,4 @@ export default function IssuedPIListPage() {
   );
 }
 
+    

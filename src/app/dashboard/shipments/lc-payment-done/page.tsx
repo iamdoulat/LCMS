@@ -25,8 +25,8 @@ interface PaymentDoneLC extends LCEntryDocument {
 
 const ITEMS_PER_PAGE = 10;
 const ALL_YEARS_VALUE = "__ALL_YEARS_PAYMENT_DONE__";
-const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_PAYMENT_DONE__";
-const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_PAYMENT_DONE__";
+const PLACEHOLDER_APPLICANT_VALUE = "__ALL_APPLICANTS_PAYMENT_DONE__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__ALL_BENEFICIARIES_PAYMENT_DONE__";
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
@@ -159,22 +159,15 @@ export default function LCPaymentDonePage() {
     if (filterLcNumber) {
       filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     }
-    if (filterApplicantId && filterApplicantId !== ALL_APPLICANTS_VALUE) {
+    if (filterApplicantId && filterApplicantId !== PLACEHOLDER_APPLICANT_VALUE) {
       filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
     }
-    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
+    if (filterBeneficiaryId && filterBeneficiaryId !== PLACEHOLDER_BENEFICIARY_VALUE) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(lc => {
-        // Assuming 'year' field is stored directly in LCEntryDocument from lcIssueDate
-        // Or derive it here if not stored:
-        // if (!lc.lcIssueDate) return false;
-        // try {
-        //   const issueDate = parseISO(lc.lcIssueDate);
-        //   return isValid(issueDate) && getYear(issueDate) === yearNum;
-        // } catch { return false; }
         return lc.year === yearNum;
       });
     }
@@ -250,7 +243,7 @@ export default function LCPaymentDonePage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div>
                   <Label htmlFor="lcNoFilterPaymentDone" className="text-sm font-medium">L/C Number</Label>
                   <Input id="lcNoFilterPaymentDone" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
@@ -259,8 +252,8 @@ export default function LCPaymentDonePage() {
                   <Label htmlFor="applicantFilterPaymentDone" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
                   <Combobox
                     options={applicantOptions}
-                    value={filterApplicantId || ALL_APPLICANTS_VALUE}
-                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)}
+                    value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
                     placeholder="Search Applicant..."
                     selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
                     emptyStateMessage="No applicant found."
@@ -271,8 +264,8 @@ export default function LCPaymentDonePage() {
                   <Label htmlFor="beneficiaryFilterPaymentDone" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
                   <Combobox
                     options={beneficiaryOptions}
-                    value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE}
-                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)}
+                    value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                     placeholder="Search Beneficiary..."
                     selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
                     emptyStateMessage="No beneficiary found."
@@ -288,7 +281,7 @@ export default function LCPaymentDonePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="lg:col-span-3"> {/* Adjust if more filters are added */}
+                <div className="lg:col-span-4 md:col-span-2"> {/* Adjust to span full width on larger screens or as needed */}
                   <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters
                   </Button>
@@ -448,3 +441,6 @@ export default function LCPaymentDonePage() {
     </div>
   );
 }
+
+
+    
