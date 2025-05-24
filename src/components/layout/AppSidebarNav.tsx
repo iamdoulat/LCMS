@@ -46,6 +46,7 @@ import {
   Truck,
   PackageCheck,
   BarChart3,
+  FileEdit, // Added FileEdit here
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -163,7 +164,7 @@ export function AppSidebarNav() {
     return subLinks.some(sub => isActive(sub.href));
   };
 
-  const allAccordionGroups = [...coreModulesNavItems, ...reportingManagementNavItems, ...managementNavItems];
+  const allAccordionGroups = [...coreModulesNavItems, ...managementNavItems, ...reportingManagementNavItems];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
@@ -307,12 +308,14 @@ export function AppSidebarNav() {
         </SidebarGroup>
 
         <SidebarSeparator />
-        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+        <SidebarGroup className="p-0">
+          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Reporting Management
-        </SidebarGroupLabel>
-        <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-            {reportingManagementNavItems.map(renderNavGroup)}
-        </Accordion>
+          </SidebarGroupLabel>
+          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+              {reportingManagementNavItems.map(renderNavGroup)}
+          </Accordion>
+        </SidebarGroup>
 
         <SidebarSeparator />
         <SidebarGroup className="p-0">
