@@ -521,12 +521,13 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, authLoading]); // Removed selectedYear from deps to avoid re-fetch on just year change, use explicit call.
 
   useEffect(() => {
     console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
     if (!authLoading && authUser) {
-      console.log("Dashboard: Auth loaded, user available. Triggering fetch.");
+      console.log("Dashboard: Auth loaded, user available. Triggering fetch for year:", selectedYear);
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       console.log("Dashboard: User not authenticated after auth load, clearing data.");
@@ -682,7 +683,7 @@ export default function DashboardPage() {
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
-                L/Cs from {selectedYear} nearing ETD (Status not &quot;Shipment Done&quot;).
+                L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">
@@ -701,9 +702,37 @@ export default function DashboardPage() {
                     >
                         {upcomingEtdShipments.map((shipment) => (
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
-                             <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block mb-1">
-                                    {shipment.documentaryCreditNumber || 'N/A'}
-                            </Link>
+                            <div className="flex justify-between items-start mb-1">
+                                <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block pr-20">
+                                        {shipment.documentaryCreditNumber || 'N/A'}
+                                </Link>
+                                <div className="flex gap-1.5 items-center">
+                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                        <Button
+                                            variant={shipment.isFirstShipment ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            title="1st Shipment Status"
+                                        >1st</Button>
+                                    </Link>
+                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                        <Button
+                                            variant={shipment.isSecondShipment ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            title="2nd Shipment Status"
+                                        >2nd</Button>
+                                    </Link>
+                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                        <Button
+                                            variant={shipment.isThirdShipment ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            title="3rd Shipment Status"
+                                        >3rd</Button>
+                                    </Link>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                 <div>
                                     <p className="truncate">Applicant: <span className="font-medium text-foreground">{shipment.applicantName || 'N/A'}</span></p>
@@ -713,32 +742,6 @@ export default function DashboardPage() {
                                 <div>
                                     <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
                                     <p className="truncate">ETA: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etaDate)}</span></p>
-                                     <div className="flex gap-1.5 mt-1">
-                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                            <Button
-                                                variant={shipment.isFirstShipment ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                                title="1st Shipment Status"
-                                            >1st</Button>
-                                        </Link>
-                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                            <Button
-                                                variant={shipment.isSecondShipment ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                                title="2nd Shipment Status"
-                                            >2nd</Button>
-                                        </Link>
-                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
-                                            <Button
-                                                variant={shipment.isThirdShipment ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", shipment.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                                title="3rd Shipment Status"
-                                            >3rd</Button>
-                                        </Link>
-                                    </div>
                                 </div>
                             </div>
                         </li>
@@ -754,7 +757,7 @@ export default function DashboardPage() {
         <CardHeader>
             <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary" />
-                Total L/C Values by Year (2020-2030)
+                Total L/C and T/T Values by Year (2020-2030)
             </CardTitle>
             <CardDescription>
                 Overview of total L/C values for each year. Data fetched from Firestore.
@@ -889,4 +892,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
