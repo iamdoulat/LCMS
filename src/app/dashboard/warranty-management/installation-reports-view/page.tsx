@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Added CardContent
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
+import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -50,6 +50,7 @@ export default function InstallationReportsViewPage() {
         const querySnapshot = await getDocs(q);
         const fetchedReports = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
+          // Ensure dates are consistently strings if they come from Firestore Timestamps
           const createdAtISO = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt;
           const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
@@ -126,12 +127,25 @@ export default function InstallationReportsViewPage() {
     });
   };
 
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return allReports.slice(startIndex, endIndex);
   }, [allReports, currentPage]);
-  
+
   const totalPages = Math.ceil(allReports.length / ITEMS_PER_PAGE);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -165,7 +179,7 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
                 View Installation Reports
               </CardTitle>
@@ -203,7 +217,7 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+            <ul className="space-y-4">
               {currentItems.map((report) => (
                 <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
                   <div className="absolute top-3 right-3 flex gap-1 z-10">
@@ -223,18 +237,18 @@ export default function InstallationReportsViewPage() {
                       <span className="sr-only">Delete Report</span>
                     </Button>
                   </div>
-                  
+
                   <div className="mb-2 text-sm pr-16">
-                    <div className="flex flex-wrap items-baseline gap-x-3">
-                      <span className="font-semibold text-primary">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline">
                         C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                      </span>
+                      </Link>
                       {report.commercialInvoiceNumber && report.commercialInvoiceDate && (
                         <span className="text-xs text-muted-foreground">
-                          (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                          (C.I. Date: {formatDisplayDate(report.commercialInvoiceDate)})
                         </span>
                       )}
-                      <span className="font-semibold text-primary ml-2"> 
+                      <span className="font-medium text-foreground">
                         L/C: {formatReportValue(report.documentaryCreditNumber)}
                       </span>
                     </div>
@@ -251,7 +265,7 @@ export default function InstallationReportsViewPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-3">
                     <div>
                       <span className="text-muted-foreground">Total L/C Qty: </span>
                       <span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span>
@@ -267,10 +281,20 @@ export default function InstallationReportsViewPage() {
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed">
+
+                  <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
                     {report.createdAt && (
                       <span>Created: {isValid(new Date(report.createdAt as string)) ? format(new Date(report.createdAt as string), 'PPP p') : 'N/A'}</span>
+                    )}
+                    {report.packingListUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 py-1 text-xs"
+                        onClick={() => handleViewUrl(report.packingListUrl)}
+                      >
+                        <FileText className="mr-1.5 h-3 w-3" /> Packing List
+                      </Button>
                     )}
                   </div>
                 </li>
@@ -307,3 +331,5 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
+    
