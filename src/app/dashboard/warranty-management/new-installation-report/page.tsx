@@ -80,7 +80,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
 };
 
 const renderPartialDetailReadOnly = (label: string, value?: number | string | null) => {
-  let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (value || "0");
+  let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
   return (
     <FormItem className="mb-2">
         <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
@@ -104,16 +104,16 @@ export default function NewInstallationReportPage() {
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: PartialShipmentAllowed;
-    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
   }>({
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
-    firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-    secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-    thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+    firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
+    secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
+    thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
   });
   
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
@@ -161,7 +161,7 @@ export default function NewInstallationReportPage() {
         const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
-          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))) // Ensure we fetch LCs with C.I. No.
+          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", "")))
         ]);
 
         setApplicantOptions(
@@ -174,7 +174,7 @@ export default function NewInstallationReportPage() {
         const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
         lcsSnap.forEach(doc => {
           const data = doc.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) { // Double check C.I. No existence
+          if (data.commercialInvoiceNumber) { 
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
@@ -216,14 +216,13 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty, firstPartialAmount: lc.firstPartialAmount, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
-            secondPartialQty: lc.secondPartialQty, secondPartialAmount: lc.secondPartialAmount, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
-            thirdPartialQty: lc.thirdPartialQty, thirdPartialAmount: lc.thirdPartialAmount, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
+            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
+            secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
+            thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
-      // Clear fields if no L/C selected
       setValue("applicantId", '', { shouldValidate: true });
       setValue("beneficiaryId", '', { shouldValidate: true });
       setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -237,9 +236,9 @@ export default function NewInstallationReportPage() {
         lcIdForLink: null,
         isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
         partialShipmentAllowed: "No",
-        firstPartialQty: 0, firstPartialAmount: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-        secondPartialQty: 0, secondPartialAmount: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-        thirdPartialQty: 0, thirdPartialAmount: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+        firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
+        secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
+        thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
       });
       setSelectedCommercialInvoiceDateDisplay(null);
     }
@@ -526,7 +525,7 @@ export default function NewInstallationReportPage() {
                  <Accordion
                     type="single"
                     collapsible
-                    className="w-full"
+                    className="w-full mt-4" 
                     value={activePartialShipmentAccordion}
                     onValueChange={setActivePartialShipmentAccordion}
                 >
@@ -573,8 +572,7 @@ export default function NewInstallationReportPage() {
                     </AccordionItem>
                 </Accordion>
               )}
-              <Separator className="my-6" />
-
+              {/* Separator removed here */}
                 <h3 className={cn(sectionHeadingClass)}>
                     <ClipboardList className="mr-2 h-5 w-5 text-primary" />
                     Installation Details
@@ -681,7 +679,7 @@ export default function NewInstallationReportPage() {
               {formState.errors.installationDetails && !formState.errors.installationDetails.message && typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root && (
                 <p className="text-sm font-medium text-destructive">{(formState.errors.installationDetails as any).root?.message || "Please ensure all installation details are valid."}</p>
               )}
-              <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
+               <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
               </Button>
 
@@ -695,7 +693,10 @@ export default function NewInstallationReportPage() {
                     <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
                 </FormItem>
               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              
+              <Separator className="my-6" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <FormField
                     control={control} 
                     name="missingItemInfo"
@@ -719,6 +720,7 @@ export default function NewInstallationReportPage() {
                     )}
                 />
               </div>
+              
               <Separator className="my-6" />
 
 
@@ -750,6 +752,7 @@ export default function NewInstallationReportPage() {
                     )}
                 />
               </div>
+              <Separator className="my-6" />
               <FormField
                 control={control} 
                 name="installationNotes"
@@ -782,6 +785,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
-
-    
