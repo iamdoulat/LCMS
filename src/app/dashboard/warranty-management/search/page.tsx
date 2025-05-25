@@ -16,8 +16,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
-import { Label } from '@/components/ui/label';
-import Lottie from "lottie-react"; 
+import Image from 'next/image'; // Import next/image
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
@@ -43,7 +42,7 @@ interface WarrantySearchResultItem {
   serialNo?: string;
   ctlBoxModel?: string;
   ctlBoxSerial?: string;
-  installDate?: string; // ISO string date
+  installDate?: string;
   warrantyStatus: string;
 }
 
@@ -70,7 +69,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
-    setSearchError(null); 
+    setSearchError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -326,13 +325,11 @@ export default function WarrantySearchPage() {
         className="shadow-xl max-w-6xl mx-auto"
       >
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div className="flex-1 text-center sm:text-left">
-                <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                    <Microscope className="h-7 w-7 text-primary" />
-                    Warranty Search Engine
-                </CardTitle>
-            </div>
+          <div className="flex-1 text-center sm:text-left">
+            <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Microscope className="h-7 w-7 text-primary" />
+                Warranty Search Engine
+            </CardTitle>
           </div>
            <CardDescription className="text-card-foreground/80 text-center pt-2">
              Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
@@ -370,7 +367,14 @@ export default function WarrantySearchPage() {
 
           {!displayedSearchTerm && !isSearching && !searchError && (
             <div className="text-center text-card-foreground/70 py-10">
-                <Lottie path="/search_animation.json" loop={true} style={{ width: 150, height: 150, margin: '0 auto' }} className="mb-4" />
+                <Image
+                  src="https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/search_ani.gif?alt=media&token=cce7e0dd-9ff9-4af9-8e75-254699bd8283"
+                  alt="Search Animation"
+                  width={150}
+                  height={150}
+                  className="mx-auto mb-4"
+                  unoptimized // Good for GIFs
+                />
                 <p className="text-lg">
                   Enter terms above to search warranty-related information for{' '}
                   {selectedYear === "All Years" ? "all years" : selectedYear}.
@@ -454,7 +458,7 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.89) 30%, rgba(232, 227, 218, 1) 100%)',
+          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
         }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
