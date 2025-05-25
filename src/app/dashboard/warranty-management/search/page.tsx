@@ -70,11 +70,8 @@ export default function WarrantySearchPage() {
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
     setSearchError(null);
-    console.log(`WarrantySearch: Fetching reports and calculating stats for year: ${yearToFilter}`);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
-      // For stats, we fetch all reports initially, then filter client-side.
-      // This could be optimized for very large datasets by querying by year if 'reportYear' field exists.
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -93,7 +90,7 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); // Store all reports for searching
+      setAllReports(fetchedReports);
 
       let reportsForSelectedYear = fetchedReports;
       if (yearToFilter !== "All Years") {
@@ -109,8 +106,6 @@ export default function WarrantySearchPage() {
           return false;
         });
       }
-      console.log(`WarrantySearch: Found ${reportsForSelectedYear.length} reports for year ${yearToFilter}`);
-
 
       let totalLcMachineries = 0;
       let totalInstalledMachines = 0;
@@ -156,7 +151,7 @@ export default function WarrantySearchPage() {
       } else if (error.message) {
         errorMsg = `Failed to load statistics: ${error.message}`;
       }
-      setSearchError(errorMsg); // Use a general searchError state for now
+      setSearchError(errorMsg);
       Swal.fire("Statistics Error", errorMsg, "error");
       setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
     } finally {
@@ -228,7 +223,7 @@ export default function WarrantySearchPage() {
                 detailMatchedInReport = true;
             }
 
-            if (currentDetailMatch) { // Only add if this specific detail matches
+            if (currentDetailMatch) {
                 let warrantyStatus = "N/A";
                 if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -254,10 +249,9 @@ export default function WarrantySearchPage() {
             }
         });
         
-        // If report matched at top level but no specific detail matched, add first detail as representative (or handle differently)
         if (reportLevelMatch && !detailMatchedInReport) {
             if (report.installationDetails && report.installationDetails.length > 0) {
-                const detail = report.installationDetails[0]; // Take the first detail
+                const detail = report.installationDetails[0]; 
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -280,7 +274,7 @@ export default function WarrantySearchPage() {
                         warrantyStatus,
                     });
                 }
-            } else { // Report matched but has NO installation details
+            } else { 
                  const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                  if (existingResultIndex === -1) {
                      results.push({
@@ -329,20 +323,18 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-            background: 'radial-gradient(circle, rgba(34,190,195,0.1) 0%, rgba(255,255,255,0) 70%), hsl(var(--card))',
+            background: 'radial-gradient(circle, rgba(34,190,195,1) 65%, rgba(191,177,163,1) 100%)',
         }}
       >
         <CardHeader>
-           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div className="flex-1">
-              <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Microscope className="h-7 w-7 text-primary" />
-                 Warranty Search Engine
-              </CardTitle>
-            </div>
+           <div className="flex-1">
+            <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <Microscope className="h-7 w-7 text-primary" />
+               Warranty Search Engine
+            </CardTitle>
           </div>
            <CardDescription className="text-center pt-2 text-card-foreground/80">
-            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -461,7 +453,7 @@ export default function WarrantySearchPage() {
           background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
         }}
       >
-         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+         <CardHeader className="flex flex-col sm:flex-row justify-between items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
             <CardTitle className={cn("flex items-center sm:justify-start justify-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary"/>
@@ -493,7 +485,7 @@ export default function WarrantySearchPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> 
               <span className="text-card-foreground/80">Calculating statistics...</span>
             </div>
-          ) : searchError && !isSearching ? ( // Display general errors here too if stats failed
+          ) : searchError && !isSearching ? ( 
             <div className="text-destructive text-center py-4">{searchError}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
