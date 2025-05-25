@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, Layers, ExternalLink, Truck, Factory, BarChart3 } from 'lucide-react';
+import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3 } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -155,7 +155,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
               scrollElement.scrollTop += 1;
             }
           }
-        }, 75);
+        }, 75); // Adjust speed as needed
       }
     };
 
@@ -235,16 +235,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (authLoading || !authUser) {
-        console.log("Dashboard: Auth still loading or user not available yet. Waiting to fetch data.");
-        setIsLoading(true);
-        return;
-    }
-
-    console.log("Dashboard: Fetching data for year", year);
-    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
     if (!auth.currentUser) {
-      console.warn("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -274,7 +265,7 @@ export default function DashboardPage() {
              if (isValid(lcIssueDateParsed)) {
               lcIssueDateValid = true;
             }
-          } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
+          } catch (e) { /* console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); */ }
         }
 
         if (data.amount !== undefined && typeof data.amount === 'number' && !isNaN(data.amount) && lcIssueDateValid) {
@@ -282,19 +273,17 @@ export default function DashboardPage() {
               id: doc.id,
               ...data,
             } as LCEntryDocument);
-        } else {
-          // console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-      
+
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30;
+        const BATCH_SIZE = 30; // Firestore 'in' query limit
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
-          if (batchIds.length > 0) {
+          if (batchIds.length > 0) { // Ensure batch is not empty
             const suppliersQuery = query(collection(firestore, "suppliers"), where(documentId(), "in", batchIds));
             const suppliersSnapshot = await getDocs(suppliersQuery);
             suppliersSnapshot.forEach((docSnap) => {
@@ -304,7 +293,6 @@ export default function DashboardPage() {
           }
         }
       }
-
 
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
@@ -322,7 +310,6 @@ export default function DashboardPage() {
             const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate();
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
           } catch (e) {
-            // console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
             return false;
           }
         }).length;
@@ -333,11 +320,9 @@ export default function DashboardPage() {
         if (typeof lc.amount !== 'number' || isNaN(lc.amount) || !lc.beneficiaryId) return;
 
         const supplierDetails = supplierMap.get(lc.beneficiaryId);
-        const displayName = supplierDetails?.brandName && supplierDetails.brandName.trim() !== ""
+        const displayName = (supplierDetails?.brandName && supplierDetails.brandName.trim() !== "")
                             ? supplierDetails.brandName
-                            : lc.beneficiaryName // Fallback to L/C's beneficiaryName if no supplier brand
-                                ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName)
-                                : 'Unknown/No Brand';
+                            : (lc.beneficiaryName && lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) || 'Unknown/No Brand';
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
       });
 
@@ -425,7 +410,6 @@ export default function DashboardPage() {
                 }
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
             } catch (e) {
-                // console.warn("Error parsing ETD for upcoming shipments card:", lc.id, lc.etd, e);
                 return false;
             }
         })
@@ -462,13 +446,14 @@ export default function DashboardPage() {
                 isThirdShipment: lc.isThirdShipment,
             } as UpcomingEtdShipment;
         })
-        .sort((a, b) => compareAsc(a.etdDate, b.etdDate)) // Earliest ETD first
+        .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
         .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
-      const piQuerySnapshot = await getDocs(piCollectionRef); // TODO: Optimize this fetch
+      // TODO: Optimize this fetch for large PI collections, potentially with backend aggregation or more targeted queries if possible.
+      const piQuerySnapshot = await getDocs(piCollectionRef);
       const allProformaInvoices: ProformaInvoiceDocument[] = [];
       piQuerySnapshot.forEach((docSnap) => {
         allProformaInvoices.push({ id: docSnap.id, ...docSnap.data() } as ProformaInvoiceDocument);
@@ -506,7 +491,6 @@ export default function DashboardPage() {
       setYearlyLcValueData(resolvedYearlyData);
 
     } catch (error: any) {
-      console.error("Dashboard: Detailed error fetching dashboard data: ", error);
       let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
        if (error.code && (error.message?.toLowerCase().includes("permission") || error.message?.toLowerCase().includes("missing or insufficient"))) {
          errorMessage = `Could not fetch dashboard data. This is often due to Firestore security rules. Please ensure your rules allow read access to the 'lc_entries' collection for authenticated users (e.g., by having 'allow read: if request.auth != null;' for the '/lc_entries/{lcEntryId}' path). Original Firebase error: ${error.message} (Code: ${error.code || 'N/A'})`;
@@ -523,15 +507,12 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, authLoading]);
+  }, []);
 
   useEffect(() => {
-    console.log("Dashboard: AuthContext loading state:", authLoading, "AuthContext user:", authUser);
     if (!authLoading && authUser) {
-      console.log("Dashboard: Auth loaded, user available. Triggering fetch for year:", selectedYear);
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
-      console.log("Dashboard: User not authenticated after auth load, clearing data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -682,7 +663,7 @@ export default function DashboardPage() {
                 Upcoming ETDs
               </CardTitle>
               <CardDescription>
-                L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
+                L/Cs from {selectedYear} nearing ETD (Status not "Shipment Done").
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">

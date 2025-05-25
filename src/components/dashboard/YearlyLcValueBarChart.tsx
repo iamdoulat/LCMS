@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 
 interface YearlyLcValue {
   year: string;
-  totalValue: number | null; // Allow null for years with no data
+  totalValue: number | null;
 }
 
 interface YearlyLcValueBarChartProps {
@@ -21,7 +21,7 @@ const CustomTooltip: FC<any> = ({ active, payload, label }) => {
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <p className="text-sm font-medium text-foreground">{`Year ${label}`}</p>
         <p className="text-sm text-primary">
-          {value === null || value === undefined || isNaN(value) ? 'USD N/A' : `Total Value: USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          {value === null || value === undefined || isNaN(value) ? 'USD N/A' : `Total L/Cs Values: USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </p>
       </div>
     );
@@ -44,7 +44,6 @@ export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) 
 
   const chartData = data.map(item => ({
     ...item,
-    // Ensure totalValue is a number for the chart, 0 if null/undefined for rendering purposes if bar shouldn't be gapped
     totalValue: item.totalValue === null || item.totalValue === undefined ? 0 : item.totalValue,
   }));
 
