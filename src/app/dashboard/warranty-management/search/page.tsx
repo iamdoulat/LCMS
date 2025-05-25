@@ -13,7 +13,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -153,6 +153,7 @@ export default function WarrantySearchPage() {
         errorMsg = `Failed to load statistics: ${error.message}`;
       }
       setStatsError(errorMsg);
+      Swal.fire("Statistics Error", errorMsg, "error");
       setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
     } finally {
       setIsLoadingStats(false);
@@ -250,31 +251,48 @@ export default function WarrantySearchPage() {
             }
         });
 
-        if (reportLevelMatch && !detailMatchedInReport) {
-            report.installationDetails?.forEach(detail => {
-                 let warrantyStatus = "N/A";
-                if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
-                    const installDateObj = parseISO(detail.installDate as string);
-                    const expiryDate = addDays(installDateObj, 365);
-                    const diff = differenceInDays(expiryDate, today);
-                    warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
-                }
-                const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) {
-                     results.push({
-                        reportId: report.id,
-                        commercialInvoiceNumber: report.commercialInvoiceNumber,
-                        applicantName: report.applicantName,
-                        beneficiaryName: report.beneficiaryName,
-                        machineModel: detail.machineModel,
-                        serialNo: detail.serialNo,
-                        ctlBoxModel: detail.ctlBoxModel,
-                        ctlBoxSerial: detail.ctlBoxSerial,
-                        installDate: detail.installDate as string,
-                        warrantyStatus,
-                    });
-                }
-            });
+        if (reportLevelMatch && !detailMatchedInReport && report.installationDetails && report.installationDetails.length > 0) {
+            // If report level matched, but no specific detail, list the first machine detail as representative.
+            const detail = report.installationDetails[0];
+            let warrantyStatus = "N/A";
+            if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
+                const installDateObj = parseISO(detail.installDate as string);
+                const expiryDate = addDays(installDateObj, 365);
+                const diff = differenceInDays(expiryDate, today);
+                warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
+            }
+            const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
+             if (existingResultIndex === -1) {
+                results.push({
+                    reportId: report.id,
+                    commercialInvoiceNumber: report.commercialInvoiceNumber,
+                    applicantName: report.applicantName,
+                    beneficiaryName: report.beneficiaryName,
+                    machineModel: detail.machineModel,
+                    serialNo: detail.serialNo,
+                    ctlBoxModel: detail.ctlBoxModel,
+                    ctlBoxSerial: detail.ctlBoxSerial,
+                    installDate: detail.installDate as string,
+                    warrantyStatus,
+                });
+            }
+        } else if (reportLevelMatch && (!report.installationDetails || report.installationDetails.length === 0)) {
+            // Report level match but no installation details to show
+            const existingResultIndex = results.findIndex(r => r.reportId === report.id);
+            if (existingResultIndex === -1) {
+                results.push({
+                    reportId: report.id,
+                    commercialInvoiceNumber: report.commercialInvoiceNumber,
+                    applicantName: report.applicantName,
+                    beneficiaryName: report.beneficiaryName,
+                    machineModel: "N/A (No Details)",
+                    serialNo: "N/A",
+                    ctlBoxModel: "N/A",
+                    ctlBoxSerial: "N/A",
+                    installDate: undefined,
+                    warrantyStatus: "N/A",
+                });
+            }
         }
     });
     setSearchResults(results);
@@ -304,20 +322,22 @@ export default function WarrantySearchPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <Card className="shadow-xl max-w-6xl mx-auto">
+      <Card 
+        className="shadow-xl max-w-6xl mx-auto"
+        style={{
+          background: 'radial-gradient(circle, rgba(34,190,195,0.1) 0%, rgba(255,255,255,0) 70%), hsl(var(--card))', // Subtle gradient combined with card background
+        }}
+      >
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex-1">
-              <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Microscope className="h-7 w-7 text-primary" />
-                Warranty Search Engine
-              </CardTitle>
-            </div>
-            {/* Year selector moved to the statistics card */}
+          <div className="flex-1 text-center">
+            <CardTitle className={cn("flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <Microscope className="h-7 w-7 text-primary" />
+              Warranty Search Engine
+            </CardTitle>
+            <CardDescription className="text-center pt-2 text-card-foreground/80">
+              Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+            </CardDescription>
           </div>
-           <CardDescription className="text-center pt-2">
-            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearchSubmit} className="flex w-full max-w-md mx-auto items-center space-x-2 mb-8">
@@ -336,7 +356,7 @@ export default function WarrantySearchPage() {
           </form>
 
           {displayedSearchTerm && !isSearching && searchResults.length === 0 && !searchError && (
-            <div className="text-center text-muted-foreground py-10">
+            <div className="text-center text-card-foreground/70 py-10">
                 <Info className="mx-auto h-12 w-12 mb-4" />
                 <p className="text-lg">No warranty-related installation report details found for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "any year" : selectedYear}.</p>
                  <p className="text-sm">Ensure data exists in Firestore and check filter criteria.</p>
@@ -350,7 +370,7 @@ export default function WarrantySearchPage() {
           )}
 
           {!displayedSearchTerm && !isSearching && !searchError && (
-            <div className="text-center text-muted-foreground py-10">
+            <div className="text-center text-card-foreground/70 py-10">
                 <SearchIcon className="mx-auto h-12 w-12 mb-4" />
                 <p className="text-lg">Enter terms above to search warranty-related details from installation reports for {selectedYear === "All Years" ? "all years" : selectedYear}.</p>
             </div>
@@ -358,29 +378,29 @@ export default function WarrantySearchPage() {
 
           {currentSearchItems.length > 0 && !isSearching && (
             <div className="space-y-6">
-                 <h3 className="text-lg font-semibold text-foreground mt-6 mb-2">
+                 <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2">
                     Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries):
                  </h3>
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Machine Model</TableHead>
-                          <TableHead>Machine S/N</TableHead>
-                          <TableHead>Ctl. Box Model</TableHead>
-                          <TableHead>Ctl. Box S/N</TableHead>
-                          <TableHead>Warranty</TableHead>
-                          <TableHead>Applicant</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead className="text-card-foreground/90">Machine Model</TableHead>
+                          <TableHead className="text-card-foreground/90">Machine S/N</TableHead>
+                          <TableHead className="text-card-foreground/90">Ctl. Box Model</TableHead>
+                          <TableHead className="text-card-foreground/90">Ctl. Box S/N</TableHead>
+                          <TableHead className="text-card-foreground/90">Warranty</TableHead>
+                          <TableHead className="text-card-foreground/90">Applicant</TableHead>
+                          <TableHead className="text-right text-card-foreground/90">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {currentSearchItems.map((item, idx) => (
                           <TableRow key={`${item.reportId}-${item.serialNo || idx}-${item.ctlBoxSerial || idx}`}>
-                            <TableCell>{item.machineModel || 'N/A'}</TableCell>
-                            <TableCell>{item.serialNo || 'N/A'}</TableCell>
-                            <TableCell>{item.ctlBoxModel || 'N/A'}</TableCell>
-                            <TableCell>{item.ctlBoxSerial || 'N/A'}</TableCell>
+                            <TableCell className="text-card-foreground/80">{item.machineModel || 'N/A'}</TableCell>
+                            <TableCell className="text-card-foreground/80">{item.serialNo || 'N/A'}</TableCell>
+                            <TableCell className="text-card-foreground/80">{item.ctlBoxModel || 'N/A'}</TableCell>
+                            <TableCell className="text-card-foreground/80">{item.ctlBoxSerial || 'N/A'}</TableCell>
                             <TableCell
                               className={cn(
                                 "font-medium",
@@ -389,7 +409,7 @@ export default function WarrantySearchPage() {
                             >
                               {item.warrantyStatus}
                             </TableCell>
-                            <TableCell className="truncate max-w-xs">{item.applicantName || 'N/A'}</TableCell>
+                            <TableCell className="truncate max-w-xs text-card-foreground/80">{item.applicantName || 'N/A'}</TableCell>
                             <TableCell className="text-right">
                               <Button variant="outline" size="sm" asChild>
                                 <Link href={`/dashboard/warranty-management/edit-installation-report/${item.reportId}`}>
@@ -400,7 +420,7 @@ export default function WarrantySearchPage() {
                           </TableRow>
                         ))}
                       </TableBody>
-                      <TableCaption>
+                      <TableCaption className="text-card-foreground/70">
                         Displaying {indexOfFirstSearchItem + 1} - {Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries.
                       </TableCaption>
                     </Table>
@@ -422,14 +442,19 @@ export default function WarrantySearchPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl max-w-6xl mx-auto">
-         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-           <div>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+      <Card 
+        className="shadow-xl max-w-6xl mx-auto"
+        style={{
+          background: 'radial-gradient(circle, rgba(34,190,195,0.1) 0%, rgba(255,255,255,0) 70%), hsl(var(--card))',
+        }}
+      >
+         <CardHeader className="flex flex-col sm:flex-row justify-between items-center gap-2">
+           <div className="flex-1 text-center sm:text-left">
+            <CardTitle className={cn("flex items-center sm:justify-start justify-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary"/>
                 Yearly Warranty Statistics
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-card-foreground/80">
                 Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}. Data fetched from Firestore.
             </CardDescription>
            </div>
