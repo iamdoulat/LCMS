@@ -12,11 +12,11 @@ import Swal from 'sweetalert2';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import Image from 'next/image';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
-import Image from 'next/image'; // Import next/image
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
@@ -42,8 +42,8 @@ interface WarrantySearchResultItem {
   serialNo?: string;
   ctlBoxModel?: string;
   ctlBoxSerial?: string;
-  installDate?: string;
-  warrantyStatus: string;
+  installDate?: string; // Keep as string from Firestore for now
+  warrantyStatus: string; // "X days remaining", "Expired", "N/A"
 }
 
 export default function WarrantySearchPage() {
@@ -69,7 +69,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
-    setSearchError(null);
+    setSearchError(null); // Reset search error when stats are re-fetched
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -81,6 +81,7 @@ export default function WarrantySearchPage() {
             ...data,
             commercialInvoiceDate: data.commercialInvoiceDate instanceof Timestamp ? data.commercialInvoiceDate.toDate().toISOString() : (data.commercialInvoiceDate && isValid(parseISO(data.commercialInvoiceDate)) ? data.commercialInvoiceDate : undefined),
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt && isValid(parseISO(data.createdAt)) ? data.createdAt : 'N/A'),
+            // Ensure date fields are consistently strings or undefined
             invoiceDate: data.invoiceDate instanceof Timestamp ? data.invoiceDate.toDate().toISOString() : (data.invoiceDate && isValid(parseISO(data.invoiceDate)) ? data.invoiceDate : undefined),
             etdDate: data.etdDate instanceof Timestamp ? data.etdDate.toDate().toISOString() : (data.etdDate && isValid(parseISO(data.etdDate)) ? data.etdDate : undefined),
             etaDate: data.etaDate instanceof Timestamp ? data.etaDate.toDate().toISOString() : (data.etaDate && isValid(parseISO(data.etaDate)) ? data.etaDate : undefined),
@@ -90,13 +91,13 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports);
+      setAllReports(fetchedReports); // Store all fetched reports for potential searching
 
       let reportsForSelectedYear = fetchedReports;
       if (yearToFilter !== "All Years") {
         const numericYear = parseInt(yearToFilter);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || (report.createdAt as string);
+          const reportDateString = report.commercialInvoiceDate || (report.createdAt as string); // Fallback to createdAt if CI date is missing
           if (reportDateString && reportDateString !== 'N/A') {
             try {
               const reportDate = parseISO(reportDateString);
@@ -178,10 +179,10 @@ export default function WarrantySearchPage() {
 
     const lowerSearchTerm = trimmedSearchTerm.toLowerCase();
     
-    let reportsToSearch = allReports;
+    let reportsToSearchFrom = allReports;
     if (selectedYear !== "All Years") {
         const numericYear = parseInt(selectedYear);
-        reportsToSearch = allReports.filter(report => {
+        reportsToSearchFrom = allReports.filter(report => {
             const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
             if (reportDateString && reportDateString !== 'N/A') {
                 try {
@@ -196,7 +197,7 @@ export default function WarrantySearchPage() {
     const results: WarrantySearchResultItem[] = [];
     const today = startOfDay(new Date());
 
-    reportsToSearch.forEach(report => {
+    reportsToSearchFrom.forEach(report => {
         let reportLevelMatch = false;
         if (
             report.applicantName?.toLowerCase().includes(lowerSearchTerm) ||
@@ -222,6 +223,7 @@ export default function WarrantySearchPage() {
                 detailMatchedInReport = true;
             }
 
+            // If current detail matches, add it to results
             if (currentDetailMatch) {
                 let warrantyStatus = "N/A";
                 if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
@@ -230,6 +232,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
+                // Avoid duplicate entries if multiple fields in the same detail item match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -241,16 +244,17 @@ export default function WarrantySearchPage() {
                         serialNo: detail.serialNo,
                         ctlBoxModel: detail.ctlBoxModel,
                         ctlBoxSerial: detail.ctlBoxSerial,
-                        installDate: detail.installDate as string,
+                        installDate: detail.installDate as string, // Keep as string
                         warrantyStatus,
                     });
                 }
             }
         });
         
+        // If report level matched but no specific detail matched yet, add first detail as representative
         if (reportLevelMatch && !detailMatchedInReport) {
             if (report.installationDetails && report.installationDetails.length > 0) {
-                const detail = report.installationDetails[0]; 
+                const detail = report.installationDetails[0]; // Take the first detail item
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -258,6 +262,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
+                // Avoid duplicate entries if this item was already added
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) { 
                      results.push({
@@ -273,10 +278,10 @@ export default function WarrantySearchPage() {
                         warrantyStatus,
                     });
                  }
-            } else { 
+            } else { // Report matched, but has no installation details
                  const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                  if (existingResultIndex === -1) {
-                     results.push({
+                     results.push({ // Add a row representing the report itself
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
                         applicantName: report.applicantName,
@@ -324,15 +329,13 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
       >
-        <CardHeader>
-          <div className="flex-1 text-center sm:text-left">
-            <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Microscope className="h-7 w-7 text-primary" />
-                Warranty Search Engine
+        <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+              <Microscope className="h-7 w-7 text-primary" />
+              Warranty Search Engine
             </CardTitle>
-          </div>
-           <CardDescription className="text-card-foreground/80 text-center pt-2">
-             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+          <CardDescription className="text-center pt-2 text-card-foreground/80">
+            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -373,7 +376,7 @@ export default function WarrantySearchPage() {
                   width={150}
                   height={150}
                   className="mx-auto mb-4"
-                  unoptimized // Good for GIFs
+                  unoptimized data-ai-hint="search animation"
                 />
                 <p className="text-lg">
                   Enter terms above to search warranty-related information for{' '}
@@ -458,16 +461,16 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
+          background: 'linear-gradient(0deg, rgba(203,247,247,0.89) 30%, rgba(232,227,218,1) 100%)',
         }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-           <div className="flex-1">
+           <div className="flex-1 text-center sm:text-left">
             <CardTitle className={cn("flex items-center sm:justify-start justify-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary"/>
                 Yearly Warranty Statistics
             </CardTitle>
-            <CardDescription className="text-card-foreground/80 sm:text-left text-center">
+            <CardDescription className="text-card-foreground/80">
                 Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
             </CardDescription>
            </div>
@@ -534,4 +537,3 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
