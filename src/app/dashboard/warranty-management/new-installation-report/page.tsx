@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationDetailItemType as PageInstallationDetailItemType } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItemType, InstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -25,16 +25,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 
-
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_NEW_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_NEW_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_NEW_COMM_INV__";
-
-type InstallationReportFormValues = PageInstallationReportFormValues;
-type InstallationDetailItemType = PageInstallationDetailItemType;
-
 
 const formatDisplayDate = (dateString?: string | Date | null): string => {
   if (!dateString) return 'N/A';
@@ -57,6 +52,17 @@ const renderPartialDetailReadOnly = (label: string, value?: number | string | nu
   );
 };
 
+const escapeCsvCell = (cellData: any): string => {
+  if (cellData === null || cellData === undefined) {
+    return '';
+  }
+  const stringData = String(cellData);
+  if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
+    return `"${stringData.replace(/"/g, '""')}"`;
+  }
+  return stringData;
+};
+
 
 export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -64,7 +70,6 @@ export default function NewInstallationReportPage() {
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const [isLoadingLcOptions, setIsLoadingLcOptions] = React.useState(true);
 
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
@@ -75,13 +80,12 @@ export default function NewInstallationReportPage() {
     firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
     secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
     thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    packingListUrl?: string;
   }>({
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
     partialShipmentAllowed: "No",
-    firstPartialQty: 0, firstPartialPkgs: 0, firstPartialNetWeight: 0, firstPartialGrossWeight: 0, firstPartialCbm: 0,
-    secondPartialQty: 0, secondPartialPkgs: 0, secondPartialNetWeight: 0, secondPartialGrossWeight: 0, secondPartialCbm: 0,
-    thirdPartialQty: 0, thirdPartialPkgs: 0, thirdPartialNetWeight: 0, thirdPartialGrossWeight: 0, thirdPartialCbm: 0,
+    packingListUrl: '',
   });
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
@@ -120,7 +124,6 @@ export default function NewInstallationReportPage() {
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
 
-
   const installationDetailsFieldArray = useFieldArray({
     control,
     name: "installationDetails",
@@ -129,7 +132,6 @@ export default function NewInstallationReportPage() {
   React.useEffect(() => {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
-      setIsLoadingLcOptions(true);
       try {
         const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
@@ -162,7 +164,6 @@ export default function NewInstallationReportPage() {
         Swal.fire("Error", `Could not load supporting data. Error: ${error.message}`, "error");
       } finally {
         setIsLoadingDropdowns(false);
-        setIsLoadingLcOptions(false);
       }
     };
     fetchOptions();
@@ -192,6 +193,7 @@ export default function NewInstallationReportPage() {
             firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
+            packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
@@ -205,7 +207,7 @@ export default function NewInstallationReportPage() {
         setValue("etdDate", undefined, { shouldValidate: true });
         setValue("etaDate", undefined, { shouldValidate: true });
         setValue("packingListUrl", '', { shouldValidate: true });
-        setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
+        setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
         setSelectedCommercialInvoiceDateDisplay(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,7 +237,7 @@ export default function NewInstallationReportPage() {
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
-      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined, // Store as ISO string from lcData
+      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -263,14 +265,12 @@ export default function NewInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
-    
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
-        // Ensure empty strings for optional fields are not sent if we intend them to be omitted
         if (typeof value === 'string' && value.trim() === '' &&
             ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId'].includes(key)
            ) {
-            // Do not add these empty strings to the object for Firestore
+            // Do not add empty strings for these specific fields
         } else {
             acc[key as keyof typeof acc] = value;
         }
@@ -291,7 +291,7 @@ export default function NewInstallationReportPage() {
       });
       reset(); // Reset form to default values
       setSelectedCommercialInvoiceDateDisplay(null);
-      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
+      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
       setActivePartialShipmentAccordion(undefined);
 
     } catch (error: any) {
@@ -330,12 +330,73 @@ export default function NewInstallationReportPage() {
       installationDetailsFieldArray.append({
         ...lastRow,
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
-        // Consider if serial numbers should be cleared or duplicated
-        // serialNo: '', 
-        // ctlBoxSerial: '',
       });
     } else {
       Swal.fire("Info", "No rows to duplicate.", "info");
+    }
+  };
+
+  const handleExportToCsv = () => {
+    const formData = getValues();
+    if (!formData.installationDetails || formData.installationDetails.length === 0) {
+      Swal.fire("No Data", "No installation details to export.", "info");
+      return;
+    }
+
+    const headers = [
+      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty Remaining"
+    ];
+
+    const reportHeaderInfo = [
+      ["Applicant Name:", selectedLcDetails.lcIdForLink ? applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId : formData.applicantId],
+      ["Beneficiary Name:", selectedLcDetails.lcIdForLink ? beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId : formData.beneficiaryId],
+      ["L/C No.:", formData.documentaryCreditNumber || "N/A"],
+      ["C.I. No.:", selectedLcDetails.lcIdForLink ? lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A" : "N/A"],
+      ["C.I. Date:", selectedCommercialInvoiceDateDisplay || "N/A"],
+      ["Total L/C QTY:", formData.totalMachineQtyFromLC || "N/A"],
+      ["Total Installed QTY:", installationDetailsFieldArray.fields.length],
+      ["Pending QTY:", pendingQty],
+      ["Technician Name:", formData.technicianName],
+      ["Reporting Engineer Name:", formData.reportingEngineerName]
+    ];
+
+    let csvContent = reportHeaderInfo.map(row => row.map(escapeCsvCell).join(",")).join("\n");
+    csvContent += "\n\n"; // Add some space before the table
+    csvContent += headers.map(escapeCsvCell).join(",") + "\n";
+
+    formData.installationDetails.forEach((item, index) => {
+      let warrantyDisplay = "N/A";
+      if (item.installDate && isValid(new Date(item.installDate))) {
+        const expiryDate = addDays(new Date(item.installDate), 365);
+        const diffDays = differenceInDays(expiryDate, new Date());
+        warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days`;
+      }
+      const row = [
+        item.slNo || (index + 1).toString(),
+        item.machineModel,
+        item.serialNo,
+        item.ctlBoxModel,
+        item.ctlBoxSerial,
+        item.installDate ? formatDisplayDate(new Date(item.installDate)) : "N/A",
+        warrantyDisplay,
+      ];
+      csvContent += row.map(escapeCsvCell).join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      const ciNumber = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "report";
+      link.setAttribute("download", `installation_report_${ciNumber.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+        Swal.fire("Export Failed", "Your browser doesn't support direct CSV download.", "error");
     }
   };
 
@@ -415,9 +476,9 @@ export default function NewInstallationReportPage() {
                           value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
                           onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
                           placeholder="Search by C.I. No..."
-                          selectPlaceholder={isLoadingLcOptions ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                          selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
                           emptyStateMessage="No L/C found with that C.I. No."
-                          disabled={isLoadingLcOptions}
+                          disabled={isLoadingDropdowns}
                         />
                         <FormMessage />
                       </FormItem>
@@ -499,6 +560,7 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
+             
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="p-3 border rounded-md bg-muted/30">
@@ -556,7 +618,7 @@ export default function NewInstallationReportPage() {
                 )}
                 />
               </div>
-
+            
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -723,12 +785,15 @@ export default function NewInstallationReportPage() {
              <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
-             <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
+            <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
               <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
+            </Button>
+            <Button type="button" variant="outline" onClick={handleExportToCsv} disabled={installationDetailsFieldArray.fields.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Export to CSV
             </Button>
             </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -850,7 +915,7 @@ export default function NewInstallationReportPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions}>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns }>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

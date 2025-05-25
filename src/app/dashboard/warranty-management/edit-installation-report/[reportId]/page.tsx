@@ -25,7 +25,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -66,6 +66,18 @@ const renderPartialDetailReadOnly = (label: string, value?: number | string | nu
   );
 };
 
+const escapeCsvCell = (cellData: any): string => {
+  if (cellData === null || cellData === undefined) {
+    return '';
+  }
+  const stringData = String(cellData);
+  if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
+    return `"${stringData.replace(/"/g, '""')}"`;
+  }
+  return stringData;
+};
+
+
 export default function EditInstallationReportPage() {
   const params = useParams();
   const router = useRouter();
@@ -86,13 +98,10 @@ export default function EditInstallationReportPage() {
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: LCEntryDocument['partialShipmentAllowed'];
-    firstPartialQty?: number;
+    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
     packingListUrl?: string;
-    firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number;
-    secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number;
-    thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
   }>({
     lcIdForLink: null,
     isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
@@ -167,6 +176,7 @@ export default function EditInstallationReportPage() {
             totalMachineQtyFromLC: initialData.totalMachineQtyFromLC || undefined,
             proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
+            commercialInvoiceDate: initialData.commercialInvoiceDate && isValid(parseISO(initialData.commercialInvoiceDate)) ? parseISO(initialData.commercialInvoiceDate) : undefined,
             etdDate: initialData.etdDate && isValid(parseISO(initialData.etdDate)) ? parseISO(initialData.etdDate) : undefined,
             etaDate: initialData.etaDate && isValid(parseISO(initialData.etaDate)) ? parseISO(initialData.etaDate) : undefined,
             packingListUrl: initialData.packingListUrl || '',
@@ -319,17 +329,17 @@ export default function EditInstallationReportPage() {
       setValue("etdDate", defaultValuesForReset.etdDate || undefined, { shouldValidate: true, shouldDirty: true });
       setValue("etaDate", defaultValuesForReset.etaDate || undefined, { shouldValidate: true, shouldDirty: true });
       setValue("packingListUrl", defaultValuesForReset.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
-      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
+      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
       setSelectedCommercialInvoiceDateDisplay(null);
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues, form.formState.defaultValues]);
 
 
   React.useEffect(() => {
-    const totalLcQty = Number(watchedTotalLcMachineQty || 0);
-    const installedQty = installationDetailsFieldArray.fields.length;
+    const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
+    const installedQtyValue = installationDetailsFieldArray.fields.length;
     if (watchedTotalLcMachineQty !== undefined) {
-      setPendingQty(totalLcQty - installedQty);
+      setPendingQty(totalLcQtyValue - installedQtyValue);
     } else {
       setPendingQty('N/A');
     }
@@ -405,8 +415,7 @@ export default function EditInstallationReportPage() {
             if (typeof value === 'string' && value.trim() === '' &&
                 ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId'].includes(key)
                ) {
-                // Allow saving of empty strings for these fields if desired, or use deleteField()
-                acc[key as keyof typeof acc] = ""; // or deleteField() if you want to remove them
+                acc[key as keyof typeof acc] = "";
             } else {
                 acc[key as keyof typeof acc] = value;
             }
@@ -460,13 +469,80 @@ export default function EditInstallationReportPage() {
       installationDetailsFieldArray.append({
         ...lastRow,
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
-        // serialNo: '', // Optionally clear serial numbers
-        // ctlBoxSerial: '',
       });
     } else {
       Swal.fire("Info", "No rows to duplicate.", "info");
     }
   };
+  
+  const handleExportToCsv = () => {
+    const formData = getValues();
+    if (!formData.installationDetails || formData.installationDetails.length === 0) {
+      Swal.fire("No Data", "No installation details to export.", "info");
+      return;
+    }
+
+    const headers = [
+      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty"
+    ];
+    
+    const applicantNameFromState = applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId || "N/A";
+    const beneficiaryNameFromState = beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId || "N/A";
+    const commercialInvoiceNumberFromState = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A";
+
+    const reportHeaderInfo = [
+      ["Applicant Name:", applicantNameFromState],
+      ["Beneficiary Name:", beneficiaryNameFromState],
+      ["L/C No.:", formData.documentaryCreditNumber || "N/A"],
+      ["C.I. No.:", commercialInvoiceNumberFromState],
+      ["C.I. Date:", selectedCommercialInvoiceDateDisplay || "N/A"],
+      ["Total L/C QTY:", formData.totalMachineQtyFromLC || "N/A"],
+      ["Total Installed QTY:", installationDetailsFieldArray.fields.length],
+      ["Pending QTY:", pendingQty],
+      ["Technician Name:", formData.technicianName],
+      ["Reporting Engineer Name:", formData.reportingEngineerName]
+    ];
+
+    let csvContent = reportHeaderInfo.map(row => row.map(escapeCsvCell).join(",")).join("\n");
+    csvContent += "\n\n"; 
+    csvContent += headers.map(escapeCsvCell).join(",") + "\n";
+
+    formData.installationDetails.forEach((item, index) => {
+      let warrantyDisplay = "N/A";
+      if (item.installDate && isValid(new Date(item.installDate))) {
+        const expiryDate = addDays(new Date(item.installDate), 365);
+        const diffDays = differenceInDays(expiryDate, new Date());
+        warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days`;
+      }
+      const row = [
+        item.slNo || (index + 1).toString(),
+        item.machineModel,
+        item.serialNo,
+        item.ctlBoxModel,
+        item.ctlBoxSerial,
+        item.installDate ? formatDisplayDate(new Date(item.installDate)) : "N/A",
+        warrantyDisplay,
+      ];
+      csvContent += row.map(escapeCsvCell).join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      const ciNumberForFilename = commercialInvoiceNumberFromState !== "N/A" ? commercialInvoiceNumberFromState : "report";
+      link.setAttribute("download", `installation_report_${ciNumberForFilename.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+        Swal.fire("Export Failed", "Your browser doesn't support direct CSV download.", "error");
+    }
+  };
+
 
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
@@ -670,6 +746,7 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
+             
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="p-3 border rounded-md bg-muted/30">
@@ -727,7 +804,7 @@ export default function EditInstallationReportPage() {
                 )}
                 />
               </div>
-
+            
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -887,7 +964,7 @@ export default function EditInstallationReportPage() {
                 <FormMessage>
                 {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
-                 "Please ensure all installation details are valid and non-empty Machine Serial No. are unique."}
+                 "Please ensure all installation details are valid."}
                 </FormMessage>
             )}
             <div className="flex gap-2 mt-2">
@@ -896,6 +973,9 @@ export default function EditInstallationReportPage() {
             </Button>
             <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
               <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
+            </Button>
+            <Button type="button" variant="outline" onClick={handleExportToCsv} disabled={installationDetailsFieldArray.fields.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Export to CSV
             </Button>
             </div>
 
@@ -1029,7 +1109,7 @@ export default function EditInstallationReportPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns }>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingReportData}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
