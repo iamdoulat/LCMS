@@ -235,7 +235,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string; // Derived from contactPerson
+  contactPersonName?: string;
   email?: string;
   phone?: string;
 }
@@ -365,8 +365,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required.").optional(), // Made optional
-  ctlBoxSerial: z.string().optional(), // Made optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -380,6 +380,7 @@ export const InstallationReportSchema = z.object({
   totalMachineQtyFromLC: z.preprocess(toNumberOrUndefined, z.number().int().positive("Qty must be positive").optional()),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().nullable().optional(),
+  commercialInvoiceDate: z.date().nullable().optional(), // Added for display consistency
   etdDate: z.date().nullable().optional(),
   etaDate: z.date().nullable().optional(),
   packingListUrl: z.preprocess(
@@ -390,7 +391,7 @@ export const InstallationReportSchema = z.object({
   reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
   installationDetails: z.array(InstallationDetailItemSchema)
     .min(1, "At least one installation detail item is required.")
-    .refine(items => {
+    .refine(items => { // Uniqueness for Ctl. Box Serial
       const ctlBoxSerials = new Set<string>();
       for (const item of items) {
         const serial = (item.ctlBoxSerial || '').trim().toUpperCase();
@@ -401,8 +402,8 @@ export const InstallationReportSchema = z.object({
       }
       return true; // All non-empty ctlBoxSerials are unique
     }, {
-      message: "Each non-empty Ctl. Box Serial must be unique within this report.",
-      path: ["installationDetails"],
+      message: "Each non-empty Ctl. Box Serial must be unique within this report.", // Specific message
+      path: ["installationDetails"], // Error attached to the whole array
     }),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
@@ -451,4 +452,4 @@ export interface LcForInvoiceDropdownOption {
 }
 
 // --- END Installation Report Types ---
-
+    
