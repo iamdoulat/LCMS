@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItemType as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationDetailItemType as PageInstallationDetailItemType } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +16,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, CheckboxIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -113,7 +112,7 @@ export default function NewInstallationReportPage() {
     },
   });
 
-  const { control, setValue, watch, formState, getValues } = form;
+  const { control, setValue, watch, formState, getValues, reset } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
   const watchedInstallationDetails = watch("installationDetails");
@@ -151,7 +150,7 @@ export default function NewInstallationReportPage() {
             fetchedLcOptions.push({
               value: doc.id,
               label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: doc.id } , // Ensure all LCEntryDocument fields are here
+              lcData: { ...data, id: doc.id } ,
             });
           }
         });
@@ -253,7 +252,7 @@ export default function NewInstallationReportPage() {
         ctlBoxSerial: item.ctlBoxSerial || undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined, // Save calculated pending Qty
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined, 
       missingItemInfo: data.missingItemInfo || undefined,
       extraFoundInfo: data.extraFoundInfo || undefined,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
@@ -263,10 +262,11 @@ export default function NewInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // Remove undefined fields before saving
+    
     Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-        delete dataToSave[key as keyof typeof dataToSave];
+      const typedKey = key as keyof typeof dataToSave;
+      if (dataToSave[typedKey] === undefined) {
+          delete dataToSave[typedKey];
       }
     });
 
@@ -281,26 +281,7 @@ export default function NewInstallationReportPage() {
         timer: 2500,
         showConfirmButton: true,
       });
-      form.reset({
-        applicantId: '',
-        beneficiaryId: '',
-        selectedCommercialInvoiceLcId: undefined,
-        documentaryCreditNumber: '',
-        totalMachineQtyFromLC: undefined,
-        proformaInvoiceNumber: '',
-        invoiceDate: undefined,
-        etdDate: undefined,
-        etaDate: undefined,
-        packingListUrl: '',
-        technicianName: '',
-        reportingEngineerName: '',
-        installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
-        missingItemInfo: '',
-        extraFoundInfo: '',
-        installationNotes: '',
-        missingItemsIssueResolved: false,
-        extraItemsIssueResolved: false,
-      });
+      reset(); // Reset form to default values
       setSelectedCommercialInvoiceDateDisplay(null);
       setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
       setActivePartialShipmentAccordion(undefined);
@@ -552,7 +533,7 @@ export default function NewInstallationReportPage() {
                   )}
                   />
               </div>
-              
+
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -591,6 +572,7 @@ export default function NewInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                        {/* Amount fields are hidden as per previous request */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
@@ -604,7 +586,6 @@ export default function NewInstallationReportPage() {
                     </AccordionItem>
                 </Accordion>
               )}
-              
               <Separator className="my-6" />
 
               <h3 className={cn(sectionHeadingClass)}>
@@ -618,10 +599,10 @@ export default function NewInstallationReportPage() {
                               <TableHead className="w-[50px] text-foreground">SL</TableHead>
                               <TableHead className="text-foreground">Machine Model*</TableHead>
                               <TableHead className="text-foreground">Machine Serial No.*</TableHead>
-                              <TableHead className="text-foreground">Ctl. Box Model*</TableHead>
-                              <TableHead className="text-foreground">Ctl. Box Serial*</TableHead>
+                              <TableHead className="text-foreground">Ctl. Box Model</TableHead>
+                              <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
                               <TableHead className="text-foreground">Install Date*</TableHead>
-                              <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
+                              <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
                               <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                           </TableRow>
                       </TableHeader>
@@ -631,8 +612,8 @@ export default function NewInstallationReportPage() {
                               let warrantyDisplay = "N/A";
                               if (installDateValue && isValid(new Date(installDateValue))) { 
                                   const expiryDate = addDays(new Date(installDateValue), 365);
-                                  const diffDays = differenceInDays(new Date(), expiryDate);
-                                  warrantyDisplay = diffDays <= 0 ? `${Math.abs(diffDays)} days remaining` : "Expired";
+                                  const diffDays = differenceInDays(expiryDate, new Date());
+                                  warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
                               }
                               return (
                                   <TableRow key={field.id}>
@@ -697,7 +678,7 @@ export default function NewInstallationReportPage() {
                                               )}
                                           />
                                       </TableCell>
-                                      <TableCell className="text-xs text-muted-foreground w-[150px]">{warrantyDisplay}</TableCell>
+                                      <TableCell className="text-xs text-foreground w-[50px]">{warrantyDisplay}</TableCell>
                                       <TableCell className="text-right">
                                           <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
                                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -711,7 +692,7 @@ export default function NewInstallationReportPage() {
             </div>
             {formState.errors.installationDetails && (
                 <FormMessage>
-                {formState.errors.installationDetails.message || 
+                {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
                  "Please ensure all installation details are valid and serial combinations are unique."}
                 </FormMessage>
@@ -720,7 +701,7 @@ export default function NewInstallationReportPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -862,5 +843,3 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
-
-    
