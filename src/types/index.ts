@@ -44,9 +44,9 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 export interface LCEntry {
   id?: string;
   applicantId: string;
-  applicantName: string;
+  // applicantName will be derived from applicantId on save
   beneficiaryId: string;
-  beneficiaryName: string;
+  // beneficiaryName will be derived from beneficiaryId on save
   currency: Currency;
   amount: number | '';
   termsOfPay?: TermsOfPay;
@@ -84,12 +84,12 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is for 'Notify Party Contact Person Name'
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
-  partialShipmentAllowed?: PartialShipmentAllowed | undefined;
+  partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number | '';
   secondPartialQty?: number | '';
   thirdPartialQty?: number | '';
@@ -169,7 +169,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This is for 'Notify Party Contact Person Name'
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -206,7 +206,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number | '';
+  billOfExchangeQty?: number;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -322,12 +322,12 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | ''; // Added
+  miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // This is sum of line item sales prices
-  grandTotalSalesPrice: number; // This is totalSalesPrice + freight (if excluded) - misc expenses
-  grandTotalCommissionUSD?: number; // Added
+  totalSalesPrice: number;
+  grandTotalSalesPrice: number;
+  grandTotalCommissionUSD?: number;
   totalExtraNetCommission?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
@@ -345,8 +345,8 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
     netCommissionPercentage?: number;
   }>;
   freightChargeAmount?: number;
-  miscellaneousExpenses?: number; // Added
-  grandTotalCommissionUSD?: number; // Added
+  miscellaneousExpenses?: number;
+  grandTotalCommissionUSD?: number;
   totalExtraNetCommission?: number;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
@@ -365,8 +365,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Made optional
-  ctlBoxSerial: z.string().optional(), // Made optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -380,7 +380,7 @@ export const InstallationReportSchema = z.object({
   totalMachineQtyFromLC: z.preprocess(toNumberOrUndefined, z.number().int().positive("Qty must be positive").optional()),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().nullable().optional(),
-  commercialInvoiceDate: z.date().nullable().optional(), // Added for display consistency
+  commercialInvoiceDate: z.date().nullable().optional(),
   etdDate: z.date().nullable().optional(),
   etaDate: z.date().nullable().optional(),
   packingListUrl: z.preprocess(
@@ -390,7 +390,19 @@ export const InstallationReportSchema = z.object({
   technicianName: z.string().min(1, "Technician Name is required."),
   reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
   installationDetails: z.array(InstallationDetailItemSchema)
-    .min(1, "At least one installation detail item is required."),
+    .min(1, "At least one installation detail item is required.")
+    .refine(
+      (items) => {
+        const serials = items
+          .map((item) => item.serialNo?.trim())
+          .filter((sn): sn is string => !!sn && sn.length > 0);
+        return new Set(serials).size === serials.length;
+      },
+      {
+        message: "Each non-empty Machine Serial No. must be unique within this report.",
+        path: [], // Error attached to the array itself
+      }
+    ),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
   missingItemsIssueResolved: z.boolean().optional().default(false),
@@ -438,4 +450,4 @@ export interface LcForInvoiceDropdownOption {
 }
 
 // --- END Installation Report Types ---
-    
+
