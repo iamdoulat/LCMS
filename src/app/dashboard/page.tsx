@@ -284,12 +284,12 @@ export default function DashboardPage() {
           console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
-
+      
       const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30;
+        const BATCH_SIZE = 30; // Firestore 'in' query limit
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -303,7 +303,6 @@ export default function DashboardPage() {
         }
       }
 
-
       if (lcEntriesForTheYear.length === 0 && !authLoading) {
         console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
       }
@@ -311,7 +310,6 @@ export default function DashboardPage() {
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
       const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
-
 
       const currentDate = new Date();
       const currentSystemYear = currentDate.getFullYear();
@@ -510,7 +508,6 @@ export default function DashboardPage() {
       const resolvedYearlyData = await Promise.all(yearlyDataPromises);
       setYearlyLcValueData(resolvedYearlyData);
 
-
     } catch (error: any) {
       console.error("Dashboard: Detailed error fetching dashboard data: ", error);
       let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
@@ -554,7 +551,7 @@ export default function DashboardPage() {
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
-  if (authLoading || (!authLoading && userRole === "Service")) {
+  if (authLoading || (userRole === "Service" && !authLoading)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -769,7 +766,7 @@ export default function DashboardPage() {
                 Total L/C and T/T Values by Year (2020-2030)
             </CardTitle>
             <CardDescription>
-                Overview of total L/C values for each year. Data fetched from Firestore.
+                Overview of total T/T and L/C values for each year.
             </CardDescription>
         </CardHeader>
         <CardContent className="h-[350px] w-full">
@@ -901,6 +898,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
-
