@@ -53,7 +53,7 @@ export default function WarrantySearchPage() {
 
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
   const [searchResults, setSearchResults] = useState<WarrantySearchResultItem[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true); // Start true
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -73,7 +73,6 @@ export default function WarrantySearchPage() {
     setStatsError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
-      // Fetch all reports, client-side filtering by year will happen after
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -92,13 +91,13 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); // Store all reports for potential re-filtering by search term
+      setAllReports(fetchedReports); 
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
         const numericYear = parseInt(year);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || report.createdAt as string; // Use C.I. Date first, fallback to createdAt
+          const reportDateString = report.commercialInvoiceDate || report.createdAt as string; 
           if (reportDateString && reportDateString !== 'N/A') {
             try {
               const reportDate = parseISO(reportDateString);
@@ -175,7 +174,6 @@ export default function WarrantySearchPage() {
     const lowerSearchTerm = trimmedSearchTerm.toLowerCase();
     let reportsToSearch = allReports;
 
-    // Filter by selected year for search if not "All Years"
     if (selectedYear !== "All Years") {
         const numericYear = parseInt(selectedYear);
         reportsToSearch = allReports.filter(report => {
@@ -228,7 +226,6 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 
-                // Prevent duplicates if multiple details in the same report match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -247,7 +244,6 @@ export default function WarrantySearchPage() {
             }
         });
         
-        // If report matched on top-level fields but no details matched, add all its details
         if (reportLevelMatch && !detailMatchedInReport) {
             report.installationDetails?.forEach(detail => {
                  let warrantyStatus = "N/A";
@@ -258,7 +254,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) { // Check for duplicates again
+                if (existingResultIndex === -1) { 
                      results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -305,7 +301,7 @@ export default function WarrantySearchPage() {
       <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-1"> {/* Added flex-1 to allow title to take space */}
+            <div className="flex-1">
               <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Microscope className="h-7 w-7 text-primary" />
                 Warranty Search Engine
@@ -332,7 +328,7 @@ export default function WarrantySearchPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearchSubmit} className="flex w-full items-center space-x-2 mb-8">
+          <form onSubmit={handleSearchSubmit} className="flex w-full max-w-md mx-auto items-center space-x-2 mb-8">
             <Input
               type="search"
               placeholder="Search by Machine Model/Serial, Ctl. Box Model/Serial, L/C No, Applicant, Beneficiary..."
