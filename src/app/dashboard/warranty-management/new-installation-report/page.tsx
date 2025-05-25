@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -33,6 +33,7 @@ const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_NEW_COMM_INV__";
 
 type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
+
 
 const formatDisplayDate = (dateString?: string | Date | null): string => {
   if (!dateString) return 'N/A';
@@ -93,6 +94,7 @@ export default function NewInstallationReportPage() {
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
+  
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
   const form = useForm<InstallationReportFormValues>({
@@ -114,9 +116,9 @@ export default function NewInstallationReportPage() {
       installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
       missingItemInfo: '',
       extraFoundInfo: '',
-      installationNotes: '',
       missingItemsIssueResolved: false,
       extraItemsIssueResolved: false,
+      installationNotes: '',
     },
   });
 
@@ -126,6 +128,7 @@ export default function NewInstallationReportPage() {
   const watchedInstallationDetails = watch("installationDetails");
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
+
 
   const installationDetailsFieldArray = useFieldArray({
     control,
@@ -152,11 +155,11 @@ export default function NewInstallationReportPage() {
         const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
         lcsSnap.forEach(doc => {
           const data = doc.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) {
+          if (data.commercialInvoiceNumber) { // Ensure C.I. Number exists
             fetchedLcOptions.push({
-              value: doc.id,
-              label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: doc.id } ,
+              value: doc.id, // L/C document ID
+              label: data.commercialInvoiceNumber, // Commercial Invoice Number for display
+              lcData: { ...data, id: doc.id } , // Store the full L/C data
             });
           }
         });
@@ -202,7 +205,7 @@ export default function NewInstallationReportPage() {
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
 
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId) {
+    } else if (!watchedSelectedCommercialInvoiceLcId) { // If C.I. Number is deselected/cleared
         setValue("applicantId", '', { shouldValidate: true });
         setValue("beneficiaryId", '', { shouldValidate: true });
         setValue("documentaryCreditNumber", '', { shouldValidate: true });
@@ -220,14 +223,14 @@ export default function NewInstallationReportPage() {
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
   React.useEffect(() => {
-    const totalLcQty = Number(watchedTotalLcMachineQty || 0);
-    const installedQty = installationDetailsFieldArray.fields.length;
+    const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
+    const installedQtyValue = installationDetailsFieldArray.fields.length;
     if (watchedTotalLcMachineQty !== undefined) {
-      setPendingQty(totalLcQty - installedQty);
+      setPendingQty(totalLcQtyValue - installedQtyValue);
     } else {
       setPendingQty('N/A');
     }
-  }, [watchedTotalLcMachineQty, installationDetailsFieldArray.fields.length]);
+  }, [watchedTotalLcMachineQty, watchedInstallationDetails, installationDetailsFieldArray.fields.length]);
 
 
   async function onSubmit(data: InstallationReportFormValues) {
@@ -290,7 +293,7 @@ export default function NewInstallationReportPage() {
       const docRef = await addDoc(collection(firestore, "installation_reports"), cleanedDataToSave);
       Swal.fire({
         title: "Installation Report Saved!",
-        text: `Report successfully saved to Firestore with ID: ${docRef.id}. Please ensure your Firestore rules allow writes to the 'installation_reports' collection.`,
+        html: `Report successfully saved to Firestore with ID: ${docRef.id}. <br/>Please ensure your Firestore rules allow writes to the 'installation_reports' collection.`,
         icon: "success",
         timer: 3500,
         showConfirmButton: true,
@@ -437,7 +440,7 @@ export default function NewInstallationReportPage() {
         }
 
         const dataRows = rows.slice(1); // Ignore header row
-        const newInstallationDetails: InstallationDetailItemType[] = dataRows.map((row, rowIndex) => {
+        const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
           const columns = row.split(','); // Simple comma split
           
           const machineModel = columns[0]?.trim() || '';
@@ -450,7 +453,6 @@ export default function NewInstallationReportPage() {
           if (installDateStr) {
             const parsedDate = parseISO(installDateStr); // Assumes YYYY-MM-DD or other ISO compatible
             if (!isValid(parsedDate)) {
-                // Try common formats if ISO fails
                 const commonFormats = ["MM/dd/yyyy", "dd/MM/yyyy", "M/d/yy", "d/M/yy"];
                 for (const fmt of commonFormats) {
                     try {
@@ -461,14 +463,16 @@ export default function NewInstallationReportPage() {
                         }
                     } catch {}
                 }
-                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${rowIndex + 1}.`);
+                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${csvRowIndex + 1}.`);
             } else {
                 installDate = parsedDate;
             }
           }
-
+          
+          // Determine the SL No. based on existing rows + current CSV row index
+          const existingRowsCount = installationDetailsFieldArray.fields.length;
           return {
-            slNo: (rowIndex + 1).toString(),
+            slNo: (existingRowsCount + csvRowIndex + 1).toString(),
             machineModel,
             serialNo,
             ctlBoxModel: ctlBoxModel || undefined, // Ensure undefined if empty
@@ -477,9 +481,12 @@ export default function NewInstallationReportPage() {
           };
         });
 
-        if (newInstallationDetails.length > 0) {
-          installationDetailsFieldArray.replace(newInstallationDetails);
-          Swal.fire("Import Complete", `${newInstallationDetails.length} rows imported successfully.`, "success");
+        if (newInstallationDetailsFromCsv.length > 0) {
+          // Append new rows instead of replacing
+          newInstallationDetailsFromCsv.forEach(item => {
+            installationDetailsFieldArray.append(item);
+          });
+          Swal.fire("Import Complete", `${newInstallationDetailsFromCsv.length} rows appended successfully.`, "success");
         } else {
           Swal.fire("No Data Imported", "No valid data rows found in the CSV after the header.", "info");
         }
@@ -714,7 +721,7 @@ export default function NewInstallationReportPage() {
                 )}
                 />
               </div>
-              <Separator className="my-2" />
+              
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -1046,6 +1053,5 @@ export default function NewInstallationReportPage() {
       </Card>
   );
 }
-
 
     

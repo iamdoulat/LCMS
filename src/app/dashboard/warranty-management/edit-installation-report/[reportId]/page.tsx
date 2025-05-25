@@ -199,8 +199,7 @@ export default function EditInstallationReportPage() {
           };
           reset(formValuesToSet);
 
-          // Trigger dependent state updates after form is reset
-          if (initialData.selectedCommercialInvoiceLcId) {
+          if (initialData.selectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) { // Ensure lcOptions are loaded
              const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
              if (selectedLcOption) {
                 const lc = selectedLcOption.lcData;
@@ -269,81 +268,13 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-        // fetchInitialReportData will be called inside the useEffect that watches lcOptionsForCommercialInvoice
+      // Only fetch initial report data after dropdown options are loaded
+      if (reportId) {
+        fetchInitialReportData();
+      }
     });
-  }, [reportId]); // Only re-run if reportId changes
-
-  React.useEffect(() => {
-    // This effect runs when lcOptionsForCommercialInvoice is populated,
-    // ensuring that we have the LC data before attempting to match and set values.
-    if (lcOptionsForCommercialInvoice.length > 0 && reportId) {
-      const fetchInitialReportData = async () => {
-        if (!reportId) return;
-        setIsLoadingReportData(true);
-        try {
-          const reportDocRef = doc(firestore, "installation_reports", reportId);
-          const reportDocSnap = await getDoc(reportDocRef);
-          if (reportDocSnap.exists()) {
-            const initialData = reportDocSnap.data() as InstallationReportDocument;
-             const formValuesToSet: InstallationReportFormValues = {
-                applicantId: initialData.applicantId || '',
-                beneficiaryId: initialData.beneficiaryId || '',
-                selectedCommercialInvoiceLcId: initialData.selectedCommercialInvoiceLcId || undefined,
-                documentaryCreditNumber: initialData.documentaryCreditNumber || '',
-                totalMachineQtyFromLC: initialData.totalMachineQtyFromLC || undefined,
-                proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
-                invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-                commercialInvoiceDate: initialData.commercialInvoiceDate && isValid(parseISO(initialData.commercialInvoiceDate)) ? parseISO(initialData.commercialInvoiceDate) : undefined,
-                etdDate: initialData.etdDate && isValid(parseISO(initialData.etdDate)) ? parseISO(initialData.etdDate) : undefined,
-                etaDate: initialData.etaDate && isValid(parseISO(initialData.etaDate)) ? parseISO(initialData.etaDate) : undefined,
-                packingListUrl: initialData.packingListUrl || '',
-                technicianName: initialData.technicianName || '',
-                reportingEngineerName: initialData.reportingEngineerName || '',
-                installationDetails: initialData.installationDetails?.map((item, index) => ({
-                  slNo: item.slNo || (index + 1).toString(),
-                  machineModel: item.machineModel || '',
-                  serialNo: item.serialNo || '',
-                  ctlBoxModel: item.ctlBoxModel || '',
-                  ctlBoxSerial: item.ctlBoxSerial || '',
-                  installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : undefined as any,
-                })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
-                missingItemInfo: initialData.missingItemInfo || '',
-                extraFoundInfo: initialData.extraFoundInfo || '',
-                missingItemsIssueResolved: initialData.missingItemsIssueResolved ?? false,
-                extraItemsIssueResolved: initialData.extraItemsIssueResolved ?? false,
-                installationNotes: initialData.installationNotes || '',
-              };
-            reset(formValuesToSet);
-
-            if (initialData.selectedCommercialInvoiceLcId) {
-                const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
-                if (selectedLcOption) {
-                    const lc = selectedLcOption.lcData;
-                    setSelectedLcDetails({
-                        isFirstShipment: lc.isFirstShipment,
-                        isSecondShipment: lc.isSecondShipment,
-                        isThirdShipment: lc.isThirdShipment,
-                        lcIdForLink: lc.id,
-                        partialShipmentAllowed: lc.partialShipmentAllowed,
-                        firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
-                        secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
-                        thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
-                        packingListUrl: lc.packingListUrl,
-                    });
-                    setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-                }
-            }
-          }
-        } catch (err) {
-          // Error handling already done in previous useEffect
-        } finally {
-          setIsLoadingReportData(false);
-        }
-      };
-      fetchInitialReportData();
-    }
-  }, [reportId, lcOptionsForCommercialInvoice, reset]);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportId, reset]); // Removed lcOptionsForCommercialInvoice from deps for initialData fetch logic
 
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
@@ -428,7 +359,8 @@ export default function EditInstallationReportPage() {
       setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
       setSelectedCommercialInvoiceDateDisplay(null);
     }
-  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues, form.formState.defaultValues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues]);
 
 
   React.useEffect(() => {
@@ -511,7 +443,8 @@ export default function EditInstallationReportPage() {
             if (typeof value === 'string' && value.trim() === '' &&
                 ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
                ) {
-                 acc[key as keyof typeof acc] = value; 
+                 // Keep empty strings for these specific fields if that's the intent, or make them undefined
+                 acc[key as keyof typeof acc] = value; // Or handle as undefined if truly optional and should be removed if empty
             } else {
                 acc[key as keyof typeof acc] = value;
             }
@@ -666,7 +599,7 @@ export default function EditInstallationReportPage() {
         }
 
         const dataRows = rows.slice(1);
-        const newInstallationDetails: InstallationDetailItemType[] = dataRows.map((row, rowIndex) => {
+        const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
           const columns = row.split(',');
           
           const machineModel = columns[0]?.trim() || '';
@@ -689,14 +622,14 @@ export default function EditInstallationReportPage() {
                         }
                     } catch {}
                 }
-                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${rowIndex + 1}.`);
+                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${csvRowIndex + 1}.`);
             } else {
                 installDate = parsedDate;
             }
           }
-
+          const existingRowsCount = installationDetailsFieldArray.fields.length;
           return {
-            slNo: (rowIndex + 1).toString(),
+            slNo: (existingRowsCount + csvRowIndex + 1).toString(),
             machineModel,
             serialNo,
             ctlBoxModel: ctlBoxModel || undefined,
@@ -705,9 +638,11 @@ export default function EditInstallationReportPage() {
           };
         });
 
-        if (newInstallationDetails.length > 0) {
-          installationDetailsFieldArray.replace(newInstallationDetails);
-          Swal.fire("Import Complete", `${newInstallationDetails.length} rows imported successfully.`, "success");
+        if (newInstallationDetailsFromCsv.length > 0) {
+          newInstallationDetailsFromCsv.forEach(item => {
+            installationDetailsFieldArray.append(item);
+          });
+          Swal.fire("Import Complete", `${newInstallationDetailsFromCsv.length} rows appended successfully.`, "success");
         } else {
           Swal.fire("No Data Imported", "No valid data rows found in the CSV after the header.", "info");
         }
@@ -986,7 +921,7 @@ export default function EditInstallationReportPage() {
                 )}
                 />
               </div>
-              <Separator className="my-2" />
+              
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
@@ -1177,7 +1112,7 @@ export default function EditInstallationReportPage() {
             </div>
 
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -1186,7 +1121,7 @@ export default function EditInstallationReportPage() {
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
                   <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
               </FormItem>
-              <FormItem>
+               <FormItem>
                 <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-destructive" />Warranty Expired:</FormLabel>
                 <Input type="text" value={`${warrantyExpiredCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-destructive" />
               </FormItem>
