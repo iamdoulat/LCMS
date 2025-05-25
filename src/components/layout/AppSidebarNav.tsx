@@ -157,7 +157,7 @@ const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
     icon: BarChart3,
-    roles: ["Super Admin", "Admin"],
+    roles: ["Super Admin", "Admin"], // Updated to include Admin
     subLinks: [
       // Add sub-links here as needed
     ],
@@ -176,10 +176,12 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
-  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-
   const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
+
+  React.useEffect(() => {
+    console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+  }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -231,13 +233,18 @@ export function AppSidebarNav() {
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
+    
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
       return null;
     }
 
-    const visibleSubLinks = item.subLinks?.filter(subLink => userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole))) || [];
+    const visibleSubLinks = item.subLinks?.filter(subLink => 
+        userRole === "Super Admin" || 
+        !subLink.roles || 
+        (userRole && subLink.roles.includes(userRole))
+    ) || [];
 
-    if (item.subLinks && visibleSubLinks.length === 0 && item.groupLabel && userRole !== "Super Admin") { 
+    if (item.subLinks && visibleSubLinks.length === 0 && userRole !== "Super Admin") { 
         return null;
     }
     
@@ -405,7 +412,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                item.href && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) &&
+                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
