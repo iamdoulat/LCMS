@@ -73,7 +73,6 @@ export default function WarrantySearchPage() {
     setStatsError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
-      // Consider ordering by a relevant field if needed, e.g., createdAt or commercialInvoiceDate
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -218,7 +217,7 @@ export default function WarrantySearchPage() {
                 detailMatchedInReport = true;
             }
 
-            if (currentDetailMatch) { // Only add if this specific detail item matches
+            if (currentDetailMatch) {
                 let warrantyStatus = "N/A";
                 if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -228,7 +227,7 @@ export default function WarrantySearchPage() {
                 }
                 
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) { // Avoid duplicate machine entries from the same report
+                if (existingResultIndex === -1) {
                     results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -245,7 +244,6 @@ export default function WarrantySearchPage() {
             }
         });
         
-        // If report matched at top level but no specific detail did, add all its details
         if (reportLevelMatch && !detailMatchedInReport) {
             report.installationDetails?.forEach(detail => {
                  let warrantyStatus = "N/A";
@@ -272,7 +270,6 @@ export default function WarrantySearchPage() {
                 }
             });
         }
-
     });
     setSearchResults(results);
     setIsSearching(false);
@@ -304,10 +301,10 @@ export default function WarrantySearchPage() {
       <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-1">
+            <div className="flex-1"> {/* Added flex-1 to allow title to take space */}
               <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Microscope className="h-7 w-7 text-primary" />
-                Warranty Search ({selectedYear === "All Years" ? "Overall" : selectedYear})
+                Warranty Search Engine
               </CardTitle>
             </div>
             <div className="w-full sm:w-auto">
@@ -326,8 +323,8 @@ export default function WarrantySearchPage() {
               </Select>
             </div>
           </div>
-          <CardDescription className="text-center pt-4">
-            Search for warranty information for year {selectedYear === "All Years" ? "All Years" : selectedYear}.
+           <CardDescription className="text-center pt-2">
+             Warranty Search Engine
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -437,10 +434,10 @@ export default function WarrantySearchPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
              <BarChart3 className="h-6 w-6 text-primary"/>
-            Yearly Warranty Statistics ({selectedYear === "All Years" ? "Overall" : selectedYear})
+            Yearly Warranty Statistics
           </CardTitle>
           <CardDescription>
-            Overview of machine warranty status for {selectedYear === "All Years" ? "all time" : `the year ${selectedYear}`}. Data fetched from Firestore.
+            Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}. Data fetched from Firestore.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -456,31 +453,31 @@ export default function WarrantySearchPage() {
                 title="Total L/C Machineries"
                 value={warrantyStats.totalLcMachineries.toLocaleString()}
                 icon={<Layers className="h-6 w-6 text-primary" />}
-                description={`For ${selectedYear === "All Years" ? "all time" : `year ${selectedYear}`}`}
+                description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
               />
               <StatCard
                 title="Total Installed Machines"
                 value={warrantyStats.totalInstalledMachines.toLocaleString()}
                 icon={<Wrench className="h-6 w-6 text-primary" />}
-                description={`For ${selectedYear === "All Years" ? "all time" : `year ${selectedYear}`}`}
+                description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
               />
               <StatCard
                 title="Total Pending Machines"
                 value={warrantyStats.totalPendingMachines.toLocaleString()}
                 icon={<Hourglass className="h-6 w-6 text-primary" />}
-                description={`For ${selectedYear === "All Years" ? "all time" : `year ${selectedYear}`}`}
+                description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
               />
               <StatCard
                 title="Machines Under Warranty"
                 value={warrantyStats.machinesUnderWarranty.toLocaleString()}
                 icon={<ShieldCheck className="h-6 w-6 text-primary" />}
-                description={`For ${selectedYear === "All Years" ? "all time" : `year ${selectedYear}`}`}
+                description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
               />
               <StatCard
                 title="Machines Out Of Warranty"
                 value={warrantyStats.machinesOutOfWarranty.toLocaleString()}
                 icon={<ShieldOff className="h-6 w-6 text-primary" />}
-                description={`For ${selectedYear === "All Years" ? "all time" : `year ${selectedYear}`}`}
+                description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
               />
             </div>
           )}
