@@ -86,9 +86,13 @@ export default function EditInstallationReportPage() {
     isThirdShipment?: boolean;
     lcIdForLink: string | null;
     partialShipmentAllowed?: LCEntryDocument['partialShipmentAllowed'];
-    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    firstPartialQty?: number;
+    // Amount fields for partial shipments are no longer displayed here
+    firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number;
+    secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number;
+    thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
     packingListUrl?: string;
   }>({
     lcIdForLink: null,
@@ -155,6 +159,7 @@ export default function EditInstallationReportPage() {
 
         if (reportDocSnap.exists()) {
           const initialData = reportDocSnap.data() as InstallationReportDocument;
+          console.log("EditInstallationReport: Initial Firestore Data:", initialData);
           const formValuesToSet: InstallationReportFormValues = {
             applicantId: initialData.applicantId || '',
             beneficiaryId: initialData.beneficiaryId || '',
@@ -168,8 +173,8 @@ export default function EditInstallationReportPage() {
             packingListUrl: initialData.packingListUrl || '',
             technicianName: initialData.technicianName || '',
             reportingEngineerName: initialData.reportingEngineerName || '',
-            installationDetails: initialData.installationDetails?.map(item => ({
-              slNo: item.slNo || '',
+            installationDetails: initialData.installationDetails?.map((item, index) => ({
+              slNo: item.slNo || (index + 1).toString(),
               machineModel: item.machineModel || '',
               serialNo: item.serialNo || '',
               ctlBoxModel: item.ctlBoxModel || '',
@@ -239,12 +244,9 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-        // Only fetch initial report data *after* dropdown options are potentially loaded
-        // This helps if the initialData setting logic depends on having options available (e.g. for finding labels)
         fetchInitialReportData();
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportId, reset, setValue]); // Only re-run if reportId changes
+  }, [reportId, reset, setValue]);
 
 
   React.useEffect(() => {
@@ -252,7 +254,7 @@ export default function EditInstallationReportPage() {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
       if (selectedOption) {
         const lc = selectedOption.lcData;
-        const currentFormValues = getValues(); // Get current form values to avoid unnecessary overwrites
+        const currentFormValues = getValues();
 
         if (currentFormValues.applicantId !== lc.applicantId || !currentFormValues.applicantId) {
             setValue("applicantId", lc.applicantId || '', { shouldValidate: true, shouldDirty: true });
@@ -271,21 +273,26 @@ export default function EditInstallationReportPage() {
         }
 
         const newInvoiceDate = lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined;
-        if ((currentFormValues.invoiceDate ? currentFormValues.invoiceDate.getTime() : null) !== (newInvoiceDate ? newInvoiceDate.getTime() : null) || (currentFormValues.invoiceDate === undefined && newInvoiceDate)) {
-            setValue("invoiceDate", newInvoiceDate, { shouldValidate: true, shouldDirty: true });
+        const currentInvoiceDateMs = currentFormValues.invoiceDate ? new Date(currentFormValues.invoiceDate).getTime() : null;
+        const newInvoiceDateMs = newInvoiceDate ? newInvoiceDate.getTime() : null;
+        if (currentInvoiceDateMs !== newInvoiceDateMs) {
+             setValue("invoiceDate", newInvoiceDate, { shouldValidate: true, shouldDirty: true });
         }
 
         const newEtdDate = lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined;
-        if ((currentFormValues.etdDate ? currentFormValues.etdDate.getTime() : null) !== (newEtdDate ? newEtdDate.getTime() : null) || (currentFormValues.etdDate === undefined && newEtdDate)) {
+        const currentEtdDateMs = currentFormValues.etdDate ? new Date(currentFormValues.etdDate).getTime() : null;
+        const newEtdDateMs = newEtdDate ? newEtdDate.getTime() : null;
+        if (currentEtdDateMs !== newEtdDateMs) {
             setValue("etdDate", newEtdDate, { shouldValidate: true, shouldDirty: true });
         }
 
         const newEtaDate = lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined;
-        if ((currentFormValues.etaDate ? currentFormValues.etaDate.getTime() : null) !== (newEtaDate ? newEtaDate.getTime() : null) || (currentFormValues.etaDate === undefined && newEtaDate)) {
+        const currentEtaDateMs = currentFormValues.etaDate ? new Date(currentFormValues.etaDate).getTime() : null;
+        const newEtaDateMs = newEtaDate ? newEtaDate.getTime() : null;
+        if (currentEtaDateMs !== newEtaDateMs) {
             setValue("etaDate", newEtaDate, { shouldValidate: true, shouldDirty: true });
         }
         
-        // Update packingListUrl from selected LC data
         if (currentFormValues.packingListUrl !== lc.packingListUrl || !currentFormValues.packingListUrl) {
            setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
         }
@@ -303,8 +310,7 @@ export default function EditInstallationReportPage() {
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) { // Only clear if not loading initial data
-      // Clear fields if C.I. Number is deselected
+    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) { 
       const defaultValuesForReset = form.formState.defaultValues;
       setValue("applicantId", defaultValuesForReset.applicantId || '', { shouldValidate: true, shouldDirty: true });
       setValue("beneficiaryId", defaultValuesForReset.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
@@ -318,8 +324,8 @@ export default function EditInstallationReportPage() {
       setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No" });
       setSelectedCommercialInvoiceDateDisplay(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues]);
+  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues, form.formState.defaultValues]);
+
 
   React.useEffect(() => {
     const totalLcQty = Number(watchedTotalLcMachineQty || 0);
@@ -363,18 +369,18 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"), // Use current value if not found
+      applicantName: selectedApplicant?.label || getValues("applicantId"), 
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), // Use current value
+      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), 
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
-      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      etaDate: data.etaDate ? format(data.etaDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      invoiceDate: data.invoiceDate && isValid(new Date(data.invoiceDate)) ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etdDate: data.etdDate && isValid(new Date(data.etdDate)) ? format(new Date(data.etdDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etaDate: data.etaDate && isValid(new Date(data.etaDate)) ? format(new Date(data.etaDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       packingListUrl: data.packingListUrl || undefined,
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
@@ -384,7 +390,7 @@ export default function EditInstallationReportPage() {
         serialNo: item.serialNo,
         ctlBoxModel: item.ctlBoxModel || undefined,
         ctlBoxSerial: item.ctlBoxSerial || undefined,
-        installDate: item.installDate ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any, 
+        installDate: item.installDate && isValid(new Date(item.installDate)) ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any, 
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
@@ -644,6 +650,7 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
+              
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   <div className="p-3 border rounded-md bg-muted/30">
@@ -741,7 +748,6 @@ export default function EditInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {/* Amount fields are hidden */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
@@ -1000,7 +1006,7 @@ export default function EditInstallationReportPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns || isLoadingLcOptions }>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
