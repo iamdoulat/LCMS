@@ -69,7 +69,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (year: string) => {
     setIsLoadingStats(true);
-    setSearchError(null); // Clear previous search errors when year changes
+    setSearchError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -90,13 +90,13 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports);
+      setAllReports(fetchedReports); // Store all reports for searching
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
         const numericYear = parseInt(year);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
+          const reportDateString = report.commercialInvoiceDate || (report.createdAt as string);
           if (reportDateString && reportDateString !== 'N/A') {
             try {
               const reportDate = parseISO(reportDateString);
@@ -129,7 +129,7 @@ export default function WarrantySearchPage() {
                 }
               }
             } catch (e) {
-              console.warn("Error parsing installDate for warranty calculation:", detail.installDate, e);
+              console.warn("Error parsing installDate for warranty stats:", detail.installDate, e);
             }
           }
         });
@@ -151,7 +151,7 @@ export default function WarrantySearchPage() {
       } else if (error.message) {
         errorMsg = `Failed to load statistics: ${error.message}`;
       }
-      setSearchError(errorMsg); // Use searchError state for stats error as well
+      setSearchError(errorMsg);
       Swal.fire("Statistics Error", errorMsg, "error");
       setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
     } finally {
@@ -232,7 +232,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) { // Add only if not already added
+                if (existingResultIndex === -1) { 
                     results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -249,10 +249,8 @@ export default function WarrantySearchPage() {
             }
         });
         
-        // If report level matched, but no specific detail, or no details exist but top-level matched.
         if (reportLevelMatch && !detailMatchedInReport) {
              if (report.installationDetails && report.installationDetails.length > 0) {
-                // Add first machine as representative if report matched but no specific detail did
                 const detail = report.installationDetails[0];
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
@@ -276,7 +274,7 @@ export default function WarrantySearchPage() {
                         warrantyStatus,
                     });
                 }
-            } else { // Report matched, but has no installation details
+            } else { 
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                 if (existingResultIndex === -1) {
                      results.push({
@@ -329,15 +327,17 @@ export default function WarrantySearchPage() {
         }}
       >
         <CardHeader>
-          <div className="flex-1 text-center">
-            <CardTitle className={cn("flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <Microscope className="h-7 w-7 text-primary" />
-              Warranty Search Engine
-            </CardTitle>
-            <CardDescription className="text-center pt-2 text-card-foreground/80">
-             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
-            </CardDescription>
+           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div className="flex-1">
+              <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Microscope className="h-7 w-7 text-primary" />
+                 Warranty Search Engine
+              </CardTitle>
+            </div>
           </div>
+           <CardDescription className="text-center pt-2 text-card-foreground/80">
+             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearchSubmit} className="flex w-full max-w-md mx-auto items-center space-x-2 mb-8">
@@ -376,10 +376,17 @@ export default function WarrantySearchPage() {
             </div>
           )}
 
+          {isSearching && (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+              <p className="text-card-foreground/80">Searching reports...</p>
+            </div>
+          )}
+
           {currentSearchItems.length > 0 && !isSearching && (
             <div className="space-y-6">
                  <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
-                    Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries):
+                    Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
                  </h3>
                   <div className="rounded-md border">
                     <Table>
@@ -445,7 +452,7 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-          background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 32%, rgba(230, 201, 145, 1) 100%)',
+          background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
         }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -477,9 +484,10 @@ export default function WarrantySearchPage() {
         <CardContent>
           {isLoadingStats ? (
             <div className="flex items-center justify-center h-24">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> Calculating statistics...
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> 
+              <span className="text-card-foreground/80">Calculating statistics...</span>
             </div>
-          ) : searchError && !isSearching ? ( // Show stats error if not actively searching
+          ) : searchError && !isSearching ? ( 
             <div className="text-destructive text-center py-4">{searchError}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
