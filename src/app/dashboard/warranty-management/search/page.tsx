@@ -69,7 +69,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
-    setSearchError(null);
+    setSearchError(null); // Reset search error when stats are re-fetched
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -90,7 +90,7 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports);
+      setAllReports(fetchedReports); // Store all fetched reports for searching
 
       let reportsForSelectedYear = fetchedReports;
       if (yearToFilter !== "All Years") {
@@ -151,7 +151,7 @@ export default function WarrantySearchPage() {
       } else if (error.message) {
         errorMsg = `Failed to load statistics: ${error.message}`;
       }
-      setSearchError(errorMsg);
+      // setSearchError(errorMsg); // This was for search, not stats. Keep stats error separate if needed or combine.
       Swal.fire("Statistics Error", errorMsg, "error");
       setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
     } finally {
@@ -231,6 +231,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
+                // Avoid duplicates if a report matches at report-level and detail-level
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -249,8 +250,10 @@ export default function WarrantySearchPage() {
             }
         });
         
+        // If report matched at top level but no specific detail matched, add the first detail as a representative entry or a generic report entry
         if (reportLevelMatch && !detailMatchedInReport) {
             if (report.installationDetails && report.installationDetails.length > 0) {
+                // Add first detail as representative if no specific detail matched but report did
                 const detail = report.installationDetails[0]; 
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
@@ -274,7 +277,7 @@ export default function WarrantySearchPage() {
                         warrantyStatus,
                     });
                 }
-            } else { 
+            } else { // Report matched but has no installation details
                  const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                  if (existingResultIndex === -1) {
                      results.push({
@@ -297,26 +300,39 @@ export default function WarrantySearchPage() {
     setIsSearching(false);
   };
 
+  // Pagination for search results
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
   const currentSearchItems = searchResults.slice(indexOfFirstSearchItem, indexOfLastSearchItem);
 
-  const handleSearchPageChange = (pageNumber: number) => setCurrentSearchPage(pageNumber);
+  const handleSearchPageChange = (pageNumber: number) => {
+    setCurrentSearchPage(pageNumber);
+  };
 
   const getSearchPageNumbers = () => {
-    const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
-    if (totalSearchPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalSearchPages; i++) pageNumbers.push(i); }
-    else {
-      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+    if (totalSearchPages <= maxPagesToShow + 2) { 
+      for (let i = 1; i <= totalSearchPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      pageNumbers.push(1); 
+      let startPage = Math.max(2, currentSearchPage - halfPagesToShow);
+      let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
       if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalSearchPages - 1, maxPagesToShow);
       if (currentSearchPage >= totalSearchPages - halfPagesToShow) startPage = Math.max(2, totalSearchPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalSearchPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalSearchPages);
-    } return pageNumbers;
+      pageNumbers.push(totalSearchPages); 
+    }
+    return pageNumbers;
   };
+
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -327,8 +343,8 @@ export default function WarrantySearchPage() {
         }}
       >
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex-1 text-center sm:text-left">
                 <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                     <Microscope className="h-7 w-7 text-primary" />
                     Warranty Search Engine
@@ -336,7 +352,7 @@ export default function WarrantySearchPage() {
             </div>
           </div>
           <CardDescription className="text-center pt-2 text-card-foreground/80">
-             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -384,7 +400,7 @@ export default function WarrantySearchPage() {
           )}
 
           {currentSearchItems.length > 0 && !isSearching && (
-            <div className="space-y-6">
+            <div className="space-y-6 mt-8">
                  <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
                     Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
                  </h3>
@@ -452,7 +468,7 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-          background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
+          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.89) 30%, rgba(232, 227, 218, 1) 100%)',
         }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
