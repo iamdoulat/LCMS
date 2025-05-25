@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -16,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, CheckboxIcon } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -35,7 +36,7 @@ type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
 
 
-const formatDisplayDate = (dateString?: string | Date): string => {
+const formatDisplayDate = (dateString?: string | Date | null): string => {
   if (!dateString) return 'N/A';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
@@ -234,7 +235,7 @@ export default function NewInstallationReportPage() {
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
-      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
+      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined, // Store as ISO string from lcData
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -252,7 +253,7 @@ export default function NewInstallationReportPage() {
         ctlBoxSerial: item.ctlBoxSerial || undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined, 
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
       missingItemInfo: data.missingItemInfo || undefined,
       extraFoundInfo: data.extraFoundInfo || undefined,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
@@ -263,17 +264,24 @@ export default function NewInstallationReportPage() {
     };
 
     
-    Object.keys(dataToSave).forEach(key => {
-      const typedKey = key as keyof typeof dataToSave;
-      if (dataToSave[typedKey] === undefined) {
-          delete dataToSave[typedKey];
+    const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        // Ensure empty strings for optional fields are not sent if we intend them to be omitted
+        if (typeof value === 'string' && value.trim() === '' &&
+            ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId'].includes(key)
+           ) {
+            // Do not add these empty strings to the object for Firestore
+        } else {
+            acc[key as keyof typeof acc] = value;
+        }
       }
-    });
+      return acc;
+    }, {} as typeof dataToSave);
 
-    console.log("Installation Report Data to be saved to Firestore:", dataToSave);
+    console.log("Installation Report Data to be saved to Firestore:", cleanedDataToSave);
 
     try {
-      const docRef = await addDoc(collection(firestore, "installation_reports"), dataToSave);
+      const docRef = await addDoc(collection(firestore, "installation_reports"), cleanedDataToSave);
       Swal.fire({
         title: "Installation Report Saved!",
         text: `Report successfully saved to Firestore with ID: ${docRef.id}`,
@@ -290,7 +298,7 @@ export default function NewInstallationReportPage() {
       console.error("Error saving installation report: ", error);
       let errorMessage = `Failed to save installation report: ${error.message}`;
       if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMessage = `Failed to save report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
+        errorMessage = `Failed to save report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'. Original Firebase Error: ${error.message}`;
       }
       Swal.fire({
         title: "Save Failed",
@@ -312,6 +320,22 @@ export default function NewInstallationReportPage() {
       }
     } else {
       Swal.fire("No URL", "No URL provided to view.", "info");
+    }
+  };
+
+  const handleDuplicateLastRow = () => {
+    const installationDetails = getValues("installationDetails");
+    if (installationDetails && installationDetails.length > 0) {
+      const lastRow = installationDetails[installationDetails.length - 1];
+      installationDetailsFieldArray.append({
+        ...lastRow,
+        slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
+        // Consider if serial numbers should be cleared or duplicated
+        // serialNo: '', 
+        // ctlBoxSerial: '',
+      });
+    } else {
+      Swal.fire("Info", "No rows to duplicate.", "info");
     }
   };
 
@@ -413,7 +437,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -424,8 +448,8 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQtyFromLC"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
-                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
+                      <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -477,61 +501,60 @@ export default function NewInstallationReportPage() {
               </div>
               <Separator className="my-2" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  <div className="p-3 border rounded-md bg-muted/30">
-                      <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
-                      {selectedLcDetails.lcIdForLink ? (
-                          <div className="flex items-center gap-3">
-                              {[
-                                  { flag: selectedLcDetails.isFirstShipment, label: "1st" },
-                                  { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
-                                  { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
-                              ].map((shipment, index) => (
-                                  <Button
-                                      key={index}
-                                      type="button"
-                                      variant={shipment.flag ? "default" : "outline"}
-                                      size="icon"
-                                      className={cn(
-                                      "h-8 w-8 rounded-full p-0 text-xs font-bold",
-                                      shipment.flag
-                                          ? "bg-green-500 hover:bg-green-600 text-white"
-                                          : "border-destructive text-destructive hover:bg-destructive/10"
-                                      )}
-                                      title={`${shipment.label} Shipment Status`}
-                                      onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
-                                  >
-                                      {shipment.label}
-                                  </Button>
-                              ))}
-                          </div>
-                      ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
-                  </div>
-
-                  <FormField
-                  control={control}
-                  name="packingListUrl"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
-                      <div className="flex items-center gap-2">
-                          <FormControl className="flex-grow">
-                          <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} />
-                          </FormControl>
-                          <Button
-                          type="button"
-                          variant="default"
-                          size="icon"
-                          onClick={() => handleViewUrl(field.value)}
-                          disabled={!field.value}
-                          title="View Packing List"
-                          >
-                          <ExternalLink className="h-4 w-4" />
-                          </Button>
-                      </div>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
+                <div className="p-3 border rounded-md bg-muted/30">
+                    <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                    {selectedLcDetails.lcIdForLink ? (
+                        <div className="flex items-center gap-3">
+                            {[
+                                { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                                { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                                { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                            ].map((shipment, index) => (
+                                <Button
+                                    key={index}
+                                    type="button"
+                                    variant={shipment.flag ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                    "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                    shipment.flag
+                                        ? "bg-green-500 hover:bg-green-600 text-white"
+                                        : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`${shipment.label} Shipment Status`}
+                                    onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
+                                >
+                                    {shipment.label}
+                                </Button>
+                            ))}
+                        </div>
+                    ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
+                </div>
+                <FormField
+                control={control}
+                name="packingListUrl"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} readOnly={isLcSelected && !!selectedLcDetails.packingListUrl} className={cn((isLcSelected && !!selectedLcDetails.packingListUrl) && "bg-muted/50 cursor-not-allowed")}/>
+                        </FormControl>
+                        <Button
+                        type="button"
+                        variant="default"
+                        size="icon"
+                        onClick={() => handleViewUrl(field.value)}
+                        disabled={!field.value}
+                        title="View Packing List"
+                        >
+                        <ExternalLink className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
               </div>
 
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
@@ -572,7 +595,6 @@ export default function NewInstallationReportPage() {
                                     {index > 0 && <Separator className="my-2" />}
                                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
-                                        {/* Amount fields are hidden as per previous request */}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
                                         {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
@@ -602,7 +624,7 @@ export default function NewInstallationReportPage() {
                               <TableHead className="text-foreground">Ctl. Box Model</TableHead>
                               <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
                               <TableHead className="text-foreground">Install Date*</TableHead>
-                              <TableHead className="text-foreground w-[50px]">Warranty</TableHead>
+                              <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
                               <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                           </TableRow>
                       </TableHeader>
@@ -610,7 +632,7 @@ export default function NewInstallationReportPage() {
                           {installationDetailsFieldArray.fields.map((field, index) => {
                               const installDateValue = watch(`installationDetails.${index}.installDate`);
                               let warrantyDisplay = "N/A";
-                              if (installDateValue && isValid(new Date(installDateValue))) { 
+                              if (installDateValue && isValid(new Date(installDateValue))) {
                                   const expiryDate = addDays(new Date(installDateValue), 365);
                                   const diffDays = differenceInDays(expiryDate, new Date());
                                   warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
@@ -678,7 +700,7 @@ export default function NewInstallationReportPage() {
                                               )}
                                           />
                                       </TableCell>
-                                      <TableCell className="text-xs text-foreground w-[50px]">{warrantyDisplay}</TableCell>
+                                      <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
                                       <TableCell className="text-right">
                                           <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
                                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -694,12 +716,17 @@ export default function NewInstallationReportPage() {
                 <FormMessage>
                 {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
-                 "Please ensure all installation details are valid and serial combinations are unique."}
+                 "Please ensure all installation details are valid and non-empty Machine Serial No. are unique."}
                 </FormMessage>
             )}
-             <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })} className="mt-2">
+            <div className="flex gap-2 mt-2">
+             <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
+             <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
+              <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
+            </Button>
+            </div>
 
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
               <FormItem>
@@ -843,3 +870,5 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
+    
