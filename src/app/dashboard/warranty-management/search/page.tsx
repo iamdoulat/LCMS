@@ -327,13 +327,16 @@ export default function WarrantySearchPage() {
         }}
       >
         <CardHeader>
-           <div className="flex-1">
-            <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <Microscope className="h-7 w-7 text-primary" />
-               Warranty Search Engine
-            </CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex-1">
+                <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                    <Microscope className="h-7 w-7 text-primary" />
+                    Warranty Search Engine
+                </CardTitle>
+            </div>
+            {/* Year selector moved to stats card */}
           </div>
-           <CardDescription className="text-center pt-2 text-card-foreground/80">
+          <CardDescription className="text-center pt-2 text-card-foreground/80">
              Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
@@ -453,7 +456,7 @@ export default function WarrantySearchPage() {
           background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
         }}
       >
-         <CardHeader className="flex flex-col sm:flex-row justify-between items-center gap-2">
+         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
             <CardTitle className={cn("flex items-center sm:justify-start justify-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary"/>
@@ -526,3 +529,4 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
+
