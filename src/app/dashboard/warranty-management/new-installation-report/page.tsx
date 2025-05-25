@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItemType as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -116,6 +116,7 @@ export default function NewInstallationReportPage() {
   const { control, setValue, watch, formState, getValues } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
+  const watchedInstallationDetails = watch("installationDetails");
   const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
   const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
 
@@ -233,7 +234,8 @@ export default function NewInstallationReportPage() {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined, // Get C.I. No. from selected L/C option
+      commercialInvoiceNumber: selectedLcOption?.label || undefined,
+      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -245,11 +247,13 @@ export default function NewInstallationReportPage() {
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
         ...item,
-        slNo: item.slNo || undefined, 
+        slNo: item.slNo || undefined,
         installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+        ctlBoxModel: item.ctlBoxModel || undefined,
+        ctlBoxSerial: item.ctlBoxSerial || undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: pendingQty,
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined, // Save calculated pending Qty
       missingItemInfo: data.missingItemInfo || undefined,
       extraFoundInfo: data.extraFoundInfo || undefined,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
@@ -305,7 +309,7 @@ export default function NewInstallationReportPage() {
       console.error("Error saving installation report: ", error);
       let errorMessage = `Failed to save installation report: ${error.message}`;
       if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMessage = `Failed to save installation report: Missing or insufficient permissions. Please check your Firestore security rules for the 'installation_reports' collection.`;
+        errorMessage = `Failed to save report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
       }
       Swal.fire({
         title: "Save Failed",
@@ -600,6 +604,7 @@ export default function NewInstallationReportPage() {
                     </AccordionItem>
                 </Accordion>
               )}
+              
               <Separator className="my-6" />
 
               <h3 className={cn(sectionHeadingClass)}>
@@ -624,10 +629,10 @@ export default function NewInstallationReportPage() {
                           {installationDetailsFieldArray.fields.map((field, index) => {
                               const installDateValue = watch(`installationDetails.${index}.installDate`);
                               let warrantyDisplay = "N/A";
-                              if (installDateValue && isValid(installDateValue)) {
-                                  const expiryDate = addDays(installDateValue, 365);
-                                  const remainingDays = differenceInDays(new Date(), expiryDate);
-                                  warrantyDisplay = remainingDays <= 0 ? `${Math.abs(remainingDays)} days remaining` : "Expired";
+                              if (installDateValue && isValid(new Date(installDateValue))) { 
+                                  const expiryDate = addDays(new Date(installDateValue), 365);
+                                  const diffDays = differenceInDays(new Date(), expiryDate);
+                                  warrantyDisplay = diffDays <= 0 ? `${Math.abs(diffDays)} days remaining` : "Expired";
                               }
                               return (
                                   <TableRow key={field.id}>
@@ -715,7 +720,7 @@ export default function NewInstallationReportPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />

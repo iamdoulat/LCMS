@@ -365,8 +365,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required."),
-  ctlBoxSerial: z.string().min(1, "Ctl. Box Serial is required."),
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -408,15 +408,15 @@ export const InstallationReportSchema = z.object({
       const ctlBoxSerials = new Set<string>();
       for (const item of items) {
         const serial = (item.ctlBoxSerial || '').trim().toUpperCase(); // Normalize
-        if (serial !== "") {
+        if (serial !== "") { // Only check non-empty serials
           if (ctlBoxSerials.has(serial)) return false;
           ctlBoxSerials.add(serial);
         }
       }
       return true;
     }, {
-      message: "Each Ctl. Box Serial must be unique within this report.",
-      path: ["installationDetails"],
+      message: "Each Ctl. Box Serial must be unique within this report, if provided.",
+      path: ["installationDetails"], 
     }),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
@@ -445,7 +445,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; ctlBoxModel?: string; ctlBoxSerial?:string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty: number | string; // Can be string 'N/A'
   missingItemInfo?: string;
