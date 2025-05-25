@@ -34,7 +34,6 @@ import {
   UserPlus,
   Building,
   FileText,
-  Package,
   History,
   Search,
   DollarSign,
@@ -50,8 +49,9 @@ import {
   Wrench,
   ClipboardList,
   Archive,
-  FileEdit,
+  Edit,
   PackageCheck,
+  Package,
   CreditCard,
   Microscope,
   Minus,
@@ -93,7 +93,7 @@ const coreModulesNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: Edit },
     ],
   },
   {
@@ -157,7 +157,7 @@ const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
     icon: BarChart3,
-    roles: ["Super Admin", "Admin"], // Updated to include Admin
+    roles: ["Super Admin", "Admin"], // Admin can now see this group
     subLinks: [
       // Add sub-links here as needed
     ],
@@ -165,10 +165,10 @@ const reportingManagementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin", "Admin"] },
 ];
 
 export function AppSidebarNav() {
@@ -244,7 +244,7 @@ export function AppSidebarNav() {
         (userRole && subLink.roles.includes(userRole))
     ) || [];
 
-    if (item.subLinks && visibleSubLinks.length === 0 && userRole !== "Super Admin") { 
+    if (item.subLinks && visibleSubLinks.length === 0 && userRole !== "Super Admin" && (!item.roles || !item.roles.includes(userRole as UserRole))) { 
         return null;
     }
     
@@ -341,7 +341,7 @@ export function AppSidebarNav() {
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
             {[mainDashboardLink, globalSearchLink].map((item) => {
-              if (item.href === '/dashboard' && userRole === "Service") {
+              if (userRole === "Service" && item.href === '/dashboard') { // Hide main dashboard for Service role
                 return null;
               }
               return item.href && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && (
@@ -412,7 +412,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && item.href &&
+                (userRole === "Super Admin" || (userRole === "Admin" && item.roles?.includes("Admin"))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton

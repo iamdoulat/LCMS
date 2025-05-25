@@ -17,37 +17,30 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { UserRole } from '@/types';
-import { auth } from '@/lib/firebase/config'; // Import Firebase auth instance
-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import type { UserRole, UserDocumentForAdmin } from '@/types';
+import { firestore } from '@/lib/firebase/config';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
-const addUserSchema = z.object({
+const addUserProfileSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
-  password: z.string().min(6, "Password must be at least 6 characters long."),
-  confirmPassword: z.string().min(6, "Confirm password is required."),
   contactNumber: z.string().optional(),
-  role: z.enum(["Admin", "User", "Super Admin"]).default("User"),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+  role: z.enum(["Admin", "User", "Super Admin", "Service"]).default("User"), // Added "Service"
 });
 
-type AddUserFormValues = z.infer<typeof addUserSchema>;
+type AddUserProfileFormValues = z.infer<typeof addUserProfileSchema>;
 
 export default function AddUserPage() {
-  const { userRole: adminUserRole, loading: authLoading, user: adminUser } = useAuth();
+  const { userRole: adminUserRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<AddUserFormValues>({
-    resolver: zodResolver(addUserSchema),
+  const form = useForm<AddUserProfileFormValues>({
+    resolver: zodResolver(addUserProfileSchema),
     defaultValues: {
       displayName: '',
       email: '',
-      password: '',
-      confirmPassword: '',
       contactNumber: '',
       role: "User",
     },
@@ -57,7 +50,7 @@ export default function AddUserPage() {
     if (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin") {
       Swal.fire({
         title: 'Access Denied',
-        text: 'You are not permitted to add new users.',
+        text: 'You are not permitted to add new user profiles.',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,
@@ -67,42 +60,44 @@ export default function AddUserPage() {
     }
   }, [adminUserRole, authLoading, router]);
 
-  const onSubmit = async (data: AddUserFormValues) => {
+  const onSubmit = async (data: AddUserProfileFormValues) => {
     setIsSubmitting(true);
+    
+    const profileToSave: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt' | 'uid' | 'photoURL'> & { createdAt: any, updatedAt: any } = {
+      displayName: data.displayName,
+      email: data.email,
+      contactNumber: data.contactNumber || undefined,
+      role: data.role,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    
+    Object.keys(profileToSave).forEach(key => {
+        if (profileToSave[key as keyof typeof profileToSave] === undefined) {
+            delete profileToSave[key as keyof typeof profileToSave];
+        }
+    });
+
     try {
-      // Temporarily store admin's credentials if needed for re-authentication later
-      // This is complex and generally not recommended for client-side.
-      // The simpler flow is admin gets signed out.
-      const adminAuth = auth; // Use the global auth instance
-
-      // Create the new user
-      const userCredential = await createUserWithEmailAndPassword(adminAuth, data.email, data.password);
-      const newUser = userCredential.user;
-
-      // Update the new user's profile with the display name
-      await updateProfile(newUser, { displayName: data.displayName });
-
-      // Sign out the newly created user (which also signs out the admin)
-      await signOut(adminAuth);
-      
+      await addDoc(collection(firestore, "users"), profileToSave);
       Swal.fire({
-        title: "User Created in Firebase!",
-        html: `User <b>${data.displayName}</b> (${data.email}) has been created in Firebase Authentication.
-               <br/><br/><strong>IMPORTANT:</strong> You (the admin) have been signed out. Please log back in to continue.
-               <br/><br/>Role assignment (<b>${data.role}</b>) needs to be handled via backend custom claims.
-               <br/>Contact number is not stored in Firebase Auth.`,
+        title: "User Profile Added to Firestore!",
+        text: `Profile for ${data.displayName} (${data.email}) with role ${data.role} added to Firestore.`,
         icon: "success",
-        confirmButtonText: "OK, Re-login",
-      }).then(() => {
-        router.push('/login'); // Redirect admin to login page
+        timer: 3000,
+        showConfirmButton: true,
+      }).then((result) => {
+        if(result.isConfirmed || result.isDismissed) {
+            router.push('/dashboard/settings/users'); // Redirect to user list after saving
+        }
       });
       form.reset();
 
     } catch (error: any) {
-      console.error("Error creating user:", error);
+      console.error("Error adding user profile to Firestore:", error);
       Swal.fire({
-        title: "User Creation Failed",
-        text: error.message || "Could not create user in Firebase Authentication.",
+        title: "Profile Creation Failed",
+        text: error.message || "Could not add user profile to Firestore.",
         icon: "error",
       });
     } finally {
@@ -111,12 +106,28 @@ export default function AddUserPage() {
   };
 
 
-  if (authLoading || (adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading or verifying access...</p>
-      </div>
+  if (authLoading || (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
+     if (authLoading) {
+        return (
+            <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="ml-3 text-muted-foreground">Verifying access...</p>
+            </div>
+        );
+    }
+    return ( // This UI is for after auth load but still no permission, while redirecting
+         <div className="container mx-auto py-8">
+            <Card className="shadow-xl">
+                <CardHeader>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                        <ShieldAlert /> Access Denied
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>You do not have permission to view this page. Redirecting...</p>
+                </CardContent>
+            </Card>
+        </div>
     );
   }
 
@@ -134,19 +145,20 @@ export default function AddUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserPlus className="h-7 w-7 text-primary" />
-            Add New User
+            Add New User Profile (to Firestore)
           </CardTitle>
           <CardDescription>
-            Fill in the details below. This will create a new user in Firebase Authentication.
+            Fill in the details below to add a new user profile to the application database. This does not create a Firebase Authentication login.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert variant="default" className="mb-6 bg-amber-500/10 border-amber-500/30">
-            <ShieldAlert className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-700 font-semibold">Admin Sign-Out & Role Assignment</AlertTitle>
-            <AlertDescription className="text-amber-700/90">
-              Creating a user here will sign you (the admin) out. You will need to log back in.
-              Assigning roles (e.g., "{form.getValues("role")}") requires backend logic using Firebase Admin SDK (Custom Claims). The contact number is not stored in Firebase Auth by this form.
+          <Alert variant="default" className="mb-6 bg-blue-500/10 border-blue-500/30">
+            <Info className="h-5 w-5 text-blue-600" />
+            <AlertTitle className="text-blue-700 font-semibold">Important Note</AlertTitle>
+            <AlertDescription className="text-blue-700/90">
+              - This form creates a user profile record in your Firestore database.
+              - It does **not** create a Firebase Authentication account (login credentials). That requires a separate process (e.g., user self-registration or a backend Admin SDK function).
+              - The assigned role is for application-level permissions.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -179,32 +191,6 @@ export default function AddUserPage() {
               />
               <FormField
                 control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password*</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Enter a secure password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password*</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Re-enter password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="contactNumber"
                 render={({ field }) => (
                   <FormItem>
@@ -212,9 +198,6 @@ export default function AddUserPage() {
                     <FormControl>
                       <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value ?? ''} />
                     </FormControl>
-                    <FormDescription>
-                      Contact number is not stored in Firebase Auth; it would require a separate database (e.g., Firestore) entry linked to the user.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -224,7 +207,7 @@ export default function AddUserPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assign Role* (Note: Requires Backend)</FormLabel>
+                    <FormLabel>Assign Role* (Application Level)</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -235,9 +218,10 @@ export default function AddUserPage() {
                         <SelectItem value="Super Admin">Super Admin</SelectItem>
                         <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="User">User</SelectItem>
+                        <SelectItem value="Service">Service</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>Actual Firebase roles require custom claims set by a backend.</FormDescription>
+                    <FormDescription>This role is stored in Firestore and used for application permissions.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -247,12 +231,12 @@ export default function AddUserPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    Adding Profile...
                   </>
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Create User in Firebase
+                    Add User Profile to Firestore
                   </>
                 )}
               </Button>

@@ -15,10 +15,11 @@ export default function CompanySetupPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin") {
+    console.log("CompanySetupPage: Auth Loading:", authLoading, "User Role:", userRole);
+    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin") {
       Swal.fire({
         title: 'Access Denied',
-        text: 'You are not permitted to view/edit settings.',
+        text: 'You are not permitted to view/edit company settings.',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,
@@ -28,7 +29,7 @@ export default function CompanySetupPage() {
     }
   }, [userRole, authLoading, router]);
 
-  if (authLoading || userRole !== "Super Admin") {
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
