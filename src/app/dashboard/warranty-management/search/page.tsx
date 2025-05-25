@@ -70,7 +70,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
-    setSearchError(null); // Reset search error when stats are re-fetched
+    setSearchError(null); 
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -231,7 +231,6 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
-                // Prevent duplicates if multiple details in the same report match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -250,10 +249,9 @@ export default function WarrantySearchPage() {
             }
         });
         
-        // If report matched at top level but no specific detail matched, add first detail as representative
         if (reportLevelMatch && !detailMatchedInReport) {
             if (report.installationDetails && report.installationDetails.length > 0) {
-                const detail = report.installationDetails[0]; // Take the first item as representative
+                const detail = report.installationDetails[0]; 
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -262,7 +260,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) { // Avoid adding if already added via detail match
+                if (existingResultIndex === -1) { 
                      results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -275,8 +273,8 @@ export default function WarrantySearchPage() {
                         installDate: detail.installDate as string,
                         warrantyStatus,
                     });
-                }
-            } else { // Report matched, but has no installation details (should be rare but handle)
+                 }
+            } else { 
                  const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                  if (existingResultIndex === -1) {
                      results.push({
@@ -299,7 +297,6 @@ export default function WarrantySearchPage() {
     setIsSearching(false);
   };
 
-  // Pagination for search results
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
@@ -310,26 +307,17 @@ export default function WarrantySearchPage() {
   };
 
   const getSearchPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
-
-    if (totalSearchPages <= maxPagesToShow + 2) { 
-      for (let i = 1; i <= totalSearchPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      pageNumbers.push(1); 
-      let startPage = Math.max(2, currentSearchPage - halfPagesToShow);
-      let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
+    const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+    if (totalSearchPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalSearchPages; i++) pageNumbers.push(i); }
+    else {
+      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
       if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalSearchPages - 1, maxPagesToShow);
       if (currentSearchPage >= totalSearchPages - halfPagesToShow) startPage = Math.max(2, totalSearchPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalSearchPages - 1) pageNumbers.push("...");
       pageNumbers.push(totalSearchPages); 
-    }
-    return pageNumbers;
+    } return pageNumbers;
   };
 
   return (
@@ -338,13 +326,15 @@ export default function WarrantySearchPage() {
         className="shadow-xl max-w-6xl mx-auto"
       >
         <CardHeader>
-          <div className="flex-1 text-center sm:text-left">
-            <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Microscope className="h-7 w-7 text-primary" />
-                Warranty Search Engine
-            </CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex-1 text-center sm:text-left">
+                <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                    <Microscope className="h-7 w-7 text-primary" />
+                    Warranty Search Engine
+                </CardTitle>
+            </div>
           </div>
-           <CardDescription className="text-center pt-2 text-card-foreground/80">
+           <CardDescription className="text-card-foreground/80 text-center pt-2">
              Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
@@ -464,7 +454,7 @@ export default function WarrantySearchPage() {
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
         style={{
-          background: 'linear-gradient(0deg, rgba(34, 193, 195, 0.89) 30%, rgba(224, 220, 209, 1) 100%)',
+          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.89) 30%, rgba(232, 227, 218, 1) 100%)',
         }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -499,7 +489,7 @@ export default function WarrantySearchPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> 
               <span className="text-card-foreground/80">Calculating statistics...</span>
             </div>
-          ) : searchError && !isSearching ? ( // Using searchError state here might not be ideal, should have a dedicated statsError
+          ) : searchError && !isSearching ? ( 
             <div className="text-destructive text-center py-4">{searchError}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -540,3 +530,4 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
+
