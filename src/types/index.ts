@@ -89,7 +89,7 @@ export interface LCEntry {
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
   status?: LCStatus;
-  partialShipmentAllowed?: PartialShipmentAllowed;
+  partialShipmentAllowed?: PartialShipmentAllowed | undefined;
   firstPartialQty?: number | '';
   secondPartialQty?: number | '';
   thirdPartialQty?: number | '';
@@ -365,8 +365,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxModel: z.string().min(1, "Ctl. Box Model is required.").optional(), // Made optional
+  ctlBoxSerial: z.string().optional(), // Made optional
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -391,32 +391,18 @@ export const InstallationReportSchema = z.object({
   installationDetails: z.array(InstallationDetailItemSchema)
     .min(1, "At least one installation detail item is required.")
     .refine(items => {
-      const machineSerials = new Set<string>();
-      for (const item of items) {
-        const serial = (item.serialNo || '').trim().toUpperCase(); // Normalize for uniqueness check
-        if (serial !== "") {
-          if (machineSerials.has(serial)) return false;
-          machineSerials.add(serial);
-        }
-      }
-      return true;
-    }, {
-      message: "Each Machine Serial No. must be unique within this report.",
-      path: ["installationDetails"],
-    })
-    .refine(items => {
       const ctlBoxSerials = new Set<string>();
       for (const item of items) {
-        const serial = (item.ctlBoxSerial || '').trim().toUpperCase(); // Normalize
-        if (serial !== "") { // Only check non-empty serials
-          if (ctlBoxSerials.has(serial)) return false;
+        const serial = (item.ctlBoxSerial || '').trim().toUpperCase();
+        if (serial !== "") { // Only check non-empty, non-whitespace serials
+          if (ctlBoxSerials.has(serial)) return false; // Duplicate found
           ctlBoxSerials.add(serial);
         }
       }
-      return true;
+      return true; // All non-empty ctlBoxSerials are unique
     }, {
-      message: "Each Ctl. Box Serial must be unique within this report, if provided.",
-      path: ["installationDetails"], 
+      message: "Each non-empty Ctl. Box Serial must be unique within this report.",
+      path: ["installationDetails"],
     }),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
@@ -465,3 +451,4 @@ export interface LcForInvoiceDropdownOption {
 }
 
 // --- END Installation Report Types ---
+
