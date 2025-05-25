@@ -54,6 +54,8 @@ import {
   PackageCheck,
   CreditCard,
   Microscope,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -78,16 +80,15 @@ interface NavItemGroup {
     href: string;
     label: string;
     icon?: React.ElementType;
-    roles?: UserRole[]; // Sub-links can also have roles if needed for more granular control
+    roles?: UserRole[];
   }>;
   roles?: UserRole[];
 }
 
-
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -97,7 +98,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -109,7 +110,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
+    icon: Truck,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -118,7 +119,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from Building
+    icon: Factory,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -127,7 +128,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -163,10 +164,9 @@ const reportingManagementNavItems: NavItemGroup[] = [
   },
 ];
 
-
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UserPlus, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
@@ -220,7 +220,10 @@ export function AppSidebarNav() {
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
-      .filter(item => item.subLinks && isGroupActive(item.subLinks) && (!item.roles || (userRole && item.roles.includes(userRole))))
+      .filter(item => {
+        const visibleSubLinks = item.subLinks?.filter(subLink => userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole))) || [];
+        return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks) && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole)));
+      })
       .map(item => item.groupLabel || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]); 
@@ -228,13 +231,13 @@ export function AppSidebarNav() {
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
-    if (item.roles && (!userRole || !item.roles.includes(userRole))) {
+    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
       return null;
     }
 
-    const visibleSubLinks = item.subLinks?.filter(subLink => !subLink.roles || (userRole && subLink.roles.includes(userRole))) || [];
+    const visibleSubLinks = item.subLinks?.filter(subLink => userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole))) || [];
 
-    if (item.subLinks && visibleSubLinks.length === 0 && item.groupLabel) { // Ensure groups without visible sublinks aren't rendered if they have a label
+    if (item.subLinks && visibleSubLinks.length === 0 && item.groupLabel && userRole !== "Super Admin") { 
         return null;
     }
     
@@ -334,7 +337,7 @@ export function AppSidebarNav() {
               if (item.href === '/dashboard' && userRole === "Service") {
                 return null;
               }
-              return item.href && (!item.roles || (userRole && item.roles.includes(userRole))) && (
+              return item.href && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
@@ -402,7 +405,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                item.href && (!item.roles || (userRole && item.roles.includes(userRole))) &&
+                item.href && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
