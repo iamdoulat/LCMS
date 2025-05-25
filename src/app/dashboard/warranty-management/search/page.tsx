@@ -53,7 +53,7 @@ export default function WarrantySearchPage() {
 
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
   const [searchResults, setSearchResults] = useState<WarrantySearchResultItem[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(true); // Start true
   const [isSearching, setIsSearching] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -73,6 +73,7 @@ export default function WarrantySearchPage() {
     setStatsError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
+      // Fetch all reports, client-side filtering by year will happen after
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -91,13 +92,13 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports);
+      setAllReports(fetchedReports); // Store all reports for potential re-filtering by search term
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
         const numericYear = parseInt(year);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
+          const reportDateString = report.commercialInvoiceDate || report.createdAt as string; // Use C.I. Date first, fallback to createdAt
           if (reportDateString && reportDateString !== 'N/A') {
             try {
               const reportDate = parseISO(reportDateString);
@@ -174,6 +175,7 @@ export default function WarrantySearchPage() {
     const lowerSearchTerm = trimmedSearchTerm.toLowerCase();
     let reportsToSearch = allReports;
 
+    // Filter by selected year for search if not "All Years"
     if (selectedYear !== "All Years") {
         const numericYear = parseInt(selectedYear);
         reportsToSearch = allReports.filter(report => {
@@ -226,6 +228,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 
+                // Prevent duplicates if multiple details in the same report match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -244,6 +247,7 @@ export default function WarrantySearchPage() {
             }
         });
         
+        // If report matched on top-level fields but no details matched, add all its details
         if (reportLevelMatch && !detailMatchedInReport) {
             report.installationDetails?.forEach(detail => {
                  let warrantyStatus = "N/A";
@@ -254,7 +258,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) {
+                if (existingResultIndex === -1) { // Check for duplicates again
                      results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -324,7 +328,7 @@ export default function WarrantySearchPage() {
             </div>
           </div>
            <CardDescription className="text-center pt-2">
-             Warranty Search Engine
+            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
