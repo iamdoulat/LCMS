@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,7 +13,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore'; // Renamed orderBy
+import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import type { InstallationReportDocument, InstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -20,7 +21,7 @@ import { Label } from '@/components/ui/label';
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
-const ITEMS_PER_PAGE = 10; // For search results pagination
+const ITEMS_PER_PAGE = 10;
 
 const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';
@@ -41,7 +42,7 @@ interface WarrantySearchResultItem {
   serialNo?: string;
   ctlBoxModel?: string;
   ctlBoxSerial?: string;
-  installDate?: string; // ISO string
+  installDate?: string;
   warrantyStatus: string;
 }
 
@@ -72,6 +73,7 @@ export default function WarrantySearchPage() {
     setStatsError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
+      // Consider ordering by a relevant field if needed, e.g., createdAt or commercialInvoiceDate
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
       const reportsSnapshot = await getDocs(reportsQuery);
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -90,7 +92,7 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); // Store all reports for potential searching later
+      setAllReports(fetchedReports);
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
@@ -203,18 +205,20 @@ export default function WarrantySearchPage() {
             reportLevelMatch = true;
         }
 
+        let detailMatchedInReport = false;
         report.installationDetails?.forEach(detail => {
-            let detailLevelMatch = false;
+            let currentDetailMatch = false;
             if (
                 detail.machineModel?.toLowerCase().includes(lowerSearchTerm) ||
                 detail.serialNo?.toLowerCase().includes(lowerSearchTerm) ||
                 detail.ctlBoxModel?.toLowerCase().includes(lowerSearchTerm) ||
                 detail.ctlBoxSerial?.toLowerCase().includes(lowerSearchTerm)
             ) {
-                detailLevelMatch = true;
+                currentDetailMatch = true;
+                detailMatchedInReport = true;
             }
 
-            if (reportLevelMatch || detailLevelMatch) {
+            if (currentDetailMatch) { // Only add if this specific detail item matches
                 let warrantyStatus = "N/A";
                 if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -223,9 +227,8 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 
-                // Ensure each unique machine/control box entry is added only once per report if multiple fields within it match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) {
+                if (existingResultIndex === -1) { // Avoid duplicate machine entries from the same report
                     results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -241,6 +244,35 @@ export default function WarrantySearchPage() {
                 }
             }
         });
+        
+        // If report matched at top level but no specific detail did, add all its details
+        if (reportLevelMatch && !detailMatchedInReport) {
+            report.installationDetails?.forEach(detail => {
+                 let warrantyStatus = "N/A";
+                if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
+                    const installDateObj = parseISO(detail.installDate as string);
+                    const expiryDate = addDays(installDateObj, 365);
+                    const diff = differenceInDays(expiryDate, today);
+                    warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
+                }
+                const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
+                if (existingResultIndex === -1) {
+                     results.push({
+                        reportId: report.id,
+                        commercialInvoiceNumber: report.commercialInvoiceNumber,
+                        applicantName: report.applicantName,
+                        beneficiaryName: report.beneficiaryName,
+                        machineModel: detail.machineModel,
+                        serialNo: detail.serialNo,
+                        ctlBoxModel: detail.ctlBoxModel,
+                        ctlBoxSerial: detail.ctlBoxSerial,
+                        installDate: detail.installDate as string,
+                        warrantyStatus,
+                    });
+                }
+            });
+        }
+
     });
     setSearchResults(results);
     setIsSearching(false);
@@ -294,8 +326,8 @@ export default function WarrantySearchPage() {
               </Select>
             </div>
           </div>
-          <CardDescription className="text-center pt-2">
-            Warranty Search
+          <CardDescription className="text-center pt-4">
+            Search for warranty information for year {selectedYear === "All Years" ? "All Years" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -405,7 +437,7 @@ export default function WarrantySearchPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
              <BarChart3 className="h-6 w-6 text-primary"/>
-            Warranty Statistics for {selectedYear === "All Years" ? "All Time" : selectedYear}
+            Yearly Warranty Statistics ({selectedYear === "All Years" ? "Overall" : selectedYear})
           </CardTitle>
           <CardDescription>
             Overview of machine warranty status for {selectedYear === "All Years" ? "all time" : `the year ${selectedYear}`}. Data fetched from Firestore.
