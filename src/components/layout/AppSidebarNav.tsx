@@ -56,6 +56,7 @@ import {
   Microscope,
   Minus,
   Plus,
+  Sheet, // Added Sheet icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -88,17 +89,18 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: Edit },
+      { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet }, // New link
     ],
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -110,7 +112,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Store
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -119,7 +121,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from UsersIcon
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -128,7 +130,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -157,7 +159,7 @@ const reportingManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Reporting Management',
     icon: BarChart3,
-    roles: ["Super Admin", "Admin"], // Admin can now see this group
+    roles: ["Super Admin", "Admin"],
     subLinks: [
       // Add sub-links here as needed
     ],
@@ -180,7 +182,7 @@ export function AppSidebarNav() {
   const displayCompanyNameFromContext = companyName || "Smart Solution";
 
   React.useEffect(() => {
-    console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+    // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
   }, [userRole]);
 
   const isActive = (href: string) => {
@@ -196,6 +198,7 @@ export function AppSidebarNav() {
         '/dashboard/settings/users',
         '/dashboard/warranty-management/installation-reports-view',
         '/dashboard/warranty-management/search',
+        '/dashboard/google-sheets', // Added for active state checking
       ];
       if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
         return true;
@@ -234,17 +237,21 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
     
+    // Super Admin sees all. Other roles are filtered by item.roles.
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
       return null;
     }
 
+    // Further filter subLinks based on roles, unless user is Super Admin
     const visibleSubLinks = item.subLinks?.filter(subLink => 
         userRole === "Super Admin" || 
         !subLink.roles || 
         (userRole && subLink.roles.includes(userRole))
     ) || [];
 
-    if (item.subLinks && visibleSubLinks.length === 0 && userRole !== "Super Admin" && (!item.roles || !item.roles.includes(userRole as UserRole))) { 
+    // If no subLinks are visible after filtering, and it's not a Super Admin, and the group itself has role restrictions, hide the group.
+    // This handles the case where an Admin might have access to an empty "Reporting Management" group.
+    if (visibleSubLinks.length === 0 && userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole)) && (!item.subLinks || item.subLinks.length > 0) ) { 
         return null;
     }
     
@@ -331,6 +338,7 @@ export function AppSidebarNav() {
                     className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     onClick={sidebar.toggleSidebar}
                     aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+                    
                  >
                     {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                     <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
@@ -341,7 +349,7 @@ export function AppSidebarNav() {
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
             {[mainDashboardLink, globalSearchLink].map((item) => {
-              if (userRole === "Service" && item.href === '/dashboard') { // Hide main dashboard for Service role
+              if (userRole === "Service" && item.href === '/dashboard') {
                 return null;
               }
               return item.href && (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && (
