@@ -84,7 +84,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is for 'Notify Party Contact Person Name'
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number | '';
@@ -169,7 +169,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This is for 'Notify Party Contact Person Name'
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -206,7 +206,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number;
+  billOfExchangeQty?: number | '';
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -322,13 +322,13 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | '';
+  miscellaneousExpenses?: number | ''; // Added
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
+  totalSalesPrice: number; // This is sum of line item sales prices
+  grandTotalSalesPrice: number; // This is totalSalesPrice + freight (if excluded) - misc expenses
+  grandTotalCommissionUSD?: number; // Added
   totalExtraNetCommission?: number;
-  grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -345,9 +345,9 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
     netCommissionPercentage?: number;
   }>;
   freightChargeAmount?: number;
-  miscellaneousExpenses?: number;
+  miscellaneousExpenses?: number; // Added
+  grandTotalCommissionUSD?: number; // Added
   totalExtraNetCommission?: number;
-  grandTotalCommissionUSD?: number;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 };
@@ -365,8 +365,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxModel: z.string().optional(), // Made optional
+  ctlBoxSerial: z.string().optional(), // Made optional
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -390,21 +390,7 @@ export const InstallationReportSchema = z.object({
   technicianName: z.string().min(1, "Technician Name is required."),
   reportingEngineerName: z.string().min(1, "Reporting Engineer Name is required."),
   installationDetails: z.array(InstallationDetailItemSchema)
-    .min(1, "At least one installation detail item is required.")
-    .refine(items => { // Uniqueness for Ctl. Box Serial
-      const ctlBoxSerials = new Set<string>();
-      for (const item of items) {
-        const serial = (item.ctlBoxSerial || '').trim().toUpperCase();
-        if (serial !== "") { // Only check non-empty, non-whitespace serials
-          if (ctlBoxSerials.has(serial)) return false; // Duplicate found
-          ctlBoxSerials.add(serial);
-        }
-      }
-      return true; // All non-empty ctlBoxSerials are unique
-    }, {
-      message: "Each non-empty Ctl. Box Serial must be unique within this report.", // Specific message
-      path: ["installationDetails"], // Error attached to the whole array
-    }),
+    .min(1, "At least one installation detail item is required."),
   missingItemInfo: z.string().optional(),
   extraFoundInfo: z.string().optional(),
   missingItemsIssueResolved: z.boolean().optional().default(false),
@@ -434,7 +420,7 @@ export interface InstallationReportDocument {
   reportingEngineerName: string;
   installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; ctlBoxModel?: string; ctlBoxSerial?:string; }>; // installDate as ISO string
   totalInstalledQty: number;
-  pendingQty: number | string; // Can be string 'N/A'
+  pendingQty?: number | string; // Can be string 'N/A'
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
