@@ -9,7 +9,7 @@ import { Package, DollarSign, UsersRound, PieChart as PieChartIcon, TrendingUp, 
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc, getYear } from 'date-fns';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
@@ -266,10 +266,12 @@ export default function DashboardPage() {
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
         let lcIssueDateValid = false;
+        let lcIssueDateParsed: Date | null = null;
+
         if (data.lcIssueDate) {
           try {
-             const parsedDate = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp)?.toDate();
-             if (isValid(parsedDate)) {
+             lcIssueDateParsed = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp)?.toDate();
+             if (isValid(lcIssueDateParsed)) {
               lcIssueDateValid = true;
             }
           } catch (e) { console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); }
@@ -281,7 +283,7 @@ export default function DashboardPage() {
               ...data,
             } as LCEntryDocument);
         } else {
-          console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
+          // console.warn("Dashboard: Filtered out L/C entry due to missing essential fields (amount, valid lcIssueDate):", doc.id, data);
         }
       });
       
@@ -289,7 +291,7 @@ export default function DashboardPage() {
       const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
 
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30; // Firestore 'in' query limit
+        const BATCH_SIZE = 30;
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -303,9 +305,6 @@ export default function DashboardPage() {
         }
       }
 
-      if (lcEntriesForTheYear.length === 0 && !authLoading) {
-        console.log("Dashboard: No L/C entries found for the selected year after initial processing.");
-      }
 
       const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
       const activeSuppliersCount = uniqueBeneficiaryIds.length;
@@ -323,7 +322,7 @@ export default function DashboardPage() {
             const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate();
             return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
           } catch (e) {
-            console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
+            // console.warn("Invalid lcIssueDate format for an L/C:", lc.lcIssueDate, lc.id);
             return false;
           }
         }).length;
@@ -336,11 +335,9 @@ export default function DashboardPage() {
         const supplierDetails = supplierMap.get(lc.beneficiaryId);
         const displayName = supplierDetails?.brandName && supplierDetails.brandName.trim() !== ""
                             ? supplierDetails.brandName
-                            : supplierDetails?.beneficiaryName
-                                ? (supplierDetails.beneficiaryName.length > 20 ? supplierDetails.beneficiaryName.substring(0, 17) + "..." : supplierDetails.beneficiaryName)
-                                : lc.beneficiaryName // Fallback to L/C's beneficiaryName
-                                    ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName)
-                                    : 'Unknown/No Brand';
+                            : lc.beneficiaryName // Fallback to L/C's beneficiaryName if no supplier brand
+                                ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName)
+                                : 'Unknown/No Brand';
         supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
       });
 
@@ -381,7 +378,7 @@ export default function DashboardPage() {
                 if (typeof (dateB as unknown as Timestamp)?.toDate === 'function') timeB = (dateB as unknown as Timestamp).toDate().getTime();
                 else if (typeof dateB === 'string') try { timeB = parseISO(dateB).getTime(); } catch {}
             }
-            return timeB - timeA;
+            return timeB - timeA; // Most recent first
         })
         .slice(0, 10);
       setRecentlyCompletedLCs(completedLCs);
@@ -397,7 +394,7 @@ export default function DashboardPage() {
               try {
                 const parsed = parseISO(lc.createdAt);
                 if (isValid(parsed)) createdAtDate = parsed;
-              } catch (e) { console.warn("Error parsing createdAt for draft L/C:", lc.id, lc.createdAt); }
+              } catch (e) { /* console.warn("Error parsing createdAt for draft L/C:", lc.id, lc.createdAt); */ }
             }
           }
           return {
@@ -407,7 +404,7 @@ export default function DashboardPage() {
             currency: lc.currency, amount: lc.amount,
           } as DraftLC;
         })
-        .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime())
+        .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime()) // Most recent first
         .slice(0, 10);
       setDraftLCs(currentDraftLCs);
 
@@ -428,7 +425,7 @@ export default function DashboardPage() {
                 }
                 return isValid(etdDate) && (isToday(etdDate) || isFuture(etdDate));
             } catch (e) {
-                console.warn("Error parsing ETD for upcoming shipments card:", lc.id, lc.etd, e);
+                // console.warn("Error parsing ETD for upcoming shipments card:", lc.id, lc.etd, e);
                 return false;
             }
         })
@@ -465,13 +462,13 @@ export default function DashboardPage() {
                 isThirdShipment: lc.isThirdShipment,
             } as UpcomingEtdShipment;
         })
-        .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
+        .sort((a, b) => compareAsc(a.etdDate, b.etdDate)) // Earliest ETD first
         .slice(0, 10);
       setUpcomingEtdShipments(filteredUpcomingEtds);
 
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
-      const piQuerySnapshot = await getDocs(piCollectionRef);
+      const piQuerySnapshot = await getDocs(piCollectionRef); // TODO: Optimize this fetch
       const allProformaInvoices: ProformaInvoiceDocument[] = [];
       piQuerySnapshot.forEach((docSnap) => {
         allProformaInvoices.push({ id: docSnap.id, ...docSnap.data() } as ProformaInvoiceDocument);
@@ -482,7 +479,7 @@ export default function DashboardPage() {
       const totalLinkedPIsCount = linkedPIsForTheYear.length;
 
       setDashboardStats({
-        totalLCs: lcEntriesForTheYear.filter(lc => typeof lc.amount === 'number' && isValid(typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate())).length,
+        totalLCs: lcEntriesForTheYear.filter(lc => typeof lc.amount === 'number' && isValid(lc.lcIssueDate ? (typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate()) : null )).length,
         totalLCValue,
         activeSuppliers: activeSuppliersCount,
         activeApplicants: activeApplicantsCount,
@@ -617,42 +614,37 @@ export default function DashboardPage() {
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="animatedGradientClasses"
         />
         <StatCard
           title="Total L/Cs Values"
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-1 xl:col-span-2 animatedGradientClasses"
+          className="xl:col-span-2"
         />
         <StatCard
           title="Active Beneficiaries"
           value={dashboardStats.activeSuppliers.toLocaleString()}
           icon={<Truck className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
-          className="animatedGradientClasses"
         />
         <StatCard
           title="Active Applicants"
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Factory className="h-7 w-7 text-primary" />}
           description={`Unique in L/Cs for ${selectedYear}`}
-          className="animatedGradientClasses"
         />
         <StatCard
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
           description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="animatedGradientClasses"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
           icon={<Layers className="h-7 w-7 text-primary" />}
           description={`Proforma Invoices connected to LCs issued in ${selectedYear}`}
-          className="animatedGradientClasses"
         />
       </div>
 
@@ -763,7 +755,7 @@ export default function DashboardPage() {
         <CardHeader>
             <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <BarChart3 className="h-6 w-6 text-primary" />
-                Total L/C and T/T Values by Year (2020-2030)
+                Total L/C and T/T Value by Year
             </CardTitle>
             <CardDescription>
                 Overview of total T/T and L/C values for each year.
@@ -793,7 +785,7 @@ export default function DashboardPage() {
               Draft L/Cs
             </CardTitle>
             <CardDescription>
-              L/Cs currently in &quot;Draft&quot; status for {selectedYear}, sorted by most recent creation.
+              T/T and L/Cs currently in &quot;Draft&quot; status for {selectedYear}, sorted by most recent T/T and L/C open.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] space-y-3">
@@ -898,3 +890,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
