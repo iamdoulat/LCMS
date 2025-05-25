@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItemType, InstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -30,6 +30,9 @@ const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from
 const PLACEHOLDER_APPLICANT_VALUE = "__INSTALL_REPORT_NEW_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__INSTALL_REPORT_NEW_BENEFICIARY__";
 const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__INSTALL_REPORT_NEW_COMM_INV__";
+
+type InstallationReportFormValues = PageInstallationReportFormValues;
+type InstallationDetailItemType = PageInstallationDetailItemType;
 
 const formatDisplayDate = (dateString?: string | Date | null): string => {
   if (!dateString) return 'N/A';
@@ -63,13 +66,13 @@ const escapeCsvCell = (cellData: any): string => {
   return stringData;
 };
 
-
 export default function NewInstallationReportPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
     isFirstShipment?: boolean;
@@ -92,7 +95,6 @@ export default function NewInstallationReportPage() {
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
 
-
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
     defaultValues: {
@@ -103,6 +105,7 @@ export default function NewInstallationReportPage() {
       totalMachineQtyFromLC: undefined,
       proformaInvoiceNumber: '',
       invoiceDate: undefined,
+      commercialInvoiceDate: undefined,
       etdDate: undefined,
       etaDate: undefined,
       packingListUrl: '',
@@ -159,9 +162,9 @@ export default function NewInstallationReportPage() {
         });
         setLcOptionsForCommercialInvoice(fetchedLcOptions);
 
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error fetching dropdown options for Installation Report form: ", error);
-        Swal.fire("Error", `Could not load supporting data. Error: ${error.message}`, "error");
+        Swal.fire("Error", "Could not load supporting data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
       }
@@ -180,6 +183,7 @@ export default function NewInstallationReportPage() {
         setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true });
         setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true });
         setValue("invoiceDate", lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined, { shouldValidate: true });
+        setValue("commercialInvoiceDate", lc.commercialInvoiceDate && isValid(parseISO(lc.commercialInvoiceDate)) ? parseISO(lc.commercialInvoiceDate) : undefined, { shouldValidate: true });
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
         setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
         setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
@@ -196,6 +200,7 @@ export default function NewInstallationReportPage() {
             packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) {
         setValue("applicantId", '', { shouldValidate: true });
@@ -204,6 +209,7 @@ export default function NewInstallationReportPage() {
         setValue("totalMachineQtyFromLC", undefined, { shouldValidate: true });
         setValue("proformaInvoiceNumber", '', { shouldValidate: true });
         setValue("invoiceDate", undefined, { shouldValidate: true });
+        setValue("commercialInvoiceDate", undefined, { shouldValidate: true });
         setValue("etdDate", undefined, { shouldValidate: true });
         setValue("etaDate", undefined, { shouldValidate: true });
         setValue("packingListUrl", '', { shouldValidate: true });
@@ -237,7 +243,7 @@ export default function NewInstallationReportPage() {
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
-      commercialInvoiceDate: selectedLcOption?.lcData.commercialInvoiceDate || undefined,
+      commercialInvoiceDate: data.commercialInvoiceDate ? format(data.commercialInvoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
       totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
       proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
@@ -268,7 +274,7 @@ export default function NewInstallationReportPage() {
     const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
       if (value !== undefined) {
         if (typeof value === 'string' && value.trim() === '' &&
-            ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId'].includes(key)
+            ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
            ) {
             // Do not add empty strings for these specific fields
         } else {
@@ -284,9 +290,9 @@ export default function NewInstallationReportPage() {
       const docRef = await addDoc(collection(firestore, "installation_reports"), cleanedDataToSave);
       Swal.fire({
         title: "Installation Report Saved!",
-        text: `Report successfully saved to Firestore with ID: ${docRef.id}`,
+        text: `Report successfully saved to Firestore with ID: ${docRef.id}. Please ensure your Firestore rules allow writes to the 'installation_reports' collection.`,
         icon: "success",
-        timer: 2500,
+        timer: 3500,
         showConfirmButton: true,
       });
       reset(); // Reset form to default values
@@ -329,13 +335,14 @@ export default function NewInstallationReportPage() {
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
+        installDate: lastRow.installDate ? new Date(lastRow.installDate) : undefined, // Ensure Date object is copied
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
       Swal.fire("Info", "No rows to duplicate.", "info");
     }
   };
-
+  
   const handleExportToCsv = () => {
     const formData = getValues();
     if (!formData.installationDetails || formData.installationDetails.length === 0) {
@@ -344,14 +351,18 @@ export default function NewInstallationReportPage() {
     }
 
     const headers = [
-      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty Remaining"
+      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty"
     ];
+    
+    const applicantNameFromState = applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId || "N/A";
+    const beneficiaryNameFromState = beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId || "N/A";
+    const commercialInvoiceNumberFromState = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A";
 
     const reportHeaderInfo = [
-      ["Applicant Name:", selectedLcDetails.lcIdForLink ? applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId : formData.applicantId],
-      ["Beneficiary Name:", selectedLcDetails.lcIdForLink ? beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId : formData.beneficiaryId],
+      ["Applicant Name:", applicantNameFromState],
+      ["Beneficiary Name:", beneficiaryNameFromState],
       ["L/C No.:", formData.documentaryCreditNumber || "N/A"],
-      ["C.I. No.:", selectedLcDetails.lcIdForLink ? lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A" : "N/A"],
+      ["C.I. No.:", commercialInvoiceNumberFromState],
       ["C.I. Date:", selectedCommercialInvoiceDateDisplay || "N/A"],
       ["Total L/C QTY:", formData.totalMachineQtyFromLC || "N/A"],
       ["Total Installed QTY:", installationDetailsFieldArray.fields.length],
@@ -361,7 +372,7 @@ export default function NewInstallationReportPage() {
     ];
 
     let csvContent = reportHeaderInfo.map(row => row.map(escapeCsvCell).join(",")).join("\n");
-    csvContent += "\n\n"; // Add some space before the table
+    csvContent += "\n\n"; 
     csvContent += headers.map(escapeCsvCell).join(",") + "\n";
 
     formData.installationDetails.forEach((item, index) => {
@@ -388,8 +399,8 @@ export default function NewInstallationReportPage() {
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      const ciNumber = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "report";
-      link.setAttribute("download", `installation_report_${ciNumber.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+      const ciNumberForFilename = commercialInvoiceNumberFromState !== "N/A" ? commercialInvoiceNumberFromState : "report";
+      link.setAttribute("download", `installation_report_${ciNumberForFilename.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -400,11 +411,97 @@ export default function NewInstallationReportPage() {
     }
   };
 
+  const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    if (file.type !== "text/csv") {
+      Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) {
+        Swal.fire("Error Reading File", "Could not read file content.", "error");
+        return;
+      }
+      try {
+        const rows = text.split(/\r\n|\n/).filter(row => row.trim() !== ''); // Split by newline and remove empty rows
+        if (rows.length <= 1) { // Check if there's data beyond header
+          Swal.fire("Empty or Header-Only CSV", "The CSV file is empty or contains only a header row.", "info");
+          return;
+        }
+
+        const dataRows = rows.slice(1); // Ignore header row
+        const newInstallationDetails: InstallationDetailItemType[] = dataRows.map((row, rowIndex) => {
+          const columns = row.split(','); // Simple comma split
+          
+          const machineModel = columns[0]?.trim() || '';
+          const serialNo = columns[1]?.trim() || '';
+          const ctlBoxModel = columns[2]?.trim() || '';
+          const ctlBoxSerial = columns[3]?.trim() || '';
+          const installDateStr = columns[4]?.trim();
+          
+          let installDate: Date | undefined = undefined;
+          if (installDateStr) {
+            const parsedDate = parseISO(installDateStr); // Assumes YYYY-MM-DD or other ISO compatible
+            if (!isValid(parsedDate)) {
+                // Try common formats if ISO fails
+                const commonFormats = ["MM/dd/yyyy", "dd/MM/yyyy", "M/d/yy", "d/M/yy"];
+                for (const fmt of commonFormats) {
+                    try {
+                        const d = new Date(installDateStr); // More lenient parsing
+                        if (isValid(d)) {
+                            installDate = d;
+                            break;
+                        }
+                    } catch {}
+                }
+                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${rowIndex + 1}.`);
+            } else {
+                installDate = parsedDate;
+            }
+          }
+
+          return {
+            slNo: (rowIndex + 1).toString(),
+            machineModel,
+            serialNo,
+            ctlBoxModel: ctlBoxModel || undefined, // Ensure undefined if empty
+            ctlBoxSerial: ctlBoxSerial || undefined, // Ensure undefined if empty
+            installDate,
+          };
+        });
+
+        if (newInstallationDetails.length > 0) {
+          installationDetailsFieldArray.replace(newInstallationDetails);
+          Swal.fire("Import Complete", `${newInstallationDetails.length} rows imported successfully.`, "success");
+        } else {
+          Swal.fire("No Data Imported", "No valid data rows found in the CSV after the header.", "info");
+        }
+      } catch (parseError) {
+        console.error("Error parsing CSV: ", parseError);
+        Swal.fire("CSV Parse Error", "Could not parse the CSV file. Please ensure it's correctly formatted.", "error");
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+      }
+    };
+    reader.onerror = () => {
+      Swal.fire("File Read Error", "Error reading the selected file.", "error");
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+    };
+    reader.readAsText(file);
+  };
+
+
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-6xl mx-auto shadow-xl">
+    <Card className="max-w-6xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn(sectionHeadingClass, "flex items-center text-primary")}>
             <Wrench className="mr-2 h-7 w-7 text-primary" />
@@ -442,7 +539,6 @@ export default function NewInstallationReportPage() {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={control}
                   name="beneficiaryId"
@@ -498,7 +594,7 @@ export default function NewInstallationReportPage() {
                   name="documentaryCreditNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.</FormLabel>
+                      <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
                       <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -509,7 +605,7 @@ export default function NewInstallationReportPage() {
                   name="totalMachineQtyFromLC"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty</FormLabel>
+                      <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
                       <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -560,9 +656,9 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-             
+
               <Separator className="my-2" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="p-3 border rounded-md bg-muted/30">
                     <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
                     {selectedLcDetails.lcIdForLink ? (
@@ -618,12 +714,12 @@ export default function NewInstallationReportPage() {
                 )}
                 />
               </div>
-            
+              <Separator className="my-2" />
               {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
                  <Accordion
                     type="single"
                     collapsible
-                    className="w-full mt-2"
+                    className="w-full"
                     value={activePartialShipmentAccordion}
                     onValueChange={setActivePartialShipmentAccordion}
                 >
@@ -680,7 +776,7 @@ export default function NewInstallationReportPage() {
                   <Table>
                       <TableHeader>
                           <TableRow>
-                              <TableHead className="w-[50px] text-foreground">SL</TableHead>
+                              <TableHead className="w-[50px] text-foreground">SL No.</TableHead>
                               <TableHead className="text-foreground">Machine Model*</TableHead>
                               <TableHead className="text-foreground">Machine Serial No.*</TableHead>
                               <TableHead className="text-foreground">Ctl. Box Model</TableHead>
@@ -781,19 +877,35 @@ export default function NewInstallationReportPage() {
                  "Please ensure all installation details are valid and non-empty Machine Serial No. are unique."}
                 </FormMessage>
             )}
-            <div className="flex gap-2 mt-2">
-             <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
-            </Button>
-            <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
-              <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
-            </Button>
-            <Button type="button" variant="outline" onClick={handleExportToCsv} disabled={installationDetailsFieldArray.fields.length === 0}>
-                <Download className="mr-2 h-4 w-4" /> Export to CSV
-            </Button>
+             <div className="flex flex-wrap gap-2 mt-2">
+                 <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
+                </Button>
+                <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
+                  <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
+                </Button>
+                <Button type="button" variant="outline" onClick={handleExportToCsv} disabled={installationDetailsFieldArray.fields.length === 0}>
+                    <Download className="mr-2 h-4 w-4" /> Export to CSV
+                </Button>
+                <input
+                    type="file"
+                    accept=".csv"
+                    ref={fileInputRef}
+                    onChange={handleImportCsv}
+                    className="hidden"
+                    id="csv-import-input"
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    <Upload className="mr-2 h-4 w-4" /> Import from CSV
+                </Button>
             </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -932,8 +1044,8 @@ export default function NewInstallationReportPage() {
           </Form>
         </CardContent>
       </Card>
-    </div>
   );
 }
+
 
     
