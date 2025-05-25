@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
+import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type {
@@ -199,7 +199,7 @@ export default function EditInstallationReportPage() {
           };
           reset(formValuesToSet);
 
-          if (initialData.selectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) { // Ensure lcOptions are loaded
+          if (initialData.selectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) { 
              const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
              if (selectedLcOption) {
                 const lc = selectedLcOption.lcData;
@@ -215,6 +215,9 @@ export default function EditInstallationReportPage() {
                     packingListUrl: lc.packingListUrl,
                 });
                 setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+                if(lc.partialShipmentAllowed === "Yes") {
+                    setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+                }
              }
           }
         } else {
@@ -268,13 +271,12 @@ export default function EditInstallationReportPage() {
     };
 
     fetchDropdownOptions().then(() => {
-      // Only fetch initial report data after dropdown options are loaded
       if (reportId) {
         fetchInitialReportData();
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportId, reset]); // Removed lcOptionsForCommercialInvoice from deps for initialData fetch logic
+  }, [reportId, reset]); 
 
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
@@ -343,9 +345,14 @@ export default function EditInstallationReportPage() {
             packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+         if(lc.partialShipmentAllowed === "Yes") {
+            setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        } else {
+            setActivePartialShipmentAccordion(undefined);
+        }
       }
-    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) { // Check !isLoadingReportData
-      const defaultValuesForReset = form.formState.defaultValues || form.getValues(); // Use getValues as a safer fallback
+    } else if (!watchedSelectedCommercialInvoiceLcId && !isLoadingReportData) { 
+      const defaultValuesForReset = form.formState.defaultValues || getValues(); 
       setValue("applicantId", defaultValuesForReset.applicantId || '', { shouldValidate: true, shouldDirty: true });
       setValue("beneficiaryId", defaultValuesForReset.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
       setValue("documentaryCreditNumber", defaultValuesForReset.documentaryCreditNumber || '', { shouldValidate: true, shouldDirty: true });
@@ -358,6 +365,7 @@ export default function EditInstallationReportPage() {
       setValue("packingListUrl", defaultValuesForReset.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
       setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
       setSelectedCommercialInvoiceDateDisplay(null);
+      setActivePartialShipmentAccordion(undefined);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, isLoadingReportData, getValues]);
@@ -405,9 +413,9 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"),
+      applicantName: selectedApplicant?.label || getValues("applicantId"), // Fallback to current form value if not found
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"),
+      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), // Fallback
       selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       commercialInvoiceDate: data.commercialInvoiceDate && isValid(new Date(data.commercialInvoiceDate)) ? format(new Date(data.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -440,11 +448,11 @@ export default function EditInstallationReportPage() {
 
     const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
         if (value !== undefined) {
-            if (typeof value === 'string' && value.trim() === '' &&
+             if (typeof value === 'string' && value.trim() === '' &&
                 ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
                ) {
                  // Keep empty strings for these specific fields if that's the intent, or make them undefined
-                 acc[key as keyof typeof acc] = value; // Or handle as undefined if truly optional and should be removed if empty
+                 acc[key as keyof typeof acc] = value; 
             } else {
                 acc[key as keyof typeof acc] = value;
             }
@@ -600,31 +608,27 @@ export default function EditInstallationReportPage() {
 
         const dataRows = rows.slice(1);
         const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
-          const columns = row.split(',');
+          const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
           
-          const machineModel = columns[0]?.trim() || '';
-          const serialNo = columns[1]?.trim() || '';
-          const ctlBoxModel = columns[2]?.trim() || '';
-          const ctlBoxSerial = columns[3]?.trim() || '';
-          const installDateStr = columns[4]?.trim();
+          const machineModel = columns[0] || '';
+          const serialNo = columns[1] || '';
+          const ctlBoxModel = columns[2] || '';
+          const ctlBoxSerial = columns[3] || '';
+          const installDateStr = columns[4];
           
           let installDate: Date | undefined = undefined;
           if (installDateStr) {
-            const parsedDate = parseISO(installDateStr);
+            let parsedDate = parseISO(installDateStr); 
             if (!isValid(parsedDate)) {
-                const commonFormats = ["MM/dd/yyyy", "dd/MM/yyyy", "M/d/yy", "d/M/yy"];
-                for (const fmt of commonFormats) {
-                    try {
-                        const d = new Date(installDateStr);
-                        if (isValid(d)) {
-                            installDate = d;
-                            break;
-                        }
-                    } catch {}
+                parsedDate = parseDateFns(installDateStr, 'PPP', new Date());
+                if (!isValid(parsedDate)) {
+                    parsedDate = new Date(installDateStr); 
                 }
-                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${csvRowIndex + 1}.`);
-            } else {
+            }
+            if (isValid(parsedDate)) {
                 installDate = parsedDate;
+            } else {
+                console.warn(`Could not parse date "${installDateStr}" for CSV row ${csvRowIndex + 1}.`);
             }
           }
           const existingRowsCount = installationDetailsFieldArray.fields.length;
@@ -863,7 +867,6 @@ export default function EditInstallationReportPage() {
                     )}
                  />
               </div>
-
               <Separator className="my-2" />
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="p-3 border rounded-md bg-muted/30">
@@ -1081,7 +1084,7 @@ export default function EditInstallationReportPage() {
                 <FormMessage>
                 {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
-                 "Please ensure all installation details are valid and non-empty Machine Serial No. are unique."}
+                 "Please ensure Machine Serial No. are unique."}
                 </FormMessage>
             )}
              <div className="flex flex-wrap gap-2 mt-2">
@@ -1121,7 +1124,7 @@ export default function EditInstallationReportPage() {
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
                   <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
               </FormItem>
-               <FormItem>
+              <FormItem>
                 <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-destructive" />Warranty Expired:</FormLabel>
                 <Input type="text" value={`${warrantyExpiredCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-destructive" />
               </FormItem>
@@ -1262,5 +1265,6 @@ export default function EditInstallationReportPage() {
     </div>
   );
 }
+
 
     

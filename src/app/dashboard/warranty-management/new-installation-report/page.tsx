@@ -5,10 +5,10 @@ import * as React from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, addDays, differenceInDays } from 'date-fns';
+import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationReportSchema as PageInstallationReportSchema } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -218,6 +218,7 @@ export default function NewInstallationReportPage() {
         setValue("packingListUrl", '', { shouldValidate: true });
         setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
         setSelectedCommercialInvoiceDateDisplay(null);
+        setActivePartialShipmentAccordion(undefined);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
@@ -260,8 +261,6 @@ export default function NewInstallationReportPage() {
         ...item,
         slNo: item.slNo || undefined,
         installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-        ctlBoxModel: item.ctlBoxModel || undefined,
-        ctlBoxSerial: item.ctlBoxSerial || undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
@@ -279,7 +278,7 @@ export default function NewInstallationReportPage() {
         if (typeof value === 'string' && value.trim() === '' &&
             ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
            ) {
-            // Do not add empty strings for these specific fields
+            // Do not add these empty strings for these specific fields
         } else {
             acc[key as keyof typeof acc] = value;
         }
@@ -293,10 +292,8 @@ export default function NewInstallationReportPage() {
       const docRef = await addDoc(collection(firestore, "installation_reports"), cleanedDataToSave);
       Swal.fire({
         title: "Installation Report Saved!",
-        html: `Report successfully saved to Firestore with ID: ${docRef.id}. <br/>Please ensure your Firestore rules allow writes to the 'installation_reports' collection.`,
+        text: `Report successfully saved to Firestore with ID: ${docRef.id}.`,
         icon: "success",
-        timer: 3500,
-        showConfirmButton: true,
       });
       reset(); // Reset form to default values
       setSelectedCommercialInvoiceDateDisplay(null);
@@ -307,7 +304,7 @@ export default function NewInstallationReportPage() {
       console.error("Error saving installation report: ", error);
       let errorMessage = `Failed to save installation report: ${error.message}`;
       if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMessage = `Failed to save report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'. Original Firebase Error: ${error.message}`;
+        errorMessage = `Failed to save installation report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'. Original Firebase Error: ${error.message}`;
       }
       Swal.fire({
         title: "Save Failed",
@@ -441,48 +438,42 @@ export default function NewInstallationReportPage() {
 
         const dataRows = rows.slice(1); // Ignore header row
         const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
-          const columns = row.split(','); // Simple comma split
+          const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, '')); // Simple comma split, trim, and remove surrounding quotes
           
-          const machineModel = columns[0]?.trim() || '';
-          const serialNo = columns[1]?.trim() || '';
-          const ctlBoxModel = columns[2]?.trim() || '';
-          const ctlBoxSerial = columns[3]?.trim() || '';
-          const installDateStr = columns[4]?.trim();
+          const machineModel = columns[0] || '';
+          const serialNo = columns[1] || '';
+          const ctlBoxModel = columns[2] || '';
+          const ctlBoxSerial = columns[3] || '';
+          const installDateStr = columns[4];
           
           let installDate: Date | undefined = undefined;
           if (installDateStr) {
-            const parsedDate = parseISO(installDateStr); // Assumes YYYY-MM-DD or other ISO compatible
+            let parsedDate = parseISO(installDateStr); // Try ISO first
             if (!isValid(parsedDate)) {
-                const commonFormats = ["MM/dd/yyyy", "dd/MM/yyyy", "M/d/yy", "d/M/yy"];
-                for (const fmt of commonFormats) {
-                    try {
-                        const d = new Date(installDateStr); // More lenient parsing
-                        if (isValid(d)) {
-                            installDate = d;
-                            break;
-                        }
-                    } catch {}
+                parsedDate = parseDateFns(installDateStr, 'PPP', new Date()); // Try "May 22nd, 2025" format
+                if (!isValid(parsedDate)) {
+                    parsedDate = new Date(installDateStr); // Fallback to general JS Date parsing
                 }
-                if (!installDate) console.warn(`Could not parse date "${installDateStr}" for row ${csvRowIndex + 1}.`);
-            } else {
+            }
+            if (isValid(parsedDate)) {
                 installDate = parsedDate;
+            } else {
+                console.warn(`Could not parse date "${installDateStr}" for CSV row ${csvRowIndex + 1}.`);
             }
           }
           
-          // Determine the SL No. based on existing rows + current CSV row index
           const existingRowsCount = installationDetailsFieldArray.fields.length;
           return {
             slNo: (existingRowsCount + csvRowIndex + 1).toString(),
             machineModel,
             serialNo,
-            ctlBoxModel: ctlBoxModel || undefined, // Ensure undefined if empty
-            ctlBoxSerial: ctlBoxSerial || undefined, // Ensure undefined if empty
+            ctlBoxModel: ctlBoxModel || undefined, 
+            ctlBoxSerial: ctlBoxSerial || undefined,
             installDate,
           };
         });
 
         if (newInstallationDetailsFromCsv.length > 0) {
-          // Append new rows instead of replacing
           newInstallationDetailsFromCsv.forEach(item => {
             installationDetailsFieldArray.append(item);
           });
@@ -865,7 +856,7 @@ export default function NewInstallationReportPage() {
                                               )}
                                           />
                                       </TableCell>
-                                      <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground w-[150px]">{warrantyDisplay}</TableCell>
                                       <TableCell className="text-right">
                                           <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
                                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -881,7 +872,7 @@ export default function NewInstallationReportPage() {
                 <FormMessage>
                 {formState.errors.installationDetails.message ||
                  (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
-                 "Please ensure all installation details are valid and non-empty Machine Serial No. are unique."}
+                 "Please ensure all installation details are valid."}
                 </FormMessage>
             )}
              <div className="flex flex-wrap gap-2 mt-2">
@@ -912,7 +903,7 @@ export default function NewInstallationReportPage() {
             </div>
 
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
               <FormItem>
                   <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
                   <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
