@@ -17,7 +17,7 @@ import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, whe
 import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import Lottie from "lottie-react"; // Import Lottie
+import Lottie from "lottie-react"; 
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
@@ -43,7 +43,7 @@ interface WarrantySearchResultItem {
   serialNo?: string;
   ctlBoxModel?: string;
   ctlBoxSerial?: string;
-  installDate?: string;
+  installDate?: string; // ISO string date
   warrantyStatus: string;
 }
 
@@ -70,7 +70,7 @@ export default function WarrantySearchPage() {
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
     setIsLoadingStats(true);
-    setSearchError(null);
+    setSearchError(null); // Reset search error when stats are re-fetched
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
@@ -91,7 +91,7 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); 
+      setAllReports(fetchedReports);
 
       let reportsForSelectedYear = fetchedReports;
       if (yearToFilter !== "All Years") {
@@ -147,7 +147,7 @@ export default function WarrantySearchPage() {
     } catch (error: any) {
       console.error("Error fetching/calculating warranty stats:", error);
       let errorMsg = "Failed to load statistics.";
-      if (error.code === 'permission-denied') {
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
         errorMsg = "Failed to load statistics: Missing or insufficient permissions. Please check Firestore rules for 'installation_reports'.";
       } else if (error.message) {
         errorMsg = `Failed to load statistics: ${error.message}`;
@@ -231,6 +231,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
+                // Prevent duplicates if multiple details in the same report match
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -249,9 +250,10 @@ export default function WarrantySearchPage() {
             }
         });
         
+        // If report matched at top level but no specific detail matched, add first detail as representative
         if (reportLevelMatch && !detailMatchedInReport) {
             if (report.installationDetails && report.installationDetails.length > 0) {
-                const detail = report.installationDetails[0]; 
+                const detail = report.installationDetails[0]; // Take the first item as representative
                  let warrantyStatus = "N/A";
                  if (detail.installDate && isValid(parseISO(detail.installDate as string))) {
                     const installDateObj = parseISO(detail.installDate as string);
@@ -260,7 +262,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) {
+                if (existingResultIndex === -1) { // Avoid adding if already added via detail match
                      results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -274,7 +276,7 @@ export default function WarrantySearchPage() {
                         warrantyStatus,
                     });
                 }
-            } else { 
+            } else { // Report matched, but has no installation details (should be rare but handle)
                  const existingResultIndex = results.findIndex(r => r.reportId === report.id);
                  if (existingResultIndex === -1) {
                      results.push({
@@ -297,6 +299,7 @@ export default function WarrantySearchPage() {
     setIsSearching(false);
   };
 
+  // Pagination for search results
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
@@ -333,9 +336,6 @@ export default function WarrantySearchPage() {
     <div className="container mx-auto py-8 space-y-8">
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
-        style={{
-            background: 'radial-gradient(circle, rgba(34,190,195,1) 65%, rgba(191,177,163,1) 100%)',
-        }}
       >
         <CardHeader>
           <div className="flex-1 text-center sm:text-left">
@@ -345,7 +345,7 @@ export default function WarrantySearchPage() {
             </CardTitle>
           </div>
            <CardDescription className="text-center pt-2 text-card-foreground/80">
-            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -380,7 +380,6 @@ export default function WarrantySearchPage() {
 
           {!displayedSearchTerm && !isSearching && !searchError && (
             <div className="text-center text-card-foreground/70 py-10">
-                 {/* Ensure search_animation.json is in your /public folder */}
                 <Lottie path="/search_animation.json" loop={true} style={{ width: 150, height: 150, margin: '0 auto' }} className="mb-4" />
                 <p className="text-lg">
                   Enter terms above to search warranty-related information for{' '}
@@ -500,8 +499,8 @@ export default function WarrantySearchPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> 
               <span className="text-card-foreground/80">Calculating statistics...</span>
             </div>
-          ) : searchError && !isSearching ? ( // This condition might need review if searchError is specifically for search operation
-            <div className="text-destructive text-center py-4">{searchError}</div> // Or a dedicated statsError state
+          ) : searchError && !isSearching ? ( // Using searchError state here might not be ideal, should have a dedicated statsError
+            <div className="text-destructive text-center py-4">{searchError}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <StatCard
