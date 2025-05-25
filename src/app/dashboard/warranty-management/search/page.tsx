@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit, ExternalLink } from 'lucide-react';
+import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
-import type { InstallationReportDocument, InstallationDetailItemType } from '@/types';
+import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Label } from '@/components/ui/label';
 
@@ -91,13 +91,13 @@ export default function WarrantySearchPage() {
             })) || [],
           } as InstallationReportDocument;
       });
-      setAllReports(fetchedReports); 
+      setAllReports(fetchedReports);
 
       let reportsForSelectedYear = fetchedReports;
       if (year !== "All Years") {
         const numericYear = parseInt(year);
         reportsForSelectedYear = fetchedReports.filter(report => {
-          const reportDateString = report.commercialInvoiceDate || report.createdAt as string; 
+          const reportDateString = report.commercialInvoiceDate || report.createdAt as string;
           if (reportDateString && reportDateString !== 'N/A') {
             try {
               const reportDate = parseISO(reportDateString);
@@ -146,7 +146,13 @@ export default function WarrantySearchPage() {
 
     } catch (error: any) {
       console.error("Error fetching/calculating warranty stats:", error);
-      setStatsError(`Failed to load statistics: ${error.message}`);
+      let errorMsg = "Failed to load statistics.";
+      if (error.code === 'permission-denied') {
+        errorMsg = "Failed to load statistics: Missing or insufficient permissions. Please check Firestore rules for 'installation_reports'.";
+      } else if (error.message) {
+        errorMsg = `Failed to load statistics: ${error.message}`;
+      }
+      setStatsError(errorMsg);
       setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
     } finally {
       setIsLoadingStats(false);
@@ -225,7 +231,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
-                
+
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
@@ -243,7 +249,7 @@ export default function WarrantySearchPage() {
                 }
             }
         });
-        
+
         if (reportLevelMatch && !detailMatchedInReport) {
             report.installationDetails?.forEach(detail => {
                  let warrantyStatus = "N/A";
@@ -254,7 +260,7 @@ export default function WarrantySearchPage() {
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
-                if (existingResultIndex === -1) { 
+                if (existingResultIndex === -1) {
                      results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
@@ -274,7 +280,7 @@ export default function WarrantySearchPage() {
     setSearchResults(results);
     setIsSearching(false);
   };
-  
+
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
@@ -300,28 +306,14 @@ export default function WarrantySearchPage() {
     <div className="container mx-auto py-8 space-y-8">
       <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex-1">
               <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Microscope className="h-7 w-7 text-primary" />
                 Warranty Search Engine
               </CardTitle>
             </div>
-            <div className="w-full sm:w-auto">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-card shadow-sm">
-                  <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Select Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearFilterOptions.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Year selector moved to the statistics card */}
           </div>
            <CardDescription className="text-center pt-2">
             Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
@@ -431,14 +423,31 @@ export default function WarrantySearchPage() {
       </Card>
 
       <Card className="shadow-xl max-w-6xl mx-auto">
-        <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-             <BarChart3 className="h-6 w-6 text-primary"/>
-            Yearly Warranty Statistics
-          </CardTitle>
-          <CardDescription>
-            Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}. Data fetched from Firestore.
-          </CardDescription>
+         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+           <div>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <BarChart3 className="h-6 w-6 text-primary"/>
+                Yearly Warranty Statistics
+            </CardTitle>
+            <CardDescription>
+                Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}. Data fetched from Firestore.
+            </CardDescription>
+           </div>
+           <div className="w-full sm:w-auto">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-full sm:w-[180px] bg-card shadow-sm">
+                  <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearFilterOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </CardHeader>
         <CardContent>
           {isLoadingStats ? (
