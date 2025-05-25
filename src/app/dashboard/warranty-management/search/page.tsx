@@ -178,8 +178,8 @@ export default function WarrantySearchPage() {
     }
 
     const lowerSearchTerm = trimmedSearchTerm.toLowerCase();
+    
     let reportsToSearch = allReports;
-
     if (selectedYear !== "All Years") {
         const numericYear = parseInt(selectedYear);
         reportsToSearch = allReports.filter(report => {
@@ -231,7 +231,7 @@ export default function WarrantySearchPage() {
                     const diff = differenceInDays(expiryDate, today);
                     warrantyStatus = isBefore(expiryDate, today) ? "Expired" : `${diff} days remaining`;
                 }
-                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
+                const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
                     results.push({
                         reportId: report.id,
@@ -261,7 +261,7 @@ export default function WarrantySearchPage() {
                 }
                 const existingResultIndex = results.findIndex(r => r.reportId === report.id && r.serialNo === detail.serialNo && r.ctlBoxSerial === detail.ctlBoxSerial);
                 if (existingResultIndex === -1) {
-                    results.push({
+                     results.push({
                         reportId: report.id,
                         commercialInvoiceNumber: report.commercialInvoiceNumber,
                         applicantName: report.applicantName,
@@ -329,12 +329,11 @@ export default function WarrantySearchPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1">
-                <CardTitle className={cn("flex items-center justify-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <CardTitle className={cn("flex items-center justify-center sm:justify-start gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                     <Microscope className="h-7 w-7 text-primary" />
                     Warranty Search Engine
                 </CardTitle>
             </div>
-            {/* Year selector moved to stats card */}
           </div>
           <CardDescription className="text-center pt-2 text-card-foreground/80">
              Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
@@ -463,7 +462,7 @@ export default function WarrantySearchPage() {
                 Yearly Warranty Statistics
             </CardTitle>
             <CardDescription className="text-card-foreground/80">
-                Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}. Data fetched from Firestore.
+                Overview of machine warranty status for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
             </CardDescription>
            </div>
            <div className="w-full sm:w-auto">
@@ -529,4 +528,3 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
