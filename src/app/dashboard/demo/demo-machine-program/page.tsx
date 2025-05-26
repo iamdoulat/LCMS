@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineApplicationDocument } from '@/types';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import Swal from 'sweetalert2';
+import { Badge } from '@/components/ui/badge';
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   if (!dateString) return 'N/A';
@@ -37,6 +38,34 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
   }
   return String(value);
 };
+
+type DemoAppDisplayStatus = "Upcoming" | "Active" | "Overdue" | "Returned";
+
+const getDemoAppStatus = (app: DemoMachineApplicationDocument): DemoAppDisplayStatus => {
+    if (app.machineReturned) return "Returned";
+    const today = startOfDay(new Date());
+    const delivery = app.deliveryDate ? startOfDay(parseISO(app.deliveryDate)) : null;
+    const estReturn = app.estReturnDate ? startOfDay(parseISO(app.estReturnDate)) : null;
+
+    if (!delivery || !estReturn) return "Upcoming";
+
+    if (isPast(estReturn)) return "Overdue";
+    if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
+    if (isFuture(delivery)) return "Upcoming";
+    
+    return "Upcoming";
+};
+
+const getDemoStatusBadgeVariant = (status: DemoAppDisplayStatus): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+        case "Active": return "default"; // Green by default in ShadCN
+        case "Overdue": return "destructive";
+        case "Returned": return "secondary";
+        case "Upcoming": return "outline";
+        default: return "outline";
+    }
+};
+
 
 export default function DemoMachineProgramPage() {
   const [applications, setApplications] = useState<DemoMachineApplicationDocument[]>([]);
@@ -128,12 +157,15 @@ export default function DemoMachineProgramPage() {
                 Manage programs and software for demo machines. (Displaying Demo Applications List)
               </CardDescription>
             </div>
-            <Link href="/dashboard/demo/demo-machine-application" passHref>
-              <Button variant="default">
-                <AppWindow className="mr-2 h-4 w-4" />
-                New Demo Application
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" disabled>Filter: All</Button> {/* Placeholder filter button */}
+                <Link href="/dashboard/demo/demo-machine-application" passHref>
+                <Button variant="default">
+                    <AppWindow className="mr-2 h-4 w-4" />
+                    New Demo Application
+                </Button>
+                </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -157,20 +189,31 @@ export default function DemoMachineProgramPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {applications.slice(0, 20).map((app) => ( // Display up to 20 entries, matches demo-machine-list
-                <Card key={app.id} className="shadow-md hover:shadow-lg transition-shadow relative">
-                   <div className="absolute top-3 right-3 flex gap-1 z-10">
-                        <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                          <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
-                            <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${app.machineModel}`)}>
-                          <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Application</span>
-                        </Button>
+            <ul className="space-y-4 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {applications.map((app) => {
+                const currentStatus = getDemoAppStatus(app);
+                return (
+                <li key={app.id} className={cn(
+                    "p-4 rounded-lg border hover:shadow-md transition-shadow relative",
+                    currentStatus === "Overdue" ? "bg-destructive/10 border-destructive/30" :
+                    currentStatus === "Active" ? "bg-green-500/10 border-green-500/30" : "bg-card"
+                )}>
+                   <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+                        <Badge variant={getDemoStatusBadgeVariant(currentStatus)} className="text-xs px-2 py-0.5">
+                            {currentStatus}
+                        </Badge>
+                        <div className="flex gap-1">
+                            <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                            <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
+                                <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
+                            </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${app.machineModel}`)}>
+                            <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Application</span>
+                            </Button>
+                        </div>
                     </div>
-                  <CardHeader className="pb-3 pt-4 px-4 pr-20">
+                  <CardHeader className="pb-3 pt-0 px-0 pr-24"> {/* Adjusted pr for spacing */}
                     <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
                        {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
                     </CardTitle>
@@ -178,7 +221,7 @@ export default function DemoMachineProgramPage() {
                       Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-0">
+                  <CardContent className="px-0 pb-0 pt-0">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
                       <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
                       <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-foreground">{formatDisplayDate(app.estReturnDate)}</span></div>
@@ -200,14 +243,15 @@ export default function DemoMachineProgramPage() {
                       Applied: {formatDisplayDate(app.createdAt)}
                     </div>
                   </CardContent>
-                </Card>
-              ))}
-            </div>
+                </li>
+              );
+            })}
+            </ul>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
+    
     
