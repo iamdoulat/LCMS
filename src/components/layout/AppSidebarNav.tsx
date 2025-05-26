@@ -42,7 +42,7 @@ import {
   Ship,
   ShieldCheck,
   BarChart3,
-  Users as UsersIcon,
+  Users as UsersIcon, // Renamed to avoid conflict
   Wrench,
   ClipboardList,
   Archive,
@@ -165,7 +165,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Demo Machine Factories', icon: Factory },
+      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
@@ -181,7 +181,6 @@ const reportingManagementNavItems: NavItemGroup[] = [
     ],
   },
 ];
-
 
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
@@ -242,10 +241,15 @@ export function AppSidebarNav() {
     return allAccordionGroups
       .filter(item => {
         if (userRole === "Super Admin") return isGroupActive(item.subLinks);
-        if (item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+        if (userRole !== "Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
           return false;
         }
-        const visibleSubLinks = item.subLinks?.filter(subLink => userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))) || [];
+        const visibleSubLinks = item.subLinks?.filter(subLink => 
+            userRole === "Super Admin" || 
+            userRole === "Admin" || 
+            !subLink.roles || 
+            (userRole && subLink.roles.includes(userRole as UserRole))
+        ) || [];
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
@@ -256,17 +260,24 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+    if (userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Service" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+        return null;
+    }
+
+    // For "Service" role, only show "Warranty Management"
+    if (userRole === "Service" && item.groupLabel !== "Warranty Management") {
         return null;
     }
     
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || 
+        userRole === "Admin" ||
+        (userRole === "Service" && item.groupLabel === "Warranty Management") || // Service role sees all Warranty sub-links
         !subLink.roles || 
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+    if (userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Service" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
 
@@ -362,7 +373,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-            {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
+           {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
                 <SidebarMenuItem key={mainDashboardLink.href}>
                     <Link href={mainDashboardLink.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -438,7 +449,6 @@ export function AppSidebarNav() {
           </Accordion>
         </SidebarGroup>
 
-
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -446,7 +456,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole))) && item.href &&
+                (userRole === "Super Admin" || userRole === "Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton
