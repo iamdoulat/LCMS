@@ -13,10 +13,10 @@ export default function AddDemoMachineFactoryPage() {
   return (
     <div className="container mx-auto py-8">
         <div className="mb-6">
-            <Link href="/dashboard/demo/demo-machine-list" passHref> {/* Assuming you'll have a list page */}
+            <Link href="/dashboard/demo/demo-machine-factories-list" passHref>
                 <Button variant="outline">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Demo Machine Modules
+                    Back to Demo Machine Factories List
                 </Button>
             </Link>
         </div>
