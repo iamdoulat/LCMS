@@ -9,29 +9,31 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
-import type { DemoMachineApplication, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types'; // Assuming these are defined
+import type { DemoMachineApplication, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save } from 'lucide-react';
+import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
+
+const phoneRegexForValidation = new RegExp(
+  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
 
 const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
-  // factoryLocation will be auto-filled, not part of Zod schema for submission validation
   demoMachineId: z.string().min(1, "Machine Model is required."),
-  // machineModel, machineSerial, machineBrand will be auto-filled
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
-  // demoPeriodDays will be calculated
   factoryInchargeName: z.string().optional(),
   inchargeCell: z.string().optional().refine(
-    (value) => value === "" || value === undefined || /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/.test(value),
+    (value) => value === "" || value === undefined || phoneRegexForValidation.test(value),
     "Invalid phone number format"
   ),
   notes: z.string().optional(),
@@ -52,6 +54,8 @@ const PLACEHOLDER_MACHINE_VALUE = "__DEMO_APP_MACHINE__";
 
 interface FactoryOption extends ComboboxOption {
   location: string;
+  contactPerson?: string;
+  cellNumber?: string;
 }
 interface MachineOption extends ComboboxOption {
   serial: string;
@@ -89,6 +93,8 @@ export default function DemoMachineApplicationPage() {
   const watchedDemoMachineId = watch("demoMachineId");
   const watchedDeliveryDate = watch("deliveryDate");
   const watchedEstReturnDate = watch("estReturnDate");
+  const watchedInchargeCell = watch("inchargeCell");
+
 
   React.useEffect(() => {
     const fetchFactories = async () => {
@@ -102,6 +108,8 @@ export default function DemoMachineApplicationPage() {
               value: docSnap.id,
               label: data.factoryName || 'Unnamed Factory',
               location: data.factoryLocation || 'N/A',
+              contactPerson: data.contactPerson,
+              cellNumber: data.cellNumber,
             };
           })
         );
@@ -145,10 +153,14 @@ export default function DemoMachineApplicationPage() {
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
+      setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
+      setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
     } else {
       setFactoryLocationDisplay('');
+      setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: false }); // Clear if factory deselected
+      setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: false });    // Clear if factory deselected
     }
-  }, [watchedFactoryId, factoryOptions]);
+  }, [watchedFactoryId, factoryOptions, setValue]);
 
   React.useEffect(() => {
     if (watchedDemoMachineId && machineOptions.length > 0) {
@@ -201,6 +213,9 @@ export default function DemoMachineApplicationPage() {
       setMachineSerialDisplay('');
       setMachineBrandDisplay('');
       setDemoPeriodDisplay('0 Days');
+      // Explicitly clear factory incharge details as well on reset
+      setValue("factoryInchargeName", '', { shouldValidate: false });
+      setValue("inchargeCell", '', { shouldValidate: false });
     } catch (error) {
       console.error("Error submitting demo application:", error);
       Swal.fire("Error", `Failed to submit application: ${(error as Error).message}`, "error");
@@ -213,13 +228,22 @@ export default function DemoMachineApplicationPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <AppWindow className="h-7 w-7 text-primary" />
-            New Demo Machine Application
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to request a demo machine.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <AppWindow className="h-7 w-7 text-primary" />
+                New Demo Machine Application
+              </CardTitle>
+              <CardDescription>
+                Fill in the details below to request a demo machine.
+              </CardDescription>
+            </div>
+            <Link href="/dashboard/demo/add-demo-machine-factory" passHref>
+              <Button variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Factory
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoadingFactories || isLoadingMachines ? (
@@ -337,9 +361,40 @@ export default function DemoMachineApplicationPage() {
                     control={control}
                     name="inchargeCell"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Incharge Cell</FormLabel>
-                        <FormControl><Input type="tel" placeholder="Enter cell number" {...field} /></FormControl>
+                     <FormItem>
+                        <FormLabel className="flex items-center">Incharge Cell</FormLabel>
+                         <div className="flex items-center gap-2">
+                            <FormControl className="flex-grow">
+                                <Input type="tel" placeholder="Enter cell number" {...field} />
+                            </FormControl>
+                            {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                                <a href={`tel:${watchedInchargeCell.replace(/\s/g, '')}`} title={`Call ${watchedInchargeCell}`}>
+                                    <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                        <Phone className="h-4 w-4 text-primary" />
+                                    </Button>
+                                </a>
+                            ) : (
+                                <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            )}
+                            {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                                <a 
+                                href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                title={`Chat on WhatsApp with ${watchedInchargeCell}`}
+                                >
+                                    <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                        <MessageSquare className="h-4 w-4 text-primary" />
+                                    </Button>
+                                </a>
+                            ) : (
+                                <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
