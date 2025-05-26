@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Factory as FactoryIcon, Phone, Save, MessageSquare } from 'lucide-react'; // Added MessageSquare
+import { Loader2, Factory as FactoryIcon, Phone, Save, MessageSquare, User } from 'lucide-react'; // Added MessageSquare and User
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -24,7 +24,7 @@ const phoneRegex = new RegExp(
 const demoMachineFactorySchema = z.object({
   factoryName: z.string().min(1, "Factory name is required"),
   factoryLocation: z.string().min(1, "Factory location is required"),
-  contactPerson: z.string().optional(),
+  contactPerson: z.string().optional(), // This field name in the schema remains contactPerson
   cellNumber: z.string().optional().refine(
     (value) => value === "" || value === undefined || phoneRegex.test(value),
     "Invalid phone number format"
@@ -128,9 +128,9 @@ export function AddDemoMachineFactoryForm() {
             name="contactPerson"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contact Person</FormLabel>
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground"/>Incharge Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter contact person's name" {...field} />
+                  <Input placeholder="Enter incharge person's name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
