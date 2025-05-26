@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ListChecks, PlusCircle } from 'lucide-react'; // Changed icon to ListChecks
+import { ListChecks, PlusCircle, Laptop as LaptopIcon } from 'lucide-react'; // Changed icon to ListChecks
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,10 @@ export default function DemoMachineListPage() { // Renamed function
                 View and manage the list of available demo machines. {/* Updated description */}
               </CardDescription>
             </div>
-            <Link href="/dashboard/demo/add-demo-machine-factory" passHref>
+            <Link href="/dashboard/demo/add-demo-machine" passHref>
               <Button variant="default">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Factory
+                <LaptopIcon className="mr-2 h-4 w-4" /> {/* Using LaptopIcon */}
+                Add Demo Machine
               </Button>
             </Link>
           </div>
