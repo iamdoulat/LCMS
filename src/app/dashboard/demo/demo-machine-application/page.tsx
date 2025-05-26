@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
-import type { DemoMachineApplication, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -128,16 +128,20 @@ export default function DemoMachineApplicationPage() {
       setIsLoadingMachines(true);
       try {
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        setMachineOptions(
-          machinesSnapshot.docs.map(docSnap => {
+        const availableMachines = machinesSnapshot.docs
+          .map(docSnap => {
             const data = docSnap.data() as DemoMachineDocument;
-            return {
-              value: docSnap.id,
-              label: data.machineModel || 'Unnamed Model',
-              serial: data.machineSerial || 'N/A',
-              brand: data.machineBrand || 'N/A',
-            };
+            return { id: docSnap.id, ...data }; // Ensure ID is part of the object for value prop
           })
+          .filter(machine => machine.currentStatus === "Available"); // Filter for available machines
+
+        setMachineOptions(
+          availableMachines.map(machine => ({
+            value: machine.id,
+            label: machine.machineModel || 'Unnamed Model',
+            serial: machine.machineSerial || 'N/A',
+            brand: machine.machineBrand || 'N/A',
+          }))
         );
       } catch (error) {
         console.error("Error fetching demo machines:", error);
@@ -155,10 +159,11 @@ export default function DemoMachineApplicationPage() {
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
       setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
-    } else {
+    } else if (!watchedFactoryId) {
       setFactoryLocationDisplay('');
-      setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: false }); // Clear if factory deselected
-      setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: false });    // Clear if factory deselected
+      // Optionally clear incharge details if factory is deselected, or leave them if user might re-select
+      setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: false });
+      setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: false });
     }
   }, [watchedFactoryId, factoryOptions, setValue]);
 
@@ -167,7 +172,7 @@ export default function DemoMachineApplicationPage() {
       const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
-    } else {
+    } else if (!watchedDemoMachineId) {
       setMachineSerialDisplay('');
       setMachineBrandDisplay('');
     }
@@ -213,7 +218,6 @@ export default function DemoMachineApplicationPage() {
       setMachineSerialDisplay('');
       setMachineBrandDisplay('');
       setDemoPeriodDisplay('0 Days');
-      // Explicitly clear factory incharge details as well on reset
       setValue("factoryInchargeName", '', { shouldValidate: false });
       setValue("inchargeCell", '', { shouldValidate: false });
     } catch (error) {
@@ -238,7 +242,6 @@ export default function DemoMachineApplicationPage() {
                 Fill in the details below to request a demo machine.
               </CardDescription>
             </div>
-            {/* Removed "Add Factory" button */}
           </div>
         </CardHeader>
         <CardContent>
@@ -289,7 +292,7 @@ export default function DemoMachineApplicationPage() {
                         onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
                         placeholder="Search Machine Model..."
                         selectPlaceholder="Select Machine Model"
-                        emptyStateMessage="No machine found."
+                        emptyStateMessage="No available machine found."
                         disabled={isLoadingMachines}
                       />
                       <FormMessage />
@@ -348,7 +351,7 @@ export default function DemoMachineApplicationPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Factory Incharge Name</FormLabel>
-                        <FormControl><Input placeholder="Enter incharge name" {...field} /></FormControl>
+                        <FormControl><Input placeholder="Enter incharge name" {...field} value={field.value ?? ''} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -358,10 +361,10 @@ export default function DemoMachineApplicationPage() {
                     name="inchargeCell"
                     render={({ field }) => (
                      <FormItem>
-                        <FormLabel className="flex items-center">Incharge Cell</FormLabel>
+                        <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Incharge Cell</FormLabel>
                          <div className="flex items-center gap-2">
                             <FormControl className="flex-grow">
-                                <Input type="tel" placeholder="Enter cell number" {...field} />
+                                <Input type="tel" placeholder="Enter cell number" {...field} value={field.value ?? ''} />
                             </FormControl>
                             {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
                                 <a href={`tel:${watchedInchargeCell.replace(/\s/g, '')}`} title={`Call ${watchedInchargeCell}`}>
@@ -405,7 +408,7 @@ export default function DemoMachineApplicationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
-                      <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} /></FormControl>
+                      <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -426,3 +429,5 @@ export default function DemoMachineApplicationPage() {
     </div>
   );
 }
+
+    

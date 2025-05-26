@@ -130,16 +130,20 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       setIsLoadingMachines(true);
       try {
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        setMachineOptions(
-          machinesSnapshot.docs.map(docSnap => {
+        const availableMachines = machinesSnapshot.docs
+          .map(docSnap => {
             const data = docSnap.data() as DemoMachineDocument;
-            return {
-              value: docSnap.id,
-              label: data.machineModel || 'Unnamed Model',
-              serial: data.machineSerial || 'N/A',
-              brand: data.machineBrand || 'N/A',
-            };
+            return { id: docSnap.id, ...data };
           })
+          .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId); // Also include currently selected machine if it's not "Available"
+
+        setMachineOptions(
+          availableMachines.map(machine => ({
+            value: machine.id,
+            label: machine.machineModel || 'Unnamed Model',
+            serial: machine.machineSerial || 'N/A',
+            brand: machine.machineBrand || 'N/A',
+          }))
         );
       } catch (error) {
         console.error("Error fetching demo machines:", error);
@@ -149,7 +153,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       }
     };
     fetchMachines();
-  }, []);
+  }, [initialData.demoMachineId]);
 
   React.useEffect(() => {
     if (initialData && factoryOptions.length > 0 && machineOptions.length > 0) {
@@ -178,26 +182,24 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
-      // Only auto-fill if the form value is currently empty, or if it's explicitly based on the initial load.
-      // This prevents overriding user's manual changes if they re-select the same factory.
-      if (!getValues("factoryInchargeName") && selectedFactory?.contactPerson) {
-         setValue("factoryInchargeName", selectedFactory.contactPerson, { shouldValidate: true, shouldDirty: true });
+      // Auto-fill only if the initial data for these fields was empty or if the user hasn't typed anything
+      if (!getValues("factoryInchargeName") || getValues("factoryInchargeName") === initialData.factoryInchargeName) {
+         setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
-      if (!getValues("inchargeCell") && selectedFactory?.cellNumber) {
-        setValue("inchargeCell", selectedFactory.cellNumber, { shouldValidate: true, shouldDirty: true });
+      if (!getValues("inchargeCell") || getValues("inchargeCell") === initialData.inchargeCell) {
+        setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
       }
-    } else if (!watchedFactoryId) { // Factory deselected
+    } else if (!watchedFactoryId) { 
       setFactoryLocationDisplay('');
-      // Do not clear incharge details if factory is deselected, user might want to keep them.
     }
-  }, [watchedFactoryId, factoryOptions, setValue, getValues]);
+  }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell]);
 
   React.useEffect(() => {
     if (watchedDemoMachineId && machineOptions.length > 0) {
       const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
-    } else {
+    } else if (!watchedDemoMachineId) {
       setMachineSerialDisplay('');
       setMachineBrandDisplay('');
     }
@@ -248,7 +250,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
       Swal.fire("Success!", "Demo machine application updated.", "success");
-      // Optionally, refetch initialData or update local state if needed, or navigate away
     } catch (error) {
       console.error("Error updating demo application:", error);
       Swal.fire("Error", `Failed to update application: ${(error as Error).message}`, "error");
@@ -308,7 +309,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
                 onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
                 placeholder="Search Machine Model..."
                 selectPlaceholder="Select Machine Model"
-                emptyStateMessage="No machine found."
+                emptyStateMessage="No available machine found."
                 disabled={isLoadingMachines}
               />
               <FormMessage />
