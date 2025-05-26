@@ -8,8 +8,8 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'; // Added getDoc
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types'; // Assuming AppDemoMachineStatus is your app-wide status type for demo machines
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, getDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useParams, useRouter } from 'next/navigation'; // Added useParams
+import { useParams, useRouter } from 'next/navigation';
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -43,6 +43,14 @@ const demoMachineApplicationSchema = z.object({
   ),
   notes: z.string().optional(),
   machineReturned: z.boolean().optional().default(false),
+}).refine(data => {
+  if (data.deliveryDate && data.estReturnDate) {
+    return data.estReturnDate >= data.deliveryDate;
+  }
+  return true;
+}, {
+  message: "Est. Return Date must be on or after Delivery Date.",
+  path: ["estReturnDate"],
 });
 
 type DemoMachineApplicationFormValues = z.infer<typeof demoMachineApplicationSchema>;
@@ -105,7 +113,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   React.useEffect(() => {
     const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
-        const machineReturnedValue = getValues("machineReturned"); // Get current form value
+        const machineReturnedValue = getValues("machineReturned"); 
         if (machineReturnedValue) return "Returned";
         
         const deliveryDateValue = getValues("deliveryDate");
@@ -189,8 +197,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const resetValues: DemoMachineApplicationFormValues = {
         factoryId: initialData.factoryId || '',
         demoMachineId: initialData.demoMachineId || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, // Zod expects Date
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, // Zod expects Date
+        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, 
+        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, 
         factoryInchargeName: initialData.factoryInchargeName || '',
         inchargeCell: initialData.inchargeCell || '',
         notes: initialData.notes || '',
@@ -511,10 +519,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
                     </FormItem>
                 )}
             />
-            {/* Current Demo Status display (RadioGroup) removed as per previous step. Now just a Badge in header. */}
-            {/* If you still want a read-only text display in form: */}
             <div className="space-y-1">
-                 <FormLabel className="flex items-center text-sm font-medium">Current Demo Status</FormLabel>
+                 <FormLabel className="flex items-center text-sm font-medium">Calculated Demo Status</FormLabel>
                  <Input value={currentDemoStatus} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                  <FormDescription className="text-xs">This status is automatically calculated based on dates and returned status.</FormDescription>
             </div>
@@ -556,14 +562,13 @@ export default function EditDemoMachineApplicationPage() {
             setApplicationData({ 
                 id: docSnap.id, 
                 ...data,
-                // Ensure dates are ISO strings for consistency if they come as Timestamps
                 deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
                 estReturnDate: data.estReturnDate instanceof Timestamp ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
             } as DemoMachineApplicationDocument);
           } else {
             setError("Demo Machine Application not found.");
             Swal.fire("Error", `Application with ID ${applicationId} not found.`, "error").then(() => {
-                 router.push("/dashboard/demo/demo-machine-program"); // Updated redirect
+                 router.push("/dashboard/demo/demo-machine-program");
             });
           }
         } catch (err: any) {
@@ -579,7 +584,7 @@ export default function EditDemoMachineApplicationPage() {
         setError("No Application ID provided.");
         setIsLoadingPage(false);
         Swal.fire("Error", "No Application ID specified.", "error").then(() => {
-            router.push("/dashboard/demo/demo-machine-program"); // Updated redirect
+            router.push("/dashboard/demo/demo-machine-program");
         });
     }
   }, [applicationId, router]);
@@ -606,7 +611,7 @@ export default function EditDemoMachineApplicationPage() {
           <CardContent>
             <p className="text-destructive-foreground">{error}</p>
             <Button variant="outline" asChild className="mt-4">
-              <Link href="/dashboard/demo/demo-machine-program"> {/* Updated redirect */}
+              <Link href="/dashboard/demo/demo-machine-program">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Demo Program List
               </Link>
@@ -622,7 +627,7 @@ export default function EditDemoMachineApplicationPage() {
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Application data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4">
-            <Link href="/dashboard/demo/demo-machine-program"> {/* Updated redirect */}
+            <Link href="/dashboard/demo/demo-machine-program">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Demo Program List
             </Link>
@@ -634,7 +639,7 @@ export default function EditDemoMachineApplicationPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Link href="/dashboard/demo/demo-machine-program" passHref> {/* Updated link to demo-machine-program */}
+        <Link href="/dashboard/demo/demo-machine-program" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Demo Program List
