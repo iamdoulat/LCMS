@@ -4,13 +4,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListChecks, AlertTriangle, Info, Edit, Trash2, AppWindow, ExternalLink, CalendarDays, User, Phone, FileText } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { AppWindow, FileEdit, Trash2, Loader2, AlertTriangle, Info, Laptop as LaptopIcon, ExternalLink, CalendarDays, User, Phone, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineApplicationDocument } from '@/types';
-import { cn } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 
@@ -24,15 +23,15 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
       const parsed = parseISO(dateString);
       date = isValid(parsed) ? parsed : new Date(0); // Fallback for invalid ISO
     } catch (e) {
-      return 'Invalid Date Input';
+      return 'N/A';
     }
   } else {
-    return 'Invalid Date Input';
+    return 'N/A';
   }
   return date && isValid(date) && date.getFullYear() > 1 ? format(date, 'PPP') : 'N/A';
 };
 
-const formatValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
+const formatReportValue = (value: string | number | undefined | null, defaultValue: string = 'N/A'): string => {
   if (value === undefined || value === null || String(value).trim() === '') {
     return defaultValue;
   }
@@ -40,7 +39,6 @@ const formatValue = (value: string | number | undefined | null, defaultValue: st
 };
 
 export default function DemoMachineApplicationsListPage() {
-  const router = useRouter();
   const [applications, setApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -124,16 +122,16 @@ export default function DemoMachineApplicationsListPage() {
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
-                Demo Machine Applications List
+                Demo Machine List
               </CardTitle>
               <CardDescription>
                 View and manage all demo machine applications. Up to 20 latest entries are shown; list is scrollable.
               </CardDescription>
             </div>
-            <Link href="/dashboard/demo/demo-machine-application" passHref>
+            <Link href="/dashboard/demo/add-demo-machine" passHref>
               <Button variant="default">
-                <AppWindow className="mr-2 h-4 w-4" />
-                New Demo Application
+                <LaptopIcon className="mr-2 h-4 w-4" />
+                Add Demo Machine
               </Button>
             </Link>
           </div>
@@ -155,17 +153,17 @@ export default function DemoMachineApplicationsListPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Applications Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no demo machine applications in the database. Click "New Demo Application" to add one.
+                There are no demo machine applications in the database. Click "Add Demo Machine" or "New Demo Application" from relevant pages to add one.
               </p>
             </div>
           ) : (
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {applications.slice(0, 20).map((app) => ( // Display up to 20 entries
+              {applications.slice(0, 20).map((app) => ( 
                 <Card key={app.id} className="shadow-md hover:shadow-lg transition-shadow relative">
                    <div className="absolute top-3 right-3 flex gap-1 z-10">
                         <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                           <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
-                            <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
+                            <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
                           </Link>
                         </Button>
                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${app.machineModel}`)}>
@@ -174,24 +172,24 @@ export default function DemoMachineApplicationsListPage() {
                     </div>
                   <CardHeader className="pb-3 pt-4 px-4 pr-20">
                     <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
-                       {formatValue(app.factoryName)} - {formatValue(app.machineModel)}
+                       {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
                       <div><span className="text-muted-foreground">Delivery Date: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
                       <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-foreground">{formatDisplayDate(app.estReturnDate)}</span></div>
-                      <div><span className="text-muted-foreground">Demo Period: </span><span className="font-medium text-foreground">{formatValue(app.demoPeriodDays, "0")} Day(s)</span></div>
+                      <div><span className="text-muted-foreground">Demo Period: </span><span className="font-medium text-foreground">{formatReportValue(app.demoPeriodDays, "0")} Day(s)</span></div>
                       {app.factoryInchargeName && (
-                        <div><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{app.factoryInchargeName}</span></div>
+                        <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{app.factoryInchargeName}</span></div>
                       )}
                       {app.inchargeCell && (
-                        <div><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
+                        <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
                       )}
                     </div>
                     {app.notes && (
                         <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground">Expected Result/Notes:</p>
+                            <p className="text-xs font-medium text-muted-foreground flex items-center"><FileText className="mr-1 h-3.5 w-3.5" />Expected Result/Notes:</p>
                             <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{app.notes}</p>
                         </div>
                     )}
@@ -208,5 +206,3 @@ export default function DemoMachineApplicationsListPage() {
     </div>
   );
 }
-
-    
