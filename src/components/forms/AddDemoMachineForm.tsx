@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity } from 'lucide-react'; // Added Activity icon
+import { Loader2, Save, Laptop, Activity, Cog, Hash } from 'lucide-react'; // Added Cog, Hash
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -21,6 +21,8 @@ const demoMachineSchema = z.object({
   machineModel: z.string().min(1, "Machine Model is required"),
   machineSerial: z.string().min(1, "Machine Serial is required"),
   machineBrand: z.string().min(1, "Machine Brand is required"),
+  motorOrControlBoxModel: z.string().optional(),
+  controlBoxSerialNo: z.string().optional(),
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
 });
@@ -35,6 +37,8 @@ export function AddDemoMachineForm() {
       machineModel: '',
       machineSerial: '',
       machineBrand: '',
+      motorOrControlBoxModel: '',
+      controlBoxSerialNo: '',
       machineOwner: demoMachineOwnerOptions[0], // Default to "Own Machine"
       currentStatus: demoMachineStatusOptions[0], // Default to "Available"
     },
@@ -45,9 +49,18 @@ export function AddDemoMachineForm() {
     
     const dataToSave: Omit<DemoMachine, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       ...data,
+      motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
+      controlBoxSerialNo: data.controlBoxSerialNo || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
+
+    // Remove undefined fields before saving
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+        delete dataToSave[key as keyof typeof dataToSave];
+      }
+    });
 
     try {
       const docRef = await addDoc(collection(firestore, "demo_machines"), dataToSave);
@@ -75,102 +88,133 @@ export function AddDemoMachineForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="machineModel"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Machine Model*</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter machine model" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="machineModel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Machine Model*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter machine model" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="machineBrand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Machine Brand*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter machine brand" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="machineSerial"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Machine Serial*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter machine serial number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="motorOrControlBoxModel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Cog className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Motor or Control Box Model</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter model" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="controlBoxSerialNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Control Box Serial No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter serial number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
-        <FormField
-          control={form.control}
-          name="machineSerial"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Machine Serial*</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter machine serial number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="machineOwner"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Owner*</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+                  >
+                    {demoMachineOwnerOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
+                        <FormLabel className="font-normal">{option}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="machineBrand"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Machine Brand*</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter machine brand" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="machineOwner"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Owner*</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
-                >
-                  {demoMachineOwnerOptions.map((option) => (
-                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value={option} />
-                      </FormControl>
-                      <FormLabel className="font-normal">{option}</FormLabel>
-                    </FormItem>
-                  ))}
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="currentStatus"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel className="flex items-center"><Activity className="mr-2 h-4 w-4 text-muted-foreground" />Current Machine Status*</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
-                >
-                  {demoMachineStatusOptions.map((option) => (
-                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value={option} />
-                      </FormControl>
-                      <FormLabel className="font-normal">{option}</FormLabel>
-                    </FormItem>
-                  ))}
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+          <FormField
+            control={form.control}
+            name="currentStatus"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel className="flex items-center"><Activity className="mr-2 h-4 w-4 text-muted-foreground" />Current Machine Status*</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+                  >
+                    {demoMachineStatusOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option} />
+                        </FormControl>
+                        <FormLabel className="font-normal">{option}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (

@@ -81,7 +81,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This was previously notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -116,7 +116,7 @@ export interface LCEntry {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number;
+  billOfExchangeQty?: number; // Added this field
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -203,7 +203,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number;
+  billOfExchangeQty?: number; // Added this field
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -294,10 +294,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Allow empty string for form input
+  purchasePrice: number | ''; // Allow empty string for form input
+  salesPrice: number | ''; // Allow empty string for form input
+  netCommissionPercentage?: number | ''; // Allow empty string for form input
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -360,11 +360,11 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxModel: z.string().optional(), // Made optional
+  ctlBoxSerial: z.string().optional(), // Made optional
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
-export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -390,12 +390,12 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0);
+          .filter((sn): sn is string => !!sn && sn.length > 0); // Only consider non-empty serials
         return new Set(serials).size === serials.length;
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: [],
+        path: ["installationDetails"], // Point error to the array
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -425,7 +425,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty?: number | string;
   missingItemInfo?: string;
@@ -475,6 +475,8 @@ export interface DemoMachine {
   machineBrand: string;
   machineOwner: DemoMachineOwnerOption;
   currentStatus?: DemoMachineStatusOption;
+  motorOrControlBoxModel?: string;
+  controlBoxSerialNo?: string;
   createdAt?: any; // Firestore ServerTimestamp
   updatedAt?: any; // Firestore ServerTimestamp
 }
