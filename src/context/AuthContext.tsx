@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, sig
 import { useRouter } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { auth, firestore } from '@/lib/firebase/config';
+import { auth, firestore } from '@/lib/firebase/config'; // firestore is imported here
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -38,7 +38,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>; // Expose setUser
   companyName: string;
   companyLogoUrl: string;
   updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => void;
@@ -57,7 +57,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const router = useRouter();
 
+
   const fetchInitialCompanyProfile = useCallback(async () => {
+    // console.log("AuthContext: Attempting to fetch initial company profile. User UID:", auth.currentUser?.uid);
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
@@ -82,6 +84,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
     } catch (error: any) {
       console.error("AuthContext: Error fetching company profile from Firestore:", error);
+      // Fallback to localStorage or defaults if Firestore fetch fails
       const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
       setCompanyName(storedName || DEFAULT_COMPANY_NAME);
       const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
@@ -93,22 +96,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     fetchInitialCompanyProfile();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
-      setUser(currentUser);
+      setUser(currentUser); 
 
-      if (currentUser) {
-        let assignedRole: UserRole | null = null;
-        const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
+      try {
+        if (currentUser) {
+          let assignedRole: UserRole | null = null;
+          const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
 
-        if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          assignedRole = "Super Admin";
-        } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          assignedRole = "Admin";
-        } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          assignedRole = "Service";
-        }
-
-        try {
+          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            assignedRole = "Super Admin";
+          } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            assignedRole = "Admin";
+          } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            assignedRole = "Service";
+          }
+          
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
@@ -121,11 +123,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           } else {
             setFirestoreUser(null);
             const userProfileDataToCreate: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
-                uid: currentUser.uid,
+                uid: currentUser.uid, 
                 displayName: currentUser.displayName || currentUser.email || "New User",
                 email: currentUser.email || "",
                 photoURL: currentUser.photoURL || undefined,
-                role: assignedRole || "User",
+                role: assignedRole || "User", 
             };
             await setDoc(userDocRef, {
                 ...userProfileDataToCreate,
@@ -137,36 +139,39 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
                 setFirestoreUser({ id: newUserDocSnap.id, ...newUserDocSnap.data() } as UserDocumentForAdmin);
             }
           }
-        } catch (error: any) {
-          console.error("AuthContext: Error fetching/creating Firestore user profile:", error);
+          setUserRole(assignedRole || "User"); 
+        } else {
           setFirestoreUser(null);
-        } finally {
-          setUserRole(assignedRole || "User"); // Default to "User" if no role assigned
-          setLoading(false);
+          setUserRole(null);
         }
-      } else {
+      } catch (error) {
+        console.error("AuthContext: Error during onAuthStateChanged profile/role processing:", error);
         setFirestoreUser(null);
-        setUserRole(null);
-        setUser(null);
+        setUserRole(null); 
+      } finally {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
-  }, [fetchInitialCompanyProfile]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchInitialCompanyProfile, auth, firestore]); // Explicitly adding auth and firestore
+
 
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle fetching Firestore profile and setting roles/loading state.
       Swal.fire({
         title: "Login Successful",
-        text: `Welcome back, ${userCredential.user.displayName || email}!`,
+        text: `Welcome back!`,
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
       });
     } catch (error: any) {
+      console.error("Error logging in: ", error);
       let errorMessage = "Failed to login. Please check your credentials.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
         errorMessage = "Invalid email or password.";
@@ -183,7 +188,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setLoading(false);
       throw error;
     }
-  }, []);
+  }, [auth]);
 
   const logout = useCallback(async () => {
     setLoading(true);
@@ -205,21 +210,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       });
       setLoading(false);
     }
-  }, [router]);
+  }, [auth, router]);
 
   const signInWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
       Swal.fire({
         title: "Sign-in Successful",
-        text: `Welcome, ${firebaseUser.displayName || firebaseUser.email}!`,
+        text: `Welcome!`,
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
       });
+      router.push('/dashboard');
     } catch (error: any) {
+      console.error("Error signing in with Google: ", error);
       let errorMessage = "Failed to sign in with Google. Please try again.";
       if (error.code === 'auth/account-exists-with-different-credential') {
         errorMessage = "An account already exists with the same email address but different sign-in credentials. Try signing in with the original method.";
@@ -232,7 +238,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setLoading(false);
       throw error;
     }
-  }, []);
+  }, [auth, router]);
 
   const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
     let newName = companyName;
@@ -283,3 +289,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
