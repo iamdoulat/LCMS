@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Search as SearchIcon, BarChart3, CalendarDays, Layers, Laptop, CheckCircle2, AlertTriangle, Hourglass, Info, ChevronLeft, ChevronRight, FileEdit } from 'lucide-react';
+import { Search as SearchIcon, BarChart3, CalendarDays, Layers, Laptop, CheckCircle2, AlertTriangle, Hourglass, Info, ChevronLeft, ChevronRight, FileEdit, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { cn } from '@/lib/utils';
@@ -187,10 +187,11 @@ export default function DemoMachineSearchPage() {
     <div className="container mx-auto py-8 space-y-8">
       <Card 
         className="shadow-xl max-w-6xl mx-auto relative overflow-hidden"
+        // style={{ background: 'radial-gradient(circle, rgba(34,190,195,1) 65%, rgba(191,177,163,1) 100%)' }}
       >
-        <div className="relative z-10 bg-card/90 dark:bg-card/80 rounded-lg">
+        <div className="relative z-10 bg-card/90 dark:bg-card/80 rounded-lg"> {/* Wrapper for content over GIF */}
             <CardHeader className="text-center">
-                <CardTitle className={cn("flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl text-card-foreground", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <CardTitle className={cn("flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <Laptop className="h-7 w-7 text-primary" />
                 Demo M/C Search Engine
                 </CardTitle>
@@ -406,3 +407,4 @@ export default function DemoMachineSearchPage() {
     </div>
   );
 }
+
