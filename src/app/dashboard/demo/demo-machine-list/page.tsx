@@ -4,15 +4,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListChecks, Laptop as LaptopIcon, AlertTriangle, Info, Package, ExternalLink, FileText } from 'lucide-react';
+import { Loader2, ListChecks, Laptop as LaptopIcon, AlertTriangle, Info, FileText, Package, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineDocument, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatMachineDate = (dateInput?: string | Timestamp): string => {
   if (!dateInput) return 'N/A';
@@ -42,6 +44,7 @@ const getStatusBadgeVariant = (status?: DemoMachineStatusOption): "default" | "s
 
 
 export default function DemoMachineListPage() {
+  const router = useRouter();
   const [demoMachines, setDemoMachines] = useState<DemoMachineDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export default function DemoMachineListPage() {
           return {
             id: docSnap.id,
             ...data,
+            // Ensure dates are consistently strings or handle conversion if they are Timestamps
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
           } as DemoMachineDocument;
@@ -82,6 +86,43 @@ export default function DemoMachineListPage() {
     };
     fetchDemoMachines();
   }, []);
+
+  const handleEditMachine = (machineId: string) => {
+    router.push(`/dashboard/demo/edit-demo-machine/${machineId}`);
+  };
+
+  const handleDeleteMachine = (machineId: string, machineIdentifier?: string) => {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `This will permanently delete the demo machine "${machineIdentifier || machineId}". This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'hsl(var(--destructive))',
+        cancelButtonColor: 'hsl(var(--secondary))',
+        confirmButtonText: 'Yes, delete it!',
+        reverseButtons: true,
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await deleteDoc(doc(firestore, "demo_machines", machineId));
+                setDemoMachines(prev => prev.filter(m => m.id !== machineId));
+                Swal.fire(
+                    'Deleted!',
+                    `Demo machine "${machineIdentifier || machineId}" has been removed.`,
+                    'success'
+                );
+            } catch (error: any) {
+                console.error("Error deleting demo machine: ", error);
+                Swal.fire(
+                    'Error!',
+                    `Could not delete demo machine: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+    });
+  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -126,18 +167,39 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"> {/* Scrollable container */}
+            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3 pt-4 px-4">
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow relative">
+                   <div className="absolute top-3 right-3 flex gap-1 z-10">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => machine.id && handleEditMachine(machine.id)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Edit Demo Machine</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => machine.id && handleDeleteMachine(machine.id, machine.machineModel || machine.machineSerial)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Delete Demo Machine</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+                  <CardHeader className="pb-3 pt-4 px-4 pr-20"> {/* Added pr-20 for spacing */}
                     <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary mb-1 truncate pr-16">
+                        <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
                            {machine.machineModel || 'N/A'}
                         </CardTitle>
                        {machine.currentStatus && (
                          <Badge 
                             variant={getStatusBadgeVariant(machine.currentStatus)}
                             className={cn(
+                                "text-xs", // Ensure text size consistency
                                 machine.currentStatus === "Available" && "bg-green-600 text-white dark:bg-green-500 dark:text-black",
                                 machine.currentStatus === "Maintenance Mode" && "bg-red-600 text-white dark:bg-red-500 dark:text-black",
                                 machine.currentStatus === "Allocated" && "bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black"
@@ -149,7 +211,7 @@ export default function DemoMachineListPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
                       <div>
                         <span className="text-muted-foreground">Serial: </span>
                         <span className="font-medium text-foreground">{machine.machineSerial || 'N/A'}</span>
@@ -162,19 +224,16 @@ export default function DemoMachineListPage() {
                         <span className="text-muted-foreground">Owner: </span>
                         <span className="font-medium text-foreground">{machine.machineOwner || 'N/A'}</span>
                       </div>
+                      <div>
+                        <span className="text-muted-foreground">Ctl. Box Model: </span>
+                        <span className="font-medium text-foreground">{machine.motorOrControlBoxModel || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Ctl. Box S/N: </span>
+                        <span className="font-medium text-foreground">{machine.controlBoxSerialNo || 'N/A'}</span>
+                      </div>
                     </div>
-                    {machine.motorOrControlBoxModel && (
-                        <div className="mt-1 text-sm">
-                            <span className="text-muted-foreground">Ctl. Box Model: </span>
-                            <span className="font-medium text-foreground">{machine.motorOrControlBoxModel}</span>
-                        </div>
-                    )}
-                    {machine.controlBoxSerialNo && (
-                        <div className="mt-1 text-sm">
-                            <span className="text-muted-foreground">Ctl. Box S/N: </span>
-                            <span className="font-medium text-foreground">{machine.controlBoxSerialNo}</span>
-                        </div>
-                    )}
+                    
                      {machine.machineFeatures && (
                         <div className="mt-2">
                             <p className="text-xs font-medium text-muted-foreground">Features:</p>
@@ -200,5 +259,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
-    
