@@ -19,7 +19,7 @@ export default function AddNewDemoMachinePage() {
                 </Button>
             </Link>
         </div>
-      <Card className="max-w-3xl mx-auto shadow-xl"> {/* Changed from max-w-2xl to max-w-3xl */}
+      <Card className="max-w-4xl mx-auto shadow-xl"> {/* Changed from max-w-3xl to max-w-4xl */}
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Laptop className="h-7 w-7 text-primary" />
