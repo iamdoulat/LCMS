@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'; // Added getDoc
 import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types'; // Assuming AppDemoMachineStatus is your app-wide status type for demo machines
 
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'; // For displaying status
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useParams, useRouter } from 'next/navigation'; // Added useParams
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -104,21 +105,26 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   React.useEffect(() => {
     const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
-        if (watchedMachineReturned) return "Returned";
-        const today = startOfDay(new Date());
-        const delivery = watchedDeliveryDate ? startOfDay(new Date(watchedDeliveryDate)) : null;
-        const estReturn = watchedEstReturnDate ? startOfDay(new Date(watchedEstReturnDate)) : null;
+        const machineReturnedValue = getValues("machineReturned"); // Get current form value
+        if (machineReturnedValue) return "Returned";
+        
+        const deliveryDateValue = getValues("deliveryDate");
+        const estReturnDateValue = getValues("estReturnDate");
 
-        if (!delivery || !estReturn) return "Upcoming"; // Or some other default if dates aren't set
+        const today = startOfDay(new Date());
+        const delivery = deliveryDateValue ? startOfDay(new Date(deliveryDateValue)) : null;
+        const estReturn = estReturnDateValue ? startOfDay(new Date(estReturnDateValue)) : null;
+
+        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
 
         if (isPast(estReturn)) return "Overdue";
         if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
         if (isFuture(delivery)) return "Upcoming";
         
-        return "Upcoming"; // Default fallback
+        return "Upcoming"; 
     };
     setCurrentDemoStatus(calculateCurrentDemoStatus());
-  }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned]);
+  }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned, getValues]);
 
 
   React.useEffect(() => {
@@ -180,16 +186,17 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   React.useEffect(() => {
     if (initialData && factoryOptions.length > 0 && machineOptions.length > 0) {
-      reset({
+      const resetValues: DemoMachineApplicationFormValues = {
         factoryId: initialData.factoryId || '',
         demoMachineId: initialData.demoMachineId || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, // Zod expects Date
+        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, // Zod expects Date
         factoryInchargeName: initialData.factoryInchargeName || '',
         inchargeCell: initialData.inchargeCell || '',
         notes: initialData.notes || '',
         machineReturned: initialData.machineReturned ?? false,
-      });
+      };
+      reset(resetValues);
 
       const selectedFactory = factoryOptions.find(opt => opt.value === initialData.factoryId);
       setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
@@ -206,22 +213,19 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
-      // Auto-fill only if the user hasn't manually changed these fields from what initialData provided
+      
       if (getValues("factoryInchargeName") === (initialData.factoryInchargeName || '')) {
          setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
       if (getValues("inchargeCell") === (initialData.inchargeCell || '')) {
         setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
       }
-    } else if (!watchedFactoryId && (isLoadingFactories || factoryOptions.length === 0)) { 
-      // If no factory ID and options are loading or empty, use initial data if available
-      setFactoryLocationDisplay(initialData.factoryLocation || '');
-    } else if (!watchedFactoryId) {
-        // If factory ID cleared by user, clear related fields
+    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) { 
         setFactoryLocationDisplay('');
-        // Optionally clear incharge details if factory is deselected, or leave them
-        // setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
-        // setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
+        setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
+        setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
+    } else if (!watchedFactoryId) {
+         setFactoryLocationDisplay(initialData.factoryLocation || '');
     }
   }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell, initialData.factoryLocation, isLoadingFactories]);
 
@@ -230,24 +234,25 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
-    } else if (!watchedDemoMachineId && (isLoadingMachines || machineOptions.length === 0)) {
+    } else if (!watchedDemoMachineId && (!isLoadingMachines && machineOptions.length > 0)) {
+       setMachineSerialDisplay('');
+       setMachineBrandDisplay('');
+    } else if (!watchedDemoMachineId) {
        setMachineSerialDisplay(initialData.machineSerial || '');
        setMachineBrandDisplay(initialData.machineBrand || '');
-    }
-    else if (!watchedDemoMachineId) {
-      setMachineSerialDisplay('');
-      setMachineBrandDisplay('');
     }
   }, [watchedDemoMachineId, machineOptions, initialData.machineSerial, initialData.machineBrand, isLoadingMachines]);
 
   React.useEffect(() => {
-    if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
-      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate));
+    const deliveryDateVal = getValues("deliveryDate");
+    const estReturnDateVal = getValues("estReturnDate");
+    if (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) {
+      const days = differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay('0 Days');
     }
-  }, [watchedDeliveryDate, watchedEstReturnDate]);
+  }, [watchedDeliveryDate, watchedEstReturnDate, getValues]);
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     if (!applicationId) {
@@ -257,6 +262,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     setIsSubmitting(true);
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
     const selectedMachine = machineOptions.find(opt => opt.value === data.demoMachineId);
+    const deliveryDateVal = getValues("deliveryDate");
+    const estReturnDateVal = getValues("estReturnDate");
+
 
     const dataToUpdate: Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       factoryId: data.factoryId,
@@ -268,7 +276,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       machineBrand: selectedMachine?.brand || initialData.machineBrand,
       deliveryDate: data.deliveryDate ? format(new Date(data.deliveryDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       estReturnDate: data.estReturnDate ? format(new Date(data.estReturnDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      demoPeriodDays: (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) ? differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate)) : 0,
+      demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : 0,
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
@@ -296,7 +304,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   const getDemoStatusBadgeVariant = (status: CurrentDemoStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case "Active": return "default"; // Green by default in ShadCN
+        case "Active": return "default"; 
         case "Overdue": return "destructive";
         case "Returned": return "secondary";
         case "Upcoming": return "outline";
@@ -503,10 +511,12 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
                     </FormItem>
                 )}
             />
+            {/* Current Demo Status display (RadioGroup) removed as per previous step. Now just a Badge in header. */}
+            {/* If you still want a read-only text display in form: */}
             <div className="space-y-1">
-                 <FormLabel className="flex items-center text-sm font-medium">Current Demo Status (Derived)</FormLabel>
+                 <FormLabel className="flex items-center text-sm font-medium">Current Demo Status</FormLabel>
                  <Input value={currentDemoStatus} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                 <FormDescription className="text-xs">This status is automatically calculated.</FormDescription>
+                 <FormDescription className="text-xs">This status is automatically calculated based on dates and returned status.</FormDescription>
             </div>
         </div>
 
@@ -542,11 +552,18 @@ export default function EditDemoMachineApplicationPage() {
           const docRef = doc(firestore, "demo_machine_applications", applicationId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setApplicationData({ id: docSnap.id, ...docSnap.data() } as DemoMachineApplicationDocument);
+            const data = docSnap.data() as Omit<DemoMachineApplicationDocument, 'id'>;
+            setApplicationData({ 
+                id: docSnap.id, 
+                ...data,
+                // Ensure dates are ISO strings for consistency if they come as Timestamps
+                deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
+                estReturnDate: data.estReturnDate instanceof Timestamp ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
+            } as DemoMachineApplicationDocument);
           } else {
             setError("Demo Machine Application not found.");
             Swal.fire("Error", `Application with ID ${applicationId} not found.`, "error").then(() => {
-                 router.push("/dashboard/demo/demo-machine-list"); 
+                 router.push("/dashboard/demo/demo-machine-program"); // Updated redirect
             });
           }
         } catch (err: any) {
@@ -562,7 +579,7 @@ export default function EditDemoMachineApplicationPage() {
         setError("No Application ID provided.");
         setIsLoadingPage(false);
         Swal.fire("Error", "No Application ID specified.", "error").then(() => {
-            router.push("/dashboard/demo/demo-machine-list");
+            router.push("/dashboard/demo/demo-machine-program"); // Updated redirect
         });
     }
   }, [applicationId, router]);
@@ -589,9 +606,9 @@ export default function EditDemoMachineApplicationPage() {
           <CardContent>
             <p className="text-destructive-foreground">{error}</p>
             <Button variant="outline" asChild className="mt-4">
-              <Link href="/dashboard/demo/demo-machine-list">
+              <Link href="/dashboard/demo/demo-machine-program"> {/* Updated redirect */}
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Demo Applications List
+                Back to Demo Program List
               </Link>
             </Button>
           </CardContent>
@@ -605,9 +622,9 @@ export default function EditDemoMachineApplicationPage() {
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Application data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4">
-            <Link href="/dashboard/demo/demo-machine-list">
+            <Link href="/dashboard/demo/demo-machine-program"> {/* Updated redirect */}
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Demo Applications List
+                Back to Demo Program List
             </Link>
         </Button>
       </div>
@@ -641,7 +658,5 @@ export default function EditDemoMachineApplicationPage() {
     </div>
   );
 }
-    
-    
-    
+
     
