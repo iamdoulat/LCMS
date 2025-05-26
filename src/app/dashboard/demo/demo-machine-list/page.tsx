@@ -19,9 +19,9 @@ const formatDisplayDate = (dateInput?: string | null | Timestamp): string => {
   let date: Date;
   if (dateInput instanceof Timestamp) {
     date = dateInput.toDate();
-  } else if (typeof dateString === 'string') {
+  } else if (typeof dateInput === 'string') { // Changed from dateString to dateInput
     try {
-      const parsed = parseISO(dateString);
+      const parsed = parseISO(dateInput);
       date = isValid(parsed) ? parsed : new Date(0); // Fallback for invalid ISO
     } catch (e) {
       return 'N/A';
@@ -173,8 +173,9 @@ export default function DemoMachineListPage() {
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.slice(0, 20).map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow relative">
-                   <div className="absolute top-3 right-3 flex gap-1 z-10">
-                        <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                  <CardHeader className="pb-2 pt-4 px-4 pr-20"> {/* Added pr-20 for button spacing */}
+                    <div className="absolute top-3 right-3 flex gap-1 z-10">
+                        <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                           <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`}>
                             <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span>
                           </Link>
@@ -183,21 +184,20 @@ export default function DemoMachineListPage() {
                           <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
                         </Button>
                     </div>
-                  <CardHeader className="pb-3 pt-4 px-4 pr-20">
-                    <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
+                    <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
                        {formatReportValue(machine.machineModel)}
                     </CardTitle>
-                     <CardDescription className="text-xs text-muted-foreground">
-                        Owner: {formatReportValue(machine.machineOwner)}
+                     <CardDescription className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                        <span>Owner: {formatReportValue(machine.machineOwner)}</span>
                         {machine.currentStatus && (
-                            <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="ml-2 text-xs">
+                            <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="ml-auto text-xs">
                                 {machine.currentStatus}
                             </Badge>
                         )}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
+                  <CardContent className="px-4 pb-4 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
                       <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                       <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
                       {machine.motorOrControlBoxModel && (
@@ -207,19 +207,23 @@ export default function DemoMachineListPage() {
                         <div><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                       )}
                     </div>
-                    {machine.machineFeatures && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Features:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.machineFeatures}</p>
-                        </div>
-                    )}
-                    {machine.note && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Note:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.note}</p>
-                        </div>
-                    )}
-                    <div className="mt-2 text-xs text-muted-foreground text-right">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                        {machine.machineFeatures && (
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Features:</p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.machineFeatures}</p>
+                            </div>
+                        )}
+                        {machine.note && (
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Note:</p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.note}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-3 text-xs text-muted-foreground text-right">
                       Added: {formatDisplayDate(machine.createdAt)}
                     </div>
                   </CardContent>
@@ -232,5 +236,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
-    
