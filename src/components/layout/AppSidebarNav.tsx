@@ -58,6 +58,7 @@ import {
   FileCode,
   AppWindow,
   Factory,
+  FileEdit, // Ensure this is imported
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -90,18 +91,18 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: Edit }, // Changed from FileEdit
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
       { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     ],
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -113,7 +114,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
+    icon: Truck,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -122,7 +123,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from Building
+    icon: Factory,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -131,7 +132,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -187,7 +188,7 @@ const reportingManagementNavItems: NavItemGroup[] = [
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
   { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] }, // All admins can now see SMTP
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
@@ -249,7 +250,8 @@ export function AppSidebarNav() {
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
-  }, [pathname, userRole]); // Removed allAccordionGroups from dependency as it's stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, userRole]);
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
@@ -264,9 +266,10 @@ export function AppSidebarNav() {
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (userRole !== "Super Admin" && item.roles && userRole && item.roles.includes(userRole) && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+    if (userRole !== "Super Admin" && item.roles && userRole && !item.roles.includes(userRole) && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
+
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -307,10 +310,10 @@ export function AppSidebarNav() {
                         )}
                         tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                       >
-                        <>
+                        <span> {/* Replaced Fragment with span */}
                           {subLink.icon && <subLink.icon className="h-4 w-4" />}
                           <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                        </>
+                        </span>
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
@@ -361,42 +364,24 @@ export function AppSidebarNav() {
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
             {[mainDashboardLink, globalSearchLink].map((item) => {
-               if (userRole === "Super Admin") return item.href && (
+              // Logic to determine if dashboard link should be shown for "Service" role
+              if (item.href === '/dashboard' && userRole === "Service") {
+                return null; // Don't show main dashboard link for Service role
+              }
+              if (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) {
+                return item.href && (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(item.href)} className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: item.label!, side: "right", className: "ml-2"}}>
-                      <>
+                      <span> {/* Replaced Fragment with span */}
                         {item.icon && <item.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </>
+                      </span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
               );
-              if (item.href === '/dashboard' && (userRole === "Admin" || userRole === "User")) return item.href && (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} passHref>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: item.label!, side: "right", className: "ml-2"}}>
-                       <>
-                        {item.icon && <item.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                       </>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              );
-               if (item.href === '/dashboard/search' && userRole === "Admin") return item.href && (
-                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} passHref>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: item.label!, side: "right", className: "ml-2"}}>
-                      <>
-                        {item.icon && <item.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              );
+              }
               return null;
             })}
         </SidebarMenu>
@@ -430,7 +415,7 @@ export function AppSidebarNav() {
               {warrantyManagementNavItems.map(renderNavGroup)}
           </Accordion>
         </SidebarGroup>
-        
+
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -459,7 +444,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole))) && item.href &&
+                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton
@@ -468,10 +453,10 @@ export function AppSidebarNav() {
                       className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
                       tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                     >
-                      <>
+                      <span> {/* Replaced Fragment with span */}
                         {item.icon && <item.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </>
+                      </span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
