@@ -5,12 +5,12 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity } from 'lucide-react'; // Added Activity icon
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { DemoMachine, DemoMachineOwnerOption } from '@/types'; // Ensure correct import
-import { demoMachineOwnerOptions } from '@/types'; // Ensure correct import
+import type { DemoMachine, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
+import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ const demoMachineSchema = z.object({
   machineSerial: z.string().min(1, "Machine Serial is required"),
   machineBrand: z.string().min(1, "Machine Brand is required"),
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
+  currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
 });
 
 type DemoMachineFormValues = z.infer<typeof demoMachineSchema>;
@@ -35,6 +36,7 @@ export function AddDemoMachineForm() {
       machineSerial: '',
       machineBrand: '',
       machineOwner: demoMachineOwnerOptions[0], // Default to "Own Machine"
+      currentStatus: demoMachineStatusOptions[0], // Default to "Available"
     },
   });
 
@@ -120,7 +122,7 @@ export function AddDemoMachineForm() {
           name="machineOwner"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Machine Owner*</FormLabel>
+              <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Owner*</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -141,6 +143,34 @@ export function AddDemoMachineForm() {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="currentStatus"
+          render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel className="flex items-center"><Activity className="mr-2 h-4 w-4 text-muted-foreground" />Current Machine Status*</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+                >
+                  {demoMachineStatusOptions.map((option) => (
+                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value={option} />
+                      </FormControl>
+                      <FormLabel className="font-normal">{option}</FormLabel>
+                    </FormItem>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (

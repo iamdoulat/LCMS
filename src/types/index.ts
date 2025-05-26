@@ -67,7 +67,6 @@ export interface LCEntry {
   eta?: Date | null | undefined;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed as per previous request
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -153,7 +152,6 @@ export interface LCEntryDocument {
   eta?: string; // ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -201,7 +199,6 @@ export interface LCEntryDocument {
   invoiceQty?: number;
   packingListQty?: number;
   beneficiaryCertificateQty?: number;
-  brandNewCertificateQty?: number;
   brandNewCertificateQty?: number;
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
@@ -297,10 +294,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Allow empty string for input, parse to number
-  purchasePrice: number | ''; // Allow empty string for input, parse to number
-  salesPrice: number | ''; // Allow empty string for input, parse to number
-  netCommissionPercentage?: number | ''; // Allow empty string for input
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -363,12 +360,11 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Changed to optional
-  ctlBoxSerial: z.string().optional(), // Changed to optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
-  // warrantyRemaining field is removed as it's dynamically calculated
 });
-export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -394,12 +390,12 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0); // Only consider non-empty, non-whitespace serials
+          .filter((sn): sn is string => !!sn && sn.length > 0);
         return new Set(serials).size === serials.length;
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: [], // Error attached to the array itself
+        path: [],
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -429,7 +425,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty?: number | string;
   missingItemInfo?: string;
@@ -469,12 +465,16 @@ export interface DemoMachineFactoryDocument extends DemoMachineFactory {
 export const demoMachineOwnerOptions = ["Own Machine", "Rent Machine", "Supplier Machine"] as const;
 export type DemoMachineOwnerOption = typeof demoMachineOwnerOptions[number];
 
+export const demoMachineStatusOptions = ["Available", "Allocated", "Maintenance Mode"] as const;
+export type DemoMachineStatusOption = typeof demoMachineStatusOptions[number];
+
 export interface DemoMachine {
   id?: string;
   machineModel: string;
   machineSerial: string;
   machineBrand: string;
   machineOwner: DemoMachineOwnerOption;
+  currentStatus?: DemoMachineStatusOption;
   createdAt?: any; // Firestore ServerTimestamp
   updatedAt?: any; // Firestore ServerTimestamp
 }
