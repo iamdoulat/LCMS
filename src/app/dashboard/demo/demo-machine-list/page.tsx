@@ -173,8 +173,8 @@ export default function DemoMachineListPage() {
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.slice(0, 20).map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow relative">
-                  <CardHeader className="pb-2 pt-4 px-4 pr-20"> 
-                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
+                  <CardHeader className="relative pb-2 pt-4 px-4"> 
+                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
                             <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                               <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`}>
@@ -191,12 +191,12 @@ export default function DemoMachineListPage() {
                             </Badge>
                         )}
                     </div>
-                    <CardTitle className="text-lg font-semibold text-primary mb-0 truncate pr-20">
-                       {formatReportValue(machine.machineModel)}
-                    </CardTitle>
-                     <CardDescription className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
-                        <span>Owner: <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span></span>
-                    </CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20"> {/* Added mr-20 to prevent overlap */}
+                        <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
+                           {formatReportValue(machine.machineModel)}
+                        </CardTitle>
+                        {/* Owner CardDescription removed as per request */}
+                    </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
@@ -206,8 +206,10 @@ export default function DemoMachineListPage() {
                             <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
                         )}
                         {machine.controlBoxSerialNo && (
-                           <div className="md:col-start-1"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
+                           <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                         )}
+                        {/* Machine Owner moved to CardDescription */}
+                         <div className="text-muted-foreground text-sm"><span className="text-muted-foreground">Owner: </span><span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span></div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
@@ -238,3 +240,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
