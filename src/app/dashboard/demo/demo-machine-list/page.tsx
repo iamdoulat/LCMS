@@ -32,11 +32,11 @@ const formatMachineDate = (dateInput?: string | Timestamp): string => {
 const getStatusBadgeVariant = (status?: DemoMachineStatusOption): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Available':
-      return 'default'; // Greenish
+      return 'default';
     case 'Allocated':
-      return 'secondary'; // Bluish/Greyish
+      return 'secondary'; 
     case 'Maintenance Mode':
-      return 'destructive'; // Reddish
+      return 'destructive';
     default:
       return 'outline';
   }
@@ -62,7 +62,6 @@ export default function DemoMachineListPage() {
           return {
             id: docSnap.id,
             ...data,
-            // Ensure dates are consistently strings or handle conversion if they are Timestamps
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
           } as DemoMachineDocument;
@@ -190,7 +189,7 @@ export default function DemoMachineListPage() {
                             </Tooltip>
                         </TooltipProvider>
                     </div>
-                  <CardHeader className="pb-3 pt-4 px-4 pr-20"> {/* Added pr-20 for spacing */}
+                  <CardHeader className="pb-3 pt-4 px-4 pr-20">
                     <div className="flex justify-between items-start">
                         <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
                            {machine.machineModel || 'N/A'}
@@ -199,7 +198,7 @@ export default function DemoMachineListPage() {
                          <Badge 
                             variant={getStatusBadgeVariant(machine.currentStatus)}
                             className={cn(
-                                "text-xs", // Ensure text size consistency
+                                "text-xs",
                                 machine.currentStatus === "Available" && "bg-green-600 text-white dark:bg-green-500 dark:text-black",
                                 machine.currentStatus === "Maintenance Mode" && "bg-red-600 text-white dark:bg-red-500 dark:text-black",
                                 machine.currentStatus === "Allocated" && "bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black"
@@ -234,19 +233,21 @@ export default function DemoMachineListPage() {
                       </div>
                     </div>
                     
-                     {machine.machineFeatures && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground">Features:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
-                        </div>
-                    )}
-                    {machine.note && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground">Note:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
-                        </div>
-                    )}
-                    <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
+                        {machine.machineFeatures && (
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground">Features:</p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
+                            </div>
+                        )}
+                        {machine.note && (
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground">Note:</p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground text-right">
                       Added: {formatMachineDate(machine.createdAt)}
                     </div>
                   </CardContent>
@@ -259,3 +260,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
