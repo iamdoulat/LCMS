@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash } from 'lucide-react'; // Added Cog, Hash
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText } from 'lucide-react'; 
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -14,6 +14,7 @@ import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
@@ -25,6 +26,8 @@ const demoMachineSchema = z.object({
   controlBoxSerialNo: z.string().optional(),
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
+  machineFeatures: z.string().optional(),
+  note: z.string().optional(),
 });
 
 type DemoMachineFormValues = z.infer<typeof demoMachineSchema>;
@@ -39,8 +42,10 @@ export function AddDemoMachineForm() {
       machineBrand: '',
       motorOrControlBoxModel: '',
       controlBoxSerialNo: '',
-      machineOwner: demoMachineOwnerOptions[0], // Default to "Own Machine"
-      currentStatus: demoMachineStatusOptions[0], // Default to "Available"
+      machineOwner: demoMachineOwnerOptions[0], 
+      currentStatus: demoMachineStatusOptions[0],
+      machineFeatures: '',
+      note: '',
     },
   });
 
@@ -51,11 +56,12 @@ export function AddDemoMachineForm() {
       ...data,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
+      machineFeatures: data.machineFeatures || undefined,
+      note: data.note || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    // Remove undefined fields before saving
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof typeof dataToSave] === undefined) {
         delete dataToSave[key as keyof typeof dataToSave];
@@ -215,6 +221,35 @@ export function AddDemoMachineForm() {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="machineFeatures"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Machine features:</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Describe machine features (e.g., color, special functions)" {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Note:</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter any additional notes for this machine" {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (

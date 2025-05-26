@@ -81,7 +81,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This was previously notifyPartyContactDetails
+  notifyPartyName?: string; 
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -116,7 +116,7 @@ export interface LCEntry {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number; // Added this field
+  billOfExchangeQty?: number; 
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -203,7 +203,7 @@ export interface LCEntryDocument {
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
-  billOfExchangeQty?: number; // Added this field
+  billOfExchangeQty?: number;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -232,7 +232,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string; // Derived from contactPerson
+  contactPersonName?: string; 
   email?: string;
   phone?: string;
 }
@@ -279,8 +279,8 @@ export interface CompanyProfile {
 }
 
 export interface UserDocumentForAdmin {
-  id: string; // Firestore document ID
-  uid?: string; // Firebase Auth UID
+  id: string; 
+  uid?: string; 
   displayName: string;
   email: string;
   contactNumber?: string;
@@ -294,10 +294,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Allow empty string for form input
-  purchasePrice: number | ''; // Allow empty string for form input
-  salesPrice: number | ''; // Allow empty string for form input
-  netCommissionPercentage?: number | ''; // Allow empty string for form input
+  qty: number | ''; 
+  purchasePrice: number | ''; 
+  salesPrice: number | ''; 
+  netCommissionPercentage?: number | ''; 
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -331,7 +331,7 @@ export interface ProformaInvoice {
   updatedAt?: any;
 }
 
-export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses'> & {
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'connectedLcIssueDate'> & {
   id: string;
   piDate: string; // ISO string
   connectedLcIssueDate?: string; // ISO string
@@ -360,8 +360,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Made optional
-  ctlBoxSerial: z.string().optional(), // Made optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -390,12 +390,12 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0); // Only consider non-empty serials
+          .filter((sn): sn is string => !!sn && sn.length > 0); 
         return new Set(serials).size === serials.length;
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: ["installationDetails"], // Point error to the array
+        path: ["installationDetails"], 
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -441,7 +441,15 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { id: string };
+  lcData: LCEntryDocument & { 
+    id: string,
+    commercialInvoiceDate?: string,
+    partialShipmentAllowed?: PartialShipmentAllowed,
+    firstPartialQty?: number, firstPartialAmount?: number, firstPartialPkgs?: number, firstPartialNetWeight?: number, firstPartialGrossWeight?: number, firstPartialCbm?: number,
+    secondPartialQty?: number, secondPartialAmount?: number, secondPartialPkgs?: number, secondPartialNetWeight?: number, secondPartialGrossWeight?: number, secondPartialCbm?: number,
+    thirdPartialQty?: number, thirdPartialAmount?: number, thirdPartialPkgs?: number, thirdPartialNetWeight?: number, thirdPartialGrossWeight?: number, thirdPartialCbm?: number,
+    packingListUrl?: string;
+  };
 }
 
 // --- Demo Machine Factory Types ---
@@ -477,6 +485,8 @@ export interface DemoMachine {
   currentStatus?: DemoMachineStatusOption;
   motorOrControlBoxModel?: string;
   controlBoxSerialNo?: string;
+  machineFeatures?: string; // New field
+  note?: string; // New field
   createdAt?: any; // Firestore ServerTimestamp
   updatedAt?: any; // Firestore ServerTimestamp
 }
