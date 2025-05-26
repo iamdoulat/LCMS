@@ -28,7 +28,6 @@ import {
   ListChecks,
   FilePlus2,
   FileText,
-  Briefcase,
   Truck,
   Ship,
   Factory,
@@ -55,8 +54,10 @@ import {
   AppWindow,
   Users as UsersIcon,
   Edit,
-  PackageCheck, // Added PackageCheck
-  Building, // Keep Building as it's used by Company Setup
+  PackageCheck,
+  Building,
+  Briefcase,
+  UserPlus, // Added UserPlus here
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -121,7 +122,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -130,7 +131,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -166,7 +167,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
+      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed as per user request
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
@@ -198,13 +199,11 @@ export function AppSidebarNav() {
   const companyLogoUrlFromContext = companyLogoUrl || "/icons/favicon-32x32.png";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
 
-  React.useEffect(() => {
-    // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-  }, [userRole]);
+  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname.startsWith(href) && pathname.split('/').length <= 3; // More specific for base dashboard
+    if (href === '/dashboard') return pathname.startsWith(href) && pathname.split('/').length <= 3;
     const regex = new RegExp(`^${href}([/\\?#].*)?$`);
     return regex.test(pathname);
   };
@@ -267,7 +266,7 @@ export function AppSidebarNav() {
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
-                  <span className="flex items-center gap-2"> {/* Changed div to span */}
+                  <span className="flex items-center gap-2"> 
                     <IconComponent className="h-5 w-5 text-primary" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
                   </span>
@@ -293,7 +292,7 @@ export function AppSidebarNav() {
                         )}
                         tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                       >
-                        <span className="flex items-center gap-2"> {/* Changed from <> to <span> */}
+                        <span className="flex items-center gap-2">
                           {subLink.icon && <subLink.icon className="h-4 w-4" />}
                           <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
                         </span>
@@ -391,7 +390,7 @@ export function AppSidebarNav() {
             {managementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
-
+        
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -401,7 +400,7 @@ export function AppSidebarNav() {
               {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
-
+        
         <SidebarSeparator />
          <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
