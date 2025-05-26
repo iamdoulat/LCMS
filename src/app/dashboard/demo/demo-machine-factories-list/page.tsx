@@ -10,7 +10,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import type { DemoMachineFactoryDocument } from '@/types';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns'; // For createdAt display
+import { format } from 'date-fns';
 import Swal from 'sweetalert2';
 
 const formatFactoryDate = (dateInput?: string | Timestamp): string => {
@@ -20,14 +20,22 @@ const formatFactoryDate = (dateInput?: string | Timestamp): string => {
     date = dateInput.toDate();
   } else if (typeof dateInput === 'string') {
     try {
-      date = new Date(dateInput); // Attempt to parse if it's a string that new Date can handle
+      // Try parsing as ISO string first, then fall back to general Date constructor
+      let parsedDate = new Date(dateInput);
+      if (isNaN(parsedDate.valueOf())) { // Check if initial parsing failed
+        // Attempt more lenient parsing for formats like "May 26th, 2025 5:18 PM"
+        // This is a simplistic attempt; for robust multi-format parsing, a library like date-fns-tz or moment.js would be better
+        // For now, we'll rely on what new Date() can handle or what might be an ISO string already.
+         parsedDate = new Date(dateInput.replace(/(\d+)(st|nd|rd|th)/, '$1')); // Remove ordinal suffixes
+      }
+      date = parsedDate;
     } catch (e) {
       return 'Invalid Date Input';
     }
   } else {
     return 'Invalid Date Input';
   }
-  return date && !isNaN(date.valueOf()) ? format(date, 'PPP p') : 'Invalid Date';
+  return date && !isNaN(date.valueOf()) ? format(date, 'PPP p') : 'N/A';
 };
 
 
@@ -49,8 +57,7 @@ export default function DemoMachineFactoriesListPage() {
           return {
             id: docSnap.id,
             ...data,
-            // Ensure createdAt and updatedAt are consistently strings or handle Timestamps
-            createdAt: data.createdAt, // Keep as Timestamp or convert to ISO string as needed
+            createdAt: data.createdAt, 
             updatedAt: data.updatedAt,
           } as DemoMachineFactoryDocument;
         });
@@ -117,7 +124,7 @@ export default function DemoMachineFactoriesListPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"> {/* Scrollable container */}
+            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {factories.map((factory) => (
                 <Card key={factory.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3 pt-4 px-4">
@@ -128,37 +135,41 @@ export default function DemoMachineFactoriesListPage() {
                         {/* Add Edit/Delete buttons here if needed later */}
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-0">
-                    <div className="space-y-1 text-sm">
-                      <p className="flex items-start">
-                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
+                  <CardContent className="px-4 pb-4 pt-0 text-sm">
+                    <div className="flex items-start mb-1">
+                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
+                      <div>
                         <span className="text-muted-foreground">Address: </span>
-                        <span className="font-medium text-foreground ml-1">{factory.factoryLocation || 'N/A'}</span>
-                      </p>
+                        <span className="font-medium text-foreground">{factory.factoryLocation || 'N/A'}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mb-1">
                       {factory.contactPerson && (
-                        <p className="flex items-center">
+                        <div className="flex items-center">
                             <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="text-muted-foreground">Contact: </span>
-                            <span className="font-medium text-foreground ml-1">{factory.contactPerson}</span>
-                        </p>
+                            <span className="font-medium text-foreground ml-1 truncate" title={factory.contactPerson}>{factory.contactPerson}</span>
+                        </div>
                       )}
                       {factory.cellNumber && (
-                        <p className="flex items-center">
+                        <div className="flex items-center">
                             <Phone className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="text-muted-foreground">Cell: </span>
-                            <a href={`tel:${factory.cellNumber.replace(/\s/g, '')}`} className="font-medium text-primary hover:underline ml-1" title={`Call ${factory.cellNumber}`}>
+                            <a href={`tel:${factory.cellNumber.replace(/\s/g, '')}`} className="font-medium text-primary hover:underline ml-1 truncate" title={`Call ${factory.cellNumber}`}>
                                 {factory.cellNumber}
                             </a>
-                        </p>
+                        </div>
                       )}
                     </div>
+
                     {factory.note && (
                         <div className="mt-2">
                             <p className="text-xs font-medium text-muted-foreground">Note:</p>
                             <p className="text-xs text-foreground whitespace-pre-wrap">{factory.note}</p>
                         </div>
                     )}
-                    <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="mt-3 text-xs text-muted-foreground">
                       Added: {formatFactoryDate(factory.createdAt)}
                     </div>
                   </CardContent>
@@ -171,3 +182,4 @@ export default function DemoMachineFactoriesListPage() {
     </div>
   );
 }
+
