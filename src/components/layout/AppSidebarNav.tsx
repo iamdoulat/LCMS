@@ -42,22 +42,16 @@ import {
   ClipboardList,
   Archive,
   ShieldCheck,
-  ShieldOff,
   BarChart3,
   DollarSign,
   Package,
-  CreditCard,
-  Microscope,
   Sheet,
   Laptop,
   FileCode,
   AppWindow,
   Users as UsersIcon,
   Edit,
-  PackageCheck,
-  Building,
-  Briefcase,
-  UserPlus, // Added UserPlus here
+  Building, // Keep Building if used by Company Setup
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -101,7 +95,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -113,7 +107,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -166,8 +160,8 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
-      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed as per user request
+      // { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow }, // Removed link
+      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
@@ -198,8 +192,6 @@ export function AppSidebarNav() {
 
   const companyLogoUrlFromContext = companyLogoUrl || "/icons/favicon-32x32.png";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
-
-  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -350,8 +342,8 @@ export function AppSidebarNav() {
                     <Link href={mainDashboardLink.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
                         <span className="flex items-center gap-2">
-                        {mainDashboardLink.icon && <mainDashboardLink.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{mainDashboardLink.label}</span>
+                          {mainDashboardLink.icon && <mainDashboardLink.icon className="h-5 w-5 text-primary" />}
+                          <span className="group-data-[collapsible=icon]:hidden">{mainDashboardLink.label}</span>
                         </span>
                     </SidebarMenuButton>
                     </Link>
@@ -362,8 +354,8 @@ export function AppSidebarNav() {
                     <Link href={globalSearchLink.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
                         <span className="flex items-center gap-2">
-                        {globalSearchLink.icon && <globalSearchLink.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{globalSearchLink.label}</span>
+                          {globalSearchLink.icon && <globalSearchLink.icon className="h-5 w-5 text-primary" />}
+                          <span className="group-data-[collapsible=icon]:hidden">{globalSearchLink.label}</span>
                         </span>
                     </SidebarMenuButton>
                     </Link>
