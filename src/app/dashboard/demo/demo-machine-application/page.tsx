@@ -238,11 +238,7 @@ export default function DemoMachineApplicationPage() {
                 Fill in the details below to request a demo machine.
               </CardDescription>
             </div>
-            <Link href="/dashboard/demo/add-demo-machine-factory" passHref>
-              <Button variant="outline">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Factory
-              </Button>
-            </Link>
+            {/* Removed "Add Factory" button */}
           </div>
         </CardHeader>
         <CardContent>
@@ -430,5 +426,3 @@ export default function DemoMachineApplicationPage() {
     </div>
   );
 }
-
-    
