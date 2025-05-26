@@ -51,9 +51,10 @@ import {
   Users as UsersIcon,
   Factory,
   Building,
-  FileEdit,
+  FileEdit, // Keep FileEdit if used elsewhere or if it's for recent-draft-lcs
   PackageCheck,
   UserPlus,
+  FileText, // Added FileText import
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -87,17 +88,16 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Using FileText here
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
-      { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     ],
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Using Briefcase here
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -137,20 +137,6 @@ const managementNavItems: NavItemGroup[] = [
   },
 ];
 
-const warrantyManagementNavItems: NavItemGroup[] = [
- {
-    groupLabel: 'Warranty Management',
-    icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service"],
-    subLinks: [
-      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
-    ],
-  },
-];
-
 const demoMachineManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Demo M/C Management',
@@ -161,8 +147,22 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
+    ],
+  },
+];
+
+
+const warrantyManagementNavItems: NavItemGroup[] = [
+ {
+    groupLabel: 'Warranty Management',
+    icon: ShieldCheck,
+    roles: ["Super Admin", "Admin", "Service"],
+    subLinks: [
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
     ],
   },
 ];
@@ -180,9 +180,9 @@ const reportingManagementNavItems: NavItemGroup[] = [
 
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
@@ -190,9 +190,12 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
+  // Add console log to check userRole
+  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
 
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-  const displayCompanyNameFromContext = companyName || "Smart Solution";
+
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const displayCompanyNameFromSettings = companyName || "Smart Solution";
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -210,7 +213,6 @@ export function AppSidebarNav() {
     ...coreModulesNavItems,
     ...managementNavItems,
     ...warrantyManagementNavItems,
-    ...demoMachineManagementNavItems,
     ...reportingManagementNavItems,
   ];
 
@@ -305,7 +307,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
             <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromContext}
+                src={companyLogoUrlFromSettings} 
                 alt="Company Logo"
                 data-ai-hint="company logo"
                 width={32}
@@ -318,7 +320,7 @@ export function AppSidebarNav() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
                 )}
             >
-                {displayCompanyNameFromContext}
+                {displayCompanyNameFromSettings}
             </span>
             </Link>
             {!sidebar.isMobile && (
@@ -337,7 +339,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-          {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
+          {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && userRole !== "Service" && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -392,7 +394,7 @@ export function AppSidebarNav() {
               {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
-        
+
         <SidebarSeparator />
          <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -420,7 +422,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || (userRole === "Admin" && item.roles?.includes("Admin"))) && item.href &&
+                (userRole === "Super Admin" || userRole === "Admin") && item.href && // Show if Super Admin OR Admin
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton
@@ -458,3 +460,4 @@ export function AppSidebarNav() {
     </>
   );
 }
+
