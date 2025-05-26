@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus, PlusCircle, Trash2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -65,7 +65,7 @@ const lcEntrySchema = z.object({
   lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }).nullable(),
   expireDate: z.date().optional().nullable(),
   latestShipmentDate: z.date().optional().nullable(),
-  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Partial Shipment Allowed is required." }),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
   firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
@@ -96,18 +96,18 @@ const lcEntrySchema = z.object({
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
-  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
-  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   shippingMarks: z.string().optional(),
   purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
@@ -226,10 +226,9 @@ const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
 const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
 
-const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
-
 
 export function NewLCEntryForm() {
+  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
@@ -275,7 +274,7 @@ export function NewLCEntryForm() {
             value: docSnap.id,
             label: data.applicantName || 'Unnamed Applicant',
             address: data.address,
-            contactPersonName: data.contactPerson, // Keep as contactPerson
+            contactPersonName: data.contactPerson, 
             email: data.email,
             phone: data.phone,
            } as ApplicantOption;
@@ -290,6 +289,7 @@ export function NewLCEntryForm() {
           })
         );
       } catch (error) {
+        console.error("Error fetching dropdown data:", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
@@ -354,7 +354,8 @@ export function NewLCEntryForm() {
       });
     }
     prevPartialShipmentAllowedRef.current = watchedPartialShipmentAllowed;
-  }, [watchedPartialShipmentAllowed, setValue, getValues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPartialShipmentAllowed, setValue, getValues]); // Dependencies carefully chosen
 
 
   React.useEffect(() => {
@@ -539,7 +540,8 @@ export function NewLCEntryForm() {
       setTotalCalculatedPartialQty(0);
       setTotalCalculatedPartialAmount(0);
       setActiveSection46A(undefined);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error saving L/C entry:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       Swal.fire({
         title: "Save Failed",
@@ -799,7 +801,7 @@ export function NewLCEntryForm() {
           />
         </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 items-start">
             <FormField
             control={control}
             name="termsOfPay"
@@ -961,11 +963,11 @@ export function NewLCEntryForm() {
           name="partialShipmentAllowed"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Partial Shipment Allowed</FormLabel>
+              <FormLabel>Partial Shipment Allowed*</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={field.value ?? "No"}
+                  value={field.value ?? defaultFormValues.partialShipmentAllowed}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
                   {partialShipmentAllowedOptions.map((option) => (
@@ -988,7 +990,7 @@ export function NewLCEntryForm() {
             </h4>
             <div className="space-y-6">
               {/* 1st Partial Shipment */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -998,7 +1000,7 @@ export function NewLCEntryForm() {
               </div>
               <Separator />
               {/* 2nd Partial Shipment */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1008,7 +1010,7 @@ export function NewLCEntryForm() {
               </div>
               <Separator />
               {/* 3rd Partial Shipment */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1119,7 +1121,7 @@ export function NewLCEntryForm() {
                    <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value ?? defaultFormValues.shipmentMode}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {shipmentModeOptions.map((option) => (
@@ -1251,7 +1253,7 @@ export function NewLCEntryForm() {
                 <FormItem className="md:col-span-1">
                   <FormLabel>Tracking Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter tracking number" {...field} disabled={!watch("trackingCourier")} value={field.value ?? ''} />
+                    <Input placeholder="Enter tracking number" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1676,4 +1678,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
