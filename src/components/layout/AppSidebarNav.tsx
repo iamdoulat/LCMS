@@ -39,23 +39,25 @@ import {
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Factory,
-  Truck,
-  Ship,
+  Building, // Customers/Applicants was using Factory, then Building. Keeping Building for Company Setup.
+  Truck,    // Suppliers/Beneficiary
+  Ship,     // Shipment Management
   ShieldCheck,
   BarChart3,
-  Users as UsersIcon,
+  Users as UsersIcon, // Explicitly use UsersIcon for "Users" settings link
   Wrench,
   ClipboardList,
   Archive,
   Edit,
   PackageCheck,
   Package,
-  CreditCard,
-  Microscope,
-  Building,
+  CreditCard, // Not currently used, but imported
+  Microscope, // Not currently used, but imported
   Sheet,
-  Laptop, // Added Laptop icon
+  Laptop,   // For Demo M/C Management group
+  FileCode, // For Demo Machine Program
+  AppWindow, // For Demo Machine Application
+  Factory,  // For Add Demo Machine Factory & Customers/Applicants
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -88,18 +90,18 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
       { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: Edit }, // Moved here
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: Edit },
       { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     ],
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -111,7 +113,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Ship
+    icon: Truck,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -120,7 +122,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from UsersIcon, then Building, now Factory
+    icon: Factory,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -129,7 +131,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -160,7 +162,12 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
     icon: Laptop,
     roles: ["Super Admin", "Admin"],
     subLinks: [
-      // Add sub-links here later
+      { href: '/dashboard/demo-machine-management/demo-machine-search', label: 'Demo Machine Search', icon: Search },
+      { href: '/dashboard/demo-machine-management/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
+      { href: '/dashboard/demo-machine-management/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
+      { href: '/dashboard/demo-machine-management/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
+      { href: '/dashboard/demo-machine-management/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
+      { href: '/dashboard/demo-machine-management/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
 ];
@@ -178,21 +185,16 @@ const reportingManagementNavItems: NavItemGroup[] = [
 
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] }, // Kept Super Admin only for logs
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
-
-  // For console debugging during development
-  React.useEffect(() => {
-    console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-  }, [userRole]);
 
   const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
@@ -247,18 +249,12 @@ export function AppSidebarNav() {
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Super Admin sees all defined groups.
-    // Other roles see a group if:
-    // 1. The group itself has no role restrictions OR their role is included.
-    // AND
-    // 2. There's at least one subLink visible to them OR the group is meant to be empty (like Demo/Reporting).
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
@@ -269,12 +265,9 @@ export function AppSidebarNav() {
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    // Further check: if a group is role-restricted (but user has the role), and all its sublinks are role-restricted from this user, hide the group.
-    // Exception for intentionally empty groups.
-    if (userRole !== "Super Admin" && item.roles && userRole && item.roles.includes(userRole) && visibleSubLinks.length === 0 && item.groupLabel !== "Demo M/C Management" && item.groupLabel !== "Reporting Management" && item.subLinks && item.subLinks.length > 0) {
+    if (userRole !== "Super Admin" && item.roles && userRole && item.roles.includes(userRole) && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
-
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -372,21 +365,12 @@ export function AppSidebarNav() {
                if (userRole === "Super Admin") return item.href && (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.href)}
-                      className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                      tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                    >
-                      <a>
-                        {item.icon && <item.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </a>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: item.label!, side: "right", className: "ml-2"}}>
+                      <a>{item.icon && <item.icon className="h-5 w-5 text-primary" />}<span className="group-data-[collapsible=icon]:hidden">{item.label}</span></a>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
               );
-              // Specific role checks for other roles
               if (item.href === '/dashboard' && (userRole === "Admin" || userRole === "User")) return item.href && (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
@@ -396,7 +380,7 @@ export function AppSidebarNav() {
                   </Link>
                 </SidebarMenuItem>
               );
-              if (item.href === '/dashboard/search' && userRole === "Admin") return item.href && (
+               if (item.href === '/dashboard/search' && userRole === "Admin") return item.href && (
                  <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton asChild isActive={isActive(item.href)} className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: item.label!, side: "right", className: "ml-2"}}>
