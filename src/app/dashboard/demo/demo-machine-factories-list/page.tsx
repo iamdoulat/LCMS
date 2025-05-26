@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin } from 'lucide-react';
+import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin, MessageSquare, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
@@ -20,15 +20,7 @@ const formatFactoryDate = (dateInput?: string | Timestamp): string => {
     date = dateInput.toDate();
   } else if (typeof dateInput === 'string') {
     try {
-      // Try parsing as ISO string first, then fall back to general Date constructor
-      let parsedDate = new Date(dateInput);
-      if (isNaN(parsedDate.valueOf())) { // Check if initial parsing failed
-        // Attempt more lenient parsing for formats like "May 26th, 2025 5:18 PM"
-        // This is a simplistic attempt; for robust multi-format parsing, a library like date-fns-tz or moment.js would be better
-        // For now, we'll rely on what new Date() can handle or what might be an ISO string already.
-         parsedDate = new Date(dateInput.replace(/(\d+)(st|nd|rd|th)/, '$1')); // Remove ordinal suffixes
-      }
-      date = parsedDate;
+      date = new Date(dateInput);
     } catch (e) {
       return 'Invalid Date Input';
     }
@@ -136,37 +128,41 @@ export default function DemoMachineFactoriesListPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0 text-sm">
-                    <div className="flex items-start mb-1">
-                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
-                      <div>
-                        <span className="text-muted-foreground">Address: </span>
-                        <span className="font-medium text-foreground">{factory.factoryLocation || 'N/A'}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 mb-2"> {/* Changed to lg:grid-cols-2 for main details */}
+                      <div className="flex items-start col-span-1 sm:col-span-2 lg:col-span-1"> {/* Address takes full width on small, half on large */}
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
+                        <div>
+                          <span className="text-muted-foreground">Address: </span>
+                          <span className="font-medium text-foreground">{factory.factoryLocation || 'N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 sm:col-span-2 lg:col-span-1 space-y-1"> {/* Contact and Cell stack within this cell on small, side-by-side behavior handled internally or can be adjusted */}
+                        {factory.contactPerson && (
+                          <div className="flex items-center">
+                              <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Contact: </span>
+                              <span className="font-medium text-foreground ml-1 truncate" title={factory.contactPerson}>{factory.contactPerson}</span>
+                          </div>
+                        )}
+                        {factory.cellNumber && (
+                          <div className="flex items-center">
+                              <Phone className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Cell: </span>
+                              <a href={`tel:${factory.cellNumber.replace(/\s/g, '')}`} className="font-medium text-primary hover:underline ml-1 truncate" title={`Call ${factory.cellNumber}`}>
+                                  {factory.cellNumber}
+                              </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mb-1">
-                      {factory.contactPerson && (
-                        <div className="flex items-center">
-                            <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="text-muted-foreground">Contact: </span>
-                            <span className="font-medium text-foreground ml-1 truncate" title={factory.contactPerson}>{factory.contactPerson}</span>
-                        </div>
-                      )}
-                      {factory.cellNumber && (
-                        <div className="flex items-center">
-                            <Phone className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="text-muted-foreground">Cell: </span>
-                            <a href={`tel:${factory.cellNumber.replace(/\s/g, '')}`} className="font-medium text-primary hover:underline ml-1 truncate" title={`Call ${factory.cellNumber}`}>
-                                {factory.cellNumber}
-                            </a>
-                        </div>
-                      )}
-                    </div>
-
                     {factory.note && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground">Note:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap">{factory.note}</p>
+                        <div className="mt-2 flex items-start">
+                            <FileText className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                            <div>
+                                <span className="text-xs font-medium text-muted-foreground">Note: </span>
+                                <span className="text-xs text-foreground whitespace-pre-wrap">{factory.note}</span>
+                            </div>
                         </div>
                     )}
                     <div className="mt-3 text-xs text-muted-foreground">
