@@ -11,26 +11,40 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineFactoryDocument } from '@/types';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-const formatFactoryDate = (dateInput?: string | Timestamp): string => {
+const formatFactoryDate = (dateInput?: string | Timestamp | Date): string => {
   if (!dateInput) return 'N/A';
   let date: Date;
   if (dateInput instanceof Timestamp) {
     date = dateInput.toDate();
   } else if (typeof dateInput === 'string') {
     try {
-      date = new Date(dateInput);
+      const parsed = parseISO(dateInput);
+      if (isValid(parsed)) {
+        date = parsed;
+      } else {
+        // Try a more lenient parse if ISO fails (e.g. if it's already formatted)
+        const directDate = new Date(dateInput);
+        if (isValid(directDate)) {
+          date = directDate;
+        } else {
+          return 'Invalid Date Input';
+        }
+      }
     } catch (e) {
       return 'Invalid Date Input';
     }
-  } else {
+  } else if (dateInput instanceof Date) {
+    date = dateInput;
+  }
+   else {
     return 'Invalid Date Input';
   }
-  return date && !isNaN(date.valueOf()) ? format(date, 'PPP p') : 'N/A';
+  return date && isValid(date) ? format(date, 'PPP p') : 'N/A';
 };
 
 
@@ -90,15 +104,13 @@ export default function DemoMachineFactoriesListPage() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                // TODO: Actual Firestore deletion
-                // await deleteDoc(doc(firestore, "demo_machine_factories", factoryId));
+                await deleteDoc(doc(firestore, "demo_machine_factories", factoryId));
                 setFactories(prev => prev.filter(f => f.id !== factoryId));
                 Swal.fire(
                     'Deleted!',
-                    `Factory "${factoryLabel || factoryId}" has been removed from the list (simulation).`,
+                    `Factory "${factoryLabel || factoryId}" has been removed.`,
                     'success'
                 );
-                console.log(`TODO: Implement actual Firestore deletion for factory ID: ${factoryId}`);
             } catch (error: any) {
                 console.error("Error deleting factory: ", error);
                 Swal.fire(
@@ -154,15 +166,15 @@ export default function DemoMachineFactoriesListPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <ul className="space-y-4">
               {factories.map((factory) => (
-                <Card key={factory.id} className="shadow-md hover:shadow-lg transition-shadow relative">
-                  <CardHeader className="pb-3 pt-4 px-4">
+                <li key={factory.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                  <CardHeader className="pb-3 pt-0 px-0"> {/* Adjusted padding for header within li */}
                     <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20"> {/* Added pr-20 for spacing */}
+                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20">
                            <FactoryIcon className="inline-block mr-2 h-5 w-5 align-text-bottom" /> {factory.factoryName || 'N/A'}
                         </CardTitle>
-                        <div className="absolute top-3 right-3 flex gap-1 z-10">
+                        <div className="absolute top-4 right-4 flex gap-1 z-10"> {/* Adjusted top to match li padding */}
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -186,7 +198,7 @@ export default function DemoMachineFactoriesListPage() {
                         </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-0 text-sm">
+                  <CardContent className="px-0 pb-0 pt-0 text-sm flex-grow"> {/* Adjusted padding for content within li */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1 mb-2">
                       <div className="flex items-start col-span-1 lg:col-span-2">
                         <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
@@ -226,18 +238,19 @@ export default function DemoMachineFactoriesListPage() {
                             </div>
                         </div>
                     )}
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      Added: {formatFactoryDate(factory.createdAt)}
-                    </div>
                   </CardContent>
-                </Card>
+                  <div className="mt-auto self-end text-xs text-muted-foreground pt-2"> {/* Date positioned at bottom-right */}
+                    Added: {formatFactoryDate(factory.createdAt)}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+    
 
     
