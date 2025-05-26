@@ -55,7 +55,7 @@ import {
   FileCode,
   AppWindow,
   Factory,
-  UserPlus, // Added UserPlus import
+  UserPlus,
   Edit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -165,7 +165,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
+      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Demo Machine Factories', icon: Factory },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
@@ -197,8 +197,6 @@ export function AppSidebarNav() {
 
   const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
-  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -215,12 +213,11 @@ export function AppSidebarNav() {
         '/dashboard/warranty-management/search',
         '/dashboard/google-sheets',
         '/dashboard/demo/demo-machine-search',
-        // Add other parent routes for exact match if needed
       ];
       if (parentRoutes.some(parent => href === parent && (pathname === parent || pathname.startsWith(`${parent}/`)))) {
         return true;
       }
-      if (pathname === href) { // Exact match for sub-pages
+      if (pathname === href) { 
         return true;
       }
       return false;
@@ -259,18 +256,16 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Hide the entire group if the current user's role does not have access to the group
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
     
     const visibleSubLinks = item.subLinks?.filter(subLink =>
-        userRole === "Super Admin" || // Super Admin sees all sub-links
-        !subLink.roles || // Sub-link has no specific roles, so it's visible if group is visible
-        (userRole && subLink.roles.includes(userRole as UserRole)) // User has one of the sub-link's roles
+        userRole === "Super Admin" || 
+        !subLink.roles || 
+        (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    // If after filtering sub-links by role, there are no visible sub-links, don't render the group (unless it's Super Admin)
     if (userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
@@ -284,7 +279,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", // Hide default chevron in icon mode
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", 
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
@@ -367,7 +362,6 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-            {/* Main Dashboard Link */}
             {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
                 <SidebarMenuItem key={mainDashboardLink.href}>
                     <Link href={mainDashboardLink.href} passHref>
@@ -380,7 +374,6 @@ export function AppSidebarNav() {
                     </Link>
                 </SidebarMenuItem>
             )}
-            {/* Global Search Link */}
             {(userRole === "Super Admin" || userRole === "Admin") && globalSearchLink.href && (
                 <SidebarMenuItem key={globalSearchLink.href}>
                     <Link href={globalSearchLink.href} passHref>
