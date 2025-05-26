@@ -10,7 +10,7 @@ import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourie
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { addDoc, serverTimestamp, collection, getDocs, doc, deleteField } from 'firebase/firestore';
+import { addDoc, serverTimestamp, collection, getDocs, query, where, deleteField } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,10 +33,6 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
-
 const lcEntrySchema = z.object({
   applicantId: z.string().min(1, "Applicant Name is required"),
   beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
@@ -55,7 +51,7 @@ const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
-  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
+  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be non-negative integer.").optional().default(0)),
   status: z.enum(lcStatusOptions, { required_error: "L/C Status is required."}),
   itemDescriptions: z.string().optional(),
   partialShipments: z.string().optional(),
@@ -67,51 +63,51 @@ const lcEntrySchema = z.object({
   notifyPartyCell: z.string().optional(),
   notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }).nullable(),
-  expireDate: z.date().optional().nullable(), // Made optional
-  latestShipmentDate: z.date().optional().nullable(), // Made optional
-  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).default("No"),
-  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  firstPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  firstPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  firstPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  firstPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  secondPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  secondPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  secondPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  secondPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  thirdPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional().default(0)),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional().default(0)),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
+  expireDate: z.date().optional().nullable(),
+  latestShipmentDate: z.date().optional().nullable(),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Partial Shipment Allowed is required." }),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional()),
+  firstPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional()),
+  firstPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
+  firstPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
+  firstPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  secondPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional()),
+  secondPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
+  secondPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
+  secondPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  thirdPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional()),
+  thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional()),
+  thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional()),
+  thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional()),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional()),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional()),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional()),
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required." }),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingCourier: z.enum(trackingCourierOptions).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
-  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
   certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional(),
   shippingMarks: z.string().optional(),
   purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
@@ -158,9 +154,9 @@ const defaultFormValues: NewLCFormValues = {
   numberOfAmendments: 0,
   status: undefined,
   itemDescriptions: '',
-  partialShipments: '',
-  portOfLoading: '',
-  portOfDischarge: '',
+  partialShipments: "ALLOWED",
+  portOfLoading: "CHINA",
+  portOfDischarge: "CHATTOGRAM",
   consigneeBankNameAddress: '',
   notifyPartyNameAndAddress: '',
   notifyPartyName: '',
@@ -226,6 +222,13 @@ const defaultFormValues: NewLCFormValues = {
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
+const PLACEHOLDER_APPLICANT_VALUE = "__LC_NEW_APPLICANT_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_NEW_BENEFICIARY_PLACEHOLDER__";
+const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
+
+const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
+
+
 export function NewLCEntryForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [applicantOptions, setApplicantOptions] = React.useState<ApplicantOption[]>([]);
@@ -237,7 +240,6 @@ export function NewLCEntryForm() {
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
   const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   
-  const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
 
 
   const form = useForm<NewLCFormValues>({
@@ -273,7 +275,7 @@ export function NewLCEntryForm() {
             value: docSnap.id,
             label: data.applicantName || 'Unnamed Applicant',
             address: data.address,
-            contactPersonName: data.contactPerson,
+            contactPersonName: data.contactPerson, // Keep as contactPerson
             email: data.email,
             phone: data.phone,
            } as ApplicantOption;
@@ -288,7 +290,6 @@ export function NewLCEntryForm() {
           })
         );
       } catch (error) {
-        console.error("Error fetching dropdown data for New L/C Entry Form: ", error);
         Swal.fire("Error", "Could not fetch applicant/beneficiary data. See console for details.", "error");
       } finally {
         setIsLoadingApplicants(false);
@@ -319,8 +320,7 @@ export function NewLCEntryForm() {
     viaLabel = "Flight Name";
   }
 
-  const amountLabel = watchedCurrency ? `${watchedCurrency} Amount*` : "Amount*";
-
+  const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
 
   const partialFieldsToWatch = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -380,15 +380,17 @@ export function NewLCEntryForm() {
       const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
       const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
       const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-      if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
-        setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+      const currentTotalPkgs = Number(getValues("totalPackageQty") || 0);
+      if (currentTotalPkgs !== newTotalPkgs) {
+          setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
       }
 
       const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
       const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
       const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
       const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
-      if (Number(getValues("totalNetWeight") || 0) !== newTotalNetW) {
+      const currentTotalNetW = Number(getValues("totalNetWeight") || 0);
+       if (currentTotalNetW !== newTotalNetW) {
         setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
       }
 
@@ -396,7 +398,8 @@ export function NewLCEntryForm() {
       const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
       const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
       const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
-       if (Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW) {
+      const currentTotalGrossW = Number(getValues("totalGrossWeight") || 0);
+       if (currentTotalGrossW !== newTotalGrossW) {
         setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
       }
       
@@ -404,7 +407,8 @@ export function NewLCEntryForm() {
       const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
       const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
       const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
-       if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
+      const currentTotalCbm = Number(getValues("totalCbm") || 0);
+       if (currentTotalCbm !== newTotalCbm) {
         setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
       }
     }
@@ -446,8 +450,8 @@ export function NewLCEntryForm() {
       notifyPartyCell: finalData.notifyPartyCell || undefined,
       notifyPartyEmail: finalData.notifyPartyEmail || undefined,
       lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      expireDate: finalData.expireDate ? format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      latestShipmentDate: finalData.latestShipmentDate ? format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? undefined : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? undefined : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       partialShipmentAllowed: finalData.partialShipmentAllowed,
       shipmentMode: finalData.shipmentMode,
       vesselOrFlightName: finalData.vesselOrFlightName || undefined,
@@ -486,16 +490,16 @@ export function NewLCEntryForm() {
       secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialCbm) : undefined,
       thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialCbm) : undefined,
       totalPackageQty: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
         : toNumberOrUndefined(finalData.totalPackageQty),
       totalNetWeight: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        ? [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
         : toNumberOrUndefined(finalData.totalNetWeight),
       totalGrossWeight: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        ? [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
         : toNumberOrUndefined(finalData.totalGrossWeight),
       totalCbm: finalData.partialShipmentAllowed === "Yes"
-        ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p) || 0).reduce((s, v) => s + v, 0)
+        ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
         : toNumberOrUndefined(finalData.totalCbm),
       originalBlQty: toNumberOrUndefined(finalData.originalBlQty),
       copyBlQty: toNumberOrUndefined(finalData.copyBlQty),
@@ -536,7 +540,6 @@ export function NewLCEntryForm() {
       setTotalCalculatedPartialAmount(0);
       setActiveSection46A(undefined);
     } catch (error) {
-      console.error("Error adding L/C document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       Swal.fire({
         title: "Save Failed",
@@ -552,7 +555,7 @@ export function NewLCEntryForm() {
     const courier = getValues("trackingCourier");
     const number = getValues("trackingNumber");
 
-    if (!courier || courier.trim() === "" || !number || number.trim() === "") {
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
       Swal.fire({
         title: "Information Missing",
         text: "Please select a courier and enter a tracking number.",
@@ -563,9 +566,9 @@ export function NewLCEntryForm() {
 
     let url = "";
     if (courier === "DHL") {
-      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(number.trim())}&submit=1`;
+      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
     } else if (courier === "FedEx") {
-      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number.trim())}`;
+      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
     }
 
     if (url) {
@@ -581,7 +584,7 @@ export function NewLCEntryForm() {
 
   const handleTrackVessel = () => {
     const imoNumber = getValues("vesselImoNumber");
-    if (!imoNumber || imoNumber.trim() === "") {
+    if (!imoNumber || String(imoNumber).trim() === "") {
        Swal.fire({
         title: "IMO Number Missing",
         text: "Please enter a Vessel IMO number to track.",
@@ -589,25 +592,25 @@ export function NewLCEntryForm() {
       });
       return;
     }
-    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(imoNumber.trim())}`;
+    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleTrackFlight = () => {
     const flightNum = getValues("flightNumber");
-    if (!flightNum || flightNum.trim() === "") {
+    if (!flightNum || String(flightNum).trim() === "") {
       Swal.fire("Info", "Please enter a flight number to track.", "info");
       return;
     }
-    const url = `https://www.flightradar24.com/${encodeURIComponent(flightNum.trim())}`;
+    const url = `https://www.flightradar24.com/${encodeURIComponent(String(flightNum).trim())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleViewUrl = (url: string | undefined | null) => {
-    if (url && url.trim() !== "") {
+    if (url && String(url).trim() !== "") {
       try {
-        new URL(url);
-        window.open(url, '_blank', 'noopener,noreferrer');
+        new URL(String(url));
+        window.open(String(url), '_blank', 'noopener,noreferrer');
       } catch (e) {
         Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
       }
@@ -669,7 +672,7 @@ export function NewLCEntryForm() {
           />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
            <FormField
             control={form.control}
             name="currency"
@@ -679,7 +682,7 @@ export function NewLCEntryForm() {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value ?? currencyOptions[0]}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {currencyOptions.map((option) => (
@@ -795,7 +798,8 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
             control={control}
             name="termsOfPay"
@@ -805,7 +809,7 @@ export function NewLCEntryForm() {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                     value={field.value || ""}
+                    value={field.value ?? undefined}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {termsOfPayOptions.map((option) => (
@@ -829,7 +833,7 @@ export function NewLCEntryForm() {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value || ""}
+                     value={field.value ?? undefined}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {lcStatusOptions.map((statusOpt) => (
@@ -847,6 +851,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
                 control={control}
@@ -960,7 +965,7 @@ export function NewLCEntryForm() {
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={field.value || "No"} 
+                  value={field.value ?? "No"}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
                   {partialShipmentAllowedOptions.map((option) => (
@@ -983,7 +988,7 @@ export function NewLCEntryForm() {
             </h4>
             <div className="space-y-6">
               {/* 1st Partial Shipment */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -993,7 +998,7 @@ export function NewLCEntryForm() {
               </div>
               <Separator />
               {/* 2nd Partial Shipment */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1003,7 +1008,7 @@ export function NewLCEntryForm() {
               </div>
               <Separator />
               {/* 3rd Partial Shipment */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="thirdPartialQty" render={({ field }) => (<FormItem><FormLabel>3rd P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialAmount" render={({ field }) => (<FormItem><FormLabel>3rd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="thirdPartialPkgs" render={({ field }) => (<FormItem><FormLabel>3rd P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -1080,7 +1085,7 @@ export function NewLCEntryForm() {
                 </FormItem>
                 )}
             />
-             {watchedPartialShipmentAllowed === "Yes" && (
+            {watchedPartialShipmentAllowed === "Yes" && (
                 <>
                     <FormItem>
                         <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
@@ -1420,7 +1425,7 @@ export function NewLCEntryForm() {
         <Separator />
 
         {/* Section: 46A: Documents Required */}
-        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
               className={cn(
@@ -1432,7 +1437,7 @@ export function NewLCEntryForm() {
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
-              {activeSection46A === "section46A" ? 
+               {activeSection46A === "section46A" ? 
                 <Minus className="h-5 w-5 text-primary" /> : 
                 <Plus className="h-5 w-5 text-primary" />}
             </AccordionTrigger>
