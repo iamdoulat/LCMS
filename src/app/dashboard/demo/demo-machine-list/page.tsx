@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AppWindow, FileEdit, Trash2, Loader2, AlertTriangle, Info, Laptop as LaptopIcon, ExternalLink, CalendarDays, User, Phone, FileText } from 'lucide-react';
+import { Laptop as LaptopIcon, ListChecks, FileEdit, Trash2, Loader2, AlertTriangle, Info, CalendarDays, User, Phone, FileText as NoteIcon, AppWindow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
@@ -189,7 +189,7 @@ export default function DemoMachineApplicationsListPage() {
                     </div>
                     {app.notes && (
                         <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground flex items-center"><FileText className="mr-1 h-3.5 w-3.5" />Expected Result/Notes:</p>
+                            <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Expected Result/Notes:</p>
                             <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{app.notes}</p>
                         </div>
                     )}
