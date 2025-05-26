@@ -1,26 +1,39 @@
+
+"use client";
+
+import { AddDemoMachineFactoryForm } from '@/components/forms/AddDemoMachineFactoryForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 export default function AddDemoMachineFactoryPage() {
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl">
+        <div className="mb-6">
+            <Link href="/dashboard/demo/demo-machine-list" passHref> {/* Assuming you'll have a list page */}
+                <Button variant="outline">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Demo Machine Modules
+                </Button>
+            </Link>
+        </div>
+      <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Factory className="h-7 w-7 text-primary" />
-            Demo Machine Factory
+            Add New Demo Machine Factory
           </CardTitle>
           <CardDescription>
-            Add or manage factories related to demo machines.
+            Fill in the details below to add a new factory for demo machines. Fields marked with an asterisk (*) are required.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>Form for adding demo machine factory details will be here.</p>
+          <AddDemoMachineFactoryForm />
         </CardContent>
       </Card>
     </div>
   );
 }
-
-    

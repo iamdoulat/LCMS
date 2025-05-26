@@ -9,20 +9,20 @@ export const termsOfPayOptions = [
   "Deffered 180days",
   "Deffered 360days",
 ] as const;
-export type TermsOfPay = typeof termsOfPayOptions[number] | "";
+export type TermsOfPay = typeof termsOfPayOptions[number] | undefined;
 
 export const shipmentModeOptions = ["Sea", "Air"] as const;
-export type ShipmentMode = typeof shipmentModeOptions[number] | "";
+export type ShipmentMode = typeof shipmentModeOptions[number];
 
 export const currencyOptions = ["USD", "EURO"] as const;
-export type Currency = typeof currencyOptions[number] | "";
+export type Currency = typeof currencyOptions[number];
 
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
-export type TrackingCourier = typeof trackingCourierOptions[number];
+export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
 
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Done", "Shipment Done"] as const;
-export type LCStatus = typeof lcStatusOptions[number];
+export type LCStatus = typeof lcStatusOptions[number] | undefined;
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
@@ -44,27 +44,25 @@ const toNumberOrUndefined = (val: unknown): number | undefined => {
 export interface LCEntry {
   id?: string;
   applicantId: string;
-  // applicantName will be derived from applicantId on save
   beneficiaryId: string;
-  // beneficiaryName will be derived from beneficiaryId on save
   currency: Currency;
-  amount: number | '';
+  amount?: number;
   termsOfPay?: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date | null | undefined;
   commercialInvoiceNumber?: string;
   commercialInvoiceDate?: Date | null | undefined;
-  totalMachineQty: number | '';
+  totalMachineQty?: number;
   lcIssueDate?: Date | null | undefined;
   expireDate?: Date | null | undefined;
   latestShipmentDate?: Date | null | undefined;
   purchaseOrderUrl?: string;
-  packingListUrl?: string;
   finalPIUrl?: string;
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
-  trackingCourier?: TrackingCourier | "";
+  packingListUrl?: string;
+  trackingCourier?: TrackingCourier;
   trackingNumber?: string;
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
@@ -74,10 +72,10 @@ export interface LCEntry {
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
-  totalPackageQty?: number | '';
-  totalNetWeight?: number | '';
-  totalGrossWeight?: number | '';
-  totalCbm?: number | '';
+  totalPackageQty?: number;
+  totalNetWeight?: number;
+  totalGrossWeight?: number;
+  totalCbm?: number;
   partialShipments?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
@@ -87,39 +85,39 @@ export interface LCEntry {
   notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
-  numberOfAmendments?: number | '';
+  numberOfAmendments?: number;
   status?: LCStatus;
   partialShipmentAllowed?: PartialShipmentAllowed;
-  firstPartialQty?: number | '';
-  secondPartialQty?: number | '';
-  thirdPartialQty?: number | '';
-  firstPartialAmount?: number | '';
-  secondPartialAmount?: number | '';
-  thirdPartialAmount?: number | '';
-  firstPartialPkgs?: number | '';
-  firstPartialNetWeight?: number | '';
-  firstPartialGrossWeight?: number | '';
-  firstPartialCbm?: number | '';
-  secondPartialPkgs?: number | '';
-  secondPartialNetWeight?: number | '';
-  secondPartialGrossWeight?: number | '';
-  secondPartialCbm?: number | '';
-  thirdPartialPkgs?: number | '';
-  thirdPartialNetWeight?: number | '';
-  thirdPartialGrossWeight?: number | '';
-  thirdPartialCbm?: number | '';
-  originalBlQty?: number | '';
-  copyBlQty?: number | '';
-  originalCooQty?: number | '';
-  copyCooQty?: number | '';
-  invoiceQty?: number | '';
-  packingListQty?: number | '';
-  beneficiaryCertificateQty?: number | '';
-  brandNewCertificateQty?: number | '';
-  beneficiaryWarrantyCertificateQty?: number | '';
-  beneficiaryComplianceCertificateQty?: number | '';
-  shipmentAdviceQty?: number | '';
-  billOfExchangeQty?: number | '';
+  firstPartialQty?: number;
+  secondPartialQty?: number;
+  thirdPartialQty?: number;
+  firstPartialAmount?: number;
+  secondPartialAmount?: number;
+  thirdPartialAmount?: number;
+  firstPartialPkgs?: number;
+  firstPartialNetWeight?: number;
+  firstPartialGrossWeight?: number;
+  firstPartialCbm?: number;
+  secondPartialPkgs?: number;
+  secondPartialNetWeight?: number;
+  secondPartialGrossWeight?: number;
+  secondPartialCbm?: number;
+  thirdPartialPkgs?: number;
+  thirdPartialNetWeight?: number;
+  thirdPartialGrossWeight?: number;
+  thirdPartialCbm?: number;
+  originalBlQty?: number;
+  copyBlQty?: number;
+  originalCooQty?: number;
+  copyCooQty?: number;
+  invoiceQty?: number;
+  packingListQty?: number;
+  beneficiaryCertificateQty?: number;
+  brandNewCertificateQty?: number;
+  beneficiaryWarrantyCertificateQty?: number;
+  beneficiaryComplianceCertificateQty?: number;
+  shipmentAdviceQty?: number;
+  billOfExchangeQty?: number;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -145,10 +143,10 @@ export interface LCEntryDocument {
   expireDate?: string; // ISO string
   latestShipmentDate?: string; // ISO string
   purchaseOrderUrl?: string;
-  packingListUrl?: string;
   finalPIUrl?: string;
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
+  packingListUrl?: string;
   trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: string; // ISO string
@@ -235,7 +233,7 @@ export interface ApplicantOption {
   value: string;
   label: string;
   address?: string;
-  contactPersonName?: string;
+  contactPersonName?: string; // Derived from contactPerson
   email?: string;
   phone?: string;
 }
@@ -325,16 +323,16 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
+  totalSalesPrice: number; // Renamed from totalSalesPriceFromLineItems for consistency
   grandTotalSalesPrice: number;
-  grandTotalCommissionUSD?: number;
+  grandTotalCommissionUSD: number;
   totalExtraNetCommission?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
 }
 
-export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'grandTotalCommissionUSD' | 'totalExtraNetCommission'> & {
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses'> & {
   id: string;
   piDate: string; // ISO string
   connectedLcIssueDate?: string; // ISO string
@@ -346,8 +344,6 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   }>;
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
-  grandTotalCommissionUSD?: number;
-  totalExtraNetCommission?: number;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 };
@@ -369,7 +365,7 @@ export const InstallationDetailItemSchema = z.object({
   ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
-export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -395,7 +391,7 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0);
+          .filter((sn): sn is string => !!sn && sn.length > 0); // Only consider non-empty, non-whitespace serials
         return new Set(serials).size === serials.length;
       },
       {
@@ -430,7 +426,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; ctlBoxModel?: string; ctlBoxSerial?:string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty?: number | string; // Can be string 'N/A'
   missingItemInfo?: string;
@@ -446,8 +442,23 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { id: string };
+  lcData: LCEntryDocument & { id: string }; // Ensure id is part of lcData
 }
 
-// --- END Installation Report Types ---
+// --- Demo Machine Factory Types ---
+export interface DemoMachineFactory {
+  id?: string;
+  factoryName: string;
+  factoryLocation: string;
+  contactPerson?: string;
+  cellNumber?: string;
+  note?: string;
+}
 
+export interface DemoMachineFactoryDocument extends DemoMachineFactory {
+  id: string;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+
+// --- END Demo Machine Factory Types ---
