@@ -4,14 +4,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin, MessageSquare, FileText } from 'lucide-react';
+import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin, MessageSquare, FileText, FileEdit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineFactoryDocument } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Swal from 'sweetalert2';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const formatFactoryDate = (dateInput?: string | Timestamp): string => {
   if (!dateInput) return 'N/A';
@@ -32,6 +35,7 @@ const formatFactoryDate = (dateInput?: string | Timestamp): string => {
 
 
 export default function DemoMachineFactoriesListPage() {
+  const router = useRouter();
   const [factories, setFactories] = useState<DemoMachineFactoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -72,6 +76,40 @@ export default function DemoMachineFactoriesListPage() {
     };
     fetchFactories();
   }, []);
+
+  const handleDeleteFactory = (factoryId: string, factoryLabel?: string) => {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `This will permanently delete the factory "${factoryLabel || factoryId}". This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'hsl(var(--destructive))',
+        cancelButtonColor: 'hsl(var(--secondary))',
+        confirmButtonText: 'Yes, delete it!',
+        reverseButtons: true,
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                // TODO: Actual Firestore deletion
+                // await deleteDoc(doc(firestore, "demo_machine_factories", factoryId));
+                setFactories(prev => prev.filter(f => f.id !== factoryId));
+                Swal.fire(
+                    'Deleted!',
+                    `Factory "${factoryLabel || factoryId}" has been removed from the list (simulation).`,
+                    'success'
+                );
+                console.log(`TODO: Implement actual Firestore deletion for factory ID: ${factoryId}`);
+            } catch (error: any) {
+                console.error("Error deleting factory: ", error);
+                Swal.fire(
+                    'Error!',
+                    `Could not delete factory: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+    });
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -118,25 +156,46 @@ export default function DemoMachineFactoriesListPage() {
           ) : (
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {factories.map((factory) => (
-                <Card key={factory.id} className="shadow-md hover:shadow-lg transition-shadow">
+                <Card key={factory.id} className="shadow-md hover:shadow-lg transition-shadow relative">
                   <CardHeader className="pb-3 pt-4 px-4">
                     <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary mb-1">
+                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20"> {/* Added pr-20 for spacing */}
                            <FactoryIcon className="inline-block mr-2 h-5 w-5 align-text-bottom" /> {factory.factoryName || 'N/A'}
                         </CardTitle>
-                        {/* Add Edit/Delete buttons here if needed later */}
+                        <div className="absolute top-3 right-3 flex gap-1 z-10">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-7 w-7" asChild>
+                                            <Link href={`/dashboard/demo/edit-demo-machine-factory/${factory.id}`}>
+                                                <FileEdit className="h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Edit Factory</p></TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteFactory(factory.id, factory.factoryName)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Delete Factory</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0 text-sm">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1 mb-2"> {/* Changed to lg:grid-cols-2 for main details */}
-                      <div className="flex items-start col-span-1 sm:col-span-2 lg:col-span-1"> {/* Address takes full width on small, half on large */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1 mb-2">
+                      <div className="flex items-start col-span-1 lg:col-span-2">
                         <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
                         <div>
                           <span className="text-muted-foreground">Address: </span>
                           <span className="font-medium text-foreground">{factory.factoryLocation || 'N/A'}</span>
                         </div>
                       </div>
-                      <div className="col-span-1 sm:col-span-2 lg:col-span-1 space-y-1"> {/* Contact and Cell stack within this cell on small, side-by-side behavior handled internally or can be adjusted */}
+                      <div className="col-span-1">
                         {factory.contactPerson && (
                           <div className="flex items-center">
                               <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
@@ -144,6 +203,8 @@ export default function DemoMachineFactoriesListPage() {
                               <span className="font-medium text-foreground ml-1 truncate" title={factory.contactPerson}>{factory.contactPerson}</span>
                           </div>
                         )}
+                      </div>
+                      <div className="col-span-1">
                         {factory.cellNumber && (
                           <div className="flex items-center">
                               <Phone className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
@@ -179,3 +240,4 @@ export default function DemoMachineFactoriesListPage() {
   );
 }
 
+    
