@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -25,7 +24,7 @@ export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shi
 export type LCStatus = typeof lcStatusOptions[number] | undefined;
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
-export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
+export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number] | undefined;
 
 export const certificateOfOriginCountries = [
   "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY",
@@ -68,6 +67,7 @@ export interface LCEntry {
   eta?: Date | null | undefined;
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
+  // bankBin?: string; // Removed as per previous request
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -153,6 +153,7 @@ export interface LCEntryDocument {
   eta?: string; // ISO string
   itemDescriptions?: string;
   consigneeBankNameAddress?: string;
+  // bankBin?: string; // Removed
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -200,6 +201,7 @@ export interface LCEntryDocument {
   invoiceQty?: number;
   packingListQty?: number;
   beneficiaryCertificateQty?: number;
+  brandNewCertificateQty?: number;
   brandNewCertificateQty?: number;
   beneficiaryWarrantyCertificateQty?: number;
   beneficiaryComplianceCertificateQty?: number;
@@ -295,10 +297,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Allow empty string for input, parse to number
+  purchasePrice: number | ''; // Allow empty string for input, parse to number
+  salesPrice: number | ''; // Allow empty string for input, parse to number
+  netCommissionPercentage?: number | ''; // Allow empty string for input
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -323,10 +325,10 @@ export interface ProformaInvoice {
   miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // Renamed from totalSalesPriceFromLineItems for consistency
+  totalSalesPrice: number;
   grandTotalSalesPrice: number;
-  grandTotalCommissionUSD: number;
   totalExtraNetCommission?: number;
+  grandTotalCommissionUSD: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -361,11 +363,12 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxModel: z.string().optional(), // Changed to optional
+  ctlBoxSerial: z.string().optional(), // Changed to optional
   installDate: z.date({ required_error: "Installation Date is required." }),
+  // warrantyRemaining field is removed as it's dynamically calculated
 });
-export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -426,9 +429,9 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
-  pendingQty?: number | string; // Can be string 'N/A'
+  pendingQty?: number | string;
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
@@ -442,7 +445,7 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { id: string }; // Ensure id is part of lcData
+  lcData: LCEntryDocument & { id: string };
 }
 
 // --- Demo Machine Factory Types ---
@@ -460,5 +463,21 @@ export interface DemoMachineFactoryDocument extends DemoMachineFactory {
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
-
 // --- END Demo Machine Factory Types ---
+
+// --- Demo Machine Types ---
+export const demoMachineOwnerOptions = ["Own Machine", "Rent Machine", "Supplier Machine"] as const;
+export type DemoMachineOwnerOption = typeof demoMachineOwnerOptions[number];
+
+export interface DemoMachine {
+  id?: string;
+  machineModel: string;
+  machineSerial: string;
+  machineBrand: string;
+  machineOwner: DemoMachineOwnerOption;
+  createdAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any; // Firestore ServerTimestamp
+}
+
+export type DemoMachineDocument = DemoMachine & { id: string, createdAt: any, updatedAt: any };
+// --- END Demo Machine Types ---
