@@ -32,7 +32,6 @@ import {
   Briefcase,
   Loader2,
   UserPlus,
-  Building,
   FileText,
   History,
   Search,
@@ -54,10 +53,9 @@ import {
   Package,
   CreditCard,
   Microscope,
-  Minus,
-  Plus,
+  Building,
   Sheet,
-  Laptop, // Added Laptop icon
+  Laptop,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -156,11 +154,11 @@ const warrantyManagementNavItems: NavItemGroup[] = [
   },
 ];
 
-const demoMachineManagementNavItems: NavItemGroup[] = [ // New Nav Group
+const demoMachineManagementNavItems: NavItemGroup[] = [
   {
-    groupLabel: 'Demo Machine Management',
+    groupLabel: 'Demo M/C Management',
     icon: Laptop,
-    roles: ["Super Admin", "Admin"], // Define roles as needed
+    roles: ["Super Admin", "Admin"],
     subLinks: [
       // Add sub-links here later
     ],
@@ -179,9 +177,9 @@ const reportingManagementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
@@ -228,14 +226,15 @@ export function AppSidebarNav() {
     ...coreModulesNavItems,
     ...managementNavItems,
     ...warrantyManagementNavItems,
-    ...demoMachineManagementNavItems, // Added new group
+    ...demoMachineManagementNavItems,
     ...reportingManagementNavItems,
   ];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
       .filter(item => {
-        if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+        if (userRole === "Super Admin") return isGroupActive(item.subLinks);
+        if (item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
           return false;
         }
         const visibleSubLinks = item.subLinks?.filter(subLink => userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))) || [];
@@ -259,16 +258,19 @@ export function AppSidebarNav() {
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (visibleSubLinks.length === 0 && (!item.subLinks || item.subLinks.length > 0) && item.groupLabel !== "Demo Machine Management") { // Allow empty Demo Machine Management for now
-        // Hide group if it has roles defined, user doesn't match, AND it has no visible sublinks (unless it's an always-empty group like Demo)
-         if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
-            return null;
-         }
-         // Also, if it's not Super Admin and the group itself is meant for Admin/SuperAdmin, but has no visible sublinks for Admin, hide it.
-         if (userRole === "Admin" && item.roles?.includes("Admin") && visibleSubLinks.length === 0) {
-            return null;
-         }
+    // Hide group if it has roles and user doesn't match, AND (it has no visible sublinks OR its sublinks array is empty but it's not an intentionally empty group like Demo/Reporting)
+    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+      if (visibleSubLinks.length === 0 && item.groupLabel !== "Demo M/C Management" && item.groupLabel !== "Reporting Management" && item.subLinks && item.subLinks.length > 0) {
+        return null;
+      }
     }
+     if (userRole === "Admin" && item.roles?.includes("Admin") && visibleSubLinks.length === 0 && item.groupLabel !== "Demo M/C Management" && item.groupLabel !== "Reporting Management" && item.subLinks && item.subLinks.length > 0) {
+        return null;
+     }
+     if (userRole === "Service" && item.roles?.includes("Service") && visibleSubLinks.length === 0 && item.groupLabel !== "Demo M/C Management" && item.groupLabel !== "Reporting Management" && item.subLinks && item.subLinks.length > 0) {
+        return null;
+     }
+
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -294,7 +296,7 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        {visibleSubLinks.length > 0 && (
+        {(visibleSubLinks.length > 0 || (item.groupLabel === "Demo M/C Management" && (userRole === "Super Admin" || userRole === "Admin")) || (item.groupLabel === "Reporting Management" && (userRole === "Super Admin" || userRole === "Admin"))) && (
           <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
             <SidebarMenu className="gap-0 py-1">
               {visibleSubLinks.map((subLink) => (
@@ -418,7 +420,7 @@ export function AppSidebarNav() {
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Demo Machine Management
+            Demo M/C Management
           </SidebarGroupLabel>
           <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
               {demoMachineManagementNavItems.map(renderNavGroup)}
@@ -442,7 +444,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole))) && item.href &&
+                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref legacyBehavior>
                     <SidebarMenuButton
