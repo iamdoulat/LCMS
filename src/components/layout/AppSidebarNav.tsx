@@ -27,36 +27,36 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Settings,
-  LogOut,
   FileText,
   Briefcase,
-  History,
-  Search,
-  DollarSign,
+  Truck,
+  Building,
+  Ship,
+  Factory,
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
-  Building, // Keep for Company Setup
-  Truck,    // For Suppliers/Beneficiary
-  Ship,     // For Shipment Management
-  ShieldCheck, // For Warranty Management & Machine Under Warranty
-  ShieldOff, // For Machine Out of Warranty
-  BarChart3, // For Reporting Management
-  Factory, // For Customers/Applicants & Add Demo Machine Factory
+  Settings,
+  LogOut,
+  History,
+  Search,
   Wrench,
   ClipboardList,
   Archive,
-  PackageCheck,
+  ShieldCheck,
+  ShieldOff,
+  BarChart3,
+  DollarSign,
   Package,
   CreditCard,
-  Microscope, // For Warranty Search
-  Sheet,    // For Google Sheets
-  Laptop,   // For Demo M/C Management
-  FileCode, // For Demo Machine Program
-  AppWindow, // For Demo Machine Application
+  Microscope,
+  Sheet,
+  Laptop,
+  FileCode,
+  AppWindow,
   UserPlus,
-  Edit, // For Recent Draft LCs
+  Users as UsersIcon, // Added Users as UsersIcon
+  Edit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -89,7 +89,7 @@ interface NavItemGroup {
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -100,7 +100,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
@@ -112,7 +112,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -121,7 +121,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from UsersIcon
+    icon: Factory, // Changed from Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -130,7 +130,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -147,7 +147,7 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     icon: ShieldCheck,
     roles: ["Super Admin", "Admin", "Service"],
     subLinks: [
-      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Microscope, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
@@ -163,14 +163,14 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
-      { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks }, // New link
+      { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
 ];
+
 
 const reportingManagementNavItems: NavItemGroup[] = [
   {
@@ -195,18 +195,15 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromContext = companyLogoUrl || "/icons/favicon-32x32.png"; // Default local fallback
   const displayCompanyNameFromContext = companyName || "Smart Solution";
 
   React.useEffect(() => {
-    if (userRole) {
-     // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-    }
+    // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
   }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-     // Check for exact match or if pathname starts with href followed by '/' or '?' or end of string
     const regex = new RegExp(`^${href}([/\\?#].*)?$`);
     return regex.test(pathname);
   };
@@ -228,15 +225,11 @@ export function AppSidebarNav() {
     return allAccordionGroups
       .filter(item => {
         if (userRole === "Super Admin") return isGroupActive(item.subLinks);
-        if (userRole === "Service" && item.groupLabel !== "Warranty Management") return false;
-        if (userRole !== "Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+        if (item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
           return false;
         }
-        const visibleSubLinks = item.subLinks?.filter(subLink =>
-            userRole === "Super Admin" ||
-            (userRole === "Admin" && (!subLink.roles || subLink.roles.includes("Admin"))) ||
-            (userRole === "Service" && item.groupLabel === "Warranty Management" && (!subLink.roles || subLink.roles.includes("Service"))) ||
-            (!subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole)))
+         const visibleSubLinks = item.subLinks?.filter(subLink =>
+            userRole === "Super Admin" || (subLink.roles && userRole && subLink.roles.includes(userRole as UserRole)) || !subLink.roles
         ) || [];
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
@@ -248,29 +241,21 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    if (userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Service" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+    // Hide group if userRole doesn't match group roles (unless Super Admin)
+    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
       return null;
     }
 
-    if (userRole === "Service" && item.groupLabel !== "Warranty Management") {
-      return null;
-    }
-
+    // Filter subLinks based on userRole (Super Admin sees all)
     const visibleSubLinks = item.subLinks?.filter(subLink =>
-        userRole === "Super Admin" ||
-        (userRole === "Admin" && (!subLink.roles || subLink.roles.includes("Admin"))) ||
-        (userRole === "Service" && item.groupLabel === "Warranty Management" && (!subLink.roles || subLink.roles.includes("Service"))) ||
-        (!subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole)))
+      userRole === "Super Admin" || (!subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole)))
     ) || [];
 
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
-      // If all sublinks are hidden for the current role, don't render the group.
-      // Exception: Super Admin sees all groups even if sublinks might be filtered for other roles initially.
-      if (userRole !== "Super Admin") {
-          return null;
-      }
+    // If no subLinks are visible for the current role (and it's not Super Admin), don't render the group.
+    if (userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+      return null;
     }
-
+    
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -310,7 +295,7 @@ export function AppSidebarNav() {
                         )}
                         tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                       >
-                        <span> {/* Changed from <> to <span> */}
+                        <span className="flex items-center gap-2">
                           {subLink.icon && <subLink.icon className="h-4 w-4" />}
                           <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
                         </span>
@@ -363,11 +348,11 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-           { mainDashboardLink.href && (userRole === "Super Admin" || !mainDashboardLink.roles || (userRole && mainDashboardLink.roles.includes(userRole as UserRole))) && (
+           { userRole !== "Service" && mainDashboardLink.href && (userRole === "Super Admin" || !mainDashboardLink.roles || (userRole && mainDashboardLink.roles.includes(userRole as UserRole))) && (
                 <SidebarMenuItem key={mainDashboardLink.href}>
                     <Link href={mainDashboardLink.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
-                        <span> {/* Changed from <> to <span> */}
+                        <span className="flex items-center gap-2">
                         {mainDashboardLink.icon && <mainDashboardLink.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{mainDashboardLink.label}</span>
                         </span>
@@ -375,11 +360,11 @@ export function AppSidebarNav() {
                     </Link>
                 </SidebarMenuItem>
             )}
-            {globalSearchLink.href && (userRole === "Super Admin" || !globalSearchLink.roles || (userRole && globalSearchLink.roles.includes(userRole as UserRole))) && (
+            { userRole !== "Service" && globalSearchLink.href && (userRole === "Super Admin" || !globalSearchLink.roles || (userRole && globalSearchLink.roles.includes(userRole as UserRole))) && (
                 <SidebarMenuItem key={globalSearchLink.href}>
                     <Link href={globalSearchLink.href} passHref>
                     <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
-                        <span> {/* Changed from <> to <span> */}
+                        <span className="flex items-center gap-2">
                         {globalSearchLink.icon && <globalSearchLink.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{globalSearchLink.label}</span>
                         </span>
@@ -420,7 +405,7 @@ export function AppSidebarNav() {
         </SidebarGroup>
 
         <SidebarSeparator />
-        <SidebarGroup className="p-0">
+         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Demo M/C Management
           </SidebarGroupLabel>
@@ -428,6 +413,7 @@ export function AppSidebarNav() {
               {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
+
 
         <SidebarSeparator />
         <SidebarGroup className="p-0">
@@ -446,7 +432,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole))) && item.href &&
+                (userRole === "Super Admin" || userRole === "Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton
@@ -455,7 +441,7 @@ export function AppSidebarNav() {
                       className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
                       tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                     >
-                      <span> {/* Changed from <> to <span> */}
+                      <span className="flex items-center gap-2">
                         {item.icon && <item.icon className="h-5 w-5 text-primary" />}
                         <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </span>
