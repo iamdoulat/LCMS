@@ -27,10 +27,8 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  FileText,
   Truck,
   Ship,
-  Factory,
   CalendarClock,
   PanelLeftClose,
   PanelRightClose,
@@ -51,13 +49,11 @@ import {
   AppWindow,
   FileCode,
   Users as UsersIcon,
-  UserPlus,
-  Edit,
+  Factory,
   Building,
-  CreditCard,
-  Microscope,
-  PackageCheck,
   FileEdit,
+  PackageCheck,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -104,7 +100,6 @@ const coreModulesNavItems: NavItemGroup[] = [
     icon: Briefcase,
     roles: ["Super Admin", "Admin"],
     subLinks: [
-      { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 },
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
     ],
   },
@@ -166,7 +161,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      { href: '/dashboard/demo/demo-machine-application', label: 'Demo Machine Application', icon: AppWindow },
+      { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Over due', icon: CalendarClock },
     ],
   },
@@ -196,13 +191,6 @@ export function AppSidebarNav() {
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
-  // For console logging to debug role issues
-  React.useEffect(() => {
-    if (!authLoading) {
-      // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-    }
-  }, [userRole, authLoading]);
-
   const companyLogoUrlFromContext = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromContext = companyName || "Smart Solution";
 
@@ -229,8 +217,7 @@ export function AppSidebarNav() {
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
       .filter(item => {
-        if (userRole === "Super Admin") return isGroupActive(item.subLinks);
-         const groupVisible = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+        const groupVisible = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
         if (!groupVisible) return false;
 
          const visibleSubLinks = item.subLinks?.filter(subLink =>
@@ -254,7 +241,7 @@ export function AppSidebarNav() {
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && item.groupLabel !== "Reporting Management") {
+    if (userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
     
@@ -282,7 +269,7 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        {(visibleSubLinks.length > 0 || (item.groupLabel === "Reporting Management" && (userRole === "Super Admin" || userRole === "Admin"))) && (
+        {visibleSubLinks.length > 0 && (
           <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
             <SidebarMenu className="gap-0 py-1">
               {visibleSubLinks.map((subLink) => (
@@ -433,7 +420,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => (
-                (userRole === "Super Admin" || (userRole === "Admin" && (item.label === "Company Setup" || item.label === "SMTP Settings"))) && item.href &&
+                (userRole === "Super Admin" || (userRole === "Admin" && item.roles?.includes("Admin"))) && item.href &&
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href} passHref>
                     <SidebarMenuButton
