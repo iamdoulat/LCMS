@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Factory as FactoryIcon, Phone, Save } from 'lucide-react';
+import { Loader2, Factory as FactoryIcon, Phone, Save, MessageSquare } from 'lucide-react'; // Added MessageSquare
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -144,7 +144,7 @@ export function AddDemoMachineFactoryForm() {
                 <FormLabel className="flex items-center">Cell Number</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl className="flex-grow">
-                    <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} />
+                    <Input type="tel" placeholder="e.g., +8801XXXXXXXXX" {...field} />
                   </FormControl>
                   {watchedCellNumber && phoneRegex.test(watchedCellNumber) ? (
                      <a href={`tel:${watchedCellNumber.replace(/\s/g, '')}`} title={`Call ${watchedCellNumber}`}>
@@ -155,6 +155,22 @@ export function AddDemoMachineFactoryForm() {
                   ) : (
                     <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
                         <Phone className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                  {watchedCellNumber && phoneRegex.test(watchedCellNumber) ? (
+                     <a 
+                       href={`https://wa.me/${watchedCellNumber.replace(/[^0-9]/g, '')}`} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       title={`Chat on WhatsApp with ${watchedCellNumber}`}
+                     >
+                        <Button type="button" variant="outline" size="icon" className="shrink-0">
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                        </Button>
+                     </a>
+                  ) : (
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   )}
                 </div>
