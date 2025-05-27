@@ -191,11 +191,13 @@ export default function DemoMachineListPage() {
                             </Badge>
                         )}
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20"> {/* Added mr-20 to prevent overlap */}
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20">
                         <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
                            {formatReportValue(machine.machineModel)}
                         </CardTitle>
-                        {/* Owner CardDescription removed as per request */}
+                        <CardDescription className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                           Owner: <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span>
+                        </CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-2">
@@ -208,8 +210,6 @@ export default function DemoMachineListPage() {
                         {machine.controlBoxSerialNo && (
                            <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                         )}
-                        {/* Machine Owner moved to CardDescription */}
-                         <div className="text-muted-foreground text-sm"><span className="text-muted-foreground">Owner: </span><span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span></div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
@@ -241,3 +241,5 @@ export default function DemoMachineListPage() {
   );
 }
 
+
+    

@@ -179,8 +179,8 @@ export default function NewDemoMachineApplicationPage() {
   }, [watchedDemoMachineId, machineOptions]);
 
   React.useEffect(() => {
-    if (watchedDeliveryDate && watchedEstReturnDate && isValid(watchedDeliveryDate) && isValid(watchedEstReturnDate) && watchedEstReturnDate >= watchedDeliveryDate) {
-      const days = differenceInDays(watchedEstReturnDate, watchedDeliveryDate);
+    if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
+      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay('0 Days');
@@ -191,6 +191,9 @@ export default function NewDemoMachineApplicationPage() {
     setIsSubmitting(true);
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
     const selectedMachine = machineOptions.find(opt => opt.value === data.demoMachineId);
+    const deliveryDateValue = getValues("deliveryDate");
+    const estReturnDateValue = getValues("estReturnDate");
+
 
     const dataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       factoryId: data.factoryId,
@@ -200,9 +203,9 @@ export default function NewDemoMachineApplicationPage() {
       machineModel: selectedMachine?.label || 'N/A',
       machineSerial: selectedMachine?.serial || 'N/A',
       machineBrand: selectedMachine?.brand || 'N/A',
-      deliveryDate: format(data.deliveryDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      estReturnDate: format(data.estReturnDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      demoPeriodDays: (watchedDeliveryDate && watchedEstReturnDate && isValid(watchedDeliveryDate) && isValid(watchedEstReturnDate) && watchedEstReturnDate >= watchedDeliveryDate) ? differenceInDays(watchedEstReturnDate, watchedDeliveryDate) : 0,
+      deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
+      estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
+      demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
@@ -228,9 +231,11 @@ export default function NewDemoMachineApplicationPage() {
             currentStatus: "Allocated" as AppDemoMachineStatus,
             updatedAt: serverTimestamp(),
           });
+          // Optimistically update machineOptions to remove the allocated machine
+          setMachineOptions(prev => prev.filter(m => m.id !== data.demoMachineId));
         } catch (machineError) {
           console.error("Error updating demo machine status:", machineError);
-          // Optionally inform user that application saved but machine status update failed
+           Swal.fire("Warning", `Application saved, but failed to update machine status: ${(machineError as Error).message}`, "warning");
         }
       }
 
@@ -261,10 +266,9 @@ export default function NewDemoMachineApplicationPage() {
                 New Demo Machine Application
               </CardTitle>
               <CardDescription>
-                Fill in the details below to request a demo machine.
+                Fill in the details below to request a demo machine. Only 'Available' machines are shown.
               </CardDescription>
             </div>
-            {/* Add Factory button removed as per user request */}
           </div>
         </CardHeader>
         <CardContent>
@@ -452,3 +456,5 @@ export default function NewDemoMachineApplicationPage() {
     </div>
   );
 }
+
+    

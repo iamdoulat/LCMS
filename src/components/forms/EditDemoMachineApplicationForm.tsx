@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'; 
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'; // Added Timestamp
 import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,16 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save } from 'lucide-react';
+import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, ArrowLeft, AppWindow, AlertTriangle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useParams, useRouter } from 'next/navigation';
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -36,7 +42,7 @@ const demoMachineApplicationSchema = z.object({
     "Invalid phone number format"
   ),
   notes: z.string().optional(),
-  machineReturned: z.boolean().optional().default(false), // Added machineReturned
+  machineReturned: z.boolean().optional().default(false),
 }).refine(data => {
   if (data.deliveryDate && data.estReturnDate) {
     return data.estReturnDate >= data.deliveryDate;
@@ -104,11 +110,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   const watchedDeliveryDate = watch("deliveryDate");
   const watchedEstReturnDate = watch("estReturnDate");
   const watchedInchargeCell = watch("inchargeCell");
-  const watchedMachineReturned = watch("machineReturned"); // Watch the checkbox
+  const watchedMachineReturned = watch("machineReturned");
 
   React.useEffect(() => {
     const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
-        const machineReturnedValue = getValues("machineReturned");
+        const machineReturnedValue = getValues("machineReturned"); 
         if (machineReturnedValue) return "Returned";
         
         const deliveryDateValue = getValues("deliveryDate");
@@ -149,7 +155,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         );
       } catch (error) {
         console.error("Error fetching factories:", error);
-        // Swal.fire("Error", "Could not load factories.", "error"); // Alert can be noisy on edit
       } finally {
         setIsLoadingFactories(false);
       }
@@ -167,6 +172,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             const data = docSnap.data() as DemoMachineDocument;
             return { id: docSnap.id, ...data };
           })
+           // For edit, allow showing the current machine even if not "Available", plus all "Available" ones
           .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId);
 
         setMachineOptions(
@@ -180,7 +186,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         );
       } catch (error) {
         console.error("Error fetching demo machines:", error);
-        // Swal.fire("Error", "Could not load demo machines.", "error"); // Alert can be noisy on edit
       } finally {
         setIsLoadingMachines(false);
       }
@@ -193,8 +198,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const resetValues: DemoMachineApplicationFormValues = {
         factoryId: initialData.factoryId || '',
         demoMachineId: initialData.demoMachineId || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any,
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any,
+        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, 
+        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, 
         factoryInchargeName: initialData.factoryInchargeName || '',
         inchargeCell: initialData.inchargeCell || '',
         notes: initialData.notes || '',
@@ -208,6 +213,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedMachine = machineOptions.find(opt => opt.value === initialData.demoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || initialData.machineSerial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || initialData.machineBrand || 'N/A');
+
     }
   }, [initialData, reset, factoryOptions, machineOptions]);
 
@@ -217,18 +223,22 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
       
+      // Only auto-fill if the field hasn't been manually changed from what initialData provided for these
       if (getValues("factoryInchargeName") === (initialData.factoryInchargeName || '')) {
          setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
       if (getValues("inchargeCell") === (initialData.inchargeCell || '')) {
         setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
       }
-    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) {
+    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) { 
         setFactoryLocationDisplay('');
         setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
         setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
     } else if (!watchedFactoryId) {
-         setFactoryLocationDisplay(initialData.factoryLocation || '');
+         // If factoryId is cleared, keep potentially manually entered incharge details,
+         // or reset to initialData's original state if they were purely auto-filled.
+         // This requires more complex logic if strict reset is needed. For now, clearing is fine.
+         setFactoryLocationDisplay(initialData.factoryLocation || ''); // Revert to original if nothing selected
     }
   }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell, initialData.factoryLocation, isLoadingFactories]);
 
@@ -268,6 +278,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     const deliveryDateVal = getValues("deliveryDate");
     const estReturnDateVal = getValues("estReturnDate");
 
+
     const dataToUpdate: Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       factoryId: data.factoryId,
       factoryName: selectedFactory?.label || initialData.factoryName,
@@ -296,7 +307,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
 
-      // Update the demo machine status
+      // Update the demo machine status based on the new machineReturned status
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
         const newMachineStatus = data.machineReturned ? "Available" : "Allocated";
@@ -306,10 +317,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             updatedAt: serverTimestamp(),
           });
         } catch (machineError) {
-            console.error("Error updating demo machine status:", machineError);
+          console.error("Error updating demo machine status:", machineError);
+           Swal.fire("Warning", `Application updated, but failed to update machine status: ${(machineError as Error).message}`, "warning");
         }
       }
-
+      
       Swal.fire("Success!", "Demo machine application updated and machine status synced.", "success");
     } catch (error) {
       console.error("Error updating demo application:", error);
@@ -319,6 +331,15 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     }
   }
 
+  const getDemoStatusBadgeVariant = (status: CurrentDemoStatus): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+        case "Active": return "default"; 
+        case "Overdue": return "destructive";
+        case "Returned": return "secondary";
+        case "Upcoming": return "outline";
+        default: return "outline";
+    }
+  };
 
   if (isLoadingFactories || isLoadingMachines) {
     return (
@@ -332,7 +353,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Form fields remain the same, add Checkbox for machineReturned */}
+        <div className="flex justify-end mb-4">
+             <Badge variant={getDemoStatusBadgeVariant(currentDemoStatus)} className="text-sm px-3 py-1">
+                {currentDemoStatus}
+            </Badge>
+        </div>
         <FormField
           control={control}
           name="factoryId"
@@ -457,9 +482,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
                             </Button>
                         )}
                         {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                            <a
-                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
+                            <a 
+                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
+                            target="_blank" 
                             rel="noopener noreferrer"
                             title={`Chat on WhatsApp with ${watchedInchargeCell}`}
                             >
@@ -534,3 +559,5 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     </Form>
   );
 }
+
+    
