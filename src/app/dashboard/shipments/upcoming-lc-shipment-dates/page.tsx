@@ -4,9 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import Link from 'next/link';
 import { format, parseISO, isValid, startOfDay, compareAsc } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -14,27 +14,27 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> { 
   latestShipmentDateObj: Date;
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"];
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"]; 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
     case 'Transmitted':
-      return 'secondary';
+      return 'secondary'; // Blue
     case 'Shipment Pending':
-      return 'default';
+      return 'default'; // Yellowish
     case 'Shipping going on':
-      return 'default';
+      return 'default'; // Orange
     case 'Payment Done':
-      return 'default';
-    case 'Shipment Done': // Updated from "Done"
-      return 'default';
+      return 'default'; // Green
+    case 'Shipment Done': 
+      return 'default'; // Darker Green
     default:
       return 'outline';
   }
@@ -56,7 +56,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 };
 
 export default function UpcomingLcShipmentDatesPage() {
-  const [upcomingLCs, setUpcomingLCs] = useState<UpcomingLC[]>([]);
+  const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,23 +76,21 @@ export default function UpcomingLcShipmentDatesPage() {
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0);
+          let latestShipmentDateObj = new Date(0); 
           if (data.latestShipmentDate) {
             const parsed = parseISO(data.latestShipmentDate);
             if (isValid(parsed)) {
               latestShipmentDateObj = parsed;
             }
           }
-          console.log({ id: doc.id, etd: data.etd, eta: data.eta, latestShipmentDate: data.latestShipmentDate, latestShipmentDateObj: latestShipmentDateObj, status: data.status });
-
-
+          
           return {
             id: doc.id,
             documentaryCreditNumber: data.documentaryCreditNumber,
             beneficiaryName: data.beneficiaryName,
-            applicantName: data.applicantName,
-            currency: data.currency,
-            amount: data.amount,
+            applicantName: data.applicantName, 
+            currency: data.currency, 
+            amount: data.amount, 
             lcIssueDate: data.lcIssueDate,
             latestShipmentDate: data.latestShipmentDate,
             latestShipmentDateObj: latestShipmentDateObj,
@@ -104,12 +102,13 @@ export default function UpcomingLcShipmentDatesPage() {
             isThirdShipment: data.isThirdShipment,
           };
         });
-        setUpcomingLCs(fetchedLCs);
+        setAllUpcomingLCs(fetchedLCs);
+
       } catch (error: any) {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN array) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -127,10 +126,10 @@ export default function UpcomingLcShipmentDatesPage() {
     fetchUpcomingLCs();
   }, []);
 
-  const totalPages = Math.ceil(upcomingLCs.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(allUpcomingLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = upcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = allUpcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -176,8 +175,8 @@ export default function UpcomingLcShipmentDatesPage() {
             Upcoming L/C Shipment Dates
           </CardTitle>
           <CardDescription>
-            List of L/Cs with "Transmitted", "Shipment Pending", or "Shipping going on" status, sorted by nearest latest shipment date.
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, upcomingLCs.length)} of {upcomingLCs.length} entries.
+            List of L/Cs with active shipment statuses, sorted by nearest latest shipment date.
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -208,7 +207,6 @@ export default function UpcomingLcShipmentDatesPage() {
                 const today = startOfDay(new Date());
                 const shipmentDate = startOfDay(lc.latestShipmentDateObj);
                 const isPastOrToday = isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
-                console.log({ id: lc.id, latestShipmentDateObj: lc.latestShipmentDateObj, isPastOrToday });
                 
                 return (
                   <li
@@ -237,7 +235,7 @@ export default function UpcomingLcShipmentDatesPage() {
                                     variant={lc.isFirstShipment ? "default" : "outline"}
                                     size="icon"
                                     className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
                                         lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                     )}
                                     title="1st Shipment Status"
@@ -250,7 +248,7 @@ export default function UpcomingLcShipmentDatesPage() {
                                     variant={lc.isSecondShipment ? "default" : "outline"}
                                     size="icon"
                                     className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
                                         lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                     )}
                                     title="2nd Shipment Status"
@@ -263,7 +261,7 @@ export default function UpcomingLcShipmentDatesPage() {
                                     variant={lc.isThirdShipment ? "default" : "outline"}
                                     size="icon"
                                     className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs",
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
                                         lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                     )}
                                     title="3rd Shipment Status"
@@ -274,33 +272,29 @@ export default function UpcomingLcShipmentDatesPage() {
                         </div>
                     </div>
 
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> 
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
-                        <div>
-                            <p className="text-muted-foreground">
-                              Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
-                            </p>
-                            <p className="text-muted-foreground">
-                              Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
-                            </p>
-                             <p className="text-muted-foreground">
-                                ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">
-                              Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
-                            </p>
-                             <p className="text-muted-foreground">
-                                Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
-                            </p>
-                            <p className="text-muted-foreground">
-                                ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
-                            </p>
-                        </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
+                      <p className="text-muted-foreground">
+                        Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
+                      </p>
+                       <p className="text-muted-foreground">
+                        ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
+                      </p>
+                       <p className="text-muted-foreground">
+                        ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
+                      </p>
                     </div>
                     
                     <div className="mt-2 flex justify-end">
@@ -357,5 +351,3 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
-
-

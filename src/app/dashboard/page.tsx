@@ -83,6 +83,7 @@ interface RecentlyCompletedLC {
   amount?: number;
   etd?: string;
   eta?: string;
+  updatedAtDate: Date;
 }
 
 interface DraftLC {
@@ -147,9 +148,9 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
     const moveScroll = () => {
       if (scrollElement && !isPaused) {
         if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) {
-          scrollElement.scrollTop = 0; // Loop to top
+          scrollElement.scrollTop = 0; 
         } else {
-          scrollElement.scrollTop += 1; // Scroll up
+          scrollElement.scrollTop += 1; 
         }
       }
     };
@@ -157,7 +158,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
     const startScrolling = () => {
       if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = setInterval(moveScroll, 75);
+        intervalRef.current = setInterval(moveScroll, 75); 
       }
     };
 
@@ -176,7 +177,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
       scrollElement.addEventListener('mouseenter', handleMouseEnter);
       scrollElement.addEventListener('mouseleave', handleMouseLeave);
     } else {
-      stopScrolling(); // Stop if no scroll needed
+      stopScrolling(); 
     }
 
     return () => {
@@ -241,9 +242,8 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    console.log("Dashboard: Checking auth.currentUser before Firestore query:", auth.currentUser);
-    if (!auth.currentUser) {
-      console.warn("Dashboard: User not authenticated in Firebase Auth when attempting to fetch dashboard data.");
+    if (!authUser) {
+      // This console log is now handled by the useEffect depending on authUser
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -256,7 +256,6 @@ export default function DashboardPage() {
     setIsLoading(true);
     try {
       const yearNumber = parseInt(year);
-      console.log("Dashboard: Fetching data for year", yearNumber);
 
       const lcEntriesRef = collection(firestore, "lc_entries");
       const q = query(lcEntriesRef, where("year", "==", yearNumber));
@@ -265,38 +264,22 @@ export default function DashboardPage() {
       const lcEntriesForTheYear: LCEntryDocument[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Omit<LCEntryDocument, 'id'>;
-        let lcIssueDateValid = false;
-        let lcIssueDateParsed: Date | null = null;
-
-        if (data.lcIssueDate) {
-          try {
-             lcIssueDateParsed = typeof data.lcIssueDate === 'string' ? parseISO(data.lcIssueDate) : (data.lcIssueDate as unknown as Timestamp)?.toDate();
-             if (isValid(lcIssueDateParsed)) {
-              lcIssueDateValid = true;
-            }
-          } catch (e) { /* console.warn("Invalid lcIssueDate encountered during dashboard fetch:", data.lcIssueDate); */ }
-        }
-        // Only include LCs with valid amount and issue date for stats that depend on these
-        if (data.amount !== undefined && typeof data.amount === 'number' && !isNaN(data.amount) && lcIssueDateValid) {
-          lcEntriesForTheYear.push({
-              id: doc.id,
-              ...data,
-            } as LCEntryDocument);
-        } else if (data.status === 'Draft' || data.status === 'Shipment Done' || (data.etd && (data.status !== 'Shipment Done'))) {
-            // For lists like Draft, Completed, Upcoming ETDs, amount/issueDate might not be strictly necessary
-            // for just listing them, but are needed for other stats.
-            lcEntriesForTheYear.push({
-                id: doc.id,
-                ...data,
-              } as LCEntryDocument);
-        }
+        lcEntriesForTheYear.push({ id: doc.id, ...data } as LCEntryDocument);
       });
 
-      const uniqueBeneficiaryIds = Array.from(new Set(lcEntriesForTheYear.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
-      const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
+      const validLcEntriesForStats = lcEntriesForTheYear.filter(lc => 
+        typeof lc.amount === 'number' && !isNaN(lc.amount) &&
+        lc.lcIssueDate && isValid(parseISO(lc.lcIssueDate))
+      );
 
+      const totalLCValue = validLcEntriesForStats.reduce((sum, lc) => sum + (lc.amount || 0), 0);
+      
+      const uniqueBeneficiaryIds = Array.from(new Set(validLcEntriesForStats.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')));
+      const uniqueApplicantIds = Array.from(new Set(validLcEntriesForStats.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')));
+
+      const supplierMap = new Map<string, Pick<SupplierDocument, 'brandName' | 'beneficiaryName'>>();
       if (uniqueBeneficiaryIds.length > 0) {
-        const BATCH_SIZE = 30;
+        const BATCH_SIZE = 30; // Firestore 'in' query limit
         for (let i = 0; i < uniqueBeneficiaryIds.length; i += BATCH_SIZE) {
           const batchIds = uniqueBeneficiaryIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -310,9 +293,8 @@ export default function DashboardPage() {
         }
       }
 
-      const totalLCValue = lcEntriesForTheYear.reduce((sum, lc) => sum + (typeof lc.amount === 'number' && !isNaN(lc.amount) ? lc.amount : 0), 0);
-      const activeSuppliersCount = uniqueBeneficiaryIds.filter(id => supplierMap.has(id)).length;
-      const activeApplicantsCount = new Set(lcEntriesForTheYear.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
+      const activeSuppliersCount = supplierMap.size; // Count based on successfully fetched suppliers
+      const activeApplicantsCount = uniqueApplicantIds.length;
 
       const currentDate = new Date();
       const currentSystemYear = currentDate.getFullYear();
@@ -320,24 +302,21 @@ export default function DashboardPage() {
       if (yearNumber === currentSystemYear) {
         const firstDayOfMonth = startOfMonth(currentDate);
         const lastDayOfMonth = endOfMonth(currentDate);
-        thisMonthLCQty = lcEntriesForTheYear.filter(lc => {
-          if (!lc.lcIssueDate) return false;
-          try {
-            const issueDate = typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate();
-            return isValid(issueDate) && isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
-          } catch (e) { return false; }
+        thisMonthLCQty = validLcEntriesForStats.filter(lc => {
+          const issueDate = parseISO(lc.lcIssueDate as string); // Already validated lc.lcIssueDate
+          return isWithinInterval(issueDate, { start: firstDayOfMonth, end: lastDayOfMonth });
         }).length;
       }
 
       const supplierValueMap: { [key: string]: number } = {};
-      lcEntriesForTheYear.forEach(lc => {
-        if (typeof lc.amount !== 'number' || isNaN(lc.amount) || !lc.beneficiaryId) return;
+      validLcEntriesForStats.forEach(lc => {
+        if (!lc.beneficiaryId) return;
         const supplierDetails = supplierMap.get(lc.beneficiaryId);
         let displayName = supplierDetails?.brandName?.trim() || '';
         if (!displayName) {
-            displayName = lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0,17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand';
+          displayName = lc.beneficiaryName ? (lc.beneficiaryName.length > 20 ? lc.beneficiaryName.substring(0, 17) + "..." : lc.beneficiaryName) : 'Unknown/No Brand';
         }
-        supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + lc.amount;
+        supplierValueMap[displayName] = (supplierValueMap[displayName] || 0) + (lc.amount || 0);
       });
 
       const pieData = Object.entries(supplierValueMap)
@@ -353,8 +332,8 @@ export default function DashboardPage() {
           let updatedAtDate = new Date(0);
           if(lc.updatedAt && typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
              updatedAtDate = (lc.updatedAt as unknown as Timestamp).toDate();
-          } else if (typeof lc.updatedAt === 'string' && isValid(parseISO(lc.updatedAt))) {
-             updatedAtDate = parseISO(lc.updatedAt);
+          } else if (typeof lc.updatedAt === 'string' && isValid(parseISO(lc.updatedAt as string))) {
+             updatedAtDate = parseISO(lc.updatedAt as string);
           }
           return {
             id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
@@ -362,7 +341,7 @@ export default function DashboardPage() {
             status: lc.status, currency: lc.currency, amount: lc.amount,
             etd: lc.etd, eta: lc.eta,
             updatedAtDate: updatedAtDate,
-          } as RecentlyCompletedLC;
+          };
         })
         .sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime())
         .slice(0, 10);
@@ -375,8 +354,8 @@ export default function DashboardPage() {
           if (lc.createdAt) {
             if (typeof (lc.createdAt as unknown as Timestamp)?.toDate === 'function') {
               createdAtDate = (lc.createdAt as unknown as Timestamp).toDate();
-            } else if (typeof lc.createdAt === 'string' && isValid(parseISO(lc.createdAt))) {
-              createdAtDate = parseISO(lc.createdAt);
+            } else if (typeof lc.createdAt === 'string' && isValid(parseISO(lc.createdAt as string))) {
+              createdAtDate = parseISO(lc.createdAt as string);
             }
           }
           return {
@@ -384,7 +363,7 @@ export default function DashboardPage() {
             beneficiaryName: lc.beneficiaryName, applicantName: lc.applicantName,
             createdAtDate: createdAtDate, status: lc.status,
             currency: lc.currency, amount: lc.amount,
-          } as DraftLC;
+          };
         })
         .sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime())
         .slice(0, 10);
@@ -410,12 +389,12 @@ export default function DashboardPage() {
             let etdDate = new Date(0);
             if (lc.etd) {
               if (typeof lc.etd === 'string') etdDate = parseISO(lc.etd);
-              else if (typeof (lc.etd as unknown as Timestamp).toDate === 'function') etdDate = (lc.etd as unknown as Timestamp).toDate();
+              else if (lc.etd && typeof (lc.etd as unknown as Timestamp).toDate === 'function') etdDate = (lc.etd as unknown as Timestamp).toDate();
             }
             let etaDate: Date | undefined = undefined;
             if (lc.eta) {
               if (typeof lc.eta === 'string') etaDate = parseISO(lc.eta);
-              else if (typeof (lc.eta as unknown as Timestamp).toDate === 'function') etaDate = (lc.eta as unknown as Timestamp).toDate();
+              else if (lc.eta && typeof (lc.eta as unknown as Timestamp).toDate === 'function') etaDate = (lc.eta as unknown as Timestamp).toDate();
             }
             return {
                 id: lc.id, documentaryCreditNumber: lc.documentaryCreditNumber,
@@ -423,7 +402,7 @@ export default function DashboardPage() {
                 etdDate: etdDate, etaDate: etaDate,
                 currency: lc.currency, amount: lc.amount,
                 isFirstShipment: lc.isFirstShipment, isSecondShipment: lc.isSecondShipment, isThirdShipment: lc.isThirdShipment,
-            } as UpcomingEtdShipment;
+            };
         })
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
         .slice(0, 10);
@@ -431,7 +410,7 @@ export default function DashboardPage() {
 
       const lcIdsForTheYear = new Set(lcEntriesForTheYear.map(lc => lc.id));
       const piCollectionRef = collection(firestore, "proforma_invoices");
-      const piQuerySnapshot = await getDocs(piCollectionRef);
+      const piQuerySnapshot = await getDocs(piCollectionRef); // TODO: Optimize this for production
       const allProformaInvoices: ProformaInvoiceDocument[] = [];
       piQuerySnapshot.forEach((docSnap) => {
         allProformaInvoices.push({ id: docSnap.id, ...docSnap.data() } as ProformaInvoiceDocument);
@@ -442,7 +421,7 @@ export default function DashboardPage() {
       const totalLinkedPIsCount = linkedPIsForTheYear.length;
 
       setDashboardStats({
-        totalLCs: lcEntriesForTheYear.filter(lc => typeof lc.amount === 'number' && isValid(lc.lcIssueDate ? (typeof lc.lcIssueDate === 'string' ? parseISO(lc.lcIssueDate) : (lc.lcIssueDate as unknown as Timestamp)?.toDate()) : null )).length,
+        totalLCs: validLcEntriesForStats.length,
         totalLCValue, activeSuppliers: activeSuppliersCount, activeApplicants: activeApplicantsCount, thisMonthLCQty, totalLinkedPIs: totalLinkedPIsCount,
       });
 
@@ -482,14 +461,12 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authUser]); // Added authUser dependency
 
   useEffect(() => {
     if (!authLoading && authUser) {
-      console.log("Dashboard: Auth loaded, user available. Triggering fetch.");
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
-      console.log("Dashboard: Auth loaded, no user. Clearing data.");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -506,7 +483,7 @@ export default function DashboardPage() {
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
-  if (authLoading) {
+  if (authLoading || (!authUser && isLoading)) { // Show global loader if auth is loading OR if no user and still initial data loading
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -515,7 +492,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!authUser && !isLoading && !authLoading) {
+  if (!authUser && !authLoading) { // If auth is done loading and still no user
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -578,7 +555,7 @@ export default function DashboardPage() {
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign className="h-7 w-7 text-primary" />}
           description={`For year ${selectedYear}`}
-          className="lg:col-span-1 xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-3"
         />
         <StatCard
           title="Active Beneficiaries"
@@ -596,8 +573,8 @@ export default function DashboardPage() {
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp className="h-7 w-7 text-primary" />}
-          description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : ' (Current Year Only)'}`}
-          className="lg:col-start-auto"
+          description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : `(${selectedYear} data)`}`}
+          className="lg:col-start-1"
         />
          <StatCard
           title={`PI's Linked with to L/Cs (${selectedYear})`}
@@ -656,7 +633,7 @@ export default function DashboardPage() {
                     >
                         {upcomingEtdShipments.map((shipment) => (
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none relative">
-                           <div className="absolute top-2 right-2 flex gap-1.5">
+                            <div className="absolute top-2 right-2 flex gap-1.5 z-10">
                                 {[
                                     { flag: shipment.isFirstShipment, label: "1st" },
                                     { flag: shipment.isSecondShipment, label: "2nd" },
@@ -685,7 +662,7 @@ export default function DashboardPage() {
                                 </div>
                                 <div>
                                     <p className="truncate">Beneficiary: <span className="font-medium text-foreground">{shipment.beneficiaryName || 'N/A'}</span></p>
-                                     <p className="truncate">ETA: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etaDate)}</span></p>
+                                    <p className="truncate">ETA: <span className="font-medium text-foreground">{formatDisplayDate(shipment.etaDate)}</span></p>
                                 </div>
                             </div>
                         </li>
@@ -723,7 +700,7 @@ export default function DashboardPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
           <CardHeader>
             <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileEdit className="h-6 w-6 text-primary" />
@@ -772,7 +749,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
           <CardHeader>
             <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <CheckCircle2 className="h-6 w-6 text-primary" />
