@@ -29,7 +29,7 @@ const phoneRegexForValidation = new RegExp(
 const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
   demoMachineId: z.string().min(1, "Machine Model is required."),
-  challanNo: z.string().optional(),
+  challanNo: z.string().optional(), // Added Challan No to schema
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
   factoryInchargeName: z.string().optional(),
@@ -95,7 +95,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     defaultValues: {
       factoryId: initialData.factoryId || '',
       demoMachineId: initialData.demoMachineId || '',
-      challanNo: initialData.challanNo || '',
+      challanNo: initialData.challanNo || '', // Ensure challanNo is in defaultValues
       deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
       estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
       factoryInchargeName: initialData.factoryInchargeName || '',
@@ -116,9 +116,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   React.useEffect(() => {
     const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
-        const machineReturnedValue = getValues("machineReturned");
+        const machineReturnedValue = getValues("machineReturned"); 
         if (machineReturnedValue) return "Returned";
-
+        
         const deliveryDateValue = getValues("deliveryDate");
         const estReturnDateValue = getValues("estReturnDate");
 
@@ -126,13 +126,13 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         const delivery = deliveryDateValue ? startOfDay(new Date(deliveryDateValue)) : null;
         const estReturn = estReturnDateValue ? startOfDay(new Date(estReturnDateValue)) : null;
 
-        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
+        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
 
         if (isPast(estReturn) && !isToday(estReturn)) return "Overdue";
         if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
         if (isFuture(delivery)) return "Upcoming";
-
-        return "Upcoming";
+        
+        return "Upcoming"; 
     };
     setCurrentDemoStatus(calculateCurrentDemoStatus());
   }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned, getValues]);
@@ -175,7 +175,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             const data = docSnap.data() as DemoMachineDocument;
             return { id: docSnap.id, ...data };
           })
-          // Include the current machine even if its status changed, but only other 'Available' machines
           .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId);
 
         setMachineOptions(
@@ -202,9 +201,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const resetValues: DemoMachineApplicationFormValues = {
         factoryId: initialData.factoryId || '',
         demoMachineId: initialData.demoMachineId || '',
-        challanNo: initialData.challanNo || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any,
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any,
+        challanNo: initialData.challanNo || '', // Ensure challanNo is reset
+        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, 
+        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, 
         factoryInchargeName: initialData.factoryInchargeName || '',
         inchargeCell: initialData.inchargeCell || '',
         notes: initialData.notes || '',
@@ -214,13 +213,13 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
       const selectedFactory = factoryOptions.find(opt => opt.value === initialData.factoryId);
       setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
-
+      
       const selectedMachine = machineOptions.find(opt => opt.value === initialData.demoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || initialData.machineSerial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || initialData.machineBrand || 'N/A');
       
-      isAfterInitialResetRef.current = true; // Flag that initial reset is done
-      prevMachineReturnedRef.current = resetValues.machineReturned; // Sync prev ref after reset
+      isAfterInitialResetRef.current = true; 
+      prevMachineReturnedRef.current = resetValues.machineReturned; 
 
     }
   }, [initialData, reset, factoryOptions, machineOptions]);
@@ -230,22 +229,20 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
-
-      // Only auto-fill if the user hasn't manually changed these fields from what initialData provided
+      
       if (getValues("factoryInchargeName") === (initialData.factoryInchargeName || '')) {
          setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
       if (getValues("inchargeCell") === (initialData.inchargeCell || '')) {
         setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
       }
-    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) {
+    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) { 
         setFactoryLocationDisplay('');
         setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
         setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
     } else if (!watchedFactoryId) {
          setFactoryLocationDisplay(initialData.factoryLocation || '');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell, initialData.factoryLocation, isLoadingFactories]);
 
   React.useEffect(() => {
@@ -260,7 +257,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
        setMachineSerialDisplay(initialData.machineSerial || '');
        setMachineBrandDisplay(initialData.machineBrand || '');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedDemoMachineId, machineOptions, initialData.machineSerial, initialData.machineBrand, isLoadingMachines]);
 
   React.useEffect(() => {
@@ -274,9 +270,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     }
   }, [watchedDeliveryDate, watchedEstReturnDate, getValues]);
 
-   // Effect to auto-update machine status in Firestore when "Machine Returned" checkbox changes
    React.useEffect(() => {
-    if (!isAfterInitialResetRef.current) { // Don't run on initial mount/reset cycles
+    if (!isAfterInitialResetRef.current) { 
       return;
     }
 
@@ -302,7 +297,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             });
           } catch (error) {
             console.error("Error auto-updating machine status:", error);
-            // Revert checkbox optimistically if Firestore update fails
             setValue("machineReturned", !watchedMachineReturned, { shouldValidate: false });
             Swal.fire({
               toast: true,
@@ -318,8 +312,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       }
       prevMachineReturnedRef.current = watchedMachineReturned;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedMachineReturned, getValues, setValue, initialData.demoMachineId]); // Added setValue and initialData.demoMachineId
+  }, [watchedMachineReturned, getValues, setValue, initialData.demoMachineId]);
 
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
@@ -342,7 +335,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       machineModel: selectedMachine?.label || initialData.machineModel,
       machineSerial: selectedMachine?.serial || initialData.machineSerial,
       machineBrand: selectedMachine?.brand || initialData.machineBrand,
-      challanNo: data.challanNo || undefined,
+      challanNo: data.challanNo || undefined, // Handle challanNo
       deliveryDate: data.deliveryDate ? format(new Date(data.deliveryDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       estReturnDate: data.estReturnDate ? format(new Date(data.estReturnDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : 0,
@@ -352,7 +345,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       machineReturned: data.machineReturned ?? false,
       updatedAt: serverTimestamp(),
     };
-
+    
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
             delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -362,8 +355,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     try {
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
-
-      // Sync Machine Status one last time on explicit save
+      
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
         const finalMachineStatus = data.machineReturned ? "Available" : "Allocated";
@@ -389,7 +381,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   const getDemoStatusBadgeVariant = (status: CurrentDemoStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case "Active": return "default";
+        case "Active": return "default"; 
         case "Overdue": return "destructive";
         case "Returned": return "secondary";
         case "Upcoming": return "outline";
@@ -471,7 +463,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
           </FormItem>
         </div>
-         <FormField
+        
+        <FormField
           control={form.control}
           name="challanNo"
           render={({ field }) => (
@@ -551,9 +544,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
                             </Button>
                         )}
                         {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                            <a
-                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
+                            <a 
+                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
+                            target="_blank" 
                             rel="noopener noreferrer"
                             title={`Chat on WhatsApp with ${watchedInchargeCell}`}
                             >
@@ -629,3 +622,4 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   );
 }
 
+    
