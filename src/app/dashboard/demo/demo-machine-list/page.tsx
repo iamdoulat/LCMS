@@ -172,7 +172,7 @@ export default function DemoMachineListPage() {
           ) : (
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.slice(0, 20).map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow relative">
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="relative pb-2 pt-4 px-4">
                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
@@ -204,7 +204,6 @@ export default function DemoMachineListPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
                         <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                         <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
-                        {/* Challan No removed from display here */}
                         {machine.motorOrControlBoxModel && (
                             <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
                         )}
@@ -216,13 +215,13 @@ export default function DemoMachineListPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
                         {machine.machineFeatures && (
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Features:</p>
+                                <p className="text-xs font-bold text-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:</p>
                                 <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.machineFeatures}</p>
                             </div>
                         )}
                         {machine.note && (
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Note:</p>
+                                <p className="text-xs font-bold text-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:</p>
                                 <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.note}</p>
                             </div>
                         )}
@@ -241,3 +240,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
