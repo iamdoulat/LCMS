@@ -19,10 +19,10 @@ const formatDisplayDate = (dateInput?: string | null | Timestamp): string => {
   let date: Date;
   if (dateInput instanceof Timestamp) {
     date = dateInput.toDate();
-  } else if (typeof dateInput === 'string') { 
+  } else if (typeof dateInput === 'string') {
     try {
       const parsed = parseISO(dateInput);
-      date = isValid(parsed) ? parsed : new Date(0); 
+      date = isValid(parsed) ? parsed : new Date(0);
     } catch (e) {
       return 'N/A';
     }
@@ -42,11 +42,11 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
 const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Available':
-      return 'default'; 
+      return 'default';
     case 'Allocated':
-      return 'secondary'; 
+      return 'secondary';
     case 'Maintenance Mode':
-      return 'destructive'; 
+      return 'destructive';
     default:
       return 'outline';
   }
@@ -173,7 +173,7 @@ export default function DemoMachineListPage() {
             <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.slice(0, 20).map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow relative">
-                  <CardHeader className="relative pb-2 pt-4 px-4"> 
+                  <CardHeader className="relative pb-2 pt-4 px-4">
                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
                             <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
@@ -204,9 +204,7 @@ export default function DemoMachineListPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
                         <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                         <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
-                         {machine.challanNo && (
-                            <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
-                        )}
+                        {/* Challan No removed from display here */}
                         {machine.motorOrControlBoxModel && (
                             <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
                         )}
@@ -214,7 +212,7 @@ export default function DemoMachineListPage() {
                            <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                         )}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
                         {machine.machineFeatures && (
                             <div>

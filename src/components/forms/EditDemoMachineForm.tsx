@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, FileInput } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileInput, FileBadge } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -25,12 +25,11 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
-  challanNo: z.string().optional(),
+  // challanNo: z.string().optional(), // Removed
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }),
   machineFeatures: z.string().optional(),
   note: z.string().optional(),
-  // machineReturned: z.boolean().optional().default(false), // Removed this field
 });
 
 type DemoMachineEditFormValues = z.infer<typeof demoMachineSchema>;
@@ -40,22 +39,21 @@ interface EditDemoMachineFormProps {
   machineId: string;
 }
 
+const defaultFormValues: DemoMachineEditFormValues = {
+  machineModel: '',
+  machineSerial: '',
+  machineBrand: '',
+  motorOrControlBoxModel: '',
+  controlBoxSerialNo: '',
+  // challanNo: '', // Removed
+  machineOwner: demoMachineOwnerOptions[0],
+  currentStatus: demoMachineStatusOptions[0],
+  machineFeatures: '',
+  note: '',
+};
+
 export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
-  const defaultFormValues: Partial<DemoMachineEditFormValues> = {
-    machineModel: '',
-    machineSerial: '',
-    machineBrand: '',
-    motorOrControlBoxModel: '',
-    controlBoxSerialNo: '',
-    challanNo: '',
-    machineOwner: demoMachineOwnerOptions[0],
-    currentStatus: demoMachineStatusOptions[0],
-    machineFeatures: '',
-    note: '',
-    // machineReturned: false, // Removed
-  };
 
   const form = useForm<DemoMachineEditFormValues>({
     resolver: zodResolver(demoMachineSchema),
@@ -70,40 +68,36 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineBrand: initialData.machineBrand || '',
         motorOrControlBoxModel: initialData.motorOrControlBoxModel || '',
         controlBoxSerialNo: initialData.controlBoxSerialNo || '',
-        challanNo: initialData.challanNo || '',
+        // challanNo: initialData.challanNo || '', // Removed
         machineOwner: initialData.machineOwner || demoMachineOwnerOptions[0],
         currentStatus: initialData.currentStatus || demoMachineStatusOptions[0],
         machineFeatures: initialData.machineFeatures || '',
         note: initialData.note || '',
-        // machineReturned: initialData.machineReturned ?? false, // Removed
       });
     }
   }, [initialData, form]);
 
   async function onSubmit(data: DemoMachineEditFormValues) {
     setIsSubmitting(true);
-    
+
     const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt' | 'machineReturned'>> & { updatedAt: any } = {
       machineModel: data.machineModel,
       machineSerial: data.machineSerial,
       machineBrand: data.machineBrand,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-      challanNo: data.challanNo || undefined,
+      // challanNo: data.challanNo || undefined, // Removed
       machineOwner: data.machineOwner,
       currentStatus: data.currentStatus,
       machineFeatures: data.machineFeatures || undefined,
       note: data.note || undefined,
-      // machineReturned: data.machineReturned ?? false, // Removed
       updatedAt: serverTimestamp(),
     };
 
-    // Ensure optional fields that are empty strings become undefined for Firestore
     Object.keys(dataToUpdate).forEach(key => {
       const typedKey = key as keyof typeof dataToUpdate;
       if (dataToUpdate[typedKey] === '') {
-        // Check specific fields if needed or apply generally for optional strings
-         if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'challanNo', 'machineFeatures', 'note'].includes(typedKey)) {
+         if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'machineFeatures', 'note'].includes(typedKey)) {
             (dataToUpdate as any)[typedKey] = undefined;
          }
       }
@@ -150,7 +144,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="machineBrand"
@@ -207,21 +201,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
-
-        <FormField
-            control={form.control}
-            name="challanNo"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><FileBadge className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Challan No.</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Challan No (Optional)" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-        />
-        
+        {/* Challan No field removed */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -232,7 +212,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value ?? defaultFormValues.machineOwner}
                     className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
                   >
                     {demoMachineOwnerOptions.map((option) => (
@@ -259,7 +239,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value ?? defaultFormValues.currentStatus}
                     className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
                   >
                     {demoMachineStatusOptions.map((option) => (
@@ -277,8 +257,6 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
-        
-        {/* Removed "Machine Returned by Factory" checkbox */}
 
         <FormField
           control={form.control}
@@ -325,4 +303,3 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
     </Form>
   );
 }
-
