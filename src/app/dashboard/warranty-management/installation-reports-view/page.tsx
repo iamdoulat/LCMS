@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Added CardContent
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label'; // Added Label import
+import { Label } from '@/components/ui/label';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react'; // Added PlusCircle
+import { Loader2, ClipboardList, Info, AlertTriangle, FileEdit, Trash2, ChevronLeft, ChevronRight, PlusCircle, ExternalLink, FileText, Filter, XCircle, Users, Building, Hash, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -16,7 +16,7 @@ import type { InstallationReportDocument, CustomerDocument, SupplierDocument } f
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { format, parseISO, isValid, addDays, isBefore, getYear } from 'date-fns';
+import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } from 'date-fns';
 
 const ITEMS_PER_PAGE = 9;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
@@ -26,7 +26,7 @@ const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
-const formatDisplayDate = (dateString?: string | null) => {
+const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
@@ -107,7 +107,6 @@ export default function InstallationReportsViewPage() {
         setIsLoadingBeneficiaries(false);
 
       } catch (error: any) {
-        console.error("Error fetching installation reports or options: ", error);
         let errorMessage = `Could not fetch data. Please ensure Firestore rules allow reads.`;
         if (error.message?.toLowerCase().includes("index")) {
             errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
@@ -178,8 +177,8 @@ export default function InstallationReportsViewPage() {
           setAllReports(prevReports => prevReports.filter(report => report.id !== reportId));
           Swal.fire('Deleted!', `Installation report "${reportIdentifier || reportId}" has been removed.`, 'success');
         } catch (error: any) {
-          console.error("Error deleting installation report: ", error);
-          Swal.fire("Error", `Could not delete report: ${error.message}`, "error");
+          setFetchError(`Could not delete report: ${(error as Error).message}`);
+          Swal.fire("Error", `Could not delete report: ${(error as Error).message}`, "error");
         }
       }
     });
@@ -231,9 +230,9 @@ export default function InstallationReportsViewPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
-                View Installation Reports
+                Installation Reports View
               </CardTitle>
               <CardDescription>
                 Browse, filter, and manage existing installation reports. 
@@ -242,12 +241,12 @@ export default function InstallationReportsViewPage() {
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
               <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Report
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Installation Report
               </Button>
             </Link>
           </div>
         </CardHeader>
-        <CardContent> {/* Added CardContent wrapper */}
+        <CardContent>
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
@@ -326,11 +325,11 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6"> {/* Responsive grid for report cards */}
+            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
               {currentItems.map((report) => {
                 let reportExpiredCount = 0;
                 let reportRemainingCount = 0;
-                const today = new Date();
+                const today = startOfDay(new Date());
                 report.installationDetails?.forEach(item => {
                   if (item.installDate) {
                     const installDateObj = parseISO(item.installDate);
@@ -346,9 +345,9 @@ export default function InstallationReportsViewPage() {
                 });
 
                 return (
-                  <div key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                  <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
                     <div className="absolute top-3 right-3 flex gap-1 z-10">
-                      <Button size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                      <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
                           <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Report</span>
                         </Link>
@@ -358,20 +357,20 @@ export default function InstallationReportsViewPage() {
                       </Button>
                     </div>
 
-                     <div className="mb-2 text-sm pr-20"> {/* Added pr-20 for spacing */}
-                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
-                          C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                        </Link>
-                        {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
-                          <span className="text-xs text-muted-foreground">
-                            (Date: {formatDisplayDate(report.commercialInvoiceDate)})
-                          </span>
-                        )}
-                        <span className="font-medium text-foreground text-base">
-                          L/C: {formatReportValue(report.documentaryCreditNumber)}
-                        </span>
-                      </div>
+                     <div className="mb-2 text-sm pr-20">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                            <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
+                            C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                            </Link>
+                            {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
+                            <span className="text-xs text-muted-foreground">
+                                (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                            </span>
+                            )}
+                             <span className="font-medium text-foreground text-base">
+                                L/C: {formatReportValue(report.documentaryCreditNumber)}
+                            </span>
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-1 text-sm">
@@ -380,11 +379,10 @@ export default function InstallationReportsViewPage() {
                     </div>
 
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
-                      <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
-                      <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
-                      <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
+                        <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
+                        <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
+                        <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
                     </div>
-
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
                         <p><strong className="text-muted-foreground">Warranty Expired:</strong> <span className="font-medium text-destructive">{reportExpiredCount} sets</span></p>
                         <p><strong className="text-muted-foreground">Warranty Remaining:</strong> <span className="font-medium text-green-600">{reportRemainingCount} sets</span></p>
@@ -398,10 +396,10 @@ export default function InstallationReportsViewPage() {
                         </Button>
                       )}
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-6">
@@ -419,3 +417,4 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
