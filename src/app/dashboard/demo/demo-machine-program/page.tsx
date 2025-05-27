@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -36,7 +37,7 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   } else if (typeof dateString === 'string') {
     try {
       const parsed = parseISO(dateString);
-      date = isValid(parsed) ? parsed : new Date(0);
+      date = isValid(parsed) ? parsed : new Date(0); 
     } catch (e) {
       return 'N/A';
     }
@@ -211,7 +212,6 @@ export default function DemoMachineProgramPage() {
             try {
                 const appToDelete = allApplications.find(app => app.id === applicationId);
                 if (appToDelete && appToDelete.demoMachineId) {
-                    // If machine was allocated by this app, set its status back to "Available"
                     if (appToDelete.machineReturned === false || appToDelete.machineReturned === undefined) {
                         const machineRef = doc(firestore, "demo_machines", appToDelete.demoMachineId);
                         await updateDoc(machineRef, {
@@ -420,20 +420,14 @@ export default function DemoMachineProgramPage() {
                       <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
                       <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-foreground">{formatDisplayDate(app.estReturnDate)}</span></div>
                       <div><span className="text-muted-foreground">Period: </span><span className="font-medium text-foreground">{formatReportValue(app.demoPeriodDays, "0")} Day(s)</span></div>
-                      {app.factoryInchargeName && (
-                        <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{app.factoryInchargeName}</span></div>
-                      )}
-                      {app.inchargeCell && (
-                        <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
-                      )}
-                       {app.challanNo && (
-                        <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{app.challanNo}</span></div>
-                      )}
+                      <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{formatReportValue(app.factoryInchargeName)}</span></div>
+                      <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{formatReportValue(app.inchargeCell)}</span></div>
+                      <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{formatReportValue(app.challanNo)}</span></div>
                     </div>
-                    {app.notes && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-muted-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Expected Result/Notes:</p>
-                            <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{app.notes}</p>
+                    {app.notes && app.notes.trim() !== "" && (
+                        <div className="mt-3 p-3 rounded-md border bg-muted/30">
+                            <p className="text-xs font-medium text-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5" />Expected Result/Notes:</p>
+                            <p className="text-xs text-foreground whitespace-pre-wrap">{app.notes}</p>
                         </div>
                     )}
                     <div className="mt-2 text-xs text-muted-foreground text-right">
