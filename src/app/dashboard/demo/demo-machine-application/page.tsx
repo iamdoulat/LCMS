@@ -29,7 +29,7 @@ const phoneRegexForValidation = new RegExp(
 const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
   demoMachineId: z.string().min(1, "Machine Model is required."),
-  challanNo: z.string().optional(),
+  challanNo: z.string().min(1, "Challan No. is required."),
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
   factoryInchargeName: z.string().optional(),
@@ -205,7 +205,7 @@ export default function NewDemoMachineApplicationPage() {
       machineModel: selectedMachine?.label || 'N/A',
       machineSerial: selectedMachine?.serial || 'N/A',
       machineBrand: selectedMachine?.brand || 'N/A',
-      challanNo: data.challanNo || undefined,
+      challanNo: data.challanNo,
       deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
@@ -270,7 +270,6 @@ export default function NewDemoMachineApplicationPage() {
                 Fill in the details below to request a demo machine. Only 'Available' machines are shown.
               </CardDescription>
             </div>
-            {/* Removed Add Factory button from here */}
           </div>
         </CardHeader>
         <CardContent>
@@ -344,9 +343,9 @@ export default function NewDemoMachineApplicationPage() {
                   name="challanNo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:</FormLabel>
+                      <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter Challan No (Optional)" {...field} value={field.value ?? ''} />
+                        <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

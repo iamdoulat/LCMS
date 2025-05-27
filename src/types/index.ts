@@ -8,7 +8,7 @@ export const termsOfPayOptions = [
   "Deffered 180days",
   "Deffered 360days",
 ] as const;
-export type TermsOfPay = typeof termsOfPayOptions[number] | undefined;
+export type TermsOfPay = typeof termsOfPayOptions[number];
 
 export const shipmentModeOptions = ["Sea", "Air"] as const;
 export type ShipmentMode = typeof shipmentModeOptions[number];
@@ -21,7 +21,7 @@ export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
 
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Done", "Shipment Done"] as const;
-export type LCStatus = typeof lcStatusOptions[number] | undefined;
+export type LCStatus = typeof lcStatusOptions[number];
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
@@ -44,13 +44,15 @@ export interface LCEntry {
   id?: string;
   applicantId: string;
   beneficiaryId: string;
-  currency?: Currency;
-  amount?: number;
+  currency: Currency;
+  amount: number | undefined;
   termsOfPay?: TermsOfPay;
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date | null | undefined;
-  totalMachineQty?: number;
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: Date | null | undefined;
+  totalMachineQty: number | undefined;
   numberOfAmendments?: number;
   status?: LCStatus;
   itemDescriptions?: string;
@@ -58,9 +60,8 @@ export interface LCEntry {
   portOfLoading?: string;
   portOfDischarge?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // Previously notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   lcIssueDate?: Date | null | undefined;
@@ -116,8 +117,6 @@ export interface LCEntry {
   billOfExchangeQty?: number;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   shippingMarks?: string;
-  commercialInvoiceNumber?: string;
-  commercialInvoiceDate?: Date | null | undefined;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -136,6 +135,8 @@ export interface LCEntryDocument {
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: string; // ISO string
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: string; // ISO string
   totalMachineQty: number;
   numberOfAmendments?: number;
   status?: LCStatus;
@@ -144,9 +145,8 @@ export interface LCEntryDocument {
   portOfLoading?: string;
   portOfDischarge?: string;
   consigneeBankNameAddress?: string;
-  // bankBin?: string; // Removed
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // Previously notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   lcIssueDate?: string; // ISO string
@@ -202,8 +202,6 @@ export interface LCEntryDocument {
   billOfExchangeQty?: number;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   shippingMarks?: string;
-  commercialInvoiceNumber?: string;
-  commercialInvoiceDate?: string; // ISO string
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -282,7 +280,7 @@ export interface CompanyProfile {
 
 export interface UserDocumentForAdmin {
   id: string; // Firestore document ID
-  uid?: string; // Firebase Auth UID
+  uid?: string; // Firebase Auth UID (if linked)
   displayName: string;
   email: string;
   contactNumber?: string;
@@ -293,16 +291,17 @@ export interface UserDocumentForAdmin {
 }
 
 // --- Proforma Invoice Types ---
+export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
+export type FreightChargeOption = typeof freightChargeOptions[number];
+
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Can be empty string during input
+  purchasePrice: number | ''; // Can be empty string during input
+  salesPrice: number | ''; // Can be empty string during input
+  netCommissionPercentage?: number | ''; // Can be empty string during input
 }
-
-export type FreightChargeOption = typeof freightChargeOptions[number];
 
 export interface ProformaInvoice {
   id?: string;
@@ -315,17 +314,17 @@ export interface ProformaInvoice {
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
-  connectedLcIssueDate?: string;
+  connectedLcIssueDate?: string; // ISO string
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
-  freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | '';
+  freightChargeAmount?: number | ''; // Can be empty string during input
+  miscellaneousExpenses?: number | ''; // Can be empty string during input
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number;
+  totalSalesPrice: number; // Sum of (qty * salesPrice) from line items
   totalExtraNetCommission?: number;
-  grandTotalSalesPrice: number;
+  grandTotalSalesPrice: number; // (totalSalesPrice + (freight if excluded)) - miscExpenses
   grandTotalCommissionUSD: number;
   totalCommissionPercentage: number;
   createdAt?: any;
@@ -353,17 +352,20 @@ export interface LcOption {
   label: string; // L/C Documentary Credit Number
   issueDate?: string; // ISO string for L/C Issue Date
   purchaseOrderUrl?: string;
-  lcData: LCEntryDocument; // Full L/C document data for auto-fill
+  lcData: LCEntryDocument;
 }
+// --- END Proforma Invoice Types ---
+
 
 // --- Installation Report Types ---
 export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Made optional
-  ctlBoxSerial: z.string().optional(), // Made optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
+  // warrantyRemaining is calculated, not part of form data
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
 
@@ -391,12 +393,12 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0);
+          .filter((sn): sn is string => !!sn && sn.length > 0); // Filter out empty or whitespace-only serials
         return new Set(serials).size === serials.length;
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: ["installationDetails"],
+        path: ["installationDetails"], // Point error to the array if needed or a specific field
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -428,7 +430,7 @@ export interface InstallationReportDocument {
   reportingEngineerName: string;
   installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
-  pendingQty?: number | string;
+  pendingQty?: number;
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
@@ -442,9 +444,9 @@ export interface InstallationReportDocument {
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
   label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & { // Ensure LCEntryDocument includes all partial shipment fields
+  lcData: LCEntryDocument & {
     id: string;
-    commercialInvoiceDate?: string;
+    commercialInvoiceDate?: string; // ISO Date String
     partialShipmentAllowed?: PartialShipmentAllowed;
     firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
     secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
@@ -455,6 +457,7 @@ export interface LcForInvoiceDropdownOption {
     isThirdShipment?: boolean;
   };
 }
+// --- END Installation Report Types ---
 
 // --- Demo Machine Factory Types ---
 export interface DemoMachineFactory {
@@ -489,10 +492,9 @@ export interface DemoMachine {
   currentStatus?: DemoMachineStatusOption;
   motorOrControlBoxModel?: string;
   controlBoxSerialNo?: string;
-  // challanNo?: string; // Removed from DemoMachine entity
   machineFeatures?: string;
   note?: string;
-  machineReturned?: boolean;
+  machineReturned?: boolean; // Added for tracking if machine returned to inventory
 }
 
 export type DemoMachineDocument = Omit<DemoMachine, 'id'> & { id: string, createdAt: any, updatedAt: any, machineReturned?: boolean };
@@ -507,7 +509,7 @@ export interface DemoMachineApplication {
   machineModel?: string;
   machineSerial?: string;
   machineBrand?: string;
-  challanNo?: string; // Challan No can remain on the application
+  challanNo: string;
   deliveryDate: Date;
   estReturnDate: Date;
   demoPeriodDays?: number;
@@ -528,7 +530,7 @@ export interface DemoMachineApplicationDocument {
   machineModel: string;
   machineSerial: string;
   machineBrand: string;
-  challanNo?: string;
+  challanNo: string;
   deliveryDate: string; // ISO string
   estReturnDate: string; // ISO string
   demoPeriodDays: number;
