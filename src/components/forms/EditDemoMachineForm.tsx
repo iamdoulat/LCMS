@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
 import { Checkbox } from '@/components/ui/checkbox';
 
 const demoMachineSchema = z.object({
@@ -25,7 +25,7 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
-  challanNo: z.string().optional(), // Added Challan No
+  challanNo: z.string().optional(),
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }),
   machineFeatures: z.string().optional(),
@@ -51,7 +51,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       machineBrand: '',
       motorOrControlBoxModel: '',
       controlBoxSerialNo: '',
-      challanNo: '', // Added Challan No
+      challanNo: '',
       machineOwner: demoMachineOwnerOptions[0],
       currentStatus: demoMachineStatusOptions[0],
       machineFeatures: '',
@@ -68,7 +68,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineBrand: initialData.machineBrand || '',
         motorOrControlBoxModel: initialData.motorOrControlBoxModel || '',
         controlBoxSerialNo: initialData.controlBoxSerialNo || '',
-        challanNo: initialData.challanNo || '', // Added Challan No
+        challanNo: initialData.challanNo || '',
         machineOwner: initialData.machineOwner || demoMachineOwnerOptions[0],
         currentStatus: initialData.currentStatus || demoMachineStatusOptions[0],
         machineFeatures: initialData.machineFeatures || '',
@@ -87,7 +87,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       machineBrand: data.machineBrand,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-      challanNo: data.challanNo || undefined, // Added Challan No
+      challanNo: data.challanNo || undefined,
       machineOwner: data.machineOwner,
       currentStatus: data.currentStatus,
       machineFeatures: data.machineFeatures || undefined,
@@ -158,7 +158,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="machineSerial"
