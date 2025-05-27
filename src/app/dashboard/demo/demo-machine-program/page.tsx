@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
+import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight, PlusCircle, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
@@ -36,7 +36,7 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   } else if (typeof dateString === 'string') {
     try {
       const parsed = parseISO(dateString);
-      date = isValid(parsed) ? parsed : new Date(0); 
+      date = isValid(parsed) ? parsed : new Date(0);
     } catch (e) {
       return 'N/A';
     }
@@ -61,18 +61,18 @@ const getDemoAppStatus = (app: DemoMachineApplicationDocument): DemoAppDisplaySt
     const delivery = app.deliveryDate ? startOfDay(parseISO(app.deliveryDate)) : null;
     const estReturn = app.estReturnDate ? startOfDay(parseISO(app.estReturnDate)) : null;
 
-    if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
+    if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
 
-    if (isPast(estReturn)) return "Overdue";
+    if (isPast(estReturn) && !isToday(estReturn)) return "Overdue";
     if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
     if (isFuture(delivery)) return "Upcoming";
-    
-    return "Upcoming"; 
+
+    return "Upcoming";
 };
 
 const getDemoStatusBadgeVariant = (status: DemoAppDisplayStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case "Active": return "default"; 
+        case "Active": return "default";
         case "Overdue": return "destructive";
         case "Returned": return "secondary";
         case "Upcoming": return "outline";
@@ -135,7 +135,7 @@ export default function DemoMachineProgramPage() {
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
         const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as DemoMachineDocument) }));
         setMachineOptions(fetchedMachines.map(machine => ({ value: machine.id, label: machine.machineModel || 'Unnamed Model' })));
-        
+
         const uniqueBrands = Array.from(new Set(fetchedMachines.map(m => m.machineBrand).filter(brand => !!brand)));
         setBrandOptions(uniqueBrands.map(brand => ({ value: brand as string, label: brand as string }))); // Ensure value and label are strings
         setIsLoadingMachines(false);
@@ -186,7 +186,7 @@ export default function DemoMachineProgramPage() {
     if (filterBrand && filterBrand !== ALL_BRANDS_VALUE) {
       filtered = filtered.filter(app => app.machineBrand === filterBrand);
     }
-    
+
     setDisplayedApplications(filtered);
     setCurrentPage(1);
   }, [allApplications, filterYear, filterFactoryId, filterMachineId, filterBrand]);
@@ -231,7 +231,7 @@ export default function DemoMachineProgramPage() {
     setFilterBrand('');
     setCurrentPage(1);
   };
-  
+
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedApplications.slice(indexOfFirstItem, indexOfLastItem);
@@ -240,7 +240,7 @@ export default function DemoMachineProgramPage() {
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
   const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
-  
+
   const getPageNumbers = () => {
     const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
     if (totalPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalPages; i++) pageNumbers.push(i); }
@@ -267,14 +267,11 @@ export default function DemoMachineProgramPage() {
                 Demo Machine Program
               </CardTitle>
               <CardDescription>
-                Manage Demo Machine Applications. 
+                Manage Demo Machine Applications.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplications.length)} of {displayedApplications.length} entries.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline"> 
-                    <Filter className="mr-2 h-4 w-4" /> Filter: All
-                </Button>
                 <Link href="/dashboard/demo/demo-machine-application" passHref>
                 <Button variant="default">
                     <AppWindow className="mr-2 h-4 w-4" />
@@ -331,7 +328,7 @@ export default function DemoMachineProgramPage() {
                     value={filterBrand || ALL_BRANDS_VALUE}
                     onValueChange={(value) => setFilterBrand(value === ALL_BRANDS_VALUE ? '' : value)}
                     placeholder="Search Brand..."
-                    selectPlaceholder={isLoadingMachines ? "Loading..." : "All Brands"} 
+                    selectPlaceholder={isLoadingMachines ? "Loading..." : "All Brands"}
                     emptyStateMessage="No brand found."
                     disabled={isLoadingMachines}
                   />
@@ -395,6 +392,7 @@ export default function DemoMachineProgramPage() {
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
                       Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
+                       {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-0 pb-0 pt-0">

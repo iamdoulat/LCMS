@@ -16,16 +16,11 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, ArrowLeft, AppWindow, AlertTriangle, FileBadge } from 'lucide-react';
+import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useParams, useRouter } from 'next/navigation';
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -131,7 +126,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
         if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
 
-        if (isPast(estReturn)) return "Overdue";
+        if (isPast(estReturn) && !isToday(estReturn)) return "Overdue";
         if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
         if (isFuture(delivery)) return "Upcoming";
 
@@ -278,7 +273,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       return;
     }
 
-    // Only run if watchedMachineReturned has actually changed from its previous state
     if (watchedMachineReturned !== prevMachineReturnedRef.current) {
       const currentDemoMachineId = getValues("demoMachineId");
       if (currentDemoMachineId) {
@@ -313,7 +307,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         };
         updateMachineStatusInFirestore();
       }
-      prevMachineReturnedRef.current = watchedMachineReturned; // Update prev ref after handling
+      prevMachineReturnedRef.current = watchedMachineReturned;
     }
   }, [watchedMachineReturned, getValues, setValue]);
 
@@ -369,7 +363,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
           });
         } catch (machineError) {
           console.error("Error updating demo machine status on main save:", machineError);
-           // Already handled by the useEffect, this is a fallback/confirmation
         }
       }
 
@@ -623,3 +616,4 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     </Form>
   );
 }
+
