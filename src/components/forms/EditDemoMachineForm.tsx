@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, FileInput } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const demoMachineSchema = z.object({
@@ -30,7 +30,7 @@ const demoMachineSchema = z.object({
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }),
   machineFeatures: z.string().optional(),
   note: z.string().optional(),
-  machineReturned: z.boolean().optional().default(false),
+  // machineReturned: z.boolean().optional().default(false), // Removed this field
 });
 
 type DemoMachineEditFormValues = z.infer<typeof demoMachineSchema>;
@@ -43,21 +43,23 @@ interface EditDemoMachineFormProps {
 export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
+  const defaultFormValues: Partial<DemoMachineEditFormValues> = {
+    machineModel: '',
+    machineSerial: '',
+    machineBrand: '',
+    motorOrControlBoxModel: '',
+    controlBoxSerialNo: '',
+    challanNo: '',
+    machineOwner: demoMachineOwnerOptions[0],
+    currentStatus: demoMachineStatusOptions[0],
+    machineFeatures: '',
+    note: '',
+    // machineReturned: false, // Removed
+  };
+
   const form = useForm<DemoMachineEditFormValues>({
     resolver: zodResolver(demoMachineSchema),
-    defaultValues: { 
-      machineModel: '',
-      machineSerial: '',
-      machineBrand: '',
-      motorOrControlBoxModel: '',
-      controlBoxSerialNo: '',
-      challanNo: '',
-      machineOwner: demoMachineOwnerOptions[0],
-      currentStatus: demoMachineStatusOptions[0],
-      machineFeatures: '',
-      note: '',
-      machineReturned: false,
-    },
+    defaultValues: defaultFormValues,
   });
 
   React.useEffect(() => {
@@ -73,7 +75,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         currentStatus: initialData.currentStatus || demoMachineStatusOptions[0],
         machineFeatures: initialData.machineFeatures || '',
         note: initialData.note || '',
-        machineReturned: initialData.machineReturned ?? false,
+        // machineReturned: initialData.machineReturned ?? false, // Removed
       });
     }
   }, [initialData, form]);
@@ -81,7 +83,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
   async function onSubmit(data: DemoMachineEditFormValues) {
     setIsSubmitting(true);
     
-    const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+    const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt' | 'machineReturned'>> & { updatedAt: any } = {
       machineModel: data.machineModel,
       machineSerial: data.machineSerial,
       machineBrand: data.machineBrand,
@@ -92,15 +94,21 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       currentStatus: data.currentStatus,
       machineFeatures: data.machineFeatures || undefined,
       note: data.note || undefined,
-      machineReturned: data.machineReturned ?? false,
+      // machineReturned: data.machineReturned ?? false, // Removed
       updatedAt: serverTimestamp(),
     };
 
+    // Ensure optional fields that are empty strings become undefined for Firestore
     Object.keys(dataToUpdate).forEach(key => {
-      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-        delete dataToUpdate[key as keyof typeof dataToUpdate];
+      const typedKey = key as keyof typeof dataToUpdate;
+      if (dataToUpdate[typedKey] === '') {
+        // Check specific fields if needed or apply generally for optional strings
+         if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'challanNo', 'machineFeatures', 'note'].includes(typedKey)) {
+            (dataToUpdate as any)[typedKey] = undefined;
+         }
       }
     });
+
 
     try {
       const machineDocRef = doc(firestore, "demo_machines", machineId);
@@ -270,29 +278,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
           />
         </div>
         
-        <FormField
-            control={form.control}
-            name="machineReturned"
-            render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
-                    <FormControl>
-                        <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        id="machineReturnedEdit"
-                        />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                        <FormLabel htmlFor="machineReturnedEdit" className="text-sm font-medium hover:cursor-pointer">
-                        Machine Returned by Factory
-                        </FormLabel>
-                        <FormDescription className="text-xs">
-                        Check this if this specific demo machine has been returned by the factory.
-                        </FormDescription>
-                    </div>
-                </FormItem>
-            )}
-        />
+        {/* Removed "Machine Returned by Factory" checkbox */}
 
         <FormField
           control={form.control}
@@ -339,3 +325,4 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
     </Form>
   );
 }
+
