@@ -51,13 +51,11 @@ import {
   Laptop,
   AppWindow,
   FileCode,
-  FileEdit, // Keep FileEdit as it's used
+  FileEdit,
   PackageCheck,
-  UserPlus, // Keep UserPlus as it's used
-  Users as UsersIcon, // Keep UsersIcon as it's used
-  Plus,
-  Minus,
-  Microscope
+  UserPlus,
+  Microscope,
+  Users as UsersIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -87,25 +85,22 @@ interface NavItemGroup {
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
-
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
-      // { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 }, // Removed as per previous request
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
       { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     ],
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
-      // { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: FilePlus2 }, // Removed as per previous request
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
     ],
   },
@@ -114,29 +109,27 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Store
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
-      // { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 }, // Removed as per previous request
     ],
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from UsersIcon to Building, then to Factory
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
-      // { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus }, // Removed as per previous request
     ],
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
-      { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipment Dates', icon: CalendarClock },
+      { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock },
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
     ],
@@ -144,7 +137,7 @@ const managementNavItems: NavItemGroup[] = [
 ];
 
 const demoMachineManagementNavItems: NavItemGroup[] = [
- {
+  {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
     roles: ["Super Admin", "Admin", "DemoManager"],
@@ -153,12 +146,11 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // This line is removed
+      { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
 ];
-
 
 const warrantyManagementNavItems: NavItemGroup[] = [
  {
@@ -168,7 +160,6 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
-      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench }, // Removed as per previous request
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
     ],
   },
@@ -199,12 +190,9 @@ export function AppSidebarNav() {
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
 
-  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-
-
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname === href;
+    if (href === '/dashboard') return pathname === href; // Only true if exactly /dashboard
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
@@ -244,7 +232,7 @@ export function AppSidebarNav() {
     const IconComponent = item.icon;
 
     // Check if the group itself should be visible based on roles
-    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
@@ -253,17 +241,12 @@ export function AppSidebarNav() {
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    // If the group has a role restriction and no visible sublinks (and user is not Super Admin), hide the group
     if (userRole !== "Super Admin" && item.roles && visibleSubLinks.length === 0) {
         return null;
     }
-
-    // If the group has no role restriction but no visible sublinks (and user is not Super Admin), also hide it
-    // unless it's a group that might just be a label without links for some roles (which is not typical for accordions)
-    if (!item.roles && userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+     if (!item.roles && userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
-
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -274,7 +257,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
@@ -434,7 +417,6 @@ export function AppSidebarNav() {
           </Accordion>
         </SidebarGroup>
 
-
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -485,4 +467,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
