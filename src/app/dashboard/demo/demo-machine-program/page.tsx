@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
@@ -61,7 +61,7 @@ const getDemoAppStatus = (app: DemoMachineApplicationDocument): DemoAppDisplaySt
     const delivery = app.deliveryDate ? startOfDay(parseISO(app.deliveryDate)) : null;
     const estReturn = app.estReturnDate ? startOfDay(parseISO(app.estReturnDate)) : null;
 
-    if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
+    if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
 
     if (isPast(estReturn)) return "Overdue";
     if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
@@ -137,7 +137,7 @@ export default function DemoMachineProgramPage() {
         setMachineOptions(fetchedMachines.map(machine => ({ value: machine.id, label: machine.machineModel || 'Unnamed Model' })));
         
         const uniqueBrands = Array.from(new Set(fetchedMachines.map(m => m.machineBrand).filter(brand => !!brand)));
-        setBrandOptions(uniqueBrands.map(brand => ({ value: brand, label: brand })));
+        setBrandOptions(uniqueBrands.map(brand => ({ value: brand as string, label: brand as string }))); // Ensure value and label are strings
         setIsLoadingMachines(false);
 
       } catch (error: any) {
@@ -272,6 +272,9 @@ export default function DemoMachineProgramPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+                <Button variant="outline"> 
+                    <Filter className="mr-2 h-4 w-4" /> Filter: All
+                </Button>
                 <Link href="/dashboard/demo/demo-machine-application" passHref>
                 <Button variant="default">
                     <AppWindow className="mr-2 h-4 w-4" />
@@ -328,7 +331,7 @@ export default function DemoMachineProgramPage() {
                     value={filterBrand || ALL_BRANDS_VALUE}
                     onValueChange={(value) => setFilterBrand(value === ALL_BRANDS_VALUE ? '' : value)}
                     placeholder="Search Brand..."
-                    selectPlaceholder={isLoadingMachines ? "Loading..." : "All Brands"} // Brand loading depends on machines
+                    selectPlaceholder={isLoadingMachines ? "Loading..." : "All Brands"} 
                     emptyStateMessage="No brand found."
                     disabled={isLoadingMachines}
                   />
@@ -362,7 +365,7 @@ export default function DemoMachineProgramPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4 max-h-[calc(100vh-28rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <ul className="space-y-4">
               {currentItems.map((app) => {
                 const currentStatus = getDemoAppStatus(app);
                 return (
@@ -465,3 +468,4 @@ export default function DemoMachineProgramPage() {
     </div>
   );
 }
+
