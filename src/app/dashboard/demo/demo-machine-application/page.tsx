@@ -8,15 +8,15 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore'; // Added doc, updateDoc
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types'; // Ensure AppDemoMachineStatus is imported
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, PlusCircle } from 'lucide-react';
+import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, PlusCircle, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +29,7 @@ const phoneRegexForValidation = new RegExp(
 const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
   demoMachineId: z.string().min(1, "Machine Model is required."),
+  challanNo: z.string().optional(),
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
   factoryInchargeName: z.string().optional(),
@@ -58,7 +59,7 @@ interface FactoryOption extends ComboboxOption {
   cellNumber?: string;
 }
 interface MachineOption extends ComboboxOption {
-  id: string; // Ensure machine option includes its ID
+  id: string;
   serial: string;
   brand: string;
 }
@@ -80,6 +81,7 @@ export default function NewDemoMachineApplicationPage() {
     defaultValues: {
       factoryId: '',
       demoMachineId: '',
+      challanNo: '',
       deliveryDate: undefined,
       estReturnDate: undefined,
       factoryInchargeName: '',
@@ -133,11 +135,11 @@ export default function NewDemoMachineApplicationPage() {
             const data = docSnap.data() as DemoMachineDocument;
             return { id: docSnap.id, ...data };
           })
-          .filter(machine => machine.currentStatus === "Available"); 
+          .filter(machine => machine.currentStatus === "Available");
 
         setMachineOptions(
           availableMachines.map(machine => ({
-            id: machine.id, // Store the machine ID
+            id: machine.id,
             value: machine.id,
             label: machine.machineModel || 'Unnamed Model',
             serial: machine.machineSerial || 'N/A',
@@ -203,17 +205,18 @@ export default function NewDemoMachineApplicationPage() {
       machineModel: selectedMachine?.label || 'N/A',
       machineSerial: selectedMachine?.serial || 'N/A',
       machineBrand: selectedMachine?.brand || 'N/A',
+      challanNo: data.challanNo || undefined,
       deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
-      machineReturned: false, // New applications are not returned by default
+      machineReturned: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
-    
+
     Object.keys(dataToSave).forEach(key => {
         if (dataToSave[key as keyof typeof dataToSave] === undefined) {
             delete dataToSave[key as keyof typeof dataToSave];
@@ -223,7 +226,6 @@ export default function NewDemoMachineApplicationPage() {
     try {
       await addDoc(collection(firestore, "demo_machine_applications"), dataToSave);
 
-      // Update the demo machine status to "Allocated"
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
         try {
@@ -231,7 +233,6 @@ export default function NewDemoMachineApplicationPage() {
             currentStatus: "Allocated" as AppDemoMachineStatus,
             updatedAt: serverTimestamp(),
           });
-          // Optimistically update machineOptions to remove the allocated machine
           setMachineOptions(prev => prev.filter(m => m.id !== data.demoMachineId));
         } catch (machineError) {
           console.error("Error updating demo machine status:", machineError);
@@ -269,6 +270,7 @@ export default function NewDemoMachineApplicationPage() {
                 Fill in the details below to request a demo machine. Only 'Available' machines are shown.
               </CardDescription>
             </div>
+            {/* Removed Add Factory button from here */}
           </div>
         </CardHeader>
         <CardContent>
@@ -337,6 +339,19 @@ export default function NewDemoMachineApplicationPage() {
                     <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                   </FormItem>
                 </div>
+                 <FormField
+                  control={form.control}
+                  name="challanNo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Challan No (Optional)" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <Separator />
 
@@ -456,5 +471,3 @@ export default function NewDemoMachineApplicationPage() {
     </div>
   );
 }
-
-    

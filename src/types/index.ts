@@ -82,7 +82,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This was previously notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -167,7 +167,7 @@ export interface LCEntryDocument {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string;
+  notifyPartyName?: string; // This was previously notifyPartyContactDetails
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -360,8 +360,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(),
-  ctlBoxSerial: z.string().optional(),
+  ctlBoxModel: z.string().optional(), // Made optional
+  ctlBoxSerial: z.string().optional(), // Made optional
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -390,7 +390,7 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0); // Filter out empty or whitespace-only serials
+          .filter((sn): sn is string => !!sn && sn.length > 0);
         return new Set(serials).size === serials.length;
       },
       {
@@ -425,7 +425,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; ctlBoxModel?: string; ctlBoxSerial?: string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty?: number | string;
   missingItemInfo?: string;
@@ -506,6 +506,7 @@ export interface DemoMachineApplication {
   machineModel?: string;
   machineSerial?: string;
   machineBrand?: string;
+  challanNo?: string; // Added Challan No
   deliveryDate: Date;
   estReturnDate: Date;
   demoPeriodDays?: number;
@@ -526,6 +527,7 @@ export interface DemoMachineApplicationDocument {
   machineModel: string;
   machineSerial: string;
   machineBrand: string;
+  challanNo?: string; // Added Challan No
   deliveryDate: string; // ISO string
   estReturnDate: string; // ISO string
   demoPeriodDays: number;
