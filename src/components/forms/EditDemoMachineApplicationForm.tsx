@@ -309,7 +309,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       }
       prevMachineReturnedRef.current = watchedMachineReturned;
     }
-  }, [watchedMachineReturned, getValues, setValue]);
+  }, [watchedMachineReturned, getValues]);
 
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
@@ -353,16 +353,18 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
 
+      // Sync Machine Status one last time on explicit save
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
-        const newMachineStatus = data.machineReturned ? "Available" : "Allocated";
+        const finalMachineStatus = data.machineReturned ? "Available" : "Allocated";
         try {
           await updateDoc(machineRef, {
-            currentStatus: newMachineStatus as AppDemoMachineStatus,
+            currentStatus: finalMachineStatus as AppDemoMachineStatus,
             updatedAt: serverTimestamp(),
           });
         } catch (machineError) {
           console.error("Error updating demo machine status on main save:", machineError);
+           Swal.fire("Warning", `Application saved, but failed to update machine status: ${(machineError as Error).message}`, "warning");
         }
       }
 
@@ -459,7 +461,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
           </FormItem>
         </div>
-        <FormField
+         <FormField
           control={form.control}
           name="challanNo"
           render={({ field }) => (
@@ -617,3 +619,5 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   );
 }
 
+
+    
