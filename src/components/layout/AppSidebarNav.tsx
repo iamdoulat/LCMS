@@ -27,7 +27,6 @@ import {
   LayoutDashboard,
   ListChecks,
   FilePlus2,
-  Truck,
   Ship,
   CalendarClock,
   PanelLeftClose,
@@ -45,24 +44,14 @@ import {
   Package,
   Sheet,
   Briefcase,
+  FileText,
+  Factory,
+  Building,
+  UserPlus,
+  Users as UsersIcon,
   Laptop,
   AppWindow,
   FileCode,
-  Users as UsersIcon,
-  Factory,
-  Building,
-  FileEdit,
-  UserPlus,
-  FileText,
-  Microscope,
-  Info,
-  AlertTriangle,
-  ExternalLink,
-  Minus,
-  Plus,
-  PackageCheck,
-  CreditCard,
-  UsersRound,
   Plane,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -93,10 +82,11 @@ interface NavItemGroup {
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
+
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -106,7 +96,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -117,7 +107,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -125,7 +115,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -133,7 +123,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -156,20 +146,20 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop },
+      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, // This line is removed
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
 ];
 
+
 const warrantyManagementNavItems: NavItemGroup[] = [
  {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service", "DemoManager"], // DemoManager can also see this
+    roles: ["Super Admin", "Admin", "Service", "DemoManager"],
     subLinks: [
-      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', roles: ["Super Admin", "Admin", "Service", "DemoManager"] },
-      { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service", "DemoManager"] },
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service", "DemoManager"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service", "DemoManager"] },
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service", "DemoManager"] },
     ],
@@ -203,7 +193,7 @@ export function AppSidebarNav() {
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname === href;
+    if (href === '/dashboard') return pathname === href; // Exact match for dashboard itself
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
@@ -218,17 +208,19 @@ export function AppSidebarNav() {
   const allAccordionGroups = [
     ...coreModulesNavItems,
     ...managementNavItems,
-    ...warrantyManagementNavItems,
     ...demoMachineManagementNavItems,
+    ...warrantyManagementNavItems,
     ...reportingManagementNavItems,
   ];
 
   const defaultOpenAccordions = React.useMemo(() => {
     return allAccordionGroups
       .filter(item => {
+        // Check if group itself is visible based on roles
         const groupVisible = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
         if (!groupVisible) return false;
 
+         // Then check if any of its sublinks are active (and visible)
          const visibleSubLinks = item.subLinks?.filter(subLink =>
             userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
         ) || [];
@@ -242,21 +234,17 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Check group visibility
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
-    // Filter sub-links based on user role
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
     
-    // If no sub-links are visible for this group for the current user (and it's not super admin), don't render the group.
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin") {
+    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin" && !item.roles?.includes(userRole as UserRole) ) {
         return null;
     }
-
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -316,41 +304,42 @@ export function AppSidebarNav() {
     <>
       <SidebarHeader className="border-b">
         <div className="flex items-center justify-between p-2">
-            <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-                src={companyLogoUrlFromSettings}
-                alt="Company Logo"
-                data-ai-hint="company logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain"
-                priority
+              src={companyLogoUrlFromSettings}
+              alt="Company Logo"
+              data-ai-hint="company logo"
+              width={32}
+              height={32}
+              className="rounded-sm object-contain"
+              priority
             />
-            <span className={cn(
+            <span
+              className={cn(
                 "font-bold text-lg group-data-[collapsible=icon]:hidden",
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                )}
+              )}
             >
-                {displayCompanyNameFromSettings}
+              {displayCompanyNameFromSettings}
             </span>
-            </Link>
-            {!sidebar.isMobile && (
-                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    onClick={sidebar.toggleSidebar}
-                    aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
-                 >
-                    {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
-                    <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
-                </Button>
-            )}
+          </Link>
+          {!sidebar.isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={sidebar.toggleSidebar}
+                aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+              >
+                {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
+                <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
+            </Button>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-           { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
+           { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && mainDashboardLink.roles && mainDashboardLink.roles.includes(userRole as UserRole) && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -362,7 +351,7 @@ export function AppSidebarNav() {
                 </Link>
               </SidebarMenuItem>
           )}
-          {(userRole === "Super Admin" || userRole === "Admin") && globalSearchLink.href && (
+          {(userRole === "Super Admin" || userRole === "Admin") && globalSearchLink.href && globalSearchLink.roles && globalSearchLink.roles.includes(userRole as UserRole) && (
               <SidebarMenuItem key={globalSearchLink.href}>
                   <Link href={globalSearchLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
