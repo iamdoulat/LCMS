@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const demoMachineSchema = z.object({
   machineModel: z.string().min(1, "Machine Model is required"),
@@ -24,10 +25,12 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
+  challanNo: z.string().optional(), // Added Challan No
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }),
   machineFeatures: z.string().optional(),
   note: z.string().optional(),
+  machineReturned: z.boolean().optional().default(false),
 });
 
 type DemoMachineEditFormValues = z.infer<typeof demoMachineSchema>;
@@ -42,16 +45,18 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
   
   const form = useForm<DemoMachineEditFormValues>({
     resolver: zodResolver(demoMachineSchema),
-    defaultValues: { // Default values for the form structure
+    defaultValues: { 
       machineModel: '',
       machineSerial: '',
       machineBrand: '',
       motorOrControlBoxModel: '',
       controlBoxSerialNo: '',
+      challanNo: '', // Added Challan No
       machineOwner: demoMachineOwnerOptions[0],
       currentStatus: demoMachineStatusOptions[0],
       machineFeatures: '',
       note: '',
+      machineReturned: false,
     },
   });
 
@@ -63,10 +68,12 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineBrand: initialData.machineBrand || '',
         motorOrControlBoxModel: initialData.motorOrControlBoxModel || '',
         controlBoxSerialNo: initialData.controlBoxSerialNo || '',
+        challanNo: initialData.challanNo || '', // Added Challan No
         machineOwner: initialData.machineOwner || demoMachineOwnerOptions[0],
         currentStatus: initialData.currentStatus || demoMachineStatusOptions[0],
         machineFeatures: initialData.machineFeatures || '',
         note: initialData.note || '',
+        machineReturned: initialData.machineReturned ?? false,
       });
     }
   }, [initialData, form]);
@@ -80,14 +87,15 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       machineBrand: data.machineBrand,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
+      challanNo: data.challanNo || undefined, // Added Challan No
       machineOwner: data.machineOwner,
       currentStatus: data.currentStatus,
       machineFeatures: data.machineFeatures || undefined,
       note: data.note || undefined,
+      machineReturned: data.machineReturned ?? false,
       updatedAt: serverTimestamp(),
     };
 
-    // Remove undefined fields so they don't overwrite existing fields with undefined in Firestore
     Object.keys(dataToUpdate).forEach(key => {
       if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
         delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -150,7 +158,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="machineSerial"
@@ -191,6 +199,20 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
+
+        <FormField
+            control={form.control}
+            name="challanNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><FileBadge className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Challan No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Challan No (Optional)" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+        />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -247,6 +269,30 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
+        
+        <FormField
+            control={form.control}
+            name="machineReturned"
+            render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        id="machineReturnedEdit"
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel htmlFor="machineReturnedEdit" className="text-sm font-medium hover:cursor-pointer">
+                        Machine Returned by Factory
+                        </FormLabel>
+                        <FormDescription className="text-xs">
+                        Check this if this specific demo machine has been returned by the factory.
+                        </FormDescription>
+                    </div>
+                </FormItem>
+            )}
+        />
 
         <FormField
           control={form.control}

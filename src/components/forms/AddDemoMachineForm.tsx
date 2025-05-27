@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText } from 'lucide-react'; 
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge } from 'lucide-react'; 
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -24,6 +24,7 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
+  challanNo: z.string().optional(), // Added Challan No
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
   machineFeatures: z.string().optional(),
@@ -42,6 +43,7 @@ export function AddDemoMachineForm() {
       machineBrand: '',
       motorOrControlBoxModel: '',
       controlBoxSerialNo: '',
+      challanNo: '', // Added Challan No
       machineOwner: demoMachineOwnerOptions[0], 
       currentStatus: demoMachineStatusOptions[0],
       machineFeatures: '',
@@ -52,10 +54,11 @@ export function AddDemoMachineForm() {
   async function onSubmit(data: DemoMachineFormValues) {
     setIsSubmitting(true);
     
-    const dataToSave: Omit<DemoMachine, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+    const dataToSave: Omit<DemoMachine, 'id' | 'createdAt' | 'updatedAt' | 'machineReturned'> & { createdAt: any, updatedAt: any } = {
       ...data,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
+      challanNo: data.challanNo || undefined, // Added Challan No
       machineFeatures: data.machineFeatures || undefined,
       note: data.note || undefined,
       createdAt: serverTimestamp(),
@@ -124,7 +127,7 @@ export function AddDemoMachineForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="machineSerial"
@@ -165,6 +168,20 @@ export function AddDemoMachineForm() {
             )}
           />
         </div>
+
+         <FormField
+            control={form.control}
+            name="challanNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><FileBadge className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Challan No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Challan No (Optional)" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

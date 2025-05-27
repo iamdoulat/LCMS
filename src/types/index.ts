@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -25,7 +24,7 @@ export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shi
 export type LCStatus = typeof lcStatusOptions[number] | undefined;
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
-export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number] | undefined;
+export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
   "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY",
@@ -45,15 +44,24 @@ export interface LCEntry {
   id?: string;
   applicantId: string;
   beneficiaryId: string;
-  currency: Currency;
+  currency?: Currency; // Made optional, will default in form
   amount?: number;
-  termsOfPay?: TermsOfPay;
+  termsOfPay?: TermsOfPay; // Made optional
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date | null | undefined;
-  commercialInvoiceNumber?: string;
-  commercialInvoiceDate?: Date | null | undefined;
   totalMachineQty?: number;
+  numberOfAmendments?: number;
+  status?: LCStatus; // Made optional
+  itemDescriptions?: string;
+  partialShipments?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  consigneeBankNameAddress?: string;
+  notifyPartyNameAndAddress?: string;
+  notifyPartyName?: string;
+  notifyPartyCell?: string;
+  notifyPartyEmail?: string;
   lcIssueDate?: Date | null | undefined;
   expireDate?: Date | null | undefined;
   latestShipmentDate?: Date | null | undefined;
@@ -62,13 +70,11 @@ export interface LCEntry {
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
   packingListUrl?: string;
-  trackingCourier?: TrackingCourier;
+  trackingCourier?: TrackingCourier | "";
   trackingNumber?: string;
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
-  itemDescriptions?: string;
-  consigneeBankNameAddress?: string;
-  shipmentMode?: ShipmentMode;
+  shipmentMode?: ShipmentMode; // Made optional
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -76,18 +82,7 @@ export interface LCEntry {
   totalNetWeight?: number;
   totalGrossWeight?: number;
   totalCbm?: number;
-  partialShipments?: string;
-  portOfLoading?: string;
-  portOfDischarge?: string;
-  shippingMarks?: string;
-  certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This was previously notifyPartyContactDetails
-  notifyPartyCell?: string;
-  notifyPartyEmail?: string;
-  numberOfAmendments?: number;
-  status?: LCStatus;
-  partialShipmentAllowed?: PartialShipmentAllowed;
+  partialShipmentAllowed?: PartialShipmentAllowed; // Made optional
   firstPartialQty?: number;
   secondPartialQty?: number;
   thirdPartialQty?: number;
@@ -118,6 +113,10 @@ export interface LCEntry {
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
   billOfExchangeQty?: number;
+  certificateOfOrigin?: CertificateOfOriginCountry[];
+  shippingMarks?: string;
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: Date | null | undefined;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
@@ -136,9 +135,18 @@ export interface LCEntryDocument {
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: string; // ISO string
-  commercialInvoiceNumber?: string;
-  commercialInvoiceDate?: string; // ISO string
   totalMachineQty: number;
+  numberOfAmendments?: number;
+  status?: LCStatus;
+  itemDescriptions?: string;
+  partialShipments?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  consigneeBankNameAddress?: string;
+  notifyPartyNameAndAddress?: string;
+  notifyPartyName?: string;
+  notifyPartyCell?: string;
+  notifyPartyEmail?: string;
   lcIssueDate?: string; // ISO string
   expireDate?: string; // ISO string
   latestShipmentDate?: string; // ISO string
@@ -151,8 +159,6 @@ export interface LCEntryDocument {
   trackingNumber?: string;
   etd?: string; // ISO string
   eta?: string; // ISO string
-  itemDescriptions?: string;
-  consigneeBankNameAddress?: string;
   shipmentMode?: ShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
@@ -161,19 +167,6 @@ export interface LCEntryDocument {
   totalNetWeight?: number;
   totalGrossWeight?: number;
   totalCbm?: number;
-  partialShipments?: string;
-  portOfLoading?: string;
-  portOfDischarge?: string;
-  shippingMarks?: string;
-  certificateOfOrigin?: CertificateOfOriginCountry[];
-  notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This was previously notifyPartyContactDetails
-  notifyPartyCell?: string;
-  notifyPartyEmail?: string;
-  numberOfAmendments?: number;
-  status?: LCStatus;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
   partialShipmentAllowed?: PartialShipmentAllowed;
   firstPartialQty?: number;
   secondPartialQty?: number;
@@ -205,9 +198,15 @@ export interface LCEntryDocument {
   beneficiaryComplianceCertificateQty?: number;
   shipmentAdviceQty?: number;
   billOfExchangeQty?: number;
+  certificateOfOrigin?: CertificateOfOriginCountry[];
+  shippingMarks?: string;
+  commercialInvoiceNumber?: string;
+  commercialInvoiceDate?: string; // ISO string
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }
 
 export interface Customer {
@@ -217,14 +216,14 @@ export interface Customer {
   phone?: string;
   address: string;
   contactPerson?: string;
-  contactPersonDesignation?: string;
+  contactPersonDesignation?: string; // Added
   binNo?: string;
   tinNo?: string;
   newIrcNo?: string;
   oldIrcNo?: string;
-  applicantBondNo?: string;
-  groupName?: string;
-  bidaRegNo?: string;
+  applicantBondNo?: string; // Added
+  groupName?: string; // Added
+  bidaRegNo?: string; // Added
   createdAt?: any;
   updatedAt?: any;
 }
@@ -233,7 +232,7 @@ export interface ApplicantOption {
   value: string; // customerId
   label: string; // applicantName
   address?: string;
-  contactPersonName?: string; // from customer.contactPerson
+  contactPersonName?: string;
   email?: string;
   phone?: string;
 }
@@ -281,24 +280,24 @@ export interface CompanyProfile {
 
 export interface UserDocumentForAdmin {
   id: string; // Firestore document ID
-  uid?: string; // Firebase Auth UID (optional, if not directly an Auth user)
+  uid?: string;
   displayName: string;
   email: string;
   contactNumber?: string;
   role: UserRole;
   photoURL?: string;
-  createdAt?: any; // Firestore ServerTimestamp
-  updatedAt?: any; // Firestore ServerTimestamp
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 // --- Proforma Invoice Types ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | '';
-  purchasePrice: number | '';
-  salesPrice: number | '';
-  netCommissionPercentage?: number | '';
+  qty: number | ''; // Allow string for form input
+  purchasePrice: number | ''; // Allow string for form input
+  salesPrice: number | ''; // Allow string for form input
+  netCommissionPercentage?: number | ''; // Allow string for form input
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -311,7 +310,7 @@ export interface ProformaInvoice {
   applicantId: string;
   applicantName: string;
   piNo: string;
-  piDate: Date; // Date object for form
+  piDate: Date;
   salesPersonName: string;
   connectedLcId?: string;
   connectedLcNumber?: string;
@@ -324,8 +323,8 @@ export interface ProformaInvoice {
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number;
-  grandTotalSalesPrice: number;
   totalExtraNetCommission?: number;
+  grandTotalSalesPrice: number;
   grandTotalCommissionUSD: number;
   totalCommissionPercentage: number;
   createdAt?: any;
@@ -344,13 +343,13 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
   }>;
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any;
+  updatedAt: any;
 };
 
 export interface LcOption {
-  value: string; // L/C document ID
-  label: string; // L/C Number (documentaryCreditNumber)
+  value: string;
+  label: string;
   issueDate?: string; // ISO string
   purchaseOrderUrl?: string;
 }
@@ -360,11 +359,11 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Made optional
-  ctlBoxSerial: z.string().optional(), // Made optional
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
-export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -390,12 +389,12 @@ export const InstallationReportSchema = z.object({
       (items) => {
         const serials = items
           .map((item) => item.serialNo?.trim())
-          .filter((sn): sn is string => !!sn && sn.length > 0);
+          .filter((sn): sn is string => !!sn && sn.length > 0); // Filter out empty or whitespace-only serials
         return new Set(serials).size === serials.length;
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: ["installationDetails"],
+        path: ["installationDetails"], // path of the error
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -425,9 +424,9 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; ctlBoxModel?: string; ctlBoxSerial?: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
-  pendingQty?: number | string;
+  pendingQty?: number | string; // Allow string for "N/A" display
   missingItemInfo?: string;
   extraFoundInfo?: string;
   missingItemsIssueResolved: boolean;
@@ -489,8 +488,9 @@ export interface DemoMachine {
   motorOrControlBoxModel?: string;
   controlBoxSerialNo?: string;
   machineFeatures?: string;
+  challanNo?: string; // Added Challan No
   note?: string;
-  machineReturned?: boolean;
+  machineReturned?: boolean; // Added to track if the specific machine instance is returned
   createdAt?: any;
   updatedAt?: any;
 }
@@ -506,14 +506,14 @@ export interface DemoMachineApplication {
   machineModel?: string;
   machineSerial?: string;
   machineBrand?: string;
-  challanNo?: string; // Added Challan No
+  challanNo?: string;
   deliveryDate: Date;
   estReturnDate: Date;
   demoPeriodDays?: number;
   factoryInchargeName?: string;
   inchargeCell?: string;
   notes?: string;
-  machineReturned?: boolean;
+  machineReturned?: boolean; // Tracks if the machine under this application has been returned
   createdAt?: any;
   updatedAt?: any;
 }
@@ -527,7 +527,7 @@ export interface DemoMachineApplicationDocument {
   machineModel: string;
   machineSerial: string;
   machineBrand: string;
-  challanNo?: string; // Added Challan No
+  challanNo?: string;
   deliveryDate: string; // ISO string
   estReturnDate: string; // ISO string
   demoPeriodDays: number;
@@ -535,7 +535,7 @@ export interface DemoMachineApplicationDocument {
   inchargeCell?: string;
   notes?: string;
   machineReturned?: boolean;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any;
+  updatedAt: any;
 }
 // --- END Demo Machine Types ---
