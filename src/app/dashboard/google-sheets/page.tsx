@@ -16,8 +16,7 @@ export default function GoogleSheetsPage() {
   return (
     <div className="container mx-auto py-8 space-y-8">
       <Card 
-        className="shadow-xl max-w-6xl mx-auto relative overflow-hidden"
-        // style={{ background: 'radial-gradient(circle, rgba(34,190,195,1) 65%, rgba(191,177,163,1) 100%)' }} // Optional: radial gradient from search page
+        className="shadow-xl max-w-screen-2xl mx-auto relative overflow-hidden"
       >
         <div className="relative z-10 bg-card/90 dark:bg-card/80 rounded-lg"> {/* Wrapper for content over GIF */}
           <CardHeader className="text-center">
@@ -33,7 +32,7 @@ export default function GoogleSheetsPage() {
       </Card>
 
       <Card 
-        className="shadow-xl max-w-6xl mx-auto"
+        className="shadow-xl max-w-screen-2xl mx-auto"
         style={{
           background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.2) 30%, rgba(232, 227, 218, 0.1) 100%)', // Lighter gradient for content
         }}
