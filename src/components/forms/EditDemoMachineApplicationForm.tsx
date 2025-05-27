@@ -40,14 +40,6 @@ const demoMachineApplicationSchema = z.object({
   ),
   notes: z.string().optional(),
   machineReturned: z.boolean().optional().default(false),
-}).refine(data => {
-  if (data.deliveryDate && data.estReturnDate) {
-    return data.estReturnDate >= data.deliveryDate;
-  }
-  return true;
-}, {
-  message: "Est. Return Date must be on or after Delivery Date.",
-  path: ["estReturnDate"],
 });
 
 type DemoMachineApplicationFormValues = z.infer<typeof demoMachineApplicationSchema>;
@@ -56,6 +48,7 @@ const PLACEHOLDER_FACTORY_VALUE = "__EDIT_DEMO_APP_FACTORY__";
 const PLACEHOLDER_MACHINE_VALUE = "__EDIT_DEMO_APP_MACHINE__";
 
 interface FactoryOption extends ComboboxOption {
+  id: string;
   location: string;
   contactPerson?: string;
   cellNumber?: string;
@@ -151,6 +144,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
           factoriesSnapshot.docs.map(docSnap => {
             const data = docSnap.data() as DemoMachineFactoryDocument;
             return {
+              id: docSnap.id,
               value: docSnap.id,
               label: data.factoryName || 'Unnamed Factory',
               location: data.factoryLocation || 'N/A',
@@ -233,7 +227,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
 
   React.useEffect(() => {
     if (watchedFactoryId && factoryOptions.length > 0) {
-      const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
+      const selectedFactory = factoryOptions.find(opt => opt.id === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
       setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
@@ -246,7 +240,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
 
   React.useEffect(() => {
     if (watchedDemoMachineId && machineOptions.length > 0) {
-      const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
+      const selectedMachine = machineOptions.find(opt => opt.id === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
     } else if (!watchedDemoMachineId && isAfterInitialResetRef.current) { 
@@ -280,12 +274,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       if (currentDemoMachineId) {
         const newMachineStatus = watchedMachineReturned ? "Available" : "Allocated";
         const updateMachineStatusInFirestore = async () => {
-          console.log(`Automatic status update: Machine ${currentDemoMachineId} to ${newMachineStatus} due to checkbox change.`);
           try {
             const machineRef = doc(firestore, "demo_machines", currentDemoMachineId);
             await updateDoc(machineRef, {
               currentStatus: newMachineStatus as AppDemoMachineStatus,
-              machineReturned: watchedMachineReturned,
+              machineReturned: watchedMachineReturned, 
               updatedAt: serverTimestamp(),
             });
             Swal.fire({
@@ -348,8 +341,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
     };
     
     Object.keys(dataToUpdate).forEach(key => {
-        if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-            delete dataToUpdate[key as keyof typeof dataToUpdate];
+        const typedKey = key as keyof typeof dataToUpdate;
+        if (dataToUpdate[typedKey] === undefined) {
+            delete dataToUpdate[typedKey];
+        } else if (typeof dataToUpdate[typedKey] === 'string' && (dataToUpdate[typedKey] as string).trim() === '' && ['factoryInchargeName', 'inchargeCell', 'notes'].includes(typedKey)) {
+            delete dataToUpdate[typedKey];
         }
     });
 
@@ -357,13 +353,14 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
       
+      // Final sync of machine status on explicit save
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
         const finalMachineStatus = data.machineReturned ? "Available" : "Allocated";
         try {
           await updateDoc(machineRef, {
             currentStatus: finalMachineStatus as AppDemoMachineStatus,
-            machineReturned: data.machineReturned ?? false,
+            machineReturned: data.machineReturned ?? false, // Also update machineReturned on the machine doc
             updatedAt: serverTimestamp(),
           });
         } catch (machineError) {
@@ -380,7 +377,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       setIsSubmitting(false);
     }
   }
-
 
   if (isLoadingFactories || isLoadingMachines) {
     return (
@@ -421,25 +417,40 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
 
         <Separator />
 
-        <FormField
-          control={control}
-          name="demoMachineId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
-              <Combobox
-                options={machineOptions}
-                value={field.value || PLACEHOLDER_MACHINE_VALUE}
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
-                placeholder="Search Machine Model..."
-                selectPlaceholder="Select Machine Model"
-                emptyStateMessage="No available machine found."
-                disabled={isLoadingMachines}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={control}
+            name="demoMachineId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
+                <Combobox
+                  options={machineOptions}
+                  value={field.value || PLACEHOLDER_MACHINE_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
+                  placeholder="Search Machine Model..."
+                  selectPlaceholder="Select Machine Model"
+                  emptyStateMessage="No available machine found."
+                  disabled={isLoadingMachines}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="challanNo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormItem>
@@ -451,19 +462,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
             <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
           </FormItem>
         </div>
-        <FormField
-          control={form.control}
-          name="challanNo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        
         <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
