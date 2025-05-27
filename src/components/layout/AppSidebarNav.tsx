@@ -39,7 +39,7 @@ import {
   ClipboardList,
   Archive,
   ShieldCheck,
-  ShieldOff, // Added for completeness, though not used in the final nav items after removal
+  ShieldOff, 
   BarChart3,
   DollarSign,
   Package,
@@ -54,8 +54,11 @@ import {
   AppWindow,
   FileCode,
   FileEdit,
-  PackageCheck, // Added PackageCheck
-  UserPlus, // Added UserPlus
+  PackageCheck,
+  UserPlus,
+  Plus, 
+  Minus,
+  Microscope
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -89,7 +92,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
+    icon: FileText, // Changed from Briefcase
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -99,7 +102,7 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase,
+    icon: Briefcase, // Changed from FileText
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
@@ -110,23 +113,25 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+    icon: Truck, // Changed from Store, then Ship
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
+      // Removed Add New Beneficiary based on user request
     ],
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from UsersIcon, then Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
+      // Removed Add New Applicant based on user request
     ],
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -148,7 +153,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
+      { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -193,14 +198,13 @@ export function AppSidebarNav() {
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
 
-  React.useEffect(() => {
-    // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
-  }, [userRole]);
+  // This console log helps in debugging role issues during development
+  // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
 
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname === href; // Only true for exact dashboard path
+    if (href === '/dashboard') return pathname === href; 
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
@@ -239,19 +243,15 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Check if group should be visible based on roles
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
-    // Filter subLinks based on roles, always showing all for Super Admin
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
     
-    // If there are no visible sublinks for non-Super Admins, and the group itself isn't specifically for their role, hide the group.
-    // However, Super Admins should see the group even if sublinks become empty due to other role filtering.
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin") {
+    if (visibleSubLinks.length === 0 && userRole !== "Super Admin") {
         return null;
     }
     
@@ -264,7 +264,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                     "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", // Hide default chevron in icon mode
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
@@ -315,7 +315,7 @@ export function AppSidebarNav() {
         <div className="flex items-center justify-between p-2">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Image
-              src={companyLogoUrlFromSettings}
+              src={companyLogoUrlFromSettings} 
               alt="Company Logo"
               data-ai-hint="company logo"
               width={32}
@@ -348,7 +348,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-           { (userRole === "Super Admin" || (mainDashboardLink.roles && userRole && mainDashboardLink.roles.includes(userRole))) && mainDashboardLink.href && (
+           { (userRole === "Super Admin" || (mainDashboardLink.roles && userRole && mainDashboardLink.roles.includes(userRole as UserRole)) ) && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -360,7 +360,7 @@ export function AppSidebarNav() {
                 </Link>
               </SidebarMenuItem>
           )}
-          {(userRole === "Super Admin" || (globalSearchLink.roles && userRole && globalSearchLink.roles.includes(userRole))) && globalSearchLink.href && (
+          {(userRole === "Super Admin" || (globalSearchLink.roles && userRole && globalSearchLink.roles.includes(userRole as UserRole))) && globalSearchLink.href && (
               <SidebarMenuItem key={globalSearchLink.href}>
                   <Link href={globalSearchLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
@@ -432,7 +432,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                const isVisible = userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
+                const isVisible = userRole === "Super Admin" || userRole === "Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
                 if (isVisible && item.href) {
                   return (
                     <SidebarMenuItem key={item.href}>
@@ -476,4 +476,3 @@ export function AppSidebarNav() {
   );
 }
 
-    
