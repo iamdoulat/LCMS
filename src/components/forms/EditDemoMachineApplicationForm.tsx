@@ -30,7 +30,6 @@ const phoneRegexForValidation = new RegExp(
 const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
   demoMachineId: z.string().min(1, "Machine Model is required."),
-  // challanNo: z.string().optional(), // Removed
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
   factoryInchargeName: z.string().optional(),
@@ -87,22 +86,20 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
   const [demoPeriodDisplay, setDemoPeriodDisplay] = React.useState<string>(`${initialData.demoPeriodDays || 0} Day(s)`);
   
   const isInitialMount = React.useRef(true);
-  const prevMachineReturnedRef = React.useRef(initialData.machineReturned);
+  const prevMachineReturnedRef = React.useRef(initialData.machineReturned ?? false);
   const isAfterInitialResetRef = React.useRef(false);
-
 
   const form = useForm<DemoMachineApplicationFormValues>({
     resolver: zodResolver(demoMachineApplicationSchema),
     defaultValues: {
-      factoryId: initialData.factoryId || '',
-      demoMachineId: initialData.demoMachineId || '',
-      // challanNo: initialData.challanNo || '', // Removed
-      deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
-      estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
-      factoryInchargeName: initialData.factoryInchargeName || '',
-      inchargeCell: initialData.inchargeCell || '',
-      notes: initialData.notes || '',
-      machineReturned: initialData.machineReturned ?? false,
+      factoryId: '',
+      demoMachineId: '',
+      deliveryDate: undefined,
+      estReturnDate: undefined,
+      factoryInchargeName: '',
+      inchargeCell: '',
+      notes: '',
+      machineReturned: false,
     },
   });
 
@@ -210,7 +207,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       const resetValues: DemoMachineApplicationFormValues = {
         factoryId: factoryExists ? initialData.factoryId || '' : '',
         demoMachineId: machineExists ? initialData.demoMachineId || '' : '',
-        // challanNo: initialData.challanNo || '', // Removed
         deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, 
         estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, 
         factoryInchargeName: initialData.factoryInchargeName || '',
@@ -296,6 +292,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
             });
           } catch (error) {
             console.error("Error auto-updating machine status in EditDemoAppForm:", error);
+            // Revert checkbox if Firestore update fails to keep UI consistent with backend attempt
             setValue("machineReturned", !watchedMachineReturned, { shouldValidate: false }); 
             Swal.fire({
                 toast: true,
@@ -334,7 +331,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       machineModel: selectedMachine?.label || initialData.machineModel,
       machineSerial: selectedMachine?.serial || initialData.machineSerial,
       machineBrand: selectedMachine?.brand || initialData.machineBrand,
-      // challanNo: data.challanNo || undefined, // Removed
+      // challanNo removed from here
       deliveryDate: data.deliveryDate ? format(new Date(data.deliveryDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       estReturnDate: data.estReturnDate ? format(new Date(data.estReturnDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : 0,
@@ -355,6 +352,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
       
+      // Update linked demo machine status (acts as a final confirmation/sync)
       if (data.demoMachineId) {
         const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
         const finalMachineStatus = data.machineReturned ? "Available" : "Allocated";
@@ -450,22 +448,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
           </FormItem>
         </div>
         
-        {/* Removed Challan No Field 
-        <FormField
-          control={form.control}
-          name="challanNo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter Challan No (Optional)" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        */}
-
         <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
