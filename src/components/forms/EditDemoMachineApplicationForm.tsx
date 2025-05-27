@@ -87,6 +87,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   const isInitialMount = React.useRef(true);
   const prevMachineReturnedRef = React.useRef(initialData.machineReturned);
+  const isAfterInitialResetRef = React.useRef(false);
+
 
   const form = useForm<DemoMachineApplicationFormValues>({
     resolver: zodResolver(demoMachineApplicationSchema),
@@ -173,6 +175,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             const data = docSnap.data() as DemoMachineDocument;
             return { id: docSnap.id, ...data };
           })
+          // Include the current machine even if its status changed, but only other 'Available' machines
           .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId);
 
         setMachineOptions(
@@ -215,6 +218,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedMachine = machineOptions.find(opt => opt.value === initialData.demoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || initialData.machineSerial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || initialData.machineBrand || 'N/A');
+      
+      isAfterInitialResetRef.current = true; // Flag that initial reset is done
+      prevMachineReturnedRef.current = resetValues.machineReturned; // Sync prev ref after reset
 
     }
   }, [initialData, reset, factoryOptions, machineOptions]);
@@ -225,6 +231,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
 
+      // Only auto-fill if the user hasn't manually changed these fields from what initialData provided
       if (getValues("factoryInchargeName") === (initialData.factoryInchargeName || '')) {
          setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
@@ -238,6 +245,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     } else if (!watchedFactoryId) {
          setFactoryLocationDisplay(initialData.factoryLocation || '');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell, initialData.factoryLocation, isLoadingFactories]);
 
   React.useEffect(() => {
@@ -252,6 +260,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
        setMachineSerialDisplay(initialData.machineSerial || '');
        setMachineBrandDisplay(initialData.machineBrand || '');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedDemoMachineId, machineOptions, initialData.machineSerial, initialData.machineBrand, isLoadingMachines]);
 
   React.useEffect(() => {
@@ -267,9 +276,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
    // Effect to auto-update machine status in Firestore when "Machine Returned" checkbox changes
    React.useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      prevMachineReturnedRef.current = watchedMachineReturned; // Initialize prev ref
+    if (!isAfterInitialResetRef.current) { // Don't run on initial mount/reset cycles
       return;
     }
 
@@ -295,11 +302,13 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             });
           } catch (error) {
             console.error("Error auto-updating machine status:", error);
+            // Revert checkbox optimistically if Firestore update fails
+            setValue("machineReturned", !watchedMachineReturned, { shouldValidate: false });
             Swal.fire({
               toast: true,
               position: 'top-end',
               icon: 'error',
-              title: `Failed to auto-update machine status: ${(error as Error).message}`,
+              title: `Failed to auto-update machine status: ${(error as Error).message}. Change reverted.`,
               showConfirmButton: false,
               timer: 3000,
             });
@@ -309,7 +318,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       }
       prevMachineReturnedRef.current = watchedMachineReturned;
     }
-  }, [watchedMachineReturned, getValues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedMachineReturned, getValues, setValue, initialData.demoMachineId]); // Added setValue and initialData.demoMachineId
 
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
@@ -619,5 +629,3 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   );
 }
 
-
-    
