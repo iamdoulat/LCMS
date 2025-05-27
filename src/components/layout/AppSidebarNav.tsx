@@ -39,6 +39,7 @@ import {
   ClipboardList,
   Archive,
   ShieldCheck,
+  ShieldOff, // Added for completeness, though not used in the final nav items after removal
   BarChart3,
   DollarSign,
   Package,
@@ -48,13 +49,13 @@ import {
   Factory,
   Truck,
   Users as UsersIcon,
-  UserPlus,
+  Building,
   Laptop,
   AppWindow,
   FileCode,
-  Plane,
-  Building,
-  FileEdit, // Added FileEdit import
+  FileEdit,
+  PackageCheck, // Added PackageCheck
+  UserPlus, // Added UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -145,9 +146,9 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
-      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
       { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
+      { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -193,13 +194,13 @@ export function AppSidebarNav() {
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
 
   React.useEffect(() => {
-    console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
+    // console.log("AppSidebarNav: Current User Role in Sidebar:", userRole);
   }, [userRole]);
 
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname === href;
+    if (href === '/dashboard') return pathname === href; // Only true for exact dashboard path
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
@@ -238,19 +239,22 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
+    // Check if group should be visible based on roles
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
+    // Filter subLinks based on roles, always showing all for Super Admin
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
     
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin" && !item.roles?.includes(userRole as UserRole) ) {
+    // If there are no visible sublinks for non-Super Admins, and the group itself isn't specifically for their role, hide the group.
+    // However, Super Admins should see the group even if sublinks become empty due to other role filtering.
+    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin") {
         return null;
     }
     
-    // Always render as AccordionItem if it's a group, even if subLinks are empty for now.
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -335,7 +339,6 @@ export function AppSidebarNav() {
                 className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 onClick={sidebar.toggleSidebar}
                 aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
-                
               >
                 {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
                 <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
@@ -345,7 +348,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-           { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && mainDashboardLink.roles && mainDashboardLink.roles.includes(userRole as UserRole) && (
+           { (userRole === "Super Admin" || (mainDashboardLink.roles && userRole && mainDashboardLink.roles.includes(userRole))) && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -357,7 +360,7 @@ export function AppSidebarNav() {
                 </Link>
               </SidebarMenuItem>
           )}
-          {(userRole === "Super Admin" || userRole === "Admin") && globalSearchLink.href && globalSearchLink.roles && globalSearchLink.roles.includes(userRole as UserRole) && (
+          {(userRole === "Super Admin" || (globalSearchLink.roles && userRole && globalSearchLink.roles.includes(userRole))) && globalSearchLink.href && (
               <SidebarMenuItem key={globalSearchLink.href}>
                   <Link href={globalSearchLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
@@ -429,7 +432,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                const isVisible = userRole === "Super Admin" || (userRole === "Admin" && item.roles && item.roles.includes("Admin")); // Updated logic
+                const isVisible = userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
                 if (isVisible && item.href) {
                   return (
                     <SidebarMenuItem key={item.href}>
@@ -472,3 +475,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
