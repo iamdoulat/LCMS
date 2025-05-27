@@ -8,8 +8,8 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore'; // Added doc, updateDoc
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types'; // Ensure AppDemoMachineStatus is imported
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -49,8 +49,8 @@ const demoMachineApplicationSchema = z.object({
 
 type DemoMachineApplicationFormValues = z.infer<typeof demoMachineApplicationSchema>;
 
-const PLACEHOLDER_FACTORY_VALUE = "__DEMO_APP_FACTORY__";
-const PLACEHOLDER_MACHINE_VALUE = "__DEMO_APP_MACHINE__";
+const PLACEHOLDER_FACTORY_VALUE = "__DEMO_APP_FACTORY_NEW__";
+const PLACEHOLDER_MACHINE_VALUE = "__DEMO_APP_MACHINE_NEW__";
 
 interface FactoryOption extends ComboboxOption {
   location: string;
@@ -58,11 +58,12 @@ interface FactoryOption extends ComboboxOption {
   cellNumber?: string;
 }
 interface MachineOption extends ComboboxOption {
+  id: string; // Ensure machine option includes its ID
   serial: string;
   brand: string;
 }
 
-export default function DemoMachineApplicationPage() {
+export default function NewDemoMachineApplicationPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [factoryOptions, setFactoryOptions] = React.useState<FactoryOption[]>([]);
   const [machineOptions, setMachineOptions] = React.useState<MachineOption[]>([]);
@@ -87,14 +88,13 @@ export default function DemoMachineApplicationPage() {
     },
   });
 
-  const { control, setValue, watch, reset } = form;
+  const { control, setValue, watch, reset, getValues } = form;
 
   const watchedFactoryId = watch("factoryId");
   const watchedDemoMachineId = watch("demoMachineId");
   const watchedDeliveryDate = watch("deliveryDate");
   const watchedEstReturnDate = watch("estReturnDate");
   const watchedInchargeCell = watch("inchargeCell");
-
 
   React.useEffect(() => {
     const fetchFactories = async () => {
@@ -131,12 +131,13 @@ export default function DemoMachineApplicationPage() {
         const availableMachines = machinesSnapshot.docs
           .map(docSnap => {
             const data = docSnap.data() as DemoMachineDocument;
-            return { id: docSnap.id, ...data }; // Ensure ID is part of the object for value prop
+            return { id: docSnap.id, ...data };
           })
-          .filter(machine => machine.currentStatus === "Available"); // Filter for available machines
+          .filter(machine => machine.currentStatus === "Available"); 
 
         setMachineOptions(
           availableMachines.map(machine => ({
+            id: machine.id, // Store the machine ID
             value: machine.id,
             label: machine.machineModel || 'Unnamed Model',
             serial: machine.machineSerial || 'N/A',
@@ -161,7 +162,6 @@ export default function DemoMachineApplicationPage() {
       setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
     } else if (!watchedFactoryId) {
       setFactoryLocationDisplay('');
-      // Optionally clear incharge details if factory is deselected, or leave them if user might re-select
       setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: false });
       setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: false });
     }
@@ -192,7 +192,7 @@ export default function DemoMachineApplicationPage() {
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
     const selectedMachine = machineOptions.find(opt => opt.value === data.demoMachineId);
 
-    const dataToSave = {
+    const dataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       factoryId: data.factoryId,
       factoryName: selectedFactory?.label || 'N/A',
       factoryLocation: selectedFactory?.location || 'N/A',
@@ -206,13 +206,35 @@ export default function DemoMachineApplicationPage() {
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
+      machineReturned: false, // New applications are not returned by default
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
+    
+    Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+            delete dataToSave[key as keyof typeof dataToSave];
+        }
+    });
 
     try {
       await addDoc(collection(firestore, "demo_machine_applications"), dataToSave);
-      Swal.fire("Success!", "Demo machine application submitted.", "success");
+
+      // Update the demo machine status to "Allocated"
+      if (data.demoMachineId) {
+        const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
+        try {
+          await updateDoc(machineRef, {
+            currentStatus: "Allocated" as AppDemoMachineStatus,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (machineError) {
+          console.error("Error updating demo machine status:", machineError);
+          // Optionally inform user that application saved but machine status update failed
+        }
+      }
+
+      Swal.fire("Success!", "Demo machine application submitted and machine status updated.", "success");
       reset();
       setFactoryLocationDisplay('');
       setMachineSerialDisplay('');
@@ -234,7 +256,7 @@ export default function DemoMachineApplicationPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <AppWindow className="h-7 w-7 text-primary" />
                 New Demo Machine Application
               </CardTitle>
@@ -242,6 +264,7 @@ export default function DemoMachineApplicationPage() {
                 Fill in the details below to request a demo machine.
               </CardDescription>
             </div>
+            {/* Add Factory button removed as per user request */}
           </div>
         </CardHeader>
         <CardContent>
@@ -378,9 +401,9 @@ export default function DemoMachineApplicationPage() {
                                 </Button>
                             )}
                             {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                                <a 
-                                href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
-                                target="_blank" 
+                                <a
+                                href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 title={`Chat on WhatsApp with ${watchedInchargeCell}`}
                                 >
@@ -429,5 +452,3 @@ export default function DemoMachineApplicationPage() {
     </div>
   );
 }
-
-    

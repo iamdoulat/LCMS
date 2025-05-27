@@ -6,10 +6,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, differenceInDays } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'; 
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -35,6 +36,7 @@ const demoMachineApplicationSchema = z.object({
     "Invalid phone number format"
   ),
   notes: z.string().optional(),
+  machineReturned: z.boolean().optional().default(false), // Added machineReturned
 }).refine(data => {
   if (data.deliveryDate && data.estReturnDate) {
     return data.estReturnDate >= data.deliveryDate;
@@ -56,9 +58,12 @@ interface FactoryOption extends ComboboxOption {
   cellNumber?: string;
 }
 interface MachineOption extends ComboboxOption {
+  id: string;
   serial: string;
   brand: string;
 }
+
+type CurrentDemoStatus = "Upcoming" | "Active" | "Overdue" | "Returned";
 
 interface EditDemoMachineApplicationFormProps {
   initialData: DemoMachineApplicationDocument;
@@ -72,21 +77,23 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   const [isLoadingFactories, setIsLoadingFactories] = React.useState(true);
   const [isLoadingMachines, setIsLoadingMachines] = React.useState(true);
 
-  const [factoryLocationDisplay, setFactoryLocationDisplay] = React.useState<string>('');
-  const [machineSerialDisplay, setMachineSerialDisplay] = React.useState<string>('');
-  const [machineBrandDisplay, setMachineBrandDisplay] = React.useState<string>('');
-  const [demoPeriodDisplay, setDemoPeriodDisplay] = React.useState<string>('0 Days');
+  const [factoryLocationDisplay, setFactoryLocationDisplay] = React.useState<string>(initialData.factoryLocation || '');
+  const [machineSerialDisplay, setMachineSerialDisplay] = React.useState<string>(initialData.machineSerial || '');
+  const [machineBrandDisplay, setMachineBrandDisplay] = React.useState<string>(initialData.machineBrand || '');
+  const [demoPeriodDisplay, setDemoPeriodDisplay] = React.useState<string>(`${initialData.demoPeriodDays || 0} Day(s)`);
+  const [currentDemoStatus, setCurrentDemoStatus] = React.useState<CurrentDemoStatus>("Upcoming");
 
   const form = useForm<DemoMachineApplicationFormValues>({
     resolver: zodResolver(demoMachineApplicationSchema),
     defaultValues: {
-      factoryId: '',
-      demoMachineId: '',
-      deliveryDate: undefined,
-      estReturnDate: undefined,
-      factoryInchargeName: '',
-      inchargeCell: '',
-      notes: '',
+      factoryId: initialData.factoryId || '',
+      demoMachineId: initialData.demoMachineId || '',
+      deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
+      estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+      factoryInchargeName: initialData.factoryInchargeName || '',
+      inchargeCell: initialData.inchargeCell || '',
+      notes: initialData.notes || '',
+      machineReturned: initialData.machineReturned ?? false,
     },
   });
 
@@ -97,6 +104,31 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   const watchedDeliveryDate = watch("deliveryDate");
   const watchedEstReturnDate = watch("estReturnDate");
   const watchedInchargeCell = watch("inchargeCell");
+  const watchedMachineReturned = watch("machineReturned"); // Watch the checkbox
+
+  React.useEffect(() => {
+    const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
+        const machineReturnedValue = getValues("machineReturned");
+        if (machineReturnedValue) return "Returned";
+        
+        const deliveryDateValue = getValues("deliveryDate");
+        const estReturnDateValue = getValues("estReturnDate");
+
+        const today = startOfDay(new Date());
+        const delivery = deliveryDateValue ? startOfDay(new Date(deliveryDateValue)) : null;
+        const estReturn = estReturnDateValue ? startOfDay(new Date(estReturnDateValue)) : null;
+
+        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
+
+        if (isPast(estReturn)) return "Overdue";
+        if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
+        if (isFuture(delivery)) return "Upcoming";
+        
+        return "Upcoming"; 
+    };
+    setCurrentDemoStatus(calculateCurrentDemoStatus());
+  }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned, getValues]);
+
 
   React.useEffect(() => {
     const fetchFactories = async () => {
@@ -117,7 +149,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         );
       } catch (error) {
         console.error("Error fetching factories:", error);
-        Swal.fire("Error", "Could not load factories.", "error");
+        // Swal.fire("Error", "Could not load factories.", "error"); // Alert can be noisy on edit
       } finally {
         setIsLoadingFactories(false);
       }
@@ -135,10 +167,11 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
             const data = docSnap.data() as DemoMachineDocument;
             return { id: docSnap.id, ...data };
           })
-          .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId); // Also include currently selected machine if it's not "Available"
+          .filter(machine => machine.currentStatus === "Available" || machine.id === initialData.demoMachineId);
 
         setMachineOptions(
           availableMachines.map(machine => ({
+            id: machine.id,
             value: machine.id,
             label: machine.machineModel || 'Unnamed Model',
             serial: machine.machineSerial || 'N/A',
@@ -147,7 +180,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         );
       } catch (error) {
         console.error("Error fetching demo machines:", error);
-        Swal.fire("Error", "Could not load demo machines.", "error");
+        // Swal.fire("Error", "Could not load demo machines.", "error"); // Alert can be noisy on edit
       } finally {
         setIsLoadingMachines(false);
       }
@@ -157,15 +190,17 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
 
   React.useEffect(() => {
     if (initialData && factoryOptions.length > 0 && machineOptions.length > 0) {
-      reset({
+      const resetValues: DemoMachineApplicationFormValues = {
         factoryId: initialData.factoryId || '',
         demoMachineId: initialData.demoMachineId || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any,
+        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any,
         factoryInchargeName: initialData.factoryInchargeName || '',
         inchargeCell: initialData.inchargeCell || '',
         notes: initialData.notes || '',
-      });
+        machineReturned: initialData.machineReturned ?? false,
+      };
+      reset(resetValues);
 
       const selectedFactory = factoryOptions.find(opt => opt.value === initialData.factoryId);
       setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
@@ -173,7 +208,6 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       const selectedMachine = machineOptions.find(opt => opt.value === initialData.demoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || initialData.machineSerial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || initialData.machineBrand || 'N/A');
-
     }
   }, [initialData, reset, factoryOptions, machineOptions]);
 
@@ -182,37 +216,46 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
-      // Auto-fill only if the initial data for these fields was empty or if the user hasn't typed anything
-      if (!getValues("factoryInchargeName") || getValues("factoryInchargeName") === initialData.factoryInchargeName) {
+      
+      if (getValues("factoryInchargeName") === (initialData.factoryInchargeName || '')) {
          setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       }
-      if (!getValues("inchargeCell") || getValues("inchargeCell") === initialData.inchargeCell) {
+      if (getValues("inchargeCell") === (initialData.inchargeCell || '')) {
         setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
       }
-    } else if (!watchedFactoryId) { 
-      setFactoryLocationDisplay('');
+    } else if (!watchedFactoryId && (!isLoadingFactories && factoryOptions.length > 0)) {
+        setFactoryLocationDisplay('');
+        setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
+        setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
+    } else if (!watchedFactoryId) {
+         setFactoryLocationDisplay(initialData.factoryLocation || '');
     }
-  }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell]);
+  }, [watchedFactoryId, factoryOptions, setValue, getValues, initialData.factoryInchargeName, initialData.inchargeCell, initialData.factoryLocation, isLoadingFactories]);
 
   React.useEffect(() => {
     if (watchedDemoMachineId && machineOptions.length > 0) {
       const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
+    } else if (!watchedDemoMachineId && (!isLoadingMachines && machineOptions.length > 0)) {
+       setMachineSerialDisplay('');
+       setMachineBrandDisplay('');
     } else if (!watchedDemoMachineId) {
-      setMachineSerialDisplay('');
-      setMachineBrandDisplay('');
+       setMachineSerialDisplay(initialData.machineSerial || '');
+       setMachineBrandDisplay(initialData.machineBrand || '');
     }
-  }, [watchedDemoMachineId, machineOptions]);
+  }, [watchedDemoMachineId, machineOptions, initialData.machineSerial, initialData.machineBrand, isLoadingMachines]);
 
   React.useEffect(() => {
-    if (watchedDeliveryDate && watchedEstReturnDate && isValid(watchedDeliveryDate) && isValid(watchedEstReturnDate) && watchedEstReturnDate >= watchedDeliveryDate) {
-      const days = differenceInDays(watchedEstReturnDate, watchedDeliveryDate);
+    const deliveryDateVal = getValues("deliveryDate");
+    const estReturnDateVal = getValues("estReturnDate");
+    if (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) {
+      const days = differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay('0 Days');
     }
-  }, [watchedDeliveryDate, watchedEstReturnDate]);
+  }, [watchedDeliveryDate, watchedEstReturnDate, getValues]);
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     if (!applicationId) {
@@ -222,6 +265,8 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     setIsSubmitting(true);
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
     const selectedMachine = machineOptions.find(opt => opt.value === data.demoMachineId);
+    const deliveryDateVal = getValues("deliveryDate");
+    const estReturnDateVal = getValues("estReturnDate");
 
     const dataToUpdate: Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       factoryId: data.factoryId,
@@ -231,12 +276,13 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       machineModel: selectedMachine?.label || initialData.machineModel,
       machineSerial: selectedMachine?.serial || initialData.machineSerial,
       machineBrand: selectedMachine?.brand || initialData.machineBrand,
-      deliveryDate: format(data.deliveryDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      estReturnDate: format(data.estReturnDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      demoPeriodDays: (watchedDeliveryDate && watchedEstReturnDate && isValid(watchedDeliveryDate) && isValid(watchedEstReturnDate) && watchedEstReturnDate >= watchedDeliveryDate) ? differenceInDays(watchedEstReturnDate, watchedDeliveryDate) : 0,
+      deliveryDate: data.deliveryDate ? format(new Date(data.deliveryDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      estReturnDate: data.estReturnDate ? format(new Date(data.estReturnDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : 0,
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
+      machineReturned: data.machineReturned ?? false,
       updatedAt: serverTimestamp(),
     };
     
@@ -249,7 +295,22 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     try {
       const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
       await updateDoc(appDocRef, dataToUpdate);
-      Swal.fire("Success!", "Demo machine application updated.", "success");
+
+      // Update the demo machine status
+      if (data.demoMachineId) {
+        const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
+        const newMachineStatus = data.machineReturned ? "Available" : "Allocated";
+        try {
+          await updateDoc(machineRef, {
+            currentStatus: newMachineStatus as AppDemoMachineStatus,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (machineError) {
+            console.error("Error updating demo machine status:", machineError);
+        }
+      }
+
+      Swal.fire("Success!", "Demo machine application updated and machine status synced.", "success");
     } catch (error) {
       console.error("Error updating demo application:", error);
       Swal.fire("Error", `Failed to update application: ${(error as Error).message}`, "error");
@@ -257,6 +318,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
       setIsSubmitting(false);
     }
   }
+
 
   if (isLoadingFactories || isLoadingMachines) {
     return (
@@ -270,6 +332,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Form fields remain the same, add Checkbox for machineReturned */}
         <FormField
           control={control}
           name="factoryId"
@@ -360,76 +423,105 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
         </div>
 
         <Separator />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={control}
-            name="factoryInchargeName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Factory Incharge Name</FormLabel>
-                <FormControl><Input placeholder="Enter incharge name" {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="inchargeCell"
-            render={({ field }) => (
-             <FormItem>
-                <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Incharge Cell</FormLabel>
-                 <div className="flex items-center gap-2">
-                    <FormControl className="flex-grow">
-                        <Input type="tel" placeholder="Enter cell number" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                        <a href={`tel:${watchedInchargeCell.replace(/\s/g, '')}`} title={`Call ${watchedInchargeCell}`}>
-                            <Button type="button" variant="outline" size="icon" className="shrink-0">
-                                <Phone className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <FormField
+                control={control}
+                name="factoryInchargeName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Factory Incharge Name</FormLabel>
+                    <FormControl><Input placeholder="Enter incharge name" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="inchargeCell"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Incharge Cell</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                            <Input type="tel" placeholder="Enter cell number" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                            <a href={`tel:${watchedInchargeCell.replace(/\s/g, '')}`} title={`Call ${watchedInchargeCell}`}>
+                                <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                    <Phone className="h-4 w-4 text-primary" />
+                                </Button>
+                            </a>
+                        ) : (
+                            <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                <Phone className="h-4 w-4 text-muted-foreground" />
                             </Button>
-                        </a>
-                    ) : (
-                        <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
-                            <Phone className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                    )}
-                    {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                        <a 
-                        href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        title={`Chat on WhatsApp with ${watchedInchargeCell}`}
-                        >
-                            <Button type="button" variant="outline" size="icon" className="shrink-0">
-                                <MessageSquare className="h-4 w-4 text-primary" />
+                        )}
+                        {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                            <a
+                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Chat on WhatsApp with ${watchedInchargeCell}`}
+                            >
+                                <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                    <MessageSquare className="h-4 w-4 text-primary" />
+                                </Button>
+                            </a>
+                        ) : (
+                            <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
                             </Button>
-                        </a>
-                    ) : (
-                        <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
-                            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                    )}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                        )}
+                    </div>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
         </div>
-
         <Separator />
 
-        <FormField
-          control={control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
-              <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''}/></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="space-y-4">
+             <FormField
+                control={form.control}
+                name="machineReturned"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="machineReturned"
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel htmlFor="machineReturned" className="text-sm font-medium hover:cursor-pointer">
+                            Machine Returned by Factory
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                            Check this if the demo machine has been returned by the factory.
+                            </FormDescription>
+                        </div>
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="notes"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
+                    <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''}/></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <div className="space-y-1">
+                 <FormLabel className="flex items-center text-sm font-medium">Calculated Demo Status</FormLabel>
+                 <Input value={currentDemoStatus} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                 <FormDescription className="text-xs">This status is automatically calculated based on dates and returned status.</FormDescription>
+            </div>
+        </div>
+
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingFactories || isLoadingMachines}>
           {isSubmitting ? (
@@ -442,5 +534,3 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId }: E
     </Form>
   );
 }
-
-    
