@@ -39,6 +39,7 @@ import {
   ClipboardList,
   Archive,
   ShieldCheck,
+  ShieldOff,
   BarChart3,
   DollarSign,
   Package,
@@ -109,7 +110,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 const managementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck, // Changed from Store
+    icon: Truck,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
@@ -117,7 +118,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from UsersIcon to Building, then to Factory
+    icon: Factory,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
@@ -125,7 +126,7 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -146,7 +147,9 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow },
+      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, Removed as per user request
+      // { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow }, Removed as per user request
+      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, Removed as per user request
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -156,11 +159,14 @@ const warrantyManagementNavItems: NavItemGroup[] = [
  {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service"],
+    roles: ["Super Admin", "Admin", "Service"], // DemoManager excluded
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
+      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed as per user request
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
+      // { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"] }, Removed
+      // { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machine Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] }, Removed
     ],
   },
 ];
@@ -189,20 +195,7 @@ export function AppSidebarNav() {
 
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
-
-  const isActive = (href: string) => {
-    if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href === '/dashboard') return pathname === href; // Only true if exactly /dashboard
-    return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
-  };
-
-  const isGroupActive = (subLinks: NavItemGroup['subLinks']) => {
-    if (!subLinks) return false;
-    return subLinks.some(sub => {
-        const subLinkVisible = userRole === "Super Admin" || !sub.roles || (userRole && sub.roles.includes(userRole as UserRole));
-        return subLinkVisible && sub.href && isActive(sub.href);
-    });
-  };
+  const [defaultOpenAccordions, setDefaultOpenAccordions] = React.useState<string[]>([]);
 
   const allAccordionGroups = [
     ...coreModulesNavItems,
@@ -212,20 +205,35 @@ export function AppSidebarNav() {
     ...reportingManagementNavItems,
   ];
 
-  const defaultOpenAccordions = React.useMemo(() => {
-    return allAccordionGroups
+  React.useEffect(() => {
+    const activeAccordions = allAccordionGroups
       .filter(item => {
-        if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
-            return false;
+        if (userRole === "Super Admin") return true;
+        if (item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+          return false;
         }
-         const visibleSubLinks = item.subLinks?.filter(subLink =>
-            userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
+        const visibleSubLinks = item.subLinks?.filter(subLink =>
+          userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
         ) || [];
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
+    setDefaultOpenAccordions(activeAccordions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
+
+
+  const isActive = (href: string) => {
+    // For exact match on /dashboard
+    if (href === '/dashboard') return pathname === href;
+    // For other paths, check if it starts with the href
+    return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
+  };
+
+  const isGroupActive = (subLinks: NavItemGroup['subLinks']) => {
+    if (!subLinks) return false;
+    return subLinks.some(sub => sub.href && isActive(sub.href));
+  };
 
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
@@ -241,12 +249,15 @@ export function AppSidebarNav() {
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (userRole !== "Super Admin" && item.roles && visibleSubLinks.length === 0) {
+    // If the user is not Super Admin, and the group itself is not restricted but has no visible sublinks, don't render the group
+    if (userRole !== "Super Admin" && !item.roles && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
-     if (!item.roles && userRole !== "Super Admin" && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+     // If the user is not Super Admin, group is restricted, and has no visible sublinks, don't render
+    if (userRole !== "Super Admin" && item.roles && item.roles.length > 0 && visibleSubLinks.length === 0) {
         return null;
     }
+
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -257,7 +268,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", // Hide default chevron in icon mode
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
@@ -341,7 +352,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-           { ((userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (userRole !== "Service" && userRole !== "DemoManager") ) && (
+          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && userRole !== "Service" && userRole !== "DemoManager" && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -372,7 +383,7 @@ export function AppSidebarNav() {
             <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
                 T/T AND L/C MANAGEMENT
             </SidebarGroupLabel>
-            <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+            <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
                 {coreModulesNavItems.map((item, index) => renderNavGroup(item, index))}
             </Accordion>
         </SidebarGroup>
@@ -382,7 +393,7 @@ export function AppSidebarNav() {
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Management
           </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
             {managementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
@@ -392,7 +403,7 @@ export function AppSidebarNav() {
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Demo M/C Management
           </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
               {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
@@ -402,7 +413,7 @@ export function AppSidebarNav() {
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Warranty Management
           </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
               {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
@@ -412,7 +423,7 @@ export function AppSidebarNav() {
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
             Reporting Management
           </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+           <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
               {reportingManagementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
