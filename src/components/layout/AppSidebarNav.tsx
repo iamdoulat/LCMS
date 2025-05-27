@@ -90,7 +90,7 @@ interface NavItemGroup {
   roles?: UserRole[];
 }
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User"] };
+const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
 const coreModulesNavItems: NavItemGroup[] = [
@@ -123,21 +123,21 @@ const managementNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks },
-      { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 },
+      // { href: '/dashboard/suppliers/add', label: 'Add New Beneficiary', icon: FilePlus2 }, // Removed
     ],
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory, // Changed from Building
+    icon: Factory,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
-      // { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus }, // Removed as per user request
+      // { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus }, // Removed
     ],
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship, // Changed from Truck
+    icon: Ship,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -157,9 +157,9 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
-      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed as per user request
+      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, // Removed as per user request
+      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, // Removed
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -172,7 +172,7 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin", "Service"],
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
-      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed as per user request
+      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
     ],
@@ -222,8 +222,8 @@ export function AppSidebarNav() {
   const allAccordionGroups = [
     ...coreModulesNavItems,
     ...managementNavItems,
-    ...demoMachineManagementNavItems,
     ...warrantyManagementNavItems,
+    ...demoMachineManagementNavItems,
     ...reportingManagementNavItems,
   ];
 
@@ -246,12 +246,12 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
+    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
     const visibleSubLinks = item.subLinks?.filter(subLink =>
-        userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole))
+        userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
     
     if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Service") {
@@ -350,7 +350,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-          {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && userRole !== "Service" && mainDashboardLink.href && (
+          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -395,16 +395,6 @@ export function AppSidebarNav() {
             {managementNavItems.map((item, index) => renderNavGroup(item, index))}
           </Accordion>
         </SidebarGroup>
-
-         <SidebarSeparator />
-         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Demo M/C Management
-          </SidebarGroupLabel>
-          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
-              {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-          </Accordion>
-        </SidebarGroup>
         
         <SidebarSeparator />
         <SidebarGroup className="p-0">
@@ -416,6 +406,16 @@ export function AppSidebarNav() {
           </Accordion>
         </SidebarGroup>
 
+         <SidebarSeparator />
+         <SidebarGroup className="p-0">
+          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Demo M/C Management
+          </SidebarGroupLabel>
+          <Accordion type="multiple" defaultValue={defaultOpenAccordions} className="w-full">
+              {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
+          </Accordion>
+        </SidebarGroup>
+        
         <SidebarSeparator />
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -434,7 +434,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                if (userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole))) {
+                if (userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole))) {
                   return item.href && (
                     <SidebarMenuItem key={item.href}>
                       <Link href={item.href} passHref>
