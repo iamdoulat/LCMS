@@ -8,8 +8,8 @@ import Link from 'next/link';
 import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight, PlusCircle, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument } from '@/types';
+import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 import { format, parseISO, isValid, isPast, isFuture, isToday, startOfDay, getYear } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
@@ -137,7 +137,7 @@ export default function DemoMachineProgramPage() {
         setMachineOptions(fetchedMachines.map(machine => ({ value: machine.id, label: machine.machineModel || 'Unnamed Model' })));
 
         const uniqueBrands = Array.from(new Set(fetchedMachines.map(m => m.machineBrand).filter(brand => !!brand)));
-        setBrandOptions(uniqueBrands.map(brand => ({ value: brand as string, label: brand as string }))); // Ensure value and label are strings
+        setBrandOptions(uniqueBrands.map(brand => ({ value: brand as string, label: brand as string })));
         setIsLoadingMachines(false);
 
       } catch (error: any) {
@@ -193,6 +193,10 @@ export default function DemoMachineProgramPage() {
 
 
   const handleDeleteApplication = (applicationId: string, identifier?: string) => {
+    if (!applicationId) {
+        Swal.fire("Error", "Application ID is missing, cannot delete.", "error");
+        return;
+    }
     Swal.fire({
         title: 'Are you sure?',
         text: `This will permanently delete the demo machine application "${identifier || applicationId}". This action cannot be undone.`,
@@ -205,11 +209,22 @@ export default function DemoMachineProgramPage() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
+                const appToDelete = allApplications.find(app => app.id === applicationId);
+                if (appToDelete && appToDelete.demoMachineId) {
+                    // If machine was allocated by this app, set its status back to "Available"
+                    if (appToDelete.machineReturned === false || appToDelete.machineReturned === undefined) {
+                        const machineRef = doc(firestore, "demo_machines", appToDelete.demoMachineId);
+                        await updateDoc(machineRef, {
+                            currentStatus: "Available" as AppDemoMachineStatus,
+                            updatedAt: serverTimestamp(),
+                        });
+                    }
+                }
                 await deleteDoc(doc(firestore, "demo_machine_applications", applicationId));
                 setAllApplications(prev => prev.filter(app => app.id !== applicationId));
                 Swal.fire(
                     'Deleted!',
-                    `Demo machine application "${identifier || applicationId}" has been removed.`,
+                    `Demo machine application "${identifier || applicationId}" and associated machine status updated.`,
                     'success'
                 );
             } catch (error: any) {
@@ -267,16 +282,19 @@ export default function DemoMachineProgramPage() {
                 Demo Machine Program
               </CardTitle>
               <CardDescription>
-                Manage Demo Machine Applications.
+                Manage Demo Machine Applications. (Displaying Demo Applications List)
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplications.length)} of {displayedApplications.length} entries.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard/demo/demo-machine-application" passHref>
-                <Button variant="default">
-                    <AppWindow className="mr-2 h-4 w-4" />
-                    New Demo Application
+             <div className="flex items-center gap-2">
+                <Button variant="outline" disabled> {/* Placeholder filter button */}
+                    <Filter className="mr-2 h-4 w-4" /> Filter: All
                 </Button>
+                <Link href="/dashboard/demo/demo-machine-application" passHref>
+                    <Button variant="default">
+                        <AppWindow className="mr-2 h-4 w-4" />
+                        New Demo Application
+                    </Button>
                 </Link>
             </div>
           </div>
@@ -406,6 +424,9 @@ export default function DemoMachineProgramPage() {
                       {app.inchargeCell && (
                         <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
                       )}
+                       {app.challanNo && (
+                        <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{app.challanNo}</span></div>
+                      )}
                     </div>
                     {app.notes && (
                         <div className="mt-2">
@@ -467,3 +488,4 @@ export default function DemoMachineProgramPage() {
   );
 }
 
+    
