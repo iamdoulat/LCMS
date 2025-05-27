@@ -282,30 +282,31 @@ export default function NewDemoMachineApplicationPage() {
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={control}
-                  name="factoryId"
-                  render={({ field }) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                    control={control}
+                    name="factoryId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center"><Factory className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name (Factory)*</FormLabel>
+                        <Combobox
+                            options={factoryOptions}
+                            value={field.value || PLACEHOLDER_FACTORY_VALUE}
+                            onValueChange={(value) => field.onChange(value === PLACEHOLDER_FACTORY_VALUE ? '' : value)}
+                            placeholder="Search Factory..."
+                            selectPlaceholder="Select Factory"
+                            emptyStateMessage="No factory found."
+                            disabled={isLoadingFactories}
+                        />
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
                     <FormItem>
-                      <FormLabel className="flex items-center"><Factory className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name (Factory)*</FormLabel>
-                      <Combobox
-                        options={factoryOptions}
-                        value={field.value || PLACEHOLDER_FACTORY_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_FACTORY_VALUE ? '' : value)}
-                        placeholder="Search Factory..."
-                        selectPlaceholder="Select Factory"
-                        emptyStateMessage="No factory found."
-                        disabled={isLoadingFactories}
-                      />
-                      <FormMessage />
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Factory Location</FormLabel>
+                    <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                     </FormItem>
-                  )}
-                />
-
-                <FormItem>
-                  <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Factory Location</FormLabel>
-                  <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                </FormItem>
+                </div>
 
                 <Separator />
 
