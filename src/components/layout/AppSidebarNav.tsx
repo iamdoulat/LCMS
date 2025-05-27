@@ -55,13 +55,15 @@ import {
   UserPlus,
   FileText,
   Microscope,
-  Info, // Keep if used
-  AlertTriangle, // Keep if used
-  ExternalLink, // Keep if used
-  Minus, // Keep if used
-  Plus, // Keep if used
+  Info,
+  AlertTriangle,
+  ExternalLink,
+  Minus,
+  Plus,
   PackageCheck,
-  CreditCard, // Added for consistency, though DollarSign is used for L/C Payment Done
+  CreditCard,
+  UsersRound,
+  Plane,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -98,8 +100,9 @@ const coreModulesNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
-      // { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 }, // Removed as per previous request
+      // { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2 }, // Removed
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
+      { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     ],
   },
   {
@@ -125,16 +128,16 @@ const managementNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Customers / Applicants',
-    icon: Factory,
+    icon: Factory, // Changed from Building
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
-      { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus },
+      // { href: '/dashboard/customers/add', label: 'Add New Applicant', icon: UserPlus }, // Removed as per user request
     ],
   },
   {
     groupLabel: 'Shipment Management',
-    icon: Ship,
+    icon: Ship, // Changed from Truck
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
@@ -154,9 +157,9 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
-      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed
+      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, // Removed as per user request
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, // Removed
+      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, // Removed as per user request
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -169,7 +172,7 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin", "Service"],
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
-      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed as per this request
+      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed as per user request
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
     ],
@@ -243,23 +246,15 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Check if the entire group should be visible based on roles
     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
-      return null;
+        return null;
     }
 
-    // Filter sub-links based on roles (Super Admin sees all)
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole))
     ) || [];
-
-    // If the group itself is role-restricted and the user doesn't have the role, or if all its sub-links are hidden for the current user
-    if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole))) {
-        return null; // Hide the entire group
-    }
     
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin") {
-        // If a group has sub-links defined, but none are visible to the current non-SuperAdmin user, hide the group.
+    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0 && userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Service") {
         return null;
     }
 
@@ -355,7 +350,6 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-          {/* Main Dashboard Link */}
           {(userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && userRole !== "Service" && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
@@ -368,7 +362,6 @@ export function AppSidebarNav() {
                 </Link>
               </SidebarMenuItem>
           )}
-          {/* Global Search Link */}
           {(userRole === "Super Admin" || userRole === "Admin") && globalSearchLink.href && (
               <SidebarMenuItem key={globalSearchLink.href}>
                   <Link href={globalSearchLink.href} passHref>
