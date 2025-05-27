@@ -5,14 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CalendarClock, Loader2, AlertTriangle, Info, Edit, Trash2, User, Phone, FileText as NoteIcon } from 'lucide-react';
+import { CalendarClock, Loader2, AlertTriangle, Info, Edit, User, Phone, FileText as NoteIcon, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, Timestamp, where } from 'firebase/firestore'; // Added where
+import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import type { DemoMachineApplicationDocument } from '@/types';
 import { format, parseISO, isValid, startOfDay, isPast } from 'date-fns';
 import Swal from 'sweetalert2';
-import { Badge } from '@/components/ui/badge'; // Added Badge import
+import { Badge } from '@/components/ui/badge';
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   if (!dateString) return 'N/A';
@@ -50,8 +50,6 @@ export default function DemoMcDateOverduePage() {
       setFetchError(null);
       try {
         const applicationsCollectionRef = collection(firestore, "demo_machine_applications");
-        // Fetch all applications first, then filter client-side
-        // More complex queries might require composite indexes if done server-side
         const q = query(applicationsCollectionRef, orderBy("estReturnDate", "asc"));
         const querySnapshot = await getDocs(q);
         const fetchedApplications = querySnapshot.docs.map(docSnap => {
@@ -98,7 +96,7 @@ export default function DemoMcDateOverduePage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <CalendarClock className="h-7 w-7 text-primary" />
             Demo M/C Date Overdue
           </CardTitle>
@@ -130,33 +128,40 @@ export default function DemoMcDateOverduePage() {
              <ul className="space-y-4 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {overdueApplications.map((app) => (
                 <li key={app.id} className="p-4 rounded-lg border-2 border-destructive bg-destructive/10 hover:shadow-md transition-shadow relative">
-                   <div className="absolute top-3 right-3 flex gap-1 z-10">
-                        <Badge variant="destructive" className="text-xs">Overdue</Badge>
-                        <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                          <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
-                            <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
-                          </Link>
-                        </Button>
-                        {/* Delete button might not be appropriate here, consider removing or making it less prominent if only for overdue view */}
+                   <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+                        <Badge variant="destructive" className="text-xs px-2 py-0.5">Overdue</Badge>
+                        <div className="flex gap-1">
+                            <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                              <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
+                                <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
+                              </Link>
+                            </Button>
+                        </div>
                     </div>
                   <CardHeader className="pb-3 pt-0 px-0 pr-20">
-                    <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
-                       {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
+                    <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
+                        <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
+                        {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
+                        </CardTitle>
+                    </Link>
+                    <CardDescription className="text-xs text-foreground">
                       Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
+                      {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-0 pb-0 pt-0">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
                       <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
-                      <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-foreground">{formatDisplayDate(app.estReturnDate)}</span></div>
+                      <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-destructive">{formatDisplayDate(app.estReturnDate)}</span></div>
                       <div><span className="text-muted-foreground">Period: </span><span className="font-medium text-foreground">{formatReportValue(app.demoPeriodDays, "0")} Day(s)</span></div>
                       {app.factoryInchargeName && (
                         <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{app.factoryInchargeName}</span></div>
                       )}
                       {app.inchargeCell && (
                         <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
+                      )}
+                       {app.challanNo && ( // Ensure Challan no is also displayed if moved here
+                        <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{app.challanNo}</span></div>
                       )}
                     </div>
                     {app.notes && (
@@ -179,4 +184,6 @@ export default function DemoMcDateOverduePage() {
   );
 }
     
+    
+
     
