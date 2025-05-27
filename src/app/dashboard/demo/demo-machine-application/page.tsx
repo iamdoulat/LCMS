@@ -16,11 +16,10 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, PlusCircle, FileBadge } from 'lucide-react';
+import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -54,6 +53,7 @@ const PLACEHOLDER_FACTORY_VALUE = "__DEMO_APP_FACTORY_NEW__";
 const PLACEHOLDER_MACHINE_VALUE = "__DEMO_APP_MACHINE_NEW__";
 
 interface FactoryOption extends ComboboxOption {
+  id: string;
   location: string;
   contactPerson?: string;
   cellNumber?: string;
@@ -107,6 +107,7 @@ export default function NewDemoMachineApplicationPage() {
           factoriesSnapshot.docs.map(docSnap => {
             const data = docSnap.data() as DemoMachineFactoryDocument;
             return {
+              id: docSnap.id,
               value: docSnap.id,
               label: data.factoryName || 'Unnamed Factory',
               location: data.factoryLocation || 'N/A',
@@ -158,7 +159,7 @@ export default function NewDemoMachineApplicationPage() {
 
   React.useEffect(() => {
     if (watchedFactoryId && factoryOptions.length > 0) {
-      const selectedFactory = factoryOptions.find(opt => opt.value === watchedFactoryId);
+      const selectedFactory = factoryOptions.find(opt => opt.id === watchedFactoryId);
       setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
       setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
       setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
@@ -171,7 +172,7 @@ export default function NewDemoMachineApplicationPage() {
 
   React.useEffect(() => {
     if (watchedDemoMachineId && machineOptions.length > 0) {
-      const selectedMachine = machineOptions.find(opt => opt.value === watchedDemoMachineId);
+      const selectedMachine = machineOptions.find(opt => opt.id === watchedDemoMachineId);
       setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
       setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
     } else if (!watchedDemoMachineId) {
@@ -258,7 +259,7 @@ export default function NewDemoMachineApplicationPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl max-w-4xl mx-auto">
+      <Card className="shadow-xl max-w-6xl mx-auto">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -308,25 +309,41 @@ export default function NewDemoMachineApplicationPage() {
 
                 <Separator />
 
-                <FormField
-                  control={control}
-                  name="demoMachineId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
-                      <Combobox
-                        options={machineOptions}
-                        value={field.value || PLACEHOLDER_MACHINE_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
-                        placeholder="Search Machine Model..."
-                        selectPlaceholder="Select Machine Model"
-                        emptyStateMessage="No available machine found."
-                        disabled={isLoadingMachines}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={control}
+                    name="demoMachineId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
+                        <Combobox
+                          options={machineOptions}
+                          value={field.value || PLACEHOLDER_MACHINE_VALUE}
+                          onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
+                          placeholder="Search Machine Model..."
+                          selectPlaceholder="Select Machine Model"
+                          emptyStateMessage="No available machine found."
+                          disabled={isLoadingMachines}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="challanNo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormItem>
@@ -338,20 +355,7 @@ export default function NewDemoMachineApplicationPage() {
                     <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
                   </FormItem>
                 </div>
-                 <FormField
-                  control={form.control}
-                  name="challanNo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                
                 <Separator />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
