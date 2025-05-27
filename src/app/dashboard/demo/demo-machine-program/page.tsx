@@ -19,10 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 
 const ITEMS_PER_PAGE = 10;
-const ALL_YEARS_VALUE = "__ALL_YEARS_DEMO_APP__";
-const ALL_FACTORIES_VALUE = "__ALL_FACTORIES_DEMO_APP__";
-const ALL_MACHINES_VALUE = "__ALL_MACHINES_DEMO_APP__";
-const ALL_BRANDS_VALUE = "__ALL_BRANDS_DEMO_APP__";
+const ALL_YEARS_VALUE = "__ALL_YEARS_DEMO_PROG__";
+const ALL_FACTORIES_VALUE = "__ALL_FACTORIES_DEMO_PROG__";
+const ALL_MACHINES_VALUE = "__ALL_MACHINES_DEMO_PROG__";
+const ALL_BRANDS_VALUE = "__ALL_BRANDS_DEMO_PROG__";
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
@@ -287,7 +287,7 @@ export default function DemoMachineProgramPage() {
               </CardDescription>
             </div>
              <div className="flex items-center gap-2">
-                <Button variant="outline" disabled> {/* Placeholder filter button */}
+                <Button variant="outline" disabled>
                     <Filter className="mr-2 h-4 w-4" /> Filter: All
                 </Button>
                 <Link href="/dashboard/demo/demo-machine-application" passHref>
@@ -405,10 +405,12 @@ export default function DemoMachineProgramPage() {
                         </div>
                     </div>
                   <CardHeader className="pb-3 pt-0 px-0 pr-24">
-                    <CardTitle className="text-lg font-semibold text-primary mb-1 truncate">
-                       {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
+                    <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
+                      <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
+                        {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
+                      </CardTitle>
+                    </Link>
+                    <CardDescription className="text-xs text-foreground">
                       Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
                        {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
@@ -487,5 +489,7 @@ export default function DemoMachineProgramPage() {
     </div>
   );
 }
+
+    
 
     
