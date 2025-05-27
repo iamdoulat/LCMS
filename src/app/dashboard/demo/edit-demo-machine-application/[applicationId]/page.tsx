@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 import type { DemoMachineApplicationDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { EditDemoMachineApplicationForm } from '@/components/forms/EditDemoMachineApplicationForm';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, isPast, isFuture, isToday, startOfDay } from 'date-fns';
@@ -53,15 +53,13 @@ export default function EditDemoMachineApplicationPage() {
             const appData = {
                 id: docSnap.id,
                 ...data,
-                // Ensure dates are ISO strings for the form component's initial parsing
                 deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
                 estReturnDate: data.estReturnDate instanceof Timestamp ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
-                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt as any), // Keep as any if it might be a string already
+                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : (data.updatedAt as any),
             } as DemoMachineApplicationDocument;
             setApplicationData(appData);
 
-            // Calculate initial status for the page badge
             if (appData.machineReturned) {
                 setCurrentDemoStatusPage("Returned");
             } else {
@@ -132,7 +130,7 @@ export default function EditDemoMachineApplicationPage() {
             <Button variant="outline" asChild className="mt-4">
               <Link href="/dashboard/demo/demo-machine-program">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Demo Program List
+                Back to Demo Machine Program
               </Link>
             </Button>
           </CardContent>
@@ -148,7 +146,7 @@ export default function EditDemoMachineApplicationPage() {
          <Button variant="outline" asChild className="mt-4">
             <Link href="/dashboard/demo/demo-machine-program">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Demo Program List
+                Back to Demo Machine Program
             </Link>
         </Button>
       </div>
@@ -161,7 +159,7 @@ export default function EditDemoMachineApplicationPage() {
         <Link href="/dashboard/demo/demo-machine-program" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Demo Program List
+            Back to Demo Machine Program
           </Button>
         </Link>
       </div>
