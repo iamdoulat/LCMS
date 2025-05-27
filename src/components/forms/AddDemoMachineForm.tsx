@@ -24,11 +24,10 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
-  // challanNo: z.string().optional(), // Removed Challan No from here
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
   machineFeatures: z.string().optional(),
-  note: z.string().optional(),
+  note: z.string().optional(), // Made optional
 });
 
 type DemoMachineFormValues = z.infer<typeof demoMachineSchema>;
@@ -43,7 +42,6 @@ export function AddDemoMachineForm() {
       machineBrand: '',
       motorOrControlBoxModel: '',
       controlBoxSerialNo: '',
-      // challanNo: '', // Removed
       machineOwner: demoMachineOwnerOptions[0],
       currentStatus: demoMachineStatusOptions[0],
       machineFeatures: '',
@@ -58,9 +56,8 @@ export function AddDemoMachineForm() {
       ...data,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-      // challanNo: data.challanNo || undefined, // Removed
       machineFeatures: data.machineFeatures || undefined,
-      note: data.note || undefined,
+      note: data.note || undefined, // Will be undefined if empty string
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -79,7 +76,7 @@ export function AddDemoMachineForm() {
       const docRef = await addDoc(collection(firestore, "demo_machines"), dataToSave);
       Swal.fire({
         title: "Demo Machine Saved!",
-        text: `Demo Machine data saved successfully with ID: ${docRef.id}`,
+        text: `Demo Machine data saved successfully with ID: ${docRef.id}.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
@@ -172,7 +169,7 @@ export function AddDemoMachineForm() {
             )}
           />
         </div>
-        {/* Challan No field removed from here */}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -275,3 +272,4 @@ export function AddDemoMachineForm() {
     </Form>
   );
 }
+

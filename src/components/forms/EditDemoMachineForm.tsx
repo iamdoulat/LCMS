@@ -25,11 +25,11 @@ const demoMachineSchema = z.object({
   machineBrand: z.string().min(1, "Machine Brand is required"),
   motorOrControlBoxModel: z.string().optional(),
   controlBoxSerialNo: z.string().optional(),
-  // challanNo: z.string().optional(), // Removed
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }),
+  machineReturned: z.boolean().optional().default(false),
   machineFeatures: z.string().optional(),
-  note: z.string().optional(),
+  note: z.string().optional(), // Made optional
 });
 
 type DemoMachineEditFormValues = z.infer<typeof demoMachineSchema>;
@@ -45,20 +45,23 @@ const defaultFormValues: DemoMachineEditFormValues = {
   machineBrand: '',
   motorOrControlBoxModel: '',
   controlBoxSerialNo: '',
-  // challanNo: '', // Removed
   machineOwner: demoMachineOwnerOptions[0],
   currentStatus: demoMachineStatusOptions[0],
+  machineReturned: false,
   machineFeatures: '',
   note: '',
 };
 
 export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isInitialMountRef = React.useRef(true);
 
   const form = useForm<DemoMachineEditFormValues>({
     resolver: zodResolver(demoMachineSchema),
     defaultValues: defaultFormValues,
   });
+  const { watch, setValue } = form;
+  const watchedMachineReturned = watch("machineReturned");
 
   React.useEffect(() => {
     if (initialData) {
@@ -68,29 +71,53 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineBrand: initialData.machineBrand || '',
         motorOrControlBoxModel: initialData.motorOrControlBoxModel || '',
         controlBoxSerialNo: initialData.controlBoxSerialNo || '',
-        // challanNo: initialData.challanNo || '', // Removed
         machineOwner: initialData.machineOwner || demoMachineOwnerOptions[0],
         currentStatus: initialData.currentStatus || demoMachineStatusOptions[0],
+        machineReturned: initialData.machineReturned ?? false,
         machineFeatures: initialData.machineFeatures || '',
         note: initialData.note || '',
       });
+      // Set initialMount to false after the first reset based on initialData
+      // to allow subsequent useEffect for machineReturned to trigger on user changes.
+      setTimeout(() => { isInitialMountRef.current = false; }, 0);
     }
   }, [initialData, form]);
+
+  React.useEffect(() => {
+    if (isInitialMountRef.current) {
+      return; 
+    }
+    if (watchedMachineReturned) {
+      setValue("currentStatus", "Available", { shouldValidate: true, shouldDirty: true });
+    } else {
+      // If unticked, and assuming it was previously "Available" due to being returned,
+      // we might revert it to "Allocated" or leave as is if user manually changed it.
+      // For simplicity here, if it's unchecked, it implies it's not "Available" due to return.
+      // If machine was "Maintenance Mode", unchecking "Returned" shouldn't auto-change it to "Allocated".
+      // We only force "Available" if "Returned" is true.
+      // If "Returned" becomes false, it implies it's likely "Allocated" or "Maintenance Mode" again.
+      // Let's default to "Allocated" if it's not "Maintenance Mode" already.
+      if (form.getValues("currentStatus") !== "Maintenance Mode") {
+        setValue("currentStatus", "Allocated", { shouldValidate: true, shouldDirty: true });
+      }
+    }
+  }, [watchedMachineReturned, setValue, form]);
+
 
   async function onSubmit(data: DemoMachineEditFormValues) {
     setIsSubmitting(true);
 
-    const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt' | 'machineReturned'>> & { updatedAt: any } = {
+    const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
       machineModel: data.machineModel,
       machineSerial: data.machineSerial,
       machineBrand: data.machineBrand,
       motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
       controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-      // challanNo: data.challanNo || undefined, // Removed
       machineOwner: data.machineOwner,
       currentStatus: data.currentStatus,
+      machineReturned: data.machineReturned ?? false,
       machineFeatures: data.machineFeatures || undefined,
-      note: data.note || undefined,
+      note: data.note || undefined, // Will be undefined if empty string
       updatedAt: serverTimestamp(),
     };
 
@@ -115,7 +142,6 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         showConfirmButton: true,
       });
     } catch (error: any) {
-      console.error("Error updating demo machine document: ", error);
       const errorMessage = error.message || "An unknown error occurred.";
       Swal.fire({
         title: "Update Failed",
@@ -201,7 +227,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
-        {/* Challan No field removed */}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -212,7 +238,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value ?? defaultFormValues.machineOwner}
+                    value={field.value ?? demoMachineOwnerOptions[0]}
                     className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
                   >
                     {demoMachineOwnerOptions.map((option) => (
@@ -239,7 +265,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value ?? defaultFormValues.currentStatus}
+                    value={field.value ?? demoMachineStatusOptions[0]}
                     className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
                   >
                     {demoMachineStatusOptions.map((option) => (
@@ -257,6 +283,29 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
+         <FormField
+          control={form.control}
+          name="machineReturned"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  id="machineReturnedMachineForm"
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel htmlFor="machineReturnedMachineForm" className="text-sm font-medium hover:cursor-pointer">
+                  Machine Returned by Factory
+                </FormLabel>
+                <FormDescription className="text-xs">
+                  Check this if this specific demo machine has been returned by the factory.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -303,3 +352,4 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
     </Form>
   );
 }
+
