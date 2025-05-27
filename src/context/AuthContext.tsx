@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, sig
 import { useRouter } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { auth, firestore } from '@/lib/firebase/config'; // firestore is imported here
+import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -28,6 +28,7 @@ const getEmailsFromEnv = (envVar?: string): string[] => {
 const SUPER_ADMIN_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS);
 const ADMIN_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_ADMIN_EMAILS);
 const SERVICE_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SERVICE_EMAILS);
+const DEMO_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_DEMO_MANAGER_EMAILS);
 
 
 interface AuthContextType {
@@ -38,7 +39,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>; // Expose setUser
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   companyName: string;
   companyLogoUrl: string;
   updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => void;
@@ -57,9 +58,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const router = useRouter();
 
-
   const fetchInitialCompanyProfile = useCallback(async () => {
-    // console.log("AuthContext: Attempting to fetch initial company profile. User UID:", auth.currentUser?.uid);
+    console.log("AuthContext: Attempting to fetch initial company profile. User UID:", auth.currentUser?.uid);
     try {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
@@ -84,7 +84,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
     } catch (error: any) {
       console.error("AuthContext: Error fetching company profile from Firestore:", error);
-      // Fallback to localStorage or defaults if Firestore fetch fails
       const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
       setCompanyName(storedName || DEFAULT_COMPANY_NAME);
       const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
@@ -96,58 +95,73 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     fetchInitialCompanyProfile();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser); 
+      setUser(currentUser);
+      setLoading(true); // Set loading to true while fetching Firestore profile and determining role
 
       try {
         if (currentUser) {
           let assignedRole: UserRole | null = null;
           const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
 
+          console.log(`AuthContext: Checking email '${lowercasedUserEmail}' against Super Admin list:`, SUPER_ADMIN_EMAILS_FROM_ENV);
           if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
             assignedRole = "Super Admin";
-          } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Admin";
-          } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Service";
+            console.log(`AuthContext: Email '${lowercasedUserEmail}' MATCHED Super Admin.`);
+          } else {
+             console.log(`AuthContext: Email '${lowercasedUserEmail}' not in Super Admin list.`);
+             console.log(`AuthContext: Checking email '${lowercasedUserEmail}' against Admin list:`, ADMIN_EMAILS_FROM_ENV);
+             if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                assignedRole = "Admin";
+                console.log(`AuthContext: Email '${lowercasedUserEmail}' MATCHED Admin.`);
+             } else {
+                console.log(`AuthContext: Email '${lowercasedUserEmail}' not in Admin list.`);
+                console.log(`AuthContext: Checking email '${lowercasedUserEmail}' against DemoManager list:`, DEMO_MANAGER_EMAILS_FROM_ENV);
+                if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                    assignedRole = "DemoManager";
+                    console.log(`AuthContext: Email '${lowercasedUserEmail}' MATCHED DemoManager.`);
+                } else {
+                    console.log(`AuthContext: Email '${lowercasedUserEmail}' not in DemoManager list.`);
+                    console.log(`AuthContext: Checking email '${lowercasedUserEmail}' against Service list:`, SERVICE_EMAILS_FROM_ENV);
+                    if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                        assignedRole = "Service";
+                        console.log(`AuthContext: Email '${lowercasedUserEmail}' MATCHED Service.`);
+                    } else {
+                        console.log(`AuthContext: Email '${lowercasedUserEmail}' not in Service list.`);
+                    }
+                }
+             }
           }
-          
+          console.log(`AuthContext: Role after email simulation for '${lowercasedUserEmail}': ${assignedRole}`);
+
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
             const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
             setFirestoreUser(userProfileData);
-            if (userProfileData.role && (assignedRole === null || assignedRole === "User")) {
-                assignedRole = userProfileData.role;
+            console.log("AuthContext: Firestore profile found for user UID:", currentUser.uid, userProfileData);
+            // Only override simulated role if it's still default ("User") or not set, and Firestore has a role
+            if (userProfileData.role && (assignedRole === "User" || !assignedRole)) {
+              assignedRole = userProfileData.role;
+              console.log(`AuthContext: Role for '${lowercasedUserEmail}' updated from Firestore profile to: ${assignedRole}`);
             }
           } else {
             setFirestoreUser(null);
-            const userProfileDataToCreate: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt'> = {
-                uid: currentUser.uid, 
-                displayName: currentUser.displayName || currentUser.email || "New User",
-                email: currentUser.email || "",
-                photoURL: currentUser.photoURL || undefined,
-                role: assignedRole || "User", 
-            };
-            await setDoc(userDocRef, {
-                ...userProfileDataToCreate,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            });
-            const newUserDocSnap = await getDoc(userDocRef);
-            if (newUserDocSnap.exists()) {
-                setFirestoreUser({ id: newUserDocSnap.id, ...newUserDocSnap.data() } as UserDocumentForAdmin);
-            }
+            console.warn("AuthContext: No Firestore profile found for user UID:", currentUser.uid, ". Defaulting role if not set by email simulation.");
+            // User profile doesn't exist in Firestore. If admin creates it later, role will be set then.
+            // For now, role remains what was determined by email simulation or defaults to "User".
           }
-          setUserRole(assignedRole || "User"); 
+          setUserRole(assignedRole || "User"); // Default to "User" if no other role fits
+          console.log(`AuthContext: Final role for ${currentUser.email}: ${assignedRole || "User"}`);
         } else {
           setFirestoreUser(null);
           setUserRole(null);
+          console.log("AuthContext: No current user, clearing roles.");
         }
       } catch (error) {
         console.error("AuthContext: Error during onAuthStateChanged profile/role processing:", error);
         setFirestoreUser(null);
-        setUserRole(null); 
+        setUserRole(null);
       } finally {
         setLoading(false);
       }
@@ -156,13 +170,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     return () => {
       unsubscribe();
     };
-  }, [fetchInitialCompanyProfile, auth, firestore]); // Explicitly adding auth and firestore
+  }, [fetchInitialCompanyProfile]);
 
 
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and setLoading(false)
       Swal.fire({
         title: "Login Successful",
         text: `Welcome back!`,
@@ -171,7 +186,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         showConfirmButton: false,
       });
     } catch (error: any) {
-      console.error("Error logging in: ", error);
+      console.error("AuthContext: Error logging in: ", error);
       let errorMessage = "Failed to login. Please check your credentials.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
         errorMessage = "Invalid email or password.";
@@ -185,15 +200,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = `Login failed: ${error.message || 'An unknown error occurred.'}`;
       }
       Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      setLoading(false);
+      setLoading(false); // Ensure loading is set to false on direct login error
       throw error;
     }
-  }, [auth]);
+  }, []);
 
   const logout = useCallback(async () => {
     setLoading(true);
     try {
       await firebaseSignOut(auth);
+      // onAuthStateChanged will handle clearing user, firestoreUser, userRole, and setting loading to false
       Swal.fire({
         title: "Logged Out",
         text: "You have been successfully logged out.",
@@ -208,14 +224,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         text: error.message || "Failed to log out. Please try again.",
         icon: "error",
       });
-      setLoading(false);
+      setLoading(false); // Ensure loading is set to false on direct logout error
     }
-  }, [auth, router]);
+  }, [router]);
 
   const signInWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and setLoading(false)
       Swal.fire({
         title: "Sign-in Successful",
         text: `Welcome!`,
@@ -223,7 +240,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         timer: 2000,
         showConfirmButton: false,
       });
-      router.push('/dashboard');
+      // router.push('/dashboard'); // Navigation will be handled by AuthGuard or page-level logic
     } catch (error: any) {
       console.error("Error signing in with Google: ", error);
       let errorMessage = "Failed to sign in with Google. Please try again.";
@@ -235,10 +252,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         errorMessage = `Google Sign-In error: ${error.message} (Code: ${error.code})`;
       }
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
-      setLoading(false);
+      setLoading(false); // Ensure loading is set to false on direct Google sign-in error
       throw error;
     }
-  }, [auth, router]);
+  }, [router]);
 
   const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
     let newName = companyName;
@@ -289,5 +306,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

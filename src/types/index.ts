@@ -82,7 +82,7 @@ export interface LCEntry {
   shippingMarks?: string;
   certificateOfOrigin?: CertificateOfOriginCountry[];
   notifyPartyNameAndAddress?: string;
-  notifyPartyName?: string; // This was notifyPartyContactDetails before
+  notifyPartyName?: string;
   notifyPartyCell?: string;
   notifyPartyEmail?: string;
   numberOfAmendments?: number;
@@ -265,7 +265,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export type UserRole = "Super Admin" | "Admin" | "User" | "Service";
+export type UserRole = "Super Admin" | "Admin" | "User" | "Service" | "DemoManager";
 
 export interface CompanyProfile {
   companyName?: string;
@@ -295,10 +295,10 @@ export interface UserDocumentForAdmin {
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Allow empty string for form input, parse to number on save
-  purchasePrice: number | ''; // Allow empty string for form input
-  salesPrice: number | ''; // Allow empty string for form input
-  netCommissionPercentage?: number | ''; // Allow empty string for form input
+  qty: number | '';
+  purchasePrice: number | '';
+  salesPrice: number | '';
+  netCommissionPercentage?: number | '';
 }
 
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
@@ -320,13 +320,13 @@ export interface ProformaInvoice {
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number | '';
-  miscellaneousExpenses?: number | ''; // Added for PI
+  miscellaneousExpenses?: number | '';
   totalQty: number;
   totalPurchasePrice: number;
-  totalSalesPrice: number; // Sum of lineItems salesPrice * qty
-  grandTotalSalesPrice: number; // totalSalesPrice + freight (if excluded) - miscExpenses
+  totalSalesPrice: number;
+  grandTotalSalesPrice: number;
   totalExtraNetCommission?: number;
-  grandTotalCommissionUSD: number; // (grandTotalSalesPrice - totalPurchasePrice) + totalExtraNetCommission
+  grandTotalCommissionUSD: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
@@ -343,7 +343,7 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItem
     netCommissionPercentage?: number;
   }>;
   freightChargeAmount?: number;
-  miscellaneousExpenses?: number; // Added for PI Document
+  miscellaneousExpenses?: number;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 };
@@ -352,7 +352,7 @@ export interface LcOption {
   value: string; // L/C document ID
   label: string; // L/C Number (documentaryCreditNumber)
   issueDate?: string; // ISO string
-  purchaseOrderUrl?: string; // Added
+  purchaseOrderUrl?: string;
 }
 
 // --- Installation Report Types ---
@@ -360,8 +360,8 @@ export const InstallationDetailItemSchema = z.object({
   slNo: z.string().optional(),
   machineModel: z.string().min(1, "Machine Model is required."),
   serialNo: z.string().min(1, "Machine Serial No. is required."),
-  ctlBoxModel: z.string().optional(), // Optional as per last request
-  ctlBoxSerial: z.string().optional(), // Optional as per last request
+  ctlBoxModel: z.string().optional(),
+  ctlBoxSerial: z.string().optional(),
   installDate: z.date({ required_error: "Installation Date is required." }),
 });
 export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
@@ -395,7 +395,7 @@ export const InstallationReportSchema = z.object({
       },
       {
         message: "Each non-empty Machine Serial No. must be unique within this report.",
-        path: ["installationDetails"], // Point error to the array if needed
+        path: ["installationDetails"],
       }
     ),
   missingItemInfo: z.string().optional(),
@@ -449,6 +449,9 @@ export interface LcForInvoiceDropdownOption {
     secondPartialQty?: number, secondPartialAmount?: number, secondPartialPkgs?: number, secondPartialNetWeight?: number, secondPartialGrossWeight?: number, secondPartialCbm?: number,
     thirdPartialQty?: number, thirdPartialAmount?: number, thirdPartialPkgs?: number, thirdPartialNetWeight?: number, thirdPartialGrossWeight?: number, thirdPartialCbm?: number,
     packingListUrl?: string;
+    isFirstShipment?: boolean;
+    isSecondShipment?: boolean;
+    isThirdShipment?: boolean;
   };
 }
 
@@ -457,15 +460,15 @@ export interface DemoMachineFactory {
   id?: string;
   factoryName: string;
   factoryLocation: string;
-  contactPerson?: string; // Renamed from contactPersonName to match L/C form auto-fill expectation
+  contactPerson?: string;
   cellNumber?: string;
   note?: string;
 }
 
 export interface DemoMachineFactoryDocument extends DemoMachineFactory {
   id: string;
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
+  createdAt: any;
+  updatedAt: any;
 }
 // --- END Demo Machine Factory Types ---
 
