@@ -210,19 +210,26 @@ export default function DemoMachineListPage() {
                         {machine.controlBoxSerialNo && (
                            <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                         )}
+                         {machine.challanNo && (
+                            <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan No: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
+                        )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         {machine.machineFeatures && (
-                            <div>
-                                <p className="text-xs font-bold text-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:</p>
-                                <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.machineFeatures}</p>
+                            <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                <p className="text-xs font-bold text-foreground flex items-center">
+                                    <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:
+                                </p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
                             </div>
                         )}
                         {machine.note && (
-                            <div>
-                                <p className="text-xs font-bold text-foreground flex items-center"><NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:</p>
-                                <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{machine.note}</p>
+                             <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                <p className="text-xs font-bold text-foreground flex items-center">
+                                    <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:
+                                </p>
+                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
                             </div>
                         )}
                     </div>
@@ -240,4 +247,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
