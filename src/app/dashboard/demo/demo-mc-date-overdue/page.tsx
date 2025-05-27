@@ -68,6 +68,7 @@ export default function DemoMcDateOverduePage() {
         const filteredOverdue = fetchedApplications.filter(app => {
           if (!app.estReturnDate) return false;
           const estReturn = startOfDay(parseISO(app.estReturnDate));
+          // Show if estReturnDate is before today AND machine is not marked as returned
           return isValid(estReturn) && isPast(estReturn) && !(app.machineReturned === true);
         });
 
@@ -141,10 +142,10 @@ export default function DemoMcDateOverduePage() {
                   <CardHeader className="pb-3 pt-0 px-0 pr-20">
                     <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
                         <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
-                        {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
+                          {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
                         </CardTitle>
                     </Link>
-                    <CardDescription className="text-xs text-foreground">
+                    <CardDescription className="text-xs text-foreground"> {/* Changed from text-muted-foreground */}
                       Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
                       {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
@@ -160,7 +161,7 @@ export default function DemoMcDateOverduePage() {
                       {app.inchargeCell && (
                         <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{app.inchargeCell}</span></div>
                       )}
-                       {app.challanNo && ( // Ensure Challan no is also displayed if moved here
+                       {app.challanNo && ( 
                         <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{app.challanNo}</span></div>
                       )}
                     </div>
