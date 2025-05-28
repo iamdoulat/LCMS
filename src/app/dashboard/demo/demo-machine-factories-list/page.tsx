@@ -134,7 +134,7 @@ export default function DemoMachineFactoriesListPage() {
                 Demo Machine Factories List
               </CardTitle>
               <CardDescription>
-                View and manage the list of demo machine factories.
+                View and manage the list of demo machine factories. The list is scrollable if it exceeds the display area.
               </CardDescription>
             </div>
             <Link href="/dashboard/demo/add-demo-machine-factory" passHref>
@@ -166,15 +166,15 @@ export default function DemoMachineFactoriesListPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
+            <ul className="space-y-4 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {factories.map((factory) => (
                 <li key={factory.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
-                  <CardHeader className="pb-3 pt-0 px-0"> {/* Adjusted padding for header within li */}
+                  <CardHeader className="pb-3 pt-0 px-0 relative"> {/* Ensure header is relative for positioning */}
                     <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20">
+                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20"> {/* Add padding to right of title */}
                            <FactoryIcon className="inline-block mr-2 h-5 w-5 align-text-bottom" /> {factory.factoryName || 'N/A'}
                         </CardTitle>
-                        <div className="absolute top-4 right-4 flex gap-1 z-10"> {/* Adjusted top to match li padding */}
+                        <div className="absolute top-0 right-0 flex gap-1 z-10"> {/* Position buttons here */}
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -198,7 +198,7 @@ export default function DemoMachineFactoriesListPage() {
                         </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-0 pb-0 pt-0 text-sm flex-grow"> {/* Adjusted padding for content within li */}
+                  <CardContent className="px-0 pb-0 pt-0 text-sm flex-grow">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1 mb-2">
                       <div className="flex items-start col-span-1 lg:col-span-2">
                         <MapPin className="mr-2 h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /> 
@@ -239,7 +239,7 @@ export default function DemoMachineFactoriesListPage() {
                         </div>
                     )}
                   </CardContent>
-                  <div className="mt-auto self-end text-xs text-muted-foreground pt-2"> {/* Date positioned at bottom-right */}
+                  <div className="mt-auto self-end text-xs text-muted-foreground pt-2">
                     Added: {formatFactoryDate(factory.createdAt)}
                   </div>
                 </li>
