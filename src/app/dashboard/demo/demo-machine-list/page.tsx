@@ -138,7 +138,7 @@ export default function DemoMachineListPage() {
                 Demo Machine List
               </CardTitle>
               <CardDescription>
-                View and manage all registered demo machines. Up to 20 latest entries are shown; list is scrollable.
+                View and manage all registered demo machines. The list is scrollable if it exceeds the display area.
               </CardDescription>
             </div>
             <Link href="/dashboard/demo/add-demo-machine" passHref>
@@ -170,17 +170,17 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {demoMachines.slice(0, 20).map((machine) => (
+            <div className="max-h-[calc(100vh-16rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {demoMachines.map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="relative pb-2 pt-4 px-4">
                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
-                            <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                              <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`}>
-                                <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span>
-                              </Link>
-                            </Button>
+                            <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`} passHref>
+                                <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                                    <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
+                                </Button>
+                            </Link>
                             <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)}>
                               <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
                             </Button>
@@ -195,8 +195,8 @@ export default function DemoMachineListPage() {
                         <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
                            {formatReportValue(machine.machineModel)}
                         </CardTitle>
-                        <CardDescription className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
-                           Owner: <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span>
+                        <CardDescription className="text-xs mt-0.5 flex items-center gap-2">
+                           <span className="text-muted-foreground">Owner:</span> <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span>
                         </CardDescription>
                     </div>
                   </CardHeader>
@@ -204,14 +204,14 @@ export default function DemoMachineListPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
                         <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                         <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
+                        {machine.challanNo && (
+                            <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan No: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
+                        )}
                         {machine.motorOrControlBoxModel && (
                             <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
                         )}
                         {machine.controlBoxSerialNo && (
                            <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
-                        )}
-                         {machine.challanNo && (
-                            <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan No: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
                         )}
                     </div>
 
@@ -247,3 +247,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
