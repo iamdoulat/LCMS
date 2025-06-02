@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Factory as FactoryIcon, Phone, Save, MessageSquare, User } from 'lucide-react'; // Added MessageSquare and User
+import { Loader2, Factory as FactoryIcon, Phone, Save, MessageSquare, User, Building } from 'lucide-react'; // Added MessageSquare and User
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -24,7 +24,8 @@ const phoneRegex = new RegExp(
 const demoMachineFactorySchema = z.object({
   factoryName: z.string().min(1, "Factory name is required"),
   factoryLocation: z.string().min(1, "Factory location is required"),
-  contactPerson: z.string().optional(), // This field name in the schema remains contactPerson
+  groupName: z.string().optional(),
+  contactPerson: z.string().optional(),
   cellNumber: z.string().optional().refine(
     (value) => value === "" || value === undefined || phoneRegex.test(value),
     "Invalid phone number format"
@@ -41,6 +42,7 @@ export function AddDemoMachineFactoryForm() {
     defaultValues: {
       factoryName: '',
       factoryLocation: '',
+      groupName: '',
       contactPerson: '',
       cellNumber: '',
       note: '',
@@ -55,6 +57,7 @@ export function AddDemoMachineFactoryForm() {
     const dataToSave: Omit<DemoMachineFactory, 'id'> & { createdAt: any, updatedAt: any } = {
       factoryName: data.factoryName,
       factoryLocation: data.factoryLocation,
+      groupName: data.groupName || undefined,
       contactPerson: data.contactPerson || undefined,
       cellNumber: data.cellNumber || undefined,
       note: data.note || undefined,
@@ -108,19 +111,35 @@ export function AddDemoMachineFactoryForm() {
           )}
         />
         
-        <FormField
-          control={form.control}
-          name="factoryLocation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Factory Location*</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter factory's full address" {...field} rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="factoryLocation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Factory Location*</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter factory's full address" {...field} rows={3} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="groupName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground"/>Group Name:</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter group name (e.g., ABC Group)" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

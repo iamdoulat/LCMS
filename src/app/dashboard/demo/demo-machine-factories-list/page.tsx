@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin, MessageSquare, FileText, FileEdit, Trash2 } from 'lucide-react';
+import { Loader2, ListChecks, Factory as FactoryIcon, AlertTriangle, Info, PlusCircle, ExternalLink, Phone, User, MapPin, MessageSquare, FileText, FileEdit, Trash2, Building } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
@@ -206,6 +206,15 @@ export default function DemoMachineFactoriesListPage() {
                           <span className="text-muted-foreground">Address: </span>
                           <span className="font-medium text-foreground">{factory.factoryLocation || 'N/A'}</span>
                         </div>
+                      </div>
+                      <div className="col-span-1">
+                        {factory.groupName && (
+                          <div className="flex items-center">
+                              <Building className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Group: </span>
+                              <span className="font-medium text-foreground ml-1 truncate" title={factory.groupName}>{factory.groupName}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-1">
                         {factory.contactPerson && (

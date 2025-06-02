@@ -464,6 +464,7 @@ export interface DemoMachineFactory {
   id?: string;
   factoryName: string;
   factoryLocation: string;
+  groupName?: string;
   contactPerson?: string;
   cellNumber?: string;
   note?: string;
