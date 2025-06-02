@@ -188,10 +188,10 @@ export default function ApplicantsListPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 onClick={() => handleEditApplicant(applicant.id)}
-                                className="hover:bg-accent/50 hover:text-accent-foreground"
+                                className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
                               >
                                 <FileEdit className="h-4 w-4" />
                                 <span className="sr-only">Edit Applicant</span>
@@ -206,10 +206,10 @@ export default function ApplicantsListPage() {
                            <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
-                                  variant="ghost"
+                                  variant="destructive"
                                   size="icon"
                                   onClick={() => handleDeleteApplicant(applicant.id, applicant.applicantName)}
-                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-7 w-7"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                   <span className="sr-only">Delete Applicant</span>
@@ -282,3 +282,4 @@ export default function ApplicantsListPage() {
     </div>
   );
 }
+

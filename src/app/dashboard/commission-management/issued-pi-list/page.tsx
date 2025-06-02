@@ -442,10 +442,10 @@ export default function IssuedPIListPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                                <Button
-                                variant="ghost"
+                                variant="default"
                                 size="icon"
                                 onClick={() => pi.id && handleEditPI(pi.id)}
-                                className="hover:bg-accent/50 hover:text-accent-foreground"
+                                className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
                                 disabled={!pi.id}
                                 title="Edit PI"
                               >
@@ -458,10 +458,10 @@ export default function IssuedPIListPage() {
                            <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
-                                  variant="ghost"
+                                  variant="destructive"
                                   size="icon"
                                   onClick={() => pi.id && handleDeletePI(pi.id, pi.piNo)}
-                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-7 w-7"
                                   disabled={!pi.id}
                                   title="Delete PI"
                                 >

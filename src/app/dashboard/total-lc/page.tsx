@@ -537,10 +537,10 @@ export default function TotalLCPage() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                  <Button
-                                  variant="ghost"
+                                  variant="default"
                                   size="icon"
                                   onClick={() => lc.id && handleEditLC(lc.id)}
-                                  className="hover:bg-accent/50 hover:text-accent-foreground"
+                                  className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
                                   disabled={!lc.id}
                                 >
                                   <FileEdit className="h-4 w-4" />
@@ -552,10 +552,10 @@ export default function TotalLCPage() {
                              <Tooltip>
                               <TooltipTrigger asChild>
                                   <Button
-                                    variant="ghost"
+                                    variant="destructive"
                                     size="icon"
                                     onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                    className="hover:bg-destructive/10 hover:text-destructive"
+                                    className="h-7 w-7"
                                     disabled={!lc.id}
                                   >
                                     <Trash2 className="h-4 w-4" />
