@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -56,10 +57,10 @@ export function CreateQuoteForm() {
       lineItems: [{
         itemId: '',
         description: '',
-        qty: '1', // Changed from '' to '1'
-        unitPrice: '',
-        discountPercentage: '',
-        taxPercentage: '',
+        qty: '1',
+        unitPrice: '0',
+        discountPercentage: '0',
+        taxPercentage: '0',
         total: '0.00'
       }],
       taxType: 'Default',
@@ -154,42 +155,37 @@ export function CreateQuoteForm() {
 
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
-        const qty = parseFloat(String(item.qty) || '0');
-        const unitPrice = parseFloat(String(item.unitPrice) || '0');
-        const discountP = parseFloat(String(item.discountPercentage) || '0');
-        const taxP = parseFloat(String(item.taxPercentage) || '0');
-
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
+        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
+        
+        let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          const lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
           
-          currentSubtotal += itemTotalBeforeDiscount; // Subtotal is sum of (qty * unitPrice) before line discounts/taxes
+          currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
-          
-          const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-          if (String(lineTotal.toFixed(2)) !== currentFormLineTotal) {
-            setValue(`lineItems.${index}.total`, lineTotal.toFixed(2));
-          }
-        } else {
-            const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-            if ("0.00" !== currentFormLineTotal) {
-                 setValue(`lineItems.${index}.total`, "0.00");
-            }
+        }
+        
+        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
 
     setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount); // Sum of line item discounts
-    setTotalTaxAmount(currentTotalTax); // Sum of line item taxes
+    setTotalDiscountAmount(currentTotalDiscount);
+    setTotalTaxAmount(currentTotalTax);
 
-    // For now, global discount/tax aren't implemented on the line items directly
-    // Grand total will be subtotal - global discount + global tax (if any)
-    // For simplicity, current grand total is just sum of line totals.
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
 
@@ -199,16 +195,16 @@ export function CreateQuoteForm() {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; // Default to label (Name + Code)
-      if (selectedItem.description) { // Prefer actual description if available
+      let autoDescription = selectedItem.label; 
+      if (selectedItem.description) { 
         autoDescription = selectedItem.description;
       }
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
-      setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '', { shouldValidate: true });
+      setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
     } else {
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
-      setValue(`lineItems.${index}.unitPrice`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
   };
@@ -218,18 +214,18 @@ export function CreateQuoteForm() {
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty));
-      const unitPriceStr = String(item.unitPrice || '');
-      const finalUnitPrice = unitPriceStr.trim() === '' ? undefined : parseFloat(unitPriceStr);
-      const discountPercentageStr = String(item.discountPercentage || '');
-      const finalDiscountPercentage = discountPercentageStr.trim() === '' ? undefined : parseFloat(discountPercentageStr);
-      const taxPercentageStr = String(item.taxPercentage || '');
-      const finalTaxPercentage = taxPercentageStr.trim() === '' ? undefined : parseFloat(taxPercentageStr);
+      const qty = parseFloat(String(item.qty || '0'));
+      const unitPriceStr = String(item.unitPrice || '0');
+      const finalUnitPrice = parseFloat(unitPriceStr);
+      const discountPercentageStr = String(item.discountPercentage || '0');
+      const finalDiscountPercentage = parseFloat(discountPercentageStr);
+      const taxPercentageStr = String(item.taxPercentage || '0');
+      const finalTaxPercentage = parseFloat(taxPercentageStr);
 
       const lineQtyVal = qty;
-      const lineUnitPriceVal = finalUnitPrice ?? 0;
-      const lineDiscountPVal = finalDiscountPercentage ?? 0;
-      const lineTaxPVal = finalTaxPercentage ?? 0;
+      const lineUnitPriceVal = finalUnitPrice;
+      const lineDiscountPVal = finalDiscountPercentage;
+      const lineTaxPVal = finalTaxPercentage;
 
       const itemTotalBeforeDiscount = lineQtyVal * lineUnitPriceVal;
       const discountAmountVal = itemTotalBeforeDiscount * (lineDiscountPVal / 100);
@@ -241,13 +237,13 @@ export function CreateQuoteForm() {
 
       return {
         itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', // Extract name part
+        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
         itemCode: itemDetailsFromOptions?.itemCode || undefined,
         description: item.description || '',
         qty: lineQtyVal,
-        unitPrice: finalUnitPrice,
-        discountPercentage: finalDiscountPercentage,
-        taxPercentage: finalTaxPercentage,
+        unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice, // Store undefined if was empty and parsed to 0
+        discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
+        taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
         total: calculatedLineTotal,
       };
     });
@@ -267,16 +263,13 @@ export function CreateQuoteForm() {
       salesperson: data.salesperson,
       lineItems: processedLineItems,
       taxType: data.taxType,
-      // Global discount/tax not fully implemented for calculation yet
-      // globalDiscount: data.globalDiscount ? parseFloat(data.globalDiscount) : undefined,
-      // globalTaxRate: data.globalTaxRate ? parseFloat(data.globalTaxRate) : undefined,
       comments: data.comments || undefined,
       privateComments: data.privateComments || undefined,
       subtotal: finalSubtotal,
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: "Draft", // Default status
+      status: "Draft", 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -293,7 +286,7 @@ export function CreateQuoteForm() {
         text: `Quote successfully saved with ID: ${docRef.id}.`,
         icon: "success",
       });
-      form.reset(); // Reset form to default values
+      form.reset(); 
     } catch (error: any) {
       console.error("Error saving quote: ", error);
       Swal.fire({
@@ -517,7 +510,7 @@ export function CreateQuoteForm() {
          {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
             <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
         )}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '', discountPercentage: '', taxPercentage: '', total: '0.00' })} className="mt-2">
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Item
         </Button>
 
