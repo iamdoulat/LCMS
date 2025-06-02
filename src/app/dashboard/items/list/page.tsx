@@ -1,11 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,7 +16,8 @@ import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/fi
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-
+import { Label }
+ from '@/components/ui/label';
 const ITEMS_PER_PAGE = 10;
 
 const formatCurrency = (value?: number, currencySymbol: string = '$') => {
@@ -25,10 +27,16 @@ const formatCurrency = (value?: number, currencySymbol: string = '$') => {
 
 export default function ItemsListPage() {
   const router = useRouter();
-  const [items, setItems] = useState<ItemDocument[]>([]);
+  const [allItems, setAllItems] = useState<ItemDocument[]>([]);
+  const [displayedItems, setDisplayedItems] = useState<ItemDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterItemName, setFilterItemName] = useState('');
+  const [filterItemCode, setFilterItemCode] = useState('');
+  const [filterBrandName, setFilterBrandName] = useState('');
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -39,7 +47,7 @@ export default function ItemsListPage() {
         const q = query(itemsCollectionRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const fetchedItems = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ItemDocument));
-        setItems(fetchedItems);
+        setAllItems(fetchedItems);
       } catch (error: any) {
         console.error("Error fetching items: ", error);
         let errorMessage = `Could not fetch items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
@@ -60,6 +68,30 @@ export default function ItemsListPage() {
     fetchItems();
   }, []);
 
+  useEffect(() => {
+    let filtered = [...allItems];
+
+    if (filterItemName) {
+      filtered = filtered.filter(item =>
+        item.itemName?.toLowerCase().includes(filterItemName.toLowerCase())
+      );
+    }
+    if (filterItemCode) {
+      filtered = filtered.filter(item =>
+        item.itemCode?.toLowerCase().includes(filterItemCode.toLowerCase())
+      );
+    }
+    if (filterBrandName) {
+      filtered = filtered.filter(item =>
+        item.brandName?.toLowerCase().includes(filterBrandName.toLowerCase())
+      );
+    }
+
+    setDisplayedItems(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [allItems, filterItemName, filterItemCode, filterBrandName]);
+
+
   const handleEditItem = (itemId: string) => {
     router.push(`/dashboard/items/${itemId}/edit`);
   };
@@ -78,7 +110,7 @@ export default function ItemsListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "items", itemId));
-          setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+          setAllItems(prevItems => prevItems.filter(item => item.id !== itemId));
           Swal.fire(
             'Deleted!',
             `Item "${itemName || itemId}" has been removed.`,
@@ -92,10 +124,17 @@ export default function ItemsListPage() {
     });
   };
 
-  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const clearFilters = () => {
+    setFilterItemName('');
+    setFilterItemCode('');
+    setFilterBrandName('');
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(displayedItems.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = items.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedItems.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -155,6 +194,48 @@ export default function ItemsListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                  <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
+                  <Input
+                    id="itemNameFilter"
+                    placeholder="Search by Item Name..."
+                    value={filterItemName}
+                    onChange={(e) => setFilterItemName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="itemCodeFilter" className="text-sm font-medium">Item Code/SKU</Label>
+                  <Input
+                    id="itemCodeFilter"
+                    placeholder="Search by Item Code..."
+                    value={filterItemCode}
+                    onChange={(e) => setFilterItemCode(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="brandNameFilter" className="text-sm font-medium">Brand Name</Label>
+                  <Input
+                    id="brandNameFilter"
+                    placeholder="Search by Brand Name..."
+                    value={filterBrandName}
+                    onChange={(e) => setFilterBrandName(e.target.value)}
+                  />
+                </div>
+                <div className="lg:col-span-1 md:col-span-2 self-end">
+                  <Button onClick={clearFilters} variant="outline" className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -247,7 +328,7 @@ export default function ItemsListPage() {
                             <Info className="h-12 w-12 text-muted-foreground mb-4" />
                             <p className="text-xl font-semibold text-muted-foreground">No Items Found</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Click "Add New Item" to get started.
+                                {allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Item\" to get started."}
                             </p>
                         </div>
                     </TableCell>
@@ -256,7 +337,7 @@ export default function ItemsListPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your items from Firestore.
-                Showing {items.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, items.length)} of {items.length} entries.
+                Showing {displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedItems.length)} of {displayedItems.length} entries.
               </TableCaption>
             </Table>
           </div>
