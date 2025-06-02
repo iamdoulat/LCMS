@@ -178,7 +178,7 @@ export default function DemoMachineFactoriesListPage() {
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon" className="h-7 w-7" asChild>
+                                        <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                                             <Link href={`/dashboard/demo/edit-demo-machine-factory/${factory.id}`}>
                                                 <FileEdit className="h-4 w-4" />
                                             </Link>
