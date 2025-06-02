@@ -1,0 +1,604 @@
+"use client";
+
+import * as React from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import Swal from 'sweetalert2';
+import { format, parseISO, isValid } from 'date-fns';
+import { firestore } from '@/lib/firebase/config';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Renamed ItemDocument to ItemDoc to avoid conflict
+import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { DatePickerField } from './DatePickerField';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
+
+const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_CUSTOMER_PLACEHOLDER__";
+const PLACEHOLDER_ITEM_VALUE = "__QUOTE_ITEM_PLACEHOLDER__";
+
+interface ItemOption extends ComboboxOption {
+  description?: string;
+  salesPrice?: number;
+  itemCode?: string; // Added for description population
+}
+
+export function CreateQuoteForm() {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
+  const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+
+  const [subtotal, setSubtotal] = React.useState(0);
+  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
+  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
+  const [grandTotal, setGrandTotal] = React.useState(0);
+
+  const form = useForm<QuoteFormValues>({
+    resolver: zodResolver(QuoteSchema),
+    defaultValues: {
+      customerId: '',
+      billingAddress: '',
+      shippingAddress: '',
+      sameAsBilling: true,
+      quoteDate: new Date(),
+      salesperson: '',
+      lineItems: [{
+        itemId: '',
+        description: '',
+        qty: '1', // Changed from '' to '1'
+        unitPrice: '',
+        discountPercentage: '',
+        taxPercentage: '',
+        total: '0.00'
+      }],
+      taxType: 'Default',
+      globalDiscount: '',
+      globalTaxRate: '',
+      comments: '',
+      privateComments: '',
+    },
+  });
+
+  const { control, setValue, watch, getValues, reset } = form;
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "lineItems",
+  });
+
+  const watchedCustomerId = watch("customerId");
+  const watchedSameAsBilling = watch("sameAsBilling");
+  const watchedBillingAddress = watch("billingAddress");
+  const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+  const watchedGlobalDiscount = watch("globalDiscount");
+  const watchedGlobalTaxRate = watch("globalTaxRate");
+
+  React.useEffect(() => {
+    const fetchOptions = async () => {
+      setIsLoadingDropdowns(true);
+      try {
+        const [customersSnap, itemsSnap] = await Promise.all([
+          getDocs(collection(firestore, "customers")),
+          getDocs(collection(firestore, "items"))
+        ]);
+
+        setCustomerOptions(
+          customersSnap.docs.map(doc => {
+            const data = doc.data() as CustomerDocument;
+            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
+          })
+        );
+
+        setItemOptions(
+          itemsSnap.docs.map(doc => {
+            const data = doc.data() as ItemDoc;
+            return {
+              value: doc.id,
+              label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
+              description: data.description,
+              salesPrice: data.salesPrice,
+              itemCode: data.itemCode,
+            };
+          })
+        );
+
+      } catch (error) {
+        console.error("Error fetching dropdown options for Quote form: ", error);
+        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
+      } finally {
+        setIsLoadingDropdowns(false);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        const billingAddr = (selectedCustomer as any).address || '';
+        setValue("billingAddress", billingAddr);
+        if (getValues("sameAsBilling")) {
+          setValue("shippingAddress", billingAddr);
+        }
+      }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
+    }
+  }, [watchedCustomerId, customerOptions, setValue, getValues]);
+
+  React.useEffect(() => {
+    if (watchedSameAsBilling) {
+      setValue("shippingAddress", getValues("billingAddress"));
+    }
+  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
+
+
+  React.useEffect(() => {
+    let currentSubtotal = 0;
+    let currentTotalTax = 0;
+    let currentTotalDiscount = 0;
+
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item, index) => {
+        const qty = parseFloat(String(item.qty) || '0');
+        const unitPrice = parseFloat(String(item.unitPrice) || '0');
+        const discountP = parseFloat(String(item.discountPercentage) || '0');
+        const taxP = parseFloat(String(item.taxPercentage) || '0');
+
+        if (qty > 0 && unitPrice >= 0) {
+          const itemTotalBeforeDiscount = qty * unitPrice;
+          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
+          const lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          
+          currentSubtotal += itemTotalBeforeDiscount; // Subtotal is sum of (qty * unitPrice) before line discounts/taxes
+          currentTotalDiscount += lineDiscountAmount;
+          currentTotalTax += lineTaxAmount;
+          
+          const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+          if (String(lineTotal.toFixed(2)) !== currentFormLineTotal) {
+            setValue(`lineItems.${index}.total`, lineTotal.toFixed(2));
+          }
+        } else {
+            const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+            if ("0.00" !== currentFormLineTotal) {
+                 setValue(`lineItems.${index}.total`, "0.00");
+            }
+        }
+      });
+    }
+
+    setSubtotal(currentSubtotal);
+    setTotalDiscountAmount(currentTotalDiscount); // Sum of line item discounts
+    setTotalTaxAmount(currentTotalTax); // Sum of line item taxes
+
+    // For now, global discount/tax aren't implemented on the line items directly
+    // Grand total will be subtotal - global discount + global tax (if any)
+    // For simplicity, current grand total is just sum of line totals.
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+    setGrandTotal(currentGrandTotal);
+
+  }, [watchedLineItems, watchedTaxType, watchedGlobalDiscount, watchedGlobalTaxRate, setValue, getValues]);
+
+
+  const handleItemSelect = (itemId: string, index: number) => {
+    const selectedItem = itemOptions.find(opt => opt.value === itemId);
+    if (selectedItem) {
+      let autoDescription = selectedItem.label; // Default to label (Name + Code)
+      if (selectedItem.description) { // Prefer actual description if available
+        autoDescription = selectedItem.description;
+      }
+      setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
+      setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '', { shouldValidate: true });
+      setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
+    } else {
+      setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.unitPrice`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
+    }
+  };
+
+  async function onSubmit(data: QuoteFormValues) {
+    setIsSubmitting(true);
+    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+
+    const processedLineItems = data.lineItems.map(item => {
+      const qty = parseFloat(String(item.qty));
+      const unitPriceStr = String(item.unitPrice || '');
+      const finalUnitPrice = unitPriceStr.trim() === '' ? undefined : parseFloat(unitPriceStr);
+      const discountPercentageStr = String(item.discountPercentage || '');
+      const finalDiscountPercentage = discountPercentageStr.trim() === '' ? undefined : parseFloat(discountPercentageStr);
+      const taxPercentageStr = String(item.taxPercentage || '');
+      const finalTaxPercentage = taxPercentageStr.trim() === '' ? undefined : parseFloat(taxPercentageStr);
+
+      const lineQtyVal = qty;
+      const lineUnitPriceVal = finalUnitPrice ?? 0;
+      const lineDiscountPVal = finalDiscountPercentage ?? 0;
+      const lineTaxPVal = finalTaxPercentage ?? 0;
+
+      const itemTotalBeforeDiscount = lineQtyVal * lineUnitPriceVal;
+      const discountAmountVal = itemTotalBeforeDiscount * (lineDiscountPVal / 100);
+      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
+      const taxAmountVal = itemTotalAfterDiscount * (lineTaxPVal / 100);
+      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
+      
+      const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+
+      return {
+        itemId: item.itemId,
+        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', // Extract name part
+        itemCode: itemDetailsFromOptions?.itemCode || undefined,
+        description: item.description || '',
+        qty: lineQtyVal,
+        unitPrice: finalUnitPrice,
+        discountPercentage: finalDiscountPercentage,
+        taxPercentage: finalTaxPercentage,
+        total: calculatedLineTotal,
+      };
+    });
+    
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
+    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
+    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
+
+    const dataToSave = {
+      customerId: data.customerId,
+      customerName: selectedCustomer?.label || 'N/A',
+      billingAddress: data.billingAddress,
+      shippingAddress: data.shippingAddress,
+      quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      salesperson: data.salesperson,
+      lineItems: processedLineItems,
+      taxType: data.taxType,
+      // Global discount/tax not fully implemented for calculation yet
+      // globalDiscount: data.globalDiscount ? parseFloat(data.globalDiscount) : undefined,
+      // globalTaxRate: data.globalTaxRate ? parseFloat(data.globalTaxRate) : undefined,
+      comments: data.comments || undefined,
+      privateComments: data.privateComments || undefined,
+      subtotal: finalSubtotal,
+      totalDiscountAmount: finalTotalDiscount,
+      totalTaxAmount: finalTotalTax,
+      totalAmount: finalGrandTotal,
+      status: "Draft", // Default status
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    const cleanedDataToSave = Object.fromEntries(
+      Object.entries(dataToSave).filter(([, value]) => value !== undefined)
+    ) as typeof dataToSave;
+
+
+    try {
+      const docRef = await addDoc(collection(firestore, "quotes"), cleanedDataToSave);
+      Swal.fire({
+        title: "Quote Saved!",
+        text: `Quote successfully saved with ID: ${docRef.id}.`,
+        icon: "success",
+      });
+      form.reset(); // Reset form to default values
+    } catch (error: any) {
+      console.error("Error saving quote: ", error);
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save quote: ${error.message}`,
+        icon: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (isLoadingDropdowns) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading form options...</p>
+      </div>
+    );
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        
+        <h3 className={cn(sectionHeadingClass)}>
+          <Users className="mr-2 h-5 w-5 text-primary" />
+          Customer Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={control}
+            name="customerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Customer*</FormLabel>
+                <Combobox
+                  options={customerOptions}
+                  value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
+                  placeholder="Search Customer..."
+                  selectPlaceholder="Select Customer"
+                  emptyStateMessage="No customer found."
+                  disabled={isLoadingDropdowns}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={control}
+            name="salesperson"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Salesperson*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter salesperson name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={control}
+            name="billingAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bill To*</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Billing address" {...field} rows={3} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="shippingAddress"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center mb-1.5">
+                    <FormLabel>Ship To*</FormLabel>
+                    <FormField
+                        control={control}
+                        name="sameAsBilling"
+                        render={({ field: checkboxField }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxQuote" />
+                            </FormControl>
+                            <Label htmlFor="sameAsBillingCheckboxQuote" className="text-xs font-normal cursor-pointer">Same as billing</Label>
+                        </FormItem>
+                        )}
+                    />
+                </div>
+                <FormControl>
+                  <Textarea placeholder="Shipping address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <h3 className={cn(sectionHeadingClass)}>
+          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+          Quote Details
+        </h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={control}
+                name="quoteDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Quote Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select quote date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="taxType"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Tax</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select tax type" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {quoteTaxTypes.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
+        </div>
+
+        <Separator />
+        <h3 className={cn(sectionHeadingClass)}>
+          <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+        </h3>
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px]">Qty*</TableHead>
+                <TableHead className="min-w-[200px]">Item*</TableHead>
+                <TableHead className="min-w-[250px]">Description</TableHead>
+                <TableHead className="w-[120px]">Unit Price*</TableHead>
+                <TableHead className="w-[100px]">Discount %</TableHead>
+                <TableHead className="w-[100px]">Tax %</TableHead>
+                <TableHead className="w-[130px] text-right">Line Total</TableHead>
+                <TableHead className="w-[50px] text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((field, index) => (
+                <TableRow key={field.id}>
+                  <TableCell>
+                    <FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} />
+                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell>
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.itemId`}
+                      render={({ field: itemField }) => (
+                        <Combobox
+                          options={itemOptions}
+                          value={itemField.value || PLACEHOLDER_ITEM_VALUE + index}
+                          onValueChange={(itemId) => {
+                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE + index) ? '' : itemId);
+                            handleItemSelect(itemId, index);
+                          }}
+                          placeholder="Search Item..."
+                          selectPlaceholder="Select Item"
+                          emptyStateMessage="No item found."
+                          className="h-9"
+                        />
+                      )}
+                    />
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell>
+                    <FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} />
+                  </TableCell>
+                  <TableCell>
+                    <FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} />
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell>
+                    <FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} />
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell>
+                    <FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} />
+                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell className="text-right">
+                     <FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
+            <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
+        )}
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '', discountPercentage: '', taxPercentage: '', total: '0.00' })} className="mt-2">
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+        </Button>
+
+        <Separator />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={control}
+                name="comments"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Comments (Public)</FormLabel>
+                    <FormControl>
+                    <Textarea placeholder="Enter comments visible to the customer" {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="privateComments"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Private Comments (Internal)</FormLabel>
+                    <FormControl>
+                    <Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        <div className="flex justify-end space-y-2 mt-6">
+            <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span className="font-medium text-foreground">{subtotal.toFixed(2)}</span>
+                </div>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Discount:</span>
+                    <span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span>
+                </div>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Tax:</span>
+                    <span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                    <span className="text-primary">Grand Total:</span>
+                    <span className="text-primary">{grandTotal.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+        <Separator />
+        
+        <div className="flex flex-wrap gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={() => {
+                form.reset();
+                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
+            }}>
+                <X className="mr-2 h-4 w-4" />Cancel
+            </Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Quote...</>
+              ) : (
+                <><Save className="mr-2 h-4 w-4" />Save Quote</>
+              )}
+            </Button>
+             <Button type="button" variant="outline" disabled>
+                <Info className="mr-2 h-4 w-4" />Help
+            </Button>
+            <Button type="button" variant="outline" disabled>
+                <Printer className="mr-2 h-4 w-4" />Save and Preview
+            </Button>
+            <Button type="button" variant="outline" disabled>
+                <Edit className="mr-2 h-4 w-4" />Convert to Invoice
+            </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
