@@ -2,50 +2,34 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus, DemoMachineApplicationFormValues as PageDemoMachineApplicationFormValues, AppliedMachineItem as PageAppliedMachineItem } from '@/types';
+import { demoMachineApplicationSchema, AppliedMachineItemSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge } from 'lucide-react';
+import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge, PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
 );
 
-// Zod schema for form validation
-const demoMachineApplicationSchema = z.object({
-  factoryId: z.string().min(1, "Customer Name (Factory) is required."),
-  demoMachineId: z.string().min(1, "Machine Model is required."),
-  challanNo: z.string().min(1, "Challan No. is required."),
-  deliveryDate: z.date({ required_error: "Delivery Date is required." }),
-  estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
-  factoryInchargeName: z.string().optional(),
-  inchargeCell: z.string().optional().refine(
-    (value) => value === "" || value === undefined || phoneRegexForValidation.test(value),
-    "Invalid phone number format"
-  ),
-  notes: z.string().optional(),
-  machineReturned: z.boolean().optional().default(false),
-});
-
-type DemoMachineApplicationFormValues = z.infer<typeof demoMachineApplicationSchema>;
+type DemoMachineApplicationFormValues = PageDemoMachineApplicationFormValues;
+type AppliedMachineItemType = PageAppliedMachineItem; // Matches the schema used
 
 const PLACEHOLDER_FACTORY_VALUE = "__EDIT_DEMO_APP_FACTORY__";
-const PLACEHOLDER_MACHINE_VALUE = "__EDIT_DEMO_APP_MACHINE__";
+const PLACEHOLDER_MACHINE_VALUE_PREFIX = "__EDIT_DEMO_APP_MACHINE_PLACEHOLDER__"; // Prefix for unique placeholders
 
 interface FactoryOption extends ComboboxOption {
   id: string;
@@ -53,10 +37,11 @@ interface FactoryOption extends ComboboxOption {
   contactPerson?: string;
   cellNumber?: string;
 }
-interface MachineOption extends ComboboxOption {
+interface AvailableMachineOption extends ComboboxOption {
   id: string;
   serial: string;
   brand: string;
+  currentStatus?: AppDemoMachineStatus; // To know if it's available or allocated to this app
 }
 
 type CurrentDemoStatus = "Upcoming" | "Active" | "Overdue" | "Returned";
@@ -70,25 +55,19 @@ interface EditDemoMachineApplicationFormProps {
 export function EditDemoMachineApplicationForm({ initialData, applicationId, onApplicationStatusChange }: EditDemoMachineApplicationFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [factoryOptions, setFactoryOptions] = React.useState<FactoryOption[]>([]);
-  const [machineOptions, setMachineOptions] = React.useState<MachineOption[]>([]);
+  const [allFetchedMachines, setAllFetchedMachines] = React.useState<DemoMachineDocument[]>([]);
+  const [availableMachineOptions, setAvailableMachineOptions] = React.useState<AvailableMachineOption[]>([]);
+
   const [isLoadingFactories, setIsLoadingFactories] = React.useState(true);
   const [isLoadingMachines, setIsLoadingMachines] = React.useState(true);
 
   const [factoryLocationDisplay, setFactoryLocationDisplay] = React.useState<string>(initialData.factoryLocation || '');
-  const [machineSerialDisplay, setMachineSerialDisplay] = React.useState<string>(initialData.machineSerial || '');
-  const [machineBrandDisplay, setMachineBrandDisplay] = React.useState<string>(initialData.machineBrand || '');
   const [demoPeriodDisplay, setDemoPeriodDisplay] = React.useState<string>(`${initialData.demoPeriodDays || 0} Day(s)`);
-  
-  const isInitialMount = React.useRef(true);
-  const isAfterInitialResetRef = React.useRef(false);
-  const prevMachineReturnedRef = React.useRef(initialData.machineReturned ?? false);
-
 
   const form = useForm<DemoMachineApplicationFormValues>({
     resolver: zodResolver(demoMachineApplicationSchema),
     defaultValues: {
       factoryId: initialData.factoryId || '',
-      demoMachineId: initialData.demoMachineId || '',
       challanNo: initialData.challanNo || '',
       deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
       estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
@@ -96,13 +75,19 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       inchargeCell: initialData.inchargeCell || '',
       notes: initialData.notes || '',
       machineReturned: initialData.machineReturned ?? false,
+      appliedMachines: initialData.appliedMachines?.map(m => ({ demoMachineId: m.demoMachineId })) || [{ demoMachineId: '' }],
     },
   });
 
-  const { control, setValue, watch, reset, getValues } = form;
+  const { control, setValue, watch, reset, getValues, formState: { errors } } = form;
+
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "appliedMachines",
+  });
 
   const watchedFactoryId = watch("factoryId");
-  const watchedDemoMachineId = watch("demoMachineId");
+  const watchedAppliedMachines = watch("appliedMachines");
   const watchedDeliveryDate = watch("deliveryDate");
   const watchedEstReturnDate = watch("estReturnDate");
   const watchedInchargeCell = watch("inchargeCell");
@@ -110,23 +95,18 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
 
   React.useEffect(() => {
     const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
-        const machineReturnedValue = getValues("machineReturned"); 
+        const machineReturnedValue = getValues("machineReturned");
         if (machineReturnedValue) return "Returned";
-        
         const deliveryDateValue = getValues("deliveryDate");
         const estReturnDateValue = getValues("estReturnDate");
-
         const today = startOfDay(new Date());
         const delivery = deliveryDateValue ? startOfDay(new Date(deliveryDateValue)) : null;
         const estReturn = estReturnDateValue ? startOfDay(new Date(estReturnDateValue)) : null;
-
-        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming"; 
-
+        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
         if (isPast(estReturn) && !isToday(estReturn)) return "Overdue";
         if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
         if (isFuture(delivery)) return "Upcoming";
-        
-        return "Upcoming"; 
+        return "Upcoming";
     };
     const newStatus = calculateCurrentDemoStatus();
     if (onApplicationStatusChange) {
@@ -134,180 +114,97 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
     }
   }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned, getValues, onApplicationStatusChange]);
 
-
   React.useEffect(() => {
-    const fetchFactories = async () => {
+    const fetchInitialDropdownData = async () => {
       setIsLoadingFactories(true);
+      setIsLoadingMachines(true);
       try {
         const factoriesSnapshot = await getDocs(query(collection(firestore, "demo_machine_factories"), orderBy("factoryName")));
         setFactoryOptions(
           factoriesSnapshot.docs.map(docSnap => {
             const data = docSnap.data() as DemoMachineFactoryDocument;
-            return {
-              id: docSnap.id,
-              value: docSnap.id,
-              label: data.factoryName || 'Unnamed Factory',
-              location: data.factoryLocation || 'N/A',
-              contactPerson: data.contactPerson,
-              cellNumber: data.cellNumber,
-            };
+            return { id: docSnap.id, value: docSnap.id, label: data.factoryName || 'Unnamed Factory', location: data.factoryLocation || 'N/A', contactPerson: data.contactPerson, cellNumber: data.cellNumber };
           })
         );
+
+        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
+        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as DemoMachineDocument) }));
+        setAllFetchedMachines(fetchedMachines);
+
       } catch (error) {
-        console.error("Error fetching factories:", error);
+        console.error("Error fetching dropdown data:", error);
+        Swal.fire("Error", `Could not load factories or machines: ${(error as Error).message}`, "error");
       } finally {
         setIsLoadingFactories(false);
-      }
-    };
-    fetchFactories();
-  }, []);
-
-  React.useEffect(() => {
-    const fetchMachines = async () => {
-      setIsLoadingMachines(true);
-      try {
-        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        const allFetchedMachines = machinesSnapshot.docs.map(docSnap => {
-          const data = docSnap.data() as DemoMachineDocument;
-          return { id: docSnap.id, ...data };
-        });
-        
-        const availableMachines = allFetchedMachines.filter(machine => 
-          machine.currentStatus === "Available" || machine.id === initialData.demoMachineId
-        );
-
-        setMachineOptions(
-          availableMachines.map(machine => ({
-            id: machine.id,
-            value: machine.id,
-            label: machine.machineModel || 'Unnamed Model',
-            serial: machine.machineSerial || 'N/A',
-            brand: machine.machineBrand || 'N/A',
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching demo machines:", error);
-      } finally {
         setIsLoadingMachines(false);
       }
     };
-    fetchMachines();
-  }, [initialData.demoMachineId]);
+    fetchInitialDropdownData();
+  }, []);
 
- React.useEffect(() => {
-    if (initialData && factoryOptions.length > 0 && machineOptions.length > 0 && !isSubmitting) {
-      const factoryExists = factoryOptions.some(opt => opt.value === initialData.factoryId);
-      const machineExists = machineOptions.some(opt => opt.value === initialData.demoMachineId);
-
-      const resetValues: DemoMachineApplicationFormValues = {
-        factoryId: factoryExists ? initialData.factoryId || '' : '',
-        demoMachineId: machineExists ? initialData.demoMachineId || '' : '',
-        challanNo: initialData.challanNo || '',
-        deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined as any, 
-        estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined as any, 
-        factoryInchargeName: initialData.factoryInchargeName || '',
-        inchargeCell: initialData.inchargeCell || '',
-        notes: initialData.notes || '',
-        machineReturned: initialData.machineReturned ?? false,
-      };
-      reset(resetValues);
-      
-      const selectedFactory = factoryOptions.find(opt => opt.value === resetValues.factoryId);
-      setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
-      
-      const selectedMachine = machineOptions.find(opt => opt.value === resetValues.demoMachineId);
-      setMachineSerialDisplay(selectedMachine?.serial || initialData.machineSerial || 'N/A');
-      setMachineBrandDisplay(selectedMachine?.brand || initialData.machineBrand || 'N/A');
-      
-      isAfterInitialResetRef.current = true; 
-      prevMachineReturnedRef.current = resetValues.machineReturned; 
+  React.useEffect(() => {
+    if (!isLoadingFactories && !isLoadingMachines && initialData) {
+        const resetValues = {
+            factoryId: initialData.factoryId || '',
+            challanNo: initialData.challanNo || '',
+            deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
+            estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+            factoryInchargeName: initialData.factoryInchargeName || '',
+            inchargeCell: initialData.inchargeCell || '',
+            notes: initialData.notes || '',
+            machineReturned: initialData.machineReturned ?? false,
+            appliedMachines: initialData.appliedMachines && initialData.appliedMachines.length > 0
+                ? initialData.appliedMachines.map(m => ({ demoMachineId: m.demoMachineId || '' }))
+                : [{ demoMachineId: '' }],
+        };
+        replace(resetValues.appliedMachines); // Use replace for field array to correctly set initial values
+        
+        // Need to reset other form values separately if `replace` only handles array
+        Object.keys(resetValues).forEach(key => {
+            if (key !== 'appliedMachines') {
+                setValue(key as keyof DemoMachineApplicationFormValues, resetValues[key as keyof DemoMachineApplicationFormValues], { shouldValidate: true, shouldDirty: false });
+            }
+        });
     }
-  }, [initialData, factoryOptions, machineOptions, reset, isSubmitting]); 
+  }, [initialData, isLoadingFactories, isLoadingMachines, replace, setValue]);
+
+
+  React.useEffect(() => {
+    const currentAppliedMachineIds = watchedAppliedMachines.map(m => m.demoMachineId).filter(Boolean);
+    const newAvailableOptions = allFetchedMachines
+      .filter(machine =>
+        (machine.currentStatus === "Available" || currentAppliedMachineIds.includes(machine.id)) // Machine is available OR already selected in this app
+      )
+      .map(machine => ({
+        id: machine.id,
+        value: machine.id,
+        label: `${machine.machineModel || 'Unnamed Model'} (S/N: ${machine.machineSerial || 'N/A'})`,
+        serial: machine.machineSerial || 'N/A',
+        brand: machine.machineBrand || 'N/A',
+        currentStatus: machine.currentStatus,
+      }));
+    setAvailableMachineOptions(newAvailableOptions);
+  }, [watchedAppliedMachines, allFetchedMachines]);
 
 
   React.useEffect(() => {
     if (watchedFactoryId && factoryOptions.length > 0) {
       const selectedFactory = factoryOptions.find(opt => opt.id === watchedFactoryId);
-      setFactoryLocationDisplay(selectedFactory?.location || 'N/A');
-      setValue("factoryInchargeName", selectedFactory?.contactPerson || '', { shouldValidate: true, shouldDirty: true });
-      setValue("inchargeCell", selectedFactory?.cellNumber || '', { shouldValidate: true, shouldDirty: true });
-    } else if (!watchedFactoryId && isAfterInitialResetRef.current) { 
-        setFactoryLocationDisplay('');
-        setValue("factoryInchargeName", '', { shouldValidate: true, shouldDirty: true });
-        setValue("inchargeCell", '', { shouldValidate: true, shouldDirty: true });
+      setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
+      setValue("factoryInchargeName", selectedFactory?.contactPerson || initialData.factoryInchargeName || '', { shouldValidate: true, shouldDirty: true });
+      setValue("inchargeCell", selectedFactory?.cellNumber || initialData.inchargeCell || '', { shouldValidate: true, shouldDirty: true });
     }
-  }, [watchedFactoryId, factoryOptions, setValue]);
+  }, [watchedFactoryId, factoryOptions, setValue, initialData]);
+
 
   React.useEffect(() => {
-    if (watchedDemoMachineId && machineOptions.length > 0) {
-      const selectedMachine = machineOptions.find(opt => opt.id === watchedDemoMachineId);
-      setMachineSerialDisplay(selectedMachine?.serial || 'N/A');
-      setMachineBrandDisplay(selectedMachine?.brand || 'N/A');
-    } else if (!watchedDemoMachineId && isAfterInitialResetRef.current) { 
-       setMachineSerialDisplay('');
-       setMachineBrandDisplay('');
-    }
-  }, [watchedDemoMachineId, machineOptions]);
-
-  React.useEffect(() => {
-    const deliveryDateVal = getValues("deliveryDate");
-    const estReturnDateVal = getValues("estReturnDate");
-    if (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) {
-      const days = differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal));
+    if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
+      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedEstReturnDate));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
-      setDemoPeriodDisplay('0 Days');
+      setDemoPeriodDisplay(initialData.demoPeriodDays ? `${initialData.demoPeriodDays} Day(s)` : '0 Days');
     }
-  }, [watchedDeliveryDate, watchedEstReturnDate, getValues]);
-
- React.useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      if (isAfterInitialResetRef.current) {
-         prevMachineReturnedRef.current = getValues("machineReturned");
-      }
-      return;
-    }
-
-    if (isAfterInitialResetRef.current && watchedMachineReturned !== prevMachineReturnedRef.current) {
-      const currentDemoMachineId = getValues("demoMachineId");
-      if (currentDemoMachineId) {
-        const newMachineStatus = watchedMachineReturned ? "Available" : "Allocated";
-        const updateMachineStatusInFirestore = async () => {
-          try {
-            const machineRef = doc(firestore, "demo_machines", currentDemoMachineId);
-            await updateDoc(machineRef, {
-              currentStatus: newMachineStatus as AppDemoMachineStatus,
-              machineReturned: watchedMachineReturned, 
-              updatedAt: serverTimestamp(),
-            });
-            Swal.fire({
-              toast: true,
-              position: 'top-end',
-              icon: 'info',
-              title: `Machine ${newMachineStatus === "Available" ? "marked as available" : "marked as allocated"}.`,
-              showConfirmButton: false,
-              timer: 2500,
-            });
-          } catch (error) {
-            console.error("Error auto-updating machine status in EditDemoAppForm:", error);
-            setValue("machineReturned", !watchedMachineReturned, { shouldValidate: false });
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'error',
-                title: `Failed to auto-update machine status: ${(error as Error).message}. Change reverted.`,
-                showConfirmButton: false,
-                timer: 3500,
-            });
-          }
-        };
-        updateMachineStatusInFirestore();
-      }
-      prevMachineReturnedRef.current = watchedMachineReturned;
-    }
-  }, [watchedMachineReturned, initialData.demoMachineId, getValues, setValue]);
-
+  }, [watchedDeliveryDate, watchedEstReturnDate, initialData.demoPeriodDays]);
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     if (!applicationId) {
@@ -315,64 +212,71 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       return;
     }
     setIsSubmitting(true);
+    const batch = writeBatch(firestore);
+
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
-    const selectedMachine = machineOptions.find(opt => opt.value === data.demoMachineId);
     const deliveryDateVal = getValues("deliveryDate");
     const estReturnDateVal = getValues("estReturnDate");
 
+    const finalAppliedMachines = data.appliedMachines.map(applied => {
+      const machineDetail = allFetchedMachines.find(m => m.id === applied.demoMachineId);
+      return {
+        demoMachineId: applied.demoMachineId,
+        machineModel: machineDetail?.machineModel || 'N/A',
+        machineSerial: machineDetail?.machineSerial || 'N/A',
+        machineBrand: machineDetail?.machineBrand || 'N/A',
+      };
+    }).filter(m => m.demoMachineId); // Ensure only valid entries are saved
 
-    const dataToUpdate: Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
+    const appDataToUpdate: Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       factoryId: data.factoryId,
       factoryName: selectedFactory?.label || initialData.factoryName,
       factoryLocation: selectedFactory?.location || initialData.factoryLocation,
-      demoMachineId: data.demoMachineId,
-      machineModel: selectedMachine?.label || initialData.machineModel,
-      machineSerial: selectedMachine?.serial || initialData.machineSerial,
-      machineBrand: selectedMachine?.brand || initialData.machineBrand,
       challanNo: data.challanNo,
-      deliveryDate: data.deliveryDate ? format(new Date(data.deliveryDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      estReturnDate: data.estReturnDate ? format(new Date(data.estReturnDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : 0,
+      deliveryDate: deliveryDateVal ? format(new Date(deliveryDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      estReturnDate: estReturnDateVal ? format(new Date(estReturnDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : initialData.demoPeriodDays,
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
       machineReturned: data.machineReturned ?? false,
+      appliedMachines: finalAppliedMachines,
       updatedAt: serverTimestamp(),
     };
-    
-    Object.keys(dataToUpdate).forEach(key => {
-        const typedKey = key as keyof typeof dataToUpdate;
-        if (dataToUpdate[typedKey] === undefined) {
-            delete dataToUpdate[typedKey];
-        } else if (typeof dataToUpdate[typedKey] === 'string' && (dataToUpdate[typedKey] as string).trim() === '' && ['factoryInchargeName', 'inchargeCell', 'notes'].includes(typedKey)) {
-            delete dataToUpdate[typedKey];
+     Object.keys(appDataToUpdate).forEach(key => {
+        const typedKey = key as keyof typeof appDataToUpdate;
+        if (appDataToUpdate[typedKey] === undefined) {
+            delete appDataToUpdate[typedKey];
         }
+    });
+    const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
+    batch.update(appDocRef, appDataToUpdate);
+
+    // Machine Status Update Logic
+    const initialMachineIds = new Set(initialData.appliedMachines?.map(m => m.demoMachineId));
+    const finalMachineIds = new Set(finalAppliedMachines.map(m => m.demoMachineId));
+
+    // Machines removed from this application
+    initialData.appliedMachines?.forEach(initialMachine => {
+      if (!finalMachineIds.has(initialMachine.demoMachineId)) {
+        const machineRef = doc(firestore, "demo_machines", initialMachine.demoMachineId);
+        batch.update(machineRef, { currentStatus: "Available" as AppDemoMachineStatus, machineReturned: true, updatedAt: serverTimestamp() });
+      }
+    });
+
+    // Machines added or kept in this application
+    finalAppliedMachines.forEach(finalMachine => {
+      const machineRef = doc(firestore, "demo_machines", finalMachine.demoMachineId);
+      const newStatus = data.machineReturned ? "Available" : "Allocated";
+      batch.update(machineRef, { currentStatus: newStatus as AppDemoMachineStatus, machineReturned: data.machineReturned, updatedAt: serverTimestamp() });
     });
 
     try {
-      const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
-      await updateDoc(appDocRef, dataToUpdate);
-      
-      // Final sync of machine status on explicit save
-      if (data.demoMachineId) {
-        const machineRef = doc(firestore, "demo_machines", data.demoMachineId);
-        const finalMachineStatus = data.machineReturned ? "Available" : "Allocated";
-        try {
-          await updateDoc(machineRef, {
-            currentStatus: finalMachineStatus as AppDemoMachineStatus,
-            machineReturned: data.machineReturned ?? false, // Also update machineReturned on the machine doc
-            updatedAt: serverTimestamp(),
-          });
-        } catch (machineError) {
-          console.error("Error updating demo machine status on main save:", machineError);
-           Swal.fire("Warning", `Application saved, but failed to update machine status: ${(machineError as Error).message}`, "warning");
-        }
-      }
-
-      Swal.fire("Success!", "Demo machine application updated and machine status synced.", "success");
+      await batch.commit();
+      Swal.fire("Success!", "Demo machine application and machine statuses updated.", "success");
     } catch (error) {
-      console.error("Error updating demo application:", error);
-      Swal.fire("Error", `Failed to update application: ${(error as Error).message}`, "error");
+      console.error("Error updating demo application and machines:", error);
+      Swal.fire("Error", `Failed to update: ${(error as Error).message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -390,54 +294,32 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={control}
-          name="factoryId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><Factory className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name (Factory)*</FormLabel>
-              <Combobox
-                options={factoryOptions}
-                value={field.value || PLACEHOLDER_FACTORY_VALUE}
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_FACTORY_VALUE ? '' : value)}
-                placeholder="Search Factory..."
-                selectPlaceholder="Select Factory"
-                emptyStateMessage="No factory found."
-                disabled={isLoadingFactories}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormItem>
-          <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Factory Location</FormLabel>
-          <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-        </FormItem>
-
-        <Separator />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
             control={control}
-            name="demoMachineId"
+            name="factoryId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
+                <FormItem>
+                <FormLabel className="flex items-center"><Factory className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name (Factory)*</FormLabel>
                 <Combobox
-                  options={machineOptions}
-                  value={field.value || PLACEHOLDER_MACHINE_VALUE}
-                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_MACHINE_VALUE ? '' : value)}
-                  placeholder="Search Machine Model..."
-                  selectPlaceholder="Select Machine Model"
-                  emptyStateMessage="No available machine found."
-                  disabled={isLoadingMachines}
+                    options={factoryOptions}
+                    value={field.value || PLACEHOLDER_FACTORY_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_FACTORY_VALUE ? '' : value)}
+                    placeholder="Search Factory..."
+                    selectPlaceholder="Select Factory"
+                    emptyStateMessage="No factory found."
+                    disabled={isLoadingFactories}
                 />
                 <FormMessage />
-              </FormItem>
+                </FormItem>
             )}
-          />
-          <FormField
+            />
+            <FormItem>
+            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Factory Location</FormLabel>
+            <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+            </FormItem>
+        </div>
+        <FormField
             control={form.control}
             name="challanNo"
             render={({ field }) => (
@@ -450,19 +332,74 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
               </FormItem>
             )}
           />
-        </div>
+        <Separator />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormItem>
-            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Serial</FormLabel>
-            <Input value={machineSerialDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-          </FormItem>
-          <FormItem>
-            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Brand</FormLabel>
-            <Input value={machineBrandDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-          </FormItem>
-        </div>
-        
+        <h3 className="text-lg font-semibold text-foreground flex items-center">
+            <Laptop className="mr-2 h-5 w-5 text-primary" /> Applied Machines
+        </h3>
+        {fields.map((item, index) => {
+            const currentMachineIdInField = getValues(`appliedMachines.${index}.demoMachineId`);
+            const selectedMachineDetails = allFetchedMachines.find(m => m.id === currentMachineIdInField);
+            return (
+            <div key={item.id} className="p-4 border rounded-md space-y-4 relative bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <FormField
+                    control={control}
+                    name={`appliedMachines.${index}.demoMachineId`}
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
+                        <Combobox
+                        options={availableMachineOptions}
+                        value={field.value || PLACEHOLDER_MACHINE_VALUE_PREFIX + index}
+                        onValueChange={(value) => field.onChange(value === (PLACEHOLDER_MACHINE_VALUE_PREFIX + index) ? '' : value)}
+                        placeholder="Search Machine Model..."
+                        selectPlaceholder="Select Machine Model"
+                        emptyStateMessage="No available machine found or all selected."
+                        disabled={isLoadingMachines}
+                        />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormItem className="md:col-span-1">
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Serial</FormLabel>
+                    <Input value={selectedMachineDetails?.machineSerial || 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormItem>
+                <FormItem className="md:col-span-1">
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Brand</FormLabel>
+                    <Input value={selectedMachineDetails?.machineBrand || 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormItem>
+                </div>
+                {fields.length > 1 && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(index)}
+                    className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
+                    title="Remove Machine"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+                )}
+            </div>
+            );
+        })}
+        <Button
+            type="button"
+            variant="outline"
+            onClick={() => append({ demoMachineId: '' })}
+            className="mt-2"
+        >
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Another Machine
+        </Button>
+        {errors.appliedMachines && typeof errors.appliedMachines.message === 'string' && (
+            <FormMessage>{errors.appliedMachines.message}</FormMessage>
+        )}
+        {errors.appliedMachines && Array.isArray(errors.appliedMachines) && errors.appliedMachines.map((err, i) => err?.demoMachineId?.message ? <FormMessage key={i}>Machine {i+1}: {err.demoMachineId.message}</FormMessage> : null)}
+
+
         <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -529,9 +466,9 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
                             </Button>
                         )}
                         {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
-                            <a 
-                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`} 
-                            target="_blank" 
+                            <a
+                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
                             rel="noopener noreferrer"
                             title={`Chat on WhatsApp with ${watchedInchargeCell}`}
                             >
@@ -553,7 +490,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
         <Separator />
 
         <div className="space-y-4">
-             <FormField
+            <FormField
                 control={form.control}
                 name="machineReturned"
                 render={({ field }) => (
@@ -562,15 +499,15 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
                             <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            id="machineReturned"
+                            id="editMachineReturned"
                             />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                            <FormLabel htmlFor="machineReturned" className="text-sm font-medium hover:cursor-pointer">
-                            Machine Returned by Factory
+                            <FormLabel htmlFor="editMachineReturned" className="text-sm font-medium hover:cursor-pointer">
+                            All Machines Returned by Factory
                             </FormLabel>
                             <FormDescription className="text-xs">
-                            Check this if the demo machine has been returned. This will update the machine's status to 'Available'.
+                            Check this if all demo machines in this application have been returned. This will update their statuses.
                             </FormDescription>
                         </div>
                     </FormItem>

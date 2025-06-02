@@ -20,10 +20,10 @@ type CurrentDemoStatusPage = "Upcoming" | "Active" | "Overdue" | "Returned";
 
 const getDemoStatusBadgeVariantPage = (status: CurrentDemoStatusPage): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-        case "Active": return "default";
+        case "Active": return "default"; // Consider a success variant like green
         case "Overdue": return "destructive";
-        case "Returned": return "secondary";
-        case "Upcoming": return "outline";
+        case "Returned": return "secondary"; // e.g., gray or muted
+        case "Upcoming": return "outline"; // e.g., default outline
         default: return "outline";
     }
 };
@@ -50,16 +50,28 @@ export default function EditDemoMachineApplicationPage() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data() as Omit<DemoMachineApplicationDocument, 'id'>;
+            
+            const processedAppliedMachines = Array.isArray(data.appliedMachines) ? data.appliedMachines.map(machine => ({
+                demoMachineId: machine.demoMachineId || '', // Ensure demoMachineId is always a string
+                machineModel: machine.machineModel || '',
+                machineSerial: machine.machineSerial || '',
+                machineBrand: machine.machineBrand || '',
+            })) : [];
+
+
             const appData = {
                 id: docSnap.id,
                 ...data,
+                // Ensure dates are ISO strings for the form if they come from Firestore Timestamps
                 deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
                 estReturnDate: data.estReturnDate instanceof Timestamp ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt as any), // Keep as any if it might be a string already
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt as any),
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : (data.updatedAt as any),
+                appliedMachines: processedAppliedMachines,
             } as DemoMachineApplicationDocument;
             setApplicationData(appData);
 
+            // Calculate initial status for the badge
             if (appData.machineReturned) {
                 setCurrentDemoStatusPage("Returned");
             } else {
