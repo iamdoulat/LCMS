@@ -568,6 +568,7 @@ export interface Item {
   id?: string;
   itemName: string;
   itemCode?: string; // SKU
+  brandName?: string; // New field
   description?: string;
   unit?: string; // e.g., pcs, kg, m
   salesPrice?: number;
@@ -584,6 +585,7 @@ export type ItemDocument = Item & { id: string };
 export const itemSchema = z.object({
   itemName: z.string().min(1, "Item Name is required."),
   itemCode: z.string().optional(),
+  brandName: z.string().optional(), // New field
   description: z.string().optional(),
   unit: z.string().optional(),
   salesPrice: z.preprocess(

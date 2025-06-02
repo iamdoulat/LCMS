@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info } from 'lucide-react';
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
@@ -29,6 +29,7 @@ export function AddItemForm() {
     defaultValues: {
       itemName: '',
       itemCode: '',
+      brandName: '',
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
@@ -48,10 +49,11 @@ export function AddItemForm() {
     const dataToSave: Omit<Item, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       itemName: data.itemName,
       itemCode: data.itemCode || undefined,
+      brandName: data.brandName || undefined,
       description: data.description || undefined,
       unit: data.unit || undefined,
-      salesPrice: data.salesPrice, // Will be undefined if not entered
-      purchasePrice: data.purchasePrice, // Will be undefined if not entered
+      salesPrice: data.salesPrice, 
+      purchasePrice: data.purchasePrice, 
       manageStock: data.manageStock,
       currentQuantity: data.manageStock ? data.currentQuantity : undefined,
       idealQuantity: data.manageStock ? data.idealQuantity : undefined,
@@ -60,7 +62,6 @@ export function AddItemForm() {
       updatedAt: serverTimestamp(),
     };
 
-    // Filter out explicitly undefined fields that Zod might have defaulted
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof typeof dataToSave] === undefined) {
         delete dataToSave[key as keyof typeof dataToSave];
@@ -77,8 +78,8 @@ export function AddItemForm() {
         timer: 2500,
         showConfirmButton: true,
       });
-      form.reset({ // Reset to initial default values or specific ones
-        itemName: '', itemCode: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
+      form.reset({ 
+        itemName: '', itemCode: '', brandName: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
         manageStock: false, currentQuantity: 0, idealQuantity: undefined, warningQuantity: undefined,
       });
     } catch (error) {
@@ -101,8 +102,7 @@ export function AddItemForm() {
         <h3 className={cn(sectionHeadingClass)}>
           <Package className="h-5 w-5" /> Item Details
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+        <FormField
             control={form.control}
             name="itemName"
             render={({ field }) => (
@@ -115,6 +115,7 @@ export function AddItemForm() {
               </FormItem>
             )}
           />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="itemCode"
@@ -123,6 +124,19 @@ export function AddItemForm() {
                 <FormLabel>Item Code/SKU</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter item code or SKU" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="brandName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter brand name" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -61,7 +61,6 @@ export default function ItemsListPage() {
   }, []);
 
   const handleEditItem = (itemId: string) => {
-    // Placeholder for edit functionality
     Swal.fire("Edit Item", `Edit functionality for item ID: ${itemId} is not yet implemented.`, "info");
     // router.push(`/dashboard/items/${itemId}/edit`); // Uncomment when edit page is ready
   };
@@ -163,6 +162,7 @@ export default function ItemsListPage() {
                 <TableRow>
                   <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
+                  <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
@@ -173,7 +173,7 @@ export default function ItemsListPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center px-2 sm:px-4">
+                    <TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4">
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...
                       </div>
@@ -181,7 +181,7 @@ export default function ItemsListPage() {
                   </TableRow>
                 ) : fetchError ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
+                    <TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
                         {fetchError}
                     </TableCell>
                   </TableRow>
@@ -190,6 +190,7 @@ export default function ItemsListPage() {
                     <TableRow key={item.id}>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
+                      <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.purchasePrice)}</TableCell>
@@ -242,7 +243,7 @@ export default function ItemsListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-64 text-center px-2 sm:px-4">
+                    <TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4">
                         <div className="flex flex-col items-center justify-center">
                             <Info className="h-12 w-12 text-muted-foreground mb-4" />
                             <p className="text-xl font-semibold text-muted-foreground">No Items Found</p>
@@ -304,6 +305,3 @@ export default function ItemsListPage() {
     </div>
   );
 }
-
-        
-        
