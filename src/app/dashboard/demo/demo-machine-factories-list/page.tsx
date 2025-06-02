@@ -166,15 +166,15 @@ export default function DemoMachineFactoriesListPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <ul className="space-y-4 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {factories.map((factory) => (
                 <li key={factory.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
-                  <CardHeader className="pb-3 pt-0 px-0 relative"> {/* Ensure header is relative for positioning */}
+                  <CardHeader className="pb-3 pt-0 px-0 relative"> 
                     <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20"> {/* Add padding to right of title */}
+                        <CardTitle className="text-lg font-semibold text-primary mb-1 pr-20"> 
                            <FactoryIcon className="inline-block mr-2 h-5 w-5 align-text-bottom" /> {factory.factoryName || 'N/A'}
                         </CardTitle>
-                        <div className="absolute top-0 right-0 flex gap-1 z-10"> {/* Position buttons here */}
+                        <div className="absolute top-0 right-0 flex gap-1 z-10"> 
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
