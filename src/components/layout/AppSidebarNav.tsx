@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -57,6 +56,12 @@ import {
   UserPlus,
   Microscope,
   Users as UsersIcon,
+  Receipt, // New icon for Invoicing & Sales
+  ShoppingCart, // New icon for Orders
+  CreditCard, // New icon for Payments
+  Undo2, // New icon for Refunds
+  PlusCircle, // For Add New Item
+  FileOutput, // For Run Automatic Statements
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -89,7 +94,7 @@ const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Se
 const coreModulesNavItems: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
-    icon: FileText, // Changed from Briefcase
+    icon: FileText,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
@@ -99,10 +104,38 @@ const coreModulesNavItems: NavItemGroup[] = [
   },
   {
     groupLabel: 'Commission Management',
-    icon: Briefcase, // Changed from FileText
+    icon: Briefcase,
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
+    ],
+  },
+];
+
+const financialNavItems: NavItemGroup[] = [
+  {
+    groupLabel: 'Invoicing & Sales',
+    icon: Receipt,
+    roles: ["Super Admin", "Admin"],
+    subLinks: [
+      { href: '/dashboard/invoices/create', label: 'Create New Invoice', icon: FilePlus2 },
+      { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
+      { href: '/dashboard/quotes/create', label: 'Create New Quote', icon: FilePlus2 },
+      { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
+      { href: '/dashboard/orders/create', label: 'Create New Order', icon: ShoppingCart },
+      { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
+      { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
+      { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
+      { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
+    ],
+  },
+  {
+    groupLabel: 'Item Management',
+    icon: Package,
+    roles: ["Super Admin", "Admin"],
+    subLinks: [
+      { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
+      { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
     ],
   },
 ];
@@ -122,6 +155,7 @@ const managementNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
+      { href: '/dashboard/customers/statements', label: 'Run Auto Statements', icon: FileOutput },
     ],
   },
   {
@@ -147,9 +181,6 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-      // { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add Demo Machine Factory', icon: Factory }, Removed as per user request
-      // { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: AppWindow }, Removed as per user request
-      // { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: Laptop }, Removed as per user request
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
     ],
   },
@@ -159,14 +190,11 @@ const warrantyManagementNavItems: NavItemGroup[] = [
  {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service"], // DemoManager excluded
+    roles: ["Super Admin", "Admin", "Service"], 
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
-      // { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: Wrench, roles: ["Super Admin", "Admin", "Service"] }, // Removed as per user request
       { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
-      // { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machine Under Warranty', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"] }, Removed
-      // { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machine Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] }, Removed
     ],
   },
 ];
@@ -199,6 +227,7 @@ export function AppSidebarNav() {
 
   const allAccordionGroups = [
     ...coreModulesNavItems,
+    ...financialNavItems, // Added new group
     ...managementNavItems,
     ...demoMachineManagementNavItems,
     ...warrantyManagementNavItems,
@@ -224,9 +253,7 @@ export function AppSidebarNav() {
 
 
   const isActive = (href: string) => {
-    // For exact match on /dashboard
     if (href === '/dashboard') return pathname === href;
-    // For other paths, check if it starts with the href
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
@@ -239,21 +266,17 @@ export function AppSidebarNav() {
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;
 
-    // Check if the group itself should be visible based on roles
      if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
         return null;
     }
 
-    // Filter subLinks based on roles
     const visibleSubLinks = item.subLinks?.filter(subLink =>
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    // If the user is not Super Admin, and the group itself is not restricted but has no visible sublinks, don't render the group
     if (userRole !== "Super Admin" && !item.roles && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
-     // If the user is not Super Admin, group is restricted, and has no visible sublinks, don't render
     if (userRole !== "Super Admin" && item.roles && item.roles.length > 0 && visibleSubLinks.length === 0) {
         return null;
     }
@@ -268,7 +291,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", // Hide default chevron in icon mode
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", 
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
@@ -381,7 +404,7 @@ export function AppSidebarNav() {
         <SidebarSeparator />
         <SidebarGroup className="p-0">
             <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                T/T AND L/C MANAGEMENT
+                Core Modules
             </SidebarGroupLabel>
             <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
                 {coreModulesNavItems.map((item, index) => renderNavGroup(item, index))}
@@ -390,8 +413,18 @@ export function AppSidebarNav() {
 
         <SidebarSeparator />
         <SidebarGroup className="p-0">
+            <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Financial Management
+            </SidebarGroupLabel>
+            <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
+                {financialNavItems.map((item, index) => renderNavGroup(item, index))}
+            </Accordion>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+        <SidebarGroup className="p-0">
           <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Management
+            General Management
           </SidebarGroupLabel>
           <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
             {managementNavItems.map((item, index) => renderNavGroup(item, index))}
