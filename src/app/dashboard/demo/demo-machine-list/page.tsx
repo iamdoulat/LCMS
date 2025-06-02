@@ -181,7 +181,7 @@ export default function DemoMachineListPage() {
                                     <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
                                 </Button>
                             </Link>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)}>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)}>
                               <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
                             </Button>
                         </div>
@@ -247,4 +247,5 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
 

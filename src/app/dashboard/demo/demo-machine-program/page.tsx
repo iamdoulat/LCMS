@@ -92,11 +92,11 @@ export default function DemoMachineProgramPage() {
   // Filter states
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
   const [filterFactoryId, setFilterFactoryId] = useState<string>('');
-  const [filterMachineId, setFilterMachineId] = useState<string>('');
+  const [filterMachineModelId, setFilterMachineModelId] = useState<string>(''); // Changed from filterMachineId
   const [filterBrand, setFilterBrand] = useState<string>('');
 
   const [factoryOptions, setFactoryOptions] = useState<ComboboxOption[]>([]);
-  const [machineOptions, setMachineOptions] = useState<ComboboxOption[]>([]);
+  const [machineModelOptions, setMachineModelOptions] = useState<ComboboxOption[]>([]); // Changed from machineOptions
   const [brandOptions, setBrandOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingFactories, setIsLoadingFactories] = useState(true);
   const [isLoadingMachines, setIsLoadingMachines] = useState(true);
@@ -135,7 +135,12 @@ export default function DemoMachineProgramPage() {
         // Fetch machines and derive brands
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
         const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as DemoMachineDocument) }));
-        setMachineOptions(fetchedMachines.map(machine => ({ value: machine.id, label: machine.machineModel || 'Unnamed Model' })));
+        
+        // For machine model filter, we use the machine ID as value, but label is model name + serial for uniqueness
+        setMachineModelOptions(fetchedMachines.map(machine => ({ 
+            value: machine.id, // Use machine ID for filtering actual applications
+            label: `${machine.machineModel || 'Unnamed Model'} (S/N: ${machine.machineSerial || 'N/A'})` 
+        })));
 
         const uniqueBrands = Array.from(new Set(fetchedMachines.map(m => m.machineBrand).filter(brand => !!brand)));
         setBrandOptions(uniqueBrands.map(brand => ({ value: brand as string, label: brand as string })));
@@ -180,17 +185,21 @@ export default function DemoMachineProgramPage() {
       filtered = filtered.filter(app => app.factoryId === filterFactoryId);
     }
 
-    if (filterMachineId && filterMachineId !== ALL_MACHINES_VALUE) {
-      filtered = filtered.filter(app => app.demoMachineId === filterMachineId);
+    if (filterMachineModelId && filterMachineModelId !== ALL_MACHINES_VALUE) {
+      filtered = filtered.filter(app => 
+        app.appliedMachines.some(machine => machine.demoMachineId === filterMachineModelId)
+      );
     }
 
     if (filterBrand && filterBrand !== ALL_BRANDS_VALUE) {
-      filtered = filtered.filter(app => app.machineBrand === filterBrand);
+       filtered = filtered.filter(app => 
+        app.appliedMachines.some(machine => machine.machineBrand === filterBrand)
+      );
     }
 
     setDisplayedApplications(filtered);
     setCurrentPage(1);
-  }, [allApplications, filterYear, filterFactoryId, filterMachineId, filterBrand]);
+  }, [allApplications, filterYear, filterFactoryId, filterMachineModelId, filterBrand]);
 
 
   const handleDeleteApplication = (applicationId: string, identifier?: string) => {
@@ -209,22 +218,33 @@ export default function DemoMachineProgramPage() {
         reverseButtons: true,
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const batch = writeBatch(firestore);
             try {
                 const appToDelete = allApplications.find(app => app.id === applicationId);
-                if (appToDelete && appToDelete.demoMachineId) {
-                    if (appToDelete.machineReturned === false || appToDelete.machineReturned === undefined) {
-                        const machineRef = doc(firestore, "demo_machines", appToDelete.demoMachineId);
-                        await updateDoc(machineRef, {
-                            currentStatus: "Available" as AppDemoMachineStatus,
-                            updatedAt: serverTimestamp(),
-                        });
-                    }
+                
+                // Update status of all machines within this application to "Available" if not already returned
+                if (appToDelete && appToDelete.appliedMachines) {
+                    appToDelete.appliedMachines.forEach(appliedMachine => {
+                        if (appliedMachine.demoMachineId && (appToDelete.machineReturned === false || appToDelete.machineReturned === undefined)) {
+                            const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
+                            batch.update(machineRef, {
+                                currentStatus: "Available" as AppDemoMachineStatus,
+                                machineReturned: true, // Explicitly mark machine as returned
+                                updatedAt: serverTimestamp(),
+                            });
+                        }
+                    });
                 }
-                await deleteDoc(doc(firestore, "demo_machine_applications", applicationId));
+                
+                const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
+                batch.delete(appDocRef);
+
+                await batch.commit();
+
                 setAllApplications(prev => prev.filter(app => app.id !== applicationId));
                 Swal.fire(
                     'Deleted!',
-                    `Demo machine application "${identifier || applicationId}" and associated machine status updated.`,
+                    `Demo machine application "${identifier || applicationId}" and associated machine statuses updated.`,
                     'success'
                 );
             } catch (error: any) {
@@ -242,7 +262,7 @@ export default function DemoMachineProgramPage() {
   const clearFilters = () => {
     setFilterYear(ALL_YEARS_VALUE);
     setFilterFactoryId('');
-    setFilterMachineId('');
+    setFilterMachineModelId('');
     setFilterBrand('');
     setCurrentPage(1);
   };
@@ -282,14 +302,14 @@ export default function DemoMachineProgramPage() {
                 Demo Machine Program
               </CardTitle>
               <CardDescription>
-                Manage Demo Machine Applications. (Displaying Demo Applications List)
+                Manage Demo Machine Applications.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplications.length)} of {displayedApplications.length} entries.
               </CardDescription>
             </div>
              <div className="flex items-center gap-2">
-                <Button variant="outline" disabled>
+                {/* <Button variant="outline" disabled>
                     <Filter className="mr-2 h-4 w-4" /> Filter: All
-                </Button>
+                </Button> */}
                 <Link href="/dashboard/demo/demo-machine-application" passHref>
                     <Button variant="default">
                         <AppWindow className="mr-2 h-4 w-4" />
@@ -328,12 +348,12 @@ export default function DemoMachineProgramPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="machineFilterDemoProg" className="text-sm font-medium flex items-center"><Laptop className="mr-1 h-4 w-4 text-muted-foreground"/>Machine Model</Label>
+                  <Label htmlFor="machineModelFilterDemoProg" className="text-sm font-medium flex items-center"><Laptop className="mr-1 h-4 w-4 text-muted-foreground"/>Machine Model</Label>
                   <Combobox
-                    options={machineOptions}
-                    value={filterMachineId || ALL_MACHINES_VALUE}
-                    onValueChange={(value) => setFilterMachineId(value === ALL_MACHINES_VALUE ? '' : value)}
-                    placeholder="Search Machine Model..."
+                    options={machineModelOptions}
+                    value={filterMachineModelId || ALL_MACHINES_VALUE}
+                    onValueChange={(value) => setFilterMachineModelId(value === ALL_MACHINES_VALUE ? '' : value)}
+                    placeholder="Search Machine Model/S.N..."
                     selectPlaceholder={isLoadingMachines ? "Loading..." : "All Models"}
                     emptyStateMessage="No model found."
                     disabled={isLoadingMachines}
@@ -383,6 +403,7 @@ export default function DemoMachineProgramPage() {
             <ul className="space-y-4">
               {currentItems.map((app) => {
                 const currentStatus = getDemoAppStatus(app);
+                const mainMachine = app.appliedMachines?.[0]; // Display first machine for brevity, or handle multiple
                 return (
                 <li key={app.id} className={cn(
                     "p-4 rounded-lg border hover:shadow-md transition-shadow relative",
@@ -394,12 +415,12 @@ export default function DemoMachineProgramPage() {
                             {currentStatus}
                         </Badge>
                         <div className="flex gap-1">
-                            <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                            <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                             <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
                                 <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
                             </Link>
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${app.machineModel}`)}>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${mainMachine?.machineModel || 'Multiple Machines'}`)}>
                             <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Application</span>
                             </Button>
                         </div>
@@ -407,11 +428,11 @@ export default function DemoMachineProgramPage() {
                   <CardHeader className="pb-3 pt-0 px-0 pr-24">
                     <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
                       <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
-                        {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
+                        {formatReportValue(app.factoryName)} - {app.appliedMachines.length > 1 ? `${app.appliedMachines.length} Machines` : formatReportValue(mainMachine?.machineModel)}
                       </CardTitle>
                     </Link>
                     <CardDescription className="text-xs text-foreground">
-                      Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
+                      {app.appliedMachines.map(m => `${formatReportValue(m.machineModel)} (S/N: ${formatReportValue(m.machineSerial)}, Brand: ${formatReportValue(m.machineBrand)})`).join('; ') }
                        {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
                   </CardHeader>
@@ -487,3 +508,4 @@ export default function DemoMachineProgramPage() {
     
 
     
+

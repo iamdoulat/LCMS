@@ -132,7 +132,7 @@ export default function DemoMcDateOverduePage() {
                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
                         <Badge variant="destructive" className="text-xs px-2 py-0.5">Overdue</Badge>
                         <div className="flex gap-1">
-                            <Button variant="outline" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                            <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
                               <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`}>
                                 <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
                               </Link>
@@ -142,11 +142,11 @@ export default function DemoMcDateOverduePage() {
                   <CardHeader className="pb-3 pt-0 px-0 pr-20">
                     <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
                         <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
-                          {formatReportValue(app.factoryName)} - {formatReportValue(app.machineModel)}
+                          {formatReportValue(app.factoryName)} - {app.appliedMachines.length > 1 ? `${app.appliedMachines.length} Machines` : formatReportValue(app.appliedMachines?.[0]?.machineModel)}
                         </CardTitle>
                     </Link>
-                    <CardDescription className="text-xs text-foreground"> {/* Changed from text-muted-foreground */}
-                      Model: {formatReportValue(app.machineModel)} | Serial: {formatReportValue(app.machineSerial)} | Brand: {formatReportValue(app.machineBrand)}
+                    <CardDescription className="text-xs text-foreground">
+                      {app.appliedMachines.map(m => `${formatReportValue(m.machineModel)} (S/N: ${formatReportValue(m.machineSerial)}, Brand: ${formatReportValue(m.machineBrand)})`).join('; ') }
                       {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
                   </CardHeader>
@@ -188,3 +188,4 @@ export default function DemoMcDateOverduePage() {
     
 
     
+
