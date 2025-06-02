@@ -500,36 +500,47 @@ export interface DemoMachine {
 export type DemoMachineDocument = Omit<DemoMachine, 'id'> & { id: string, createdAt: any, updatedAt: any, machineReturned?: boolean };
 
 
-export interface DemoMachineApplication {
-  id?: string;
-  factoryId: string;
-  factoryName?: string;
-  factoryLocation?: string;
-  demoMachineId: string;
-  machineModel?: string;
-  machineSerial?: string;
-  machineBrand?: string;
-  challanNo: string;
-  deliveryDate: Date;
-  estReturnDate: Date;
-  demoPeriodDays?: number;
-  factoryInchargeName?: string;
-  inchargeCell?: string;
-  notes?: string;
-  machineReturned?: boolean;
-  createdAt?: any;
-  updatedAt?: any;
-}
+// --- Demo Machine Application Types ---
+const phoneRegexForValidation = new RegExp(
+  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
+
+export const AppliedMachineItemSchema = z.object({
+  demoMachineId: z.string().min(1, "Machine Model is required."),
+  // machineModel, machineSerial, machineBrand will be populated from selected demoMachineId
+});
+export type AppliedMachineItem = z.infer<typeof AppliedMachineItemSchema>;
+
+export const demoMachineApplicationSchema = z.object({
+  factoryId: z.string().min(1, "Customer Name (Factory) is required."),
+  challanNo: z.string().min(1, "Challan No. is required."),
+  deliveryDate: z.date({ required_error: "Delivery Date is required." }),
+  estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
+  factoryInchargeName: z.string().optional(),
+  inchargeCell: z.string().optional().refine(
+    (value) => value === "" || value === undefined || phoneRegexForValidation.test(value),
+    "Invalid phone number format"
+  ),
+  notes: z.string().optional(),
+  machineReturned: z.boolean().optional().default(false), // Application-level returned status
+  appliedMachines: z.array(AppliedMachineItemSchema).min(1, "At least one machine must be selected for the application."),
+}).refine(data => {
+  if (data.deliveryDate && data.estReturnDate) {
+    return data.estReturnDate >= data.deliveryDate;
+  }
+  return true;
+}, {
+  message: "Est. Return Date must be on or after Delivery Date.",
+  path: ["estReturnDate"],
+});
+
+export type DemoMachineApplicationFormValues = z.infer<typeof demoMachineApplicationSchema>;
 
 export interface DemoMachineApplicationDocument {
   id: string;
   factoryId: string;
-  factoryName: string;
-  factoryLocation: string;
-  demoMachineId: string;
-  machineModel: string;
-  machineSerial: string;
-  machineBrand: string;
+  factoryName: string; // Denormalized
+  factoryLocation: string; // Denormalized
   challanNo: string;
   deliveryDate: string; // ISO string
   estReturnDate: string; // ISO string
@@ -537,8 +548,15 @@ export interface DemoMachineApplicationDocument {
   factoryInchargeName?: string;
   inchargeCell?: string;
   notes?: string;
-  machineReturned?: boolean;
-  createdAt: any;
-  updatedAt: any;
+  machineReturned?: boolean; // Overall status of the application's machines
+  appliedMachines: Array<{ // Array of machines in this application
+    demoMachineId: string;
+    machineModel: string; // Denormalized
+    machineSerial: string; // Denormalized
+    machineBrand: string; // Denormalized
+  }>;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }
+// --- END Demo Machine Application Types ---
 // --- END Demo Machine Types ---
