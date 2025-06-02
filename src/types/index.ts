@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -561,3 +562,70 @@ export interface DemoMachineApplicationDocument {
 }
 // --- END Demo Machine Application Types ---
 // --- END Demo Machine Types ---
+
+// --- Item (Inventory) Types ---
+export interface Item {
+  id?: string;
+  itemName: string;
+  itemCode?: string; // SKU
+  description?: string;
+  unit?: string; // e.g., pcs, kg, m
+  salesPrice?: number;
+  purchasePrice?: number;
+  manageStock: boolean;
+  currentQuantity?: number;
+  idealQuantity?: number;
+  warningQuantity?: number;
+  createdAt?: any; // Firestore ServerTimestamp
+  updatedAt?: any; // Firestore ServerTimestamp
+}
+export type ItemDocument = Item & { id: string };
+
+export const itemSchema = z.object({
+  itemName: z.string().min(1, "Item Name is required."),
+  itemCode: z.string().optional(),
+  description: z.string().optional(),
+  unit: z.string().optional(),
+  salesPrice: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Sales Price must be a number." }).nonnegative("Sales Price cannot be negative.").optional()
+  ),
+  purchasePrice: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Purchase Price must be a number." }).nonnegative("Purchase Price cannot be negative.").optional()
+  ),
+  manageStock: z.boolean().default(false),
+  currentQuantity: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Current Quantity must be a number." }).int().nonnegative("Current Quantity must be a non-negative integer.").optional()
+  ),
+  idealQuantity: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Ideal Quantity must be a number." }).int().nonnegative("Ideal Quantity must be a non-negative integer.").optional()
+  ),
+  warningQuantity: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Warning Quantity must be a number." }).int().nonnegative("Warning Quantity must be a non-negative integer.").optional()
+  ),
+}).refine(data => {
+  if (data.manageStock) {
+    // Ensure currentQuantity is provided if manageStock is true
+    const qty = data.currentQuantity;
+    return qty !== undefined && qty !== null && !isNaN(qty) && qty >= 0;
+  }
+  return true;
+}, {
+  message: "Current Quantity is required and must be a non-negative number when managing stock.",
+  path: ["currentQuantity"],
+}).refine(data => {
+  if (data.manageStock && data.warningQuantity !== undefined && data.idealQuantity !== undefined) {
+    return data.warningQuantity <= data.idealQuantity;
+  }
+  return true;
+}, {
+  message: "Warning Quantity should generally be less than or equal to Ideal Quantity.",
+  path: ["warningQuantity"],
+});
+
+export type ItemFormValues = z.infer<typeof itemSchema>;
+// --- END Item (Inventory) Types ---
