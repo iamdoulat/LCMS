@@ -17,6 +17,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ITEMS_PER_PAGE = 9;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
@@ -347,14 +348,26 @@ export default function InstallationReportsViewPage() {
                 return (
                   <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
                     <div className="absolute top-3 right-3 flex gap-1 z-10">
-                      <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
-                          <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Report</span>
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}>
-                        <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Report</span>
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                              <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`}>
+                                <FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Report</span>
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Edit Report</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}>
+                              <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Report</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Delete Report</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
 
                      <div className="mb-2 text-sm pr-20">
