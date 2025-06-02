@@ -10,9 +10,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { ItemDocument } from '@/types'; 
-import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore'; 
-import { firestore } from '@/lib/firebase/config'; 
+import type { ItemDocument } from '@/types';
+import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -26,7 +26,7 @@ const formatCurrency = (value?: number, currencySymbol: string = '$') => {
 export default function ItemsListPage() {
   const router = useRouter();
   const [items, setItems] = useState<ItemDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -61,8 +61,7 @@ export default function ItemsListPage() {
   }, []);
 
   const handleEditItem = (itemId: string) => {
-    Swal.fire("Edit Item", `Edit functionality for item ID: ${itemId} is not yet implemented.`, "info");
-    // router.push(`/dashboard/items/${itemId}/edit`); // Uncomment when edit page is ready
+    router.push(`/dashboard/items/${itemId}/edit`);
   };
 
   const handleDeleteItem = (itemId: string, itemName?: string) => {
@@ -71,8 +70,8 @@ export default function ItemsListPage() {
       text: `This action cannot be undone. This will permanently delete the item "${itemName || itemId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: 'hsl(var(--destructive))', 
-      cancelButtonColor: 'hsl(var(--secondary))', 
+      confirmButtonColor: 'hsl(var(--destructive))',
+      cancelButtonColor: 'hsl(var(--secondary))',
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
     }).then(async (result) => {
@@ -256,7 +255,7 @@ export default function ItemsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your items from Firestore. 
+                A list of your items from Firestore.
                 Showing {items.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, items.length)} of {items.length} entries.
               </TableCaption>
             </Table>
@@ -305,3 +304,4 @@ export default function ItemsListPage() {
     </div>
   );
 }
+
