@@ -188,7 +188,7 @@ export default function DemoMachineFactoriesListPage() {
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" onClick={() => handleDeleteFactory(factory.id, factory.factoryName)}>
+                                        <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteFactory(factory.id, factory.factoryName)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
@@ -263,3 +263,4 @@ export default function DemoMachineFactoriesListPage() {
     
 
     
+
