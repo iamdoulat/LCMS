@@ -569,13 +569,15 @@ export interface Item {
   itemName: string;
   itemCode?: string; // SKU
   brandName?: string;
+  supplierId?: string; // New field
+  supplierName?: string; // New field (denormalized for display)
   description?: string;
   unit?: string; // e.g., pcs, kg, m
   salesPrice?: number;
   purchasePrice?: number;
   manageStock: boolean;
   currentQuantity?: number;
-  location?: string; // New field for location
+  location?: string;
   idealQuantity?: number;
   warningQuantity?: number;
   createdAt?: any; // Firestore ServerTimestamp
@@ -587,6 +589,7 @@ export const itemSchema = z.object({
   itemName: z.string().min(1, "Item Name is required."),
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
+  supplierId: z.string().optional(), // For storing selected supplier's ID
   description: z.string().optional(),
   unit: z.string().optional(),
   salesPrice: z.preprocess(
@@ -602,7 +605,7 @@ export const itemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Current Quantity must be a number." }).int().nonnegative("Current Quantity must be a non-negative integer.").optional()
   ),
-  location: z.string().optional(), // New field for location
+  location: z.string().optional(),
   idealQuantity: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Ideal Quantity must be a number." }).int().nonnegative("Ideal Quantity must be a non-negative integer.").optional()

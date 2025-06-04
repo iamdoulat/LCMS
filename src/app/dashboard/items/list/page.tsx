@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building } from 'lucide-react'; // Added Building icon
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,8 +16,8 @@ import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/fi
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Label }
- from '@/components/ui/label';
+import { Label } from '@/components/ui/label';
+
 const ITEMS_PER_PAGE = 10;
 
 const formatCurrency = (value?: number, currencySymbol: string = '$') => {
@@ -37,6 +37,7 @@ export default function ItemsListPage() {
   const [filterItemName, setFilterItemName] = useState('');
   const [filterItemCode, setFilterItemCode] = useState('');
   const [filterBrandName, setFilterBrandName] = useState('');
+  const [filterSupplierName, setFilterSupplierName] = useState(''); // New filter state
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -86,10 +87,15 @@ export default function ItemsListPage() {
         item.brandName?.toLowerCase().includes(filterBrandName.toLowerCase())
       );
     }
+    if (filterSupplierName) { // Filter by supplier name
+      filtered = filtered.filter(item =>
+        item.supplierName?.toLowerCase().includes(filterSupplierName.toLowerCase())
+      );
+    }
 
     setDisplayedItems(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [allItems, filterItemName, filterItemCode, filterBrandName]);
+  }, [allItems, filterItemName, filterItemCode, filterBrandName, filterSupplierName]);
 
 
   const handleEditItem = (itemId: string) => {
@@ -128,6 +134,7 @@ export default function ItemsListPage() {
     setFilterItemName('');
     setFilterItemCode('');
     setFilterBrandName('');
+    setFilterSupplierName(''); // Clear supplier filter
     setCurrentPage(1);
   };
 
@@ -199,7 +206,7 @@ export default function ItemsListPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end"> {/* Adjusted for 5 columns */}
                 <div>
                   <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
                   <Input
@@ -227,7 +234,16 @@ export default function ItemsListPage() {
                     onChange={(e) => setFilterBrandName(e.target.value)}
                   />
                 </div>
-                <div className="lg:col-span-1 md:col-span-2 self-end">
+                <div> {/* New Supplier Filter */}
+                  <Label htmlFor="supplierNameFilter" className="text-sm font-medium">Supplier Name</Label>
+                  <Input
+                    id="supplierNameFilter"
+                    placeholder="Search by Supplier..."
+                    value={filterSupplierName}
+                    onChange={(e) => setFilterSupplierName(e.target.value)}
+                  />
+                </div>
+                <div className="lg:col-span-1 md:col-span-2 self-end xl:col-start-5"> {/* Ensure button aligns well */}
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters
                   </Button>
@@ -243,6 +259,7 @@ export default function ItemsListPage() {
                   <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
+                  <TableHead className="px-2 sm:px-4">Supplier Name</TableHead> {/* New Header */}
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
@@ -254,7 +271,7 @@ export default function ItemsListPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
+                    <TableCell colSpan={10} className="h-24 text-center px-2 sm:px-4"> {/* Increased colSpan */}
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...
                       </div>
@@ -262,7 +279,7 @@ export default function ItemsListPage() {
                   </TableRow>
                 ) : fetchError ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
+                    <TableCell colSpan={10} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap"> {/* Increased colSpan */}
                         {fetchError}
                     </TableCell>
                   </TableRow>
@@ -272,6 +289,7 @@ export default function ItemsListPage() {
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
+                      <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell> {/* Display Supplier Name */}
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.purchasePrice)}</TableCell>
@@ -334,7 +352,7 @@ export default function ItemsListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-64 text-center px-2 sm:px-4">
+                    <TableCell colSpan={10} className="h-64 text-center px-2 sm:px-4"> {/* Increased colSpan */}
                         <div className="flex flex-col items-center justify-center">
                             <Info className="h-12 w-12 text-muted-foreground mb-4" />
                             <p className="text-xl font-semibold text-muted-foreground">No Items Found</p>
@@ -396,4 +414,3 @@ export default function ItemsListPage() {
     </div>
   );
 }
-

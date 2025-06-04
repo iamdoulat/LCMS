@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { ItemFormValues, ItemDocument } from '@/types';
+import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore'; // Added getDocs
+import type { ItemFormValues, ItemDocument, SupplierDocument } from '@/types'; // Added SupplierDocument
 import { itemSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card'; 
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building } from 'lucide-react'; // Added Building
 import { cn } from '@/lib/utils';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'; // Added Combobox
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
+const PLACEHOLDER_SUPPLIER_VALUE = "__EDIT_ITEM_SUPPLIER_PLACEHOLDER__";
 
 interface EditItemFormProps {
   initialData: ItemDocument;
@@ -29,23 +31,47 @@ interface EditItemFormProps {
 
 export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
+
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       itemName: '',
       itemCode: '',
       brandName: '',
+      supplierId: '', // Initialize supplierId
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
       manageStock: false,
       currentQuantity: 0,
-      location: '', // Added location default
+      location: '',
       idealQuantity: undefined,
       warningQuantity: undefined,
     },
   });
+
+  React.useEffect(() => {
+    const fetchSuppliers = async () => {
+      setIsLoadingSuppliers(true);
+      try {
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setSupplierOptions(
+          suppliersSnapshot.docs.map(docSnap => {
+            const data = docSnap.data() as SupplierDocument;
+            return { value: docSnap.id, label: data.beneficiaryName || 'Unnamed Supplier' };
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching suppliers for item form: ", error);
+      } finally {
+        setIsLoadingSuppliers(false);
+      }
+    };
+    fetchSuppliers();
+  }, []);
 
   React.useEffect(() => {
     if (initialData) {
@@ -53,13 +79,14 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         itemName: initialData.itemName || '',
         itemCode: initialData.itemCode || '',
         brandName: initialData.brandName || '',
+        supplierId: initialData.supplierId || '', // Populate supplierId
         description: initialData.description || '',
         unit: initialData.unit || 'pcs',
         salesPrice: initialData.salesPrice,
         purchasePrice: initialData.purchasePrice,
         manageStock: initialData.manageStock ?? false,
         currentQuantity: initialData.currentQuantity ?? 0,
-        location: initialData.location || '', // Populate location
+        location: initialData.location || '',
         idealQuantity: initialData.idealQuantity,
         warningQuantity: initialData.warningQuantity,
       });
@@ -71,22 +98,26 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   async function onSubmit(data: ItemFormValues) {
     setIsSubmitting(true);
 
+    const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
+
     const dataToUpdate: Partial<Omit<ItemDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
       itemName: data.itemName,
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
+      supplierId: data.supplierId || undefined,
+      supplierName: selectedSupplier?.label || undefined,
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
       purchasePrice: data.purchasePrice,
       manageStock: data.manageStock,
       currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-      location: data.manageStock ? (data.location || undefined) : undefined, // Save location if stock managed
+      location: data.manageStock ? (data.location || undefined) : undefined,
       idealQuantity: data.manageStock ? data.idealQuantity : undefined,
       warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       updatedAt: serverTimestamp(),
     };
-    
+
     Object.keys(dataToUpdate).forEach(key => {
       if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
         delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -163,6 +194,26 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="supplierId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
+              <Combobox
+                options={supplierOptions}
+                value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
+                onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
+                placeholder="Search Supplier..."
+                selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
+                emptyStateMessage="No supplier found."
+                disabled={isLoadingSuppliers}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -313,8 +364,8 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
             </CardContent>
           </Card>
         )}
-        
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -331,4 +382,3 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
     </Form>
   );
 }
-

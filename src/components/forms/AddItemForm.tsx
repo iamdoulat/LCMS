@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { ItemFormValues, Item } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore'; // Added getDocs
+import type { ItemFormValues, Item, SupplierDocument } from '@/types'; // Added SupplierDocument
 import { itemSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -16,27 +16,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardTitle as they are not used directly here
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building } from 'lucide-react'; // Added Building
 import { cn } from '@/lib/utils';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'; // Added Combobox
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
+const PLACEHOLDER_SUPPLIER_VALUE = "__ADD_ITEM_SUPPLIER_PLACEHOLDER__";
 
 export function AddItemForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
+
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       itemName: '',
       itemCode: '',
       brandName: '',
+      supplierId: '', // Initialize supplierId
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
       manageStock: false,
       currentQuantity: 0,
-      location: '', // Added location default
+      location: '',
       idealQuantity: undefined,
       warningQuantity: undefined,
     },
@@ -44,20 +50,45 @@ export function AddItemForm() {
 
   const watchManageStock = form.watch("manageStock");
 
+  React.useEffect(() => {
+    const fetchSuppliers = async () => {
+      setIsLoadingSuppliers(true);
+      try {
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setSupplierOptions(
+          suppliersSnapshot.docs.map(docSnap => {
+            const data = docSnap.data() as SupplierDocument;
+            return { value: docSnap.id, label: data.beneficiaryName || 'Unnamed Supplier' };
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching suppliers for item form: ", error);
+        // Optionally show an error to the user
+      } finally {
+        setIsLoadingSuppliers(false);
+      }
+    };
+    fetchSuppliers();
+  }, []);
+
   async function onSubmit(data: ItemFormValues) {
     setIsSubmitting(true);
+
+    const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
     const dataToSave: Omit<Item, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       itemName: data.itemName,
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
+      supplierId: data.supplierId || undefined,
+      supplierName: selectedSupplier?.label || undefined, // Denormalized supplier name
       description: data.description || undefined,
       unit: data.unit || undefined,
-      salesPrice: data.salesPrice, 
-      purchasePrice: data.purchasePrice, 
+      salesPrice: data.salesPrice,
+      purchasePrice: data.purchasePrice,
       manageStock: data.manageStock,
       currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-      location: data.manageStock ? (data.location || undefined) : undefined, // Save location if stock managed
+      location: data.manageStock ? (data.location || undefined) : undefined,
       idealQuantity: data.manageStock ? data.idealQuantity : undefined,
       warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       createdAt: serverTimestamp(),
@@ -70,7 +101,6 @@ export function AddItemForm() {
       }
     });
 
-
     try {
       const docRef = await addDoc(collection(firestore, "items"), dataToSave);
       Swal.fire({
@@ -80,8 +110,8 @@ export function AddItemForm() {
         timer: 2500,
         showConfirmButton: true,
       });
-      form.reset({ 
-        itemName: '', itemCode: '', brandName: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
+      form.reset({
+        itemName: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
         manageStock: false, currentQuantity: 0, location: '', idealQuantity: undefined, warningQuantity: undefined,
       });
     } catch (error) {
@@ -100,7 +130,7 @@ export function AddItemForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        
+
         <h3 className={cn(sectionHeadingClass)}>
           <Package className="h-5 w-5" /> Item Details
         </h3>
@@ -145,6 +175,26 @@ export function AddItemForm() {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="supplierId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
+              <Combobox
+                options={supplierOptions}
+                value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
+                onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
+                placeholder="Search Supplier..."
+                selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
+                emptyStateMessage="No supplier found."
+                disabled={isLoadingSuppliers}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -295,8 +345,8 @@ export function AddItemForm() {
             </CardContent>
           </Card>
         )}
-        
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -313,4 +363,3 @@ export function AddItemForm() {
     </Form>
   );
 }
-
