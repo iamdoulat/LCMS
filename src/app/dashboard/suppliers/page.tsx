@@ -1,54 +1,93 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { SupplierDocument } from '@/types'; 
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
-import { firestore } from '@/lib/firebase/config'; 
+import type { SupplierDocument } from '@/types';
+import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function BeneficiariesListPage() {
   const router = useRouter();
-  const [beneficiaries, setBeneficiaries] = useState<SupplierDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [allBeneficiaries, setAllBeneficiaries] = useState<SupplierDocument[]>([]);
+  const [displayedBeneficiaries, setDisplayedBeneficiaries] = useState<SupplierDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterBeneficiaryName, setFilterBeneficiaryName] = useState('');
+  const [filterEmail, setFilterEmail] = useState('');
+  const [filterPhone, setFilterPhone] = useState('');
+  const [filterContactPerson, setFilterContactPerson] = useState('');
 
   useEffect(() => {
     const fetchBeneficiaries = async () => {
       setIsLoading(true);
+      setFetchError(null);
       try {
-        const querySnapshot = await getDocs(collection(firestore, "suppliers"));
-        const fetchedBeneficiaries = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierDocument));
-        setBeneficiaries(fetchedBeneficiaries);
+        const q = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
+        const querySnapshot = await getDocs(q);
+        const fetchedBeneficiaries = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
+        setAllBeneficiaries(fetchedBeneficiaries);
       } catch (error: any) {
         console.error("Error fetching beneficiaries: ", error);
-         Swal.fire("Error", `Could not fetch beneficiary data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${error.message}`, "error");
+        let errorMessage = `Could not fetch beneficiary data from Firestore. Please ensure Firestore rules allow reads.`;
+        if (error.message && error.message.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch beneficiary data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchBeneficiaries();
   }, []);
 
+  useEffect(() => {
+    let filtered = [...allBeneficiaries];
+
+    if (filterBeneficiaryName) {
+      filtered = filtered.filter(b =>
+        b.beneficiaryName?.toLowerCase().includes(filterBeneficiaryName.toLowerCase())
+      );
+    }
+    if (filterEmail) {
+      filtered = filtered.filter(b =>
+        b.emailId?.toLowerCase().includes(filterEmail.toLowerCase())
+      );
+    }
+    if (filterPhone) {
+      filtered = filtered.filter(b =>
+        b.cellNumber?.toLowerCase().includes(filterPhone.toLowerCase())
+      );
+    }
+    if (filterContactPerson) {
+      filtered = filtered.filter(b =>
+        b.contactPersonName?.toLowerCase().includes(filterContactPerson.toLowerCase())
+      );
+    }
+
+    setDisplayedBeneficiaries(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [allBeneficiaries, filterBeneficiaryName, filterEmail, filterPhone, filterContactPerson]);
+
   const handleEditBeneficiary = (beneficiaryId: string) => {
-    Swal.fire({
-      title: "Redirecting...",
-      text: `Navigating to edit page for beneficiary ${beneficiaryId}.`,
-      icon: "info",
-      timer: 1500,
-      showConfirmButton: false,
-    });
     router.push(`/dashboard/suppliers/${beneficiaryId}/edit`);
   };
 
@@ -66,7 +105,8 @@ export default function BeneficiariesListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "suppliers", beneficiaryId));
-          setBeneficiaries(prevBeneficiaries => prevBeneficiaries.filter(b => b.id !== beneficiaryId));
+          // Update both allBeneficiaries and displayedBeneficiaries to reflect deletion
+          setAllBeneficiaries(prev => prev.filter(b => b.id !== beneficiaryId));
           Swal.fire(
             'Deleted!',
             `Beneficiary ${beneficiaryName || beneficiaryId} has been removed.`,
@@ -79,12 +119,20 @@ export default function BeneficiariesListPage() {
       }
     });
   };
+  
+  const clearFilters = () => {
+    setFilterBeneficiaryName('');
+    setFilterEmail('');
+    setFilterPhone('');
+    setFilterContactPerson('');
+    setCurrentPage(1);
+  };
 
   // Pagination Logic
-  const totalPages = Math.ceil(beneficiaries.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(displayedBeneficiaries.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = beneficiaries.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedBeneficiaries.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -111,23 +159,11 @@ export default function BeneficiariesListPage() {
       pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
-
-      if (currentPage <= halfPagesToShow + 1) {
-        endPage = Math.min(totalPages - 1, maxPagesToShow);
-      }
-      if (currentPage >= totalPages - halfPagesToShow) {
-        startPage = Math.max(2, totalPages - maxPagesToShow + 1);
-      }
-      
-      if (startPage > 2) {
-        pageNumbers.push("...");
-      }
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(i);
-      }
-      if (endPage < totalPages - 1) {
-        pageNumbers.push("...");
-      }
+      if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
+      if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+      if (startPage > 2) pageNumbers.push("...");
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages - 1) pageNumbers.push("...");
       pageNumbers.push(totalPages);
     }
     return pageNumbers;
@@ -157,6 +193,60 @@ export default function BeneficiariesListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Filter Section */}
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                  <Label htmlFor="beneficiaryNameFilter" className="text-sm font-medium">Beneficiary Name</Label>
+                  <Input
+                    id="beneficiaryNameFilter"
+                    placeholder="Search by Beneficiary Name..."
+                    value={filterBeneficiaryName}
+                    onChange={(e) => setFilterBeneficiaryName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emailFilter" className="text-sm font-medium">Email</Label>
+                  <Input
+                    id="emailFilter"
+                    type="email"
+                    placeholder="Search by Email..."
+                    value={filterEmail}
+                    onChange={(e) => setFilterEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phoneFilter" className="text-sm font-medium">Phone</Label>
+                  <Input
+                    id="phoneFilter"
+                    type="tel"
+                    placeholder="Search by Phone..."
+                    value={filterPhone}
+                    onChange={(e) => setFilterPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contactPersonFilter" className="text-sm font-medium">Contact Person</Label>
+                  <Input
+                    id="contactPersonFilter"
+                    placeholder="Search by Contact Person..."
+                    value={filterContactPerson}
+                    onChange={(e) => setFilterContactPerson(e.target.value)}
+                  />
+                </div>
+                <div className="lg:col-span-4 md:col-span-2">
+                  <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -177,7 +267,13 @@ export default function BeneficiariesListPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : currentItems.length > 0 ? (
+                ) : fetchError ? (
+                   <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                      {fetchError}
+                    </TableCell>
+                  </TableRow>
+                ): currentItems.length > 0 ? (
                   currentItems.map((beneficiary) => (
                     <TableRow key={beneficiary.id}>
                       <TableCell className="font-medium">{beneficiary.beneficiaryName || 'N/A'}</TableCell>
@@ -227,18 +323,17 @@ export default function BeneficiariesListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                       No beneficiaries found. Ensure Firestore rules allow reads and data exists.
+                       No beneficiaries found matching your criteria.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
                 A list of your beneficiaries from Firestore. 
-                Showing {beneficiaries.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, beneficiaries.length)} of {beneficiaries.length} entries.
+                Showing {displayedBeneficiaries.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedBeneficiaries.length)} of {displayedBeneficiaries.length} entries.
               </TableCaption>
             </Table>
           </div>
-           {/* Pagination controls will only show if there is more than one page */}
            {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
@@ -283,4 +378,4 @@ export default function BeneficiariesListPage() {
     </div>
   );
 }
-
+    
