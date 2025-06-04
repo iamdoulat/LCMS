@@ -153,7 +153,8 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         <h3 className={cn(sectionHeadingClass)}>
           <Package className="h-5 w-5" /> Item Details
         </h3>
-        <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
             control={form.control}
             name="itemName"
             render={({ field }) => (
@@ -166,6 +167,26 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="supplierId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
+                <Combobox
+                  options={supplierOptions}
+                  value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
+                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
+                  placeholder="Search Supplier..."
+                  selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
+                  emptyStateMessage="No supplier found."
+                  disabled={isLoadingSuppliers}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -194,26 +215,6 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="supplierId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
-              <Combobox
-                options={supplierOptions}
-                value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
-                placeholder="Search Supplier..."
-                selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
-                emptyStateMessage="No supplier found."
-                disabled={isLoadingSuppliers}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
