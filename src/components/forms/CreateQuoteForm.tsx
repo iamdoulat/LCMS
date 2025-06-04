@@ -595,9 +595,6 @@ export function CreateQuoteForm() {
                 <><Save className="mr-2 h-4 w-4" />Save Quote</>
               )}
             </Button>
-             <Button type="button" variant="outline" disabled>
-                <Info className="mr-2 h-4 w-4" />Help
-            </Button>
             <Button type="button" variant="outline" disabled>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
@@ -609,3 +606,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
