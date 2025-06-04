@@ -2,8 +2,7 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
-import { ThemeProvider } from 'next-themes';
-import { AuthProvider } from '@/context/AuthContext';
+import { AppProviders } from '@/components/layout/AppProviders'; // Import the new wrapper
 import './globals.css'; 
 
 export const metadata: Metadata = {
@@ -44,16 +43,9 @@ export default function RootLayout({
         */}
       </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
+        <AppProviders> {/* Use the wrapper component here */}
+          {children}
+        </AppProviders>
       </body>
     </html>
   );
