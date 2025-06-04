@@ -131,7 +131,7 @@ const financialNavItems: NavItemGroup[] = [
     ],
   },
   {
-    groupLabel: 'Item Management',
+    groupLabel: 'Inventory Management',
     icon: Package,
     roles: ["Super Admin", "Admin"],
     subLinks: [
