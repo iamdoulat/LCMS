@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -247,13 +247,14 @@ export default function ItemsListPage() {
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Stock Status</TableHead>
+                  <TableHead className="px-2 sm:px-4">Location</TableHead>
                   <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4">
+                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...
                       </div>
@@ -261,7 +262,7 @@ export default function ItemsListPage() {
                   </TableRow>
                 ) : fetchError ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
+                    <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
                         {fetchError}
                     </TableCell>
                   </TableRow>
@@ -281,6 +282,16 @@ export default function ItemsListPage() {
                           </Badge>
                         ) : (
                           <Badge variant="secondary">Not Managed</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-2 sm:px-4">
+                        {item.location ? (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            {item.location}
+                          </span>
+                        ) : (
+                          'N/A'
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-1 px-2 sm:px-4">
@@ -323,7 +334,7 @@ export default function ItemsListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4">
+                    <TableCell colSpan={9} className="h-64 text-center px-2 sm:px-4">
                         <div className="flex flex-col items-center justify-center">
                             <Info className="h-12 w-12 text-muted-foreground mb-4" />
                             <p className="text-xl font-semibold text-muted-foreground">No Items Found</p>
