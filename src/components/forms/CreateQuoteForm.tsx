@@ -6,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Renamed ItemDocument to ItemDoc to avoid conflict
@@ -34,7 +34,7 @@ const PLACEHOLDER_ITEM_VALUE = "__QUOTE_ITEM_PLACEHOLDER__";
 interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
-  itemCode?: string; // Added for description population
+  itemCode?: string;
 }
 
 export function CreateQuoteForm() {
@@ -244,7 +244,7 @@ export function CreateQuoteForm() {
         itemCode: itemDetailsFromOptions?.itemCode || undefined,
         description: item.description || '',
         qty: lineQtyVal,
-        unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice, // Store undefined if was empty and parsed to 0
+        unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
         discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
         taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
         total: calculatedLineTotal,
@@ -319,81 +319,92 @@ export function CreateQuoteForm() {
           <Users className="mr-2 h-5 w-5 text-primary" />
           Customer & Delivery Information
         </h3>
+        {/* Row 1: Customer & Delivery Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={control}
-            name="customerId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Customer*</FormLabel>
-                <Combobox
-                  options={customerOptions}
-                  value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
-                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
-                  placeholder="Search Customer..."
-                  selectPlaceholder="Select Customer"
-                  emptyStateMessage="No customer found."
-                  disabled={isLoadingDropdowns}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="shippingAddress"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex justify-between items-center mb-1.5">
-                    <FormLabel>Delivery Address*</FormLabel>
-                    <FormField
-                        control={control}
-                        name="sameAsBilling"
-                        render={({ field: checkboxField }) => (
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxQuote" />
-                            </FormControl>
-                            <Label htmlFor="sameAsBillingCheckboxQuote" className="text-xs font-normal cursor-pointer">Same as billing</Label>
-                        </FormItem>
-                        )}
-                    />
-                </div>
-                <FormControl>
-                  <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div> {/* Column 1 for Customer */}
+            <FormField
+              control={control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer*</FormLabel>
+                  <Combobox
+                    options={customerOptions}
+                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
+                    placeholder="Search Customer..."
+                    selectPlaceholder="Select Customer"
+                    emptyStateMessage="No customer found."
+                    disabled={isLoadingDropdowns}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div> {/* Column 2 for Delivery Address */}
+            <FormField
+              control={control}
+              name="shippingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center mb-1.5">
+                      <FormLabel>Delivery Address*</FormLabel>
+                      <FormField
+                          control={control}
+                          name="sameAsBilling"
+                          render={({ field: checkboxField }) => (
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxQuote" />
+                              </FormControl>
+                              <Label htmlFor="sameAsBillingCheckboxQuote" className="text-xs font-normal cursor-pointer">Same as billing</Label>
+                          </FormItem>
+                          )}
+                      />
+                  </div>
+                  <FormControl>
+                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
+
+        {/* Row 2: Salesperson & Billing Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <FormField
-            control={control}
-            name="salesperson"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Salesperson*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter salesperson name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="billingAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bill To*</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Billing address" {...field} rows={3} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div> {/* Column 1 for Salesperson */}
+            <FormField
+              control={control}
+              name="salesperson"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Salesperson*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter salesperson name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div> {/* Column 2 for Billing Address */}
+            <FormField
+              control={control}
+              name="billingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bill To*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}>
