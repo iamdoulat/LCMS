@@ -1,38 +1,57 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { CustomerDocument } from '@/types'; 
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
-import { firestore } from '@/lib/firebase/config'; 
+import type { CustomerDocument } from '@/types';
+import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function ApplicantsListPage() {
   const router = useRouter();
-  const [applicants, setApplicants] = useState<CustomerDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [allApplicants, setAllApplicants] = useState<CustomerDocument[]>([]);
+  const [displayedApplicants, setDisplayedApplicants] = useState<CustomerDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterApplicantName, setFilterApplicantName] = useState('');
+  const [filterEmail, setFilterEmail] = useState('');
+  const [filterPhone, setFilterPhone] = useState('');
+  const [filterContactPerson, setFilterContactPerson] = useState('');
 
   useEffect(() => {
     const fetchApplicants = async () => {
       setIsLoading(true);
+      setFetchError(null);
       try {
-        const querySnapshot = await getDocs(collection(firestore, "customers"));
-        const fetchedApplicants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument));
-        setApplicants(fetchedApplicants);
+        const q = query(collection(firestore, "customers"), orderBy("applicantName", "asc"));
+        const querySnapshot = await getDocs(q);
+        const fetchedApplicants = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomerDocument));
+        setAllApplicants(fetchedApplicants);
       } catch (error: any) {
         console.error("Error fetching applicants: ", error);
-        Swal.fire("Error", `Could not fetch applicant data from Firestore. Please check console for details and ensure Firestore rules allow reads. Error: ${(error as Error).message}`, "error");
+        let errorMessage = `Could not fetch applicant data from Firestore. Please ensure Firestore rules allow reads.`;
+         if (error.message && error.message.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch applicant data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
@@ -41,14 +60,36 @@ export default function ApplicantsListPage() {
     fetchApplicants();
   }, []);
 
+  useEffect(() => {
+    let filtered = [...allApplicants];
+
+    if (filterApplicantName) {
+      filtered = filtered.filter(app =>
+        app.applicantName?.toLowerCase().includes(filterApplicantName.toLowerCase())
+      );
+    }
+    if (filterEmail) {
+      filtered = filtered.filter(app =>
+        app.email?.toLowerCase().includes(filterEmail.toLowerCase())
+      );
+    }
+    if (filterPhone) {
+      filtered = filtered.filter(app =>
+        app.phone?.toLowerCase().includes(filterPhone.toLowerCase())
+      );
+    }
+    if (filterContactPerson) {
+      filtered = filtered.filter(app =>
+        app.contactPerson?.toLowerCase().includes(filterContactPerson.toLowerCase())
+      );
+    }
+
+    setDisplayedApplicants(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [allApplicants, filterApplicantName, filterEmail, filterPhone, filterContactPerson]);
+
+
   const handleEditApplicant = (applicantId: string) => {
-    Swal.fire({
-      title: "Redirecting...",
-      text: `Navigating to edit page for applicant ${applicantId}.`,
-      icon: "info",
-      timer: 1500,
-      showConfirmButton: false,
-    });
     router.push(`/dashboard/customers/${applicantId}/edit`);
   };
 
@@ -58,15 +99,15 @@ export default function ApplicantsListPage() {
       text: `This action cannot be undone. This will permanently delete the applicant profile for "${applicantName || applicantId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: 'hsl(var(--destructive))', 
-      cancelButtonColor: 'hsl(var(--secondary))', 
+      confirmButtonColor: 'hsl(var(--destructive))',
+      cancelButtonColor: 'hsl(var(--secondary))',
       confirmButtonText: 'Yes, delete it!',
       reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "customers", applicantId));
-          setApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
+          setAllApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
           Swal.fire(
             'Deleted!',
             `Applicant ${applicantName || applicantId} has been removed.`,
@@ -80,11 +121,20 @@ export default function ApplicantsListPage() {
     });
   };
 
+  const clearFilters = () => {
+    setFilterApplicantName('');
+    setFilterEmail('');
+    setFilterPhone('');
+    setFilterContactPerson('');
+    setCurrentPage(1);
+  };
+
+
   // Pagination Logic
-  const totalPages = Math.ceil(applicants.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(displayedApplicants.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = applicants.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedApplicants.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -118,7 +168,7 @@ export default function ApplicantsListPage() {
       if (currentPage >= totalPages - halfPagesToShow) {
         startPage = Math.max(2, totalPages - maxPagesToShow + 1);
       }
-      
+
       if (startPage > 2) {
         pageNumbers.push("...");
       }
@@ -156,6 +206,60 @@ export default function ApplicantsListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Filter Section */}
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                  <Label htmlFor="applicantNameFilter" className="text-sm font-medium">Applicant Name</Label>
+                  <Input
+                    id="applicantNameFilter"
+                    placeholder="Search by Applicant Name..."
+                    value={filterApplicantName}
+                    onChange={(e) => setFilterApplicantName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emailFilter" className="text-sm font-medium">Email</Label>
+                  <Input
+                    id="emailFilter"
+                    type="email"
+                    placeholder="Search by Email..."
+                    value={filterEmail}
+                    onChange={(e) => setFilterEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phoneFilter" className="text-sm font-medium">Phone</Label>
+                  <Input
+                    id="phoneFilter"
+                    type="tel"
+                    placeholder="Search by Phone..."
+                    value={filterPhone}
+                    onChange={(e) => setFilterPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contactPersonFilter" className="text-sm font-medium">Contact Person</Label>
+                  <Input
+                    id="contactPersonFilter"
+                    placeholder="Search by Contact Person..."
+                    value={filterContactPerson}
+                    onChange={(e) => setFilterContactPerson(e.target.value)}
+                  />
+                </div>
+                <div className="lg:col-span-4 md:col-span-2">
+                  <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -174,6 +278,12 @@ export default function ApplicantsListPage() {
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading applicants...
                       </div>
+                    </TableCell>
+                  </TableRow>
+                ) : fetchError ? (
+                   <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                      {fetchError}
                     </TableCell>
                   </TableRow>
                 ) : currentItems.length > 0 ? (
@@ -226,14 +336,14 @@ export default function ApplicantsListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                       No applicants found. Ensure Firestore rules allow reads and data exists.
+                       No applicants found matching your criteria.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants from Firestore. 
-                Showing {applicants.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, applicants.length)} of {applicants.length} entries.
+                A list of your applicants from Firestore.
+                Showing {displayedApplicants.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplicants.length)} of {displayedApplicants.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -252,7 +362,7 @@ export default function ApplicantsListPage() {
               {getPageNumbers().map((page, index) =>
                 typeof page === 'number' ? (
                   <Button
-                    key={page}
+                    key={`app-page-${page}`}
                     variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handlePageChange(page)}
@@ -261,7 +371,7 @@ export default function ApplicantsListPage() {
                     {page}
                   </Button>
                 ) : (
-                  <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
+                  <span key={`ellipsis-app-${index}`} className="px-2 py-1 text-sm">
                     {page}
                   </span>
                 )
