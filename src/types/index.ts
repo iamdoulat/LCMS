@@ -568,13 +568,14 @@ export interface Item {
   id?: string;
   itemName: string;
   itemCode?: string; // SKU
-  brandName?: string; // New field
+  brandName?: string;
   description?: string;
   unit?: string; // e.g., pcs, kg, m
   salesPrice?: number;
   purchasePrice?: number;
   manageStock: boolean;
   currentQuantity?: number;
+  location?: string; // New field for location
   idealQuantity?: number;
   warningQuantity?: number;
   createdAt?: any; // Firestore ServerTimestamp
@@ -585,7 +586,7 @@ export type ItemDocument = Item & { id: string };
 export const itemSchema = z.object({
   itemName: z.string().min(1, "Item Name is required."),
   itemCode: z.string().optional(),
-  brandName: z.string().optional(), // New field
+  brandName: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),
   salesPrice: z.preprocess(
@@ -601,6 +602,7 @@ export const itemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Current Quantity must be a number." }).int().nonnegative("Current Quantity must be a non-negative integer.").optional()
   ),
+  location: z.string().optional(), // New field for location
   idealQuantity: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Ideal Quantity must be a number." }).int().nonnegative("Ideal Quantity must be a non-negative integer.").optional()
@@ -611,7 +613,6 @@ export const itemSchema = z.object({
   ),
 }).refine(data => {
   if (data.manageStock) {
-    // Ensure currentQuantity is provided if manageStock is true
     const qty = data.currentQuantity;
     return qty !== undefined && qty !== null && !isNaN(qty) && qty >= 0;
   }
@@ -631,3 +632,73 @@ export const itemSchema = z.object({
 
 export type ItemFormValues = z.infer<typeof itemSchema>;
 // --- END Item (Inventory) Types ---
+
+// --- Quote Types ---
+export const quoteTaxTypes = ["Default", "Exempt", "GST @ 5%", "VAT @ 15%"] as const;
+export type QuoteTaxType = typeof quoteTaxTypes[number];
+
+export const QuoteLineItemSchema = z.object({
+  itemId: z.string().min(1, "Item selection is required."),
+  description: z.string().optional(),
+  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
+  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
+  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
+  total: z.string(), // Calculated, not for direct input
+});
+export type QuoteLineItemFormValues = z.infer<typeof QuoteLineItemSchema>;
+
+export const QuoteSchema = z.object({
+  customerId: z.string().min(1, "Customer is required."),
+  billingAddress: z.string().min(1, "Billing Address is required."),
+  shippingAddress: z.string().min(1, "Shipping Address is required."),
+  sameAsBilling: z.boolean().default(true),
+  quoteDate: z.date({ required_error: "Quote Date is required." }),
+  salesperson: z.string().min(1, "Salesperson is required."),
+  lineItems: z.array(QuoteLineItemSchema).min(1, "At least one line item is required."),
+  taxType: z.enum(quoteTaxTypes).default("Default"),
+  globalDiscount: z.string().optional(), // For future use
+  globalTaxRate: z.string().optional(), // For future use
+  comments: z.string().optional(),
+  privateComments: z.string().optional(),
+  // Calculated fields, not part of the form for direct input but needed for schema
+  subtotal: z.number().optional(),
+  totalDiscountAmount: z.number().optional(),
+  totalTaxAmount: z.number().optional(),
+  totalAmount: z.number().optional(),
+});
+export type QuoteFormValues = z.infer<typeof QuoteSchema>;
+
+export interface QuoteLineItemDocument {
+  itemId: string;
+  itemName: string; // Denormalized
+  itemCode?: string; // Denormalized
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
+export interface QuoteDocument {
+  id: string;
+  customerId: string;
+  customerName: string; // Denormalized
+  billingAddress: string;
+  shippingAddress: string;
+  quoteDate: string; // ISO string
+  salesperson: string;
+  lineItems: QuoteLineItemDocument[];
+  taxType: QuoteTaxType;
+  comments?: string;
+  privateComments?: string;
+  subtotal: number;
+  totalDiscountAmount: number;
+  totalTaxAmount: number;
+  totalAmount: number;
+  status: "Draft" | "Sent" | "Accepted" | "Rejected" | "Invoiced"; // Example statuses
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+// --- END Quote Types ---

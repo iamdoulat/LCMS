@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag } from 'lucide-react';
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
@@ -36,6 +36,7 @@ export function AddItemForm() {
       purchasePrice: undefined,
       manageStock: false,
       currentQuantity: 0,
+      location: '', // Added location default
       idealQuantity: undefined,
       warningQuantity: undefined,
     },
@@ -56,6 +57,7 @@ export function AddItemForm() {
       purchasePrice: data.purchasePrice, 
       manageStock: data.manageStock,
       currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+      location: data.manageStock ? (data.location || undefined) : undefined, // Save location if stock managed
       idealQuantity: data.manageStock ? data.idealQuantity : undefined,
       warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       createdAt: serverTimestamp(),
@@ -80,7 +82,7 @@ export function AddItemForm() {
       });
       form.reset({ 
         itemName: '', itemCode: '', brandName: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
-        manageStock: false, currentQuantity: 0, idealQuantity: undefined, warningQuantity: undefined,
+        manageStock: false, currentQuantity: 0, location: '', idealQuantity: undefined, warningQuantity: undefined,
       });
     } catch (error) {
       console.error("Error adding item document: ", error);
@@ -231,19 +233,34 @@ export function AddItemForm() {
         {watchManageStock && (
           <Card className="bg-muted/30 p-6">
             <CardContent className="space-y-4 pt-6">
-              <FormField
-                control={form.control}
-                name="currentQuantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Quantity*</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name="currentQuantity"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Current Quantity*</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -296,3 +313,4 @@ export function AddItemForm() {
     </Form>
   );
 }
+

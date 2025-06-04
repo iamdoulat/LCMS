@@ -16,8 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader and CardTitle
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card'; 
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
@@ -41,6 +41,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       purchasePrice: undefined,
       manageStock: false,
       currentQuantity: 0,
+      location: '', // Added location default
       idealQuantity: undefined,
       warningQuantity: undefined,
     },
@@ -58,6 +59,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         purchasePrice: initialData.purchasePrice,
         manageStock: initialData.manageStock ?? false,
         currentQuantity: initialData.currentQuantity ?? 0,
+        location: initialData.location || '', // Populate location
         idealQuantity: initialData.idealQuantity,
         warningQuantity: initialData.warningQuantity,
       });
@@ -79,6 +81,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       purchasePrice: data.purchasePrice,
       manageStock: data.manageStock,
       currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+      location: data.manageStock ? (data.location || undefined) : undefined, // Save location if stock managed
       idealQuantity: data.manageStock ? data.idealQuantity : undefined,
       warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       updatedAt: serverTimestamp(),
@@ -248,19 +251,34 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         {watchManageStock && (
           <Card className="bg-muted/30 p-6">
             <CardContent className="space-y-4 pt-6">
-              <FormField
-                control={form.control}
-                name="currentQuantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Quantity*</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name="currentQuantity"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Current Quantity*</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -313,3 +331,4 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
     </Form>
   );
 }
+
