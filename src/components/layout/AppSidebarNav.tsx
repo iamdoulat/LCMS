@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -155,7 +156,6 @@ const managementNavItems: NavItemGroup[] = [
     roles: ["Super Admin", "Admin"],
     subLinks: [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks },
-      { href: '/dashboard/customers/statements', label: 'Run Auto Statements', icon: FileOutput },
     ],
   },
   {
@@ -190,7 +190,7 @@ const warrantyManagementNavItems: NavItemGroup[] = [
  {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
-    roles: ["Super Admin", "Admin", "Service"], 
+    roles: ["Super Admin", "Admin", "Service"],
     subLinks: [
       { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
@@ -291,7 +291,7 @@ export function AppSidebarNav() {
                   className={cn(
                     "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                     "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden", 
+                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
                     (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                   )}
                 >
