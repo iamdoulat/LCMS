@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export default function CreateNewQuotePage() {
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-6xl mx-auto shadow-xl"> {/* Adjusted max-width for a potentially larger form */}
+      <Card className="max-w-screen-2xl mx-auto shadow-xl"> {/* Changed max-width for a potentially larger form */}
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FilePlus2 className="h-7 w-7 text-primary" />
