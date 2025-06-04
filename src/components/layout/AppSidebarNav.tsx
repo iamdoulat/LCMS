@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -57,11 +56,11 @@ import {
   UserPlus,
   Microscope,
   Users as UsersIcon,
-  // Receipt, // Removed as "Invoicing & Sales" group is hidden
-  // ShoppingCart, // Removed as "Invoicing & Sales" group is hidden
-  // CreditCard, // Removed as "Invoicing & Sales" group is hidden
-  // Undo2, // Removed as "Invoicing & Sales" group is hidden
-  PlusCircle, // For Add New Item
+  Receipt, // Re-added
+  ShoppingCart, // Re-added
+  CreditCard, // Re-added
+  Undo2, // Re-added
+  PlusCircle, 
   // FileOutput, // Removed as "Reporting Management" group is empty
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -114,7 +113,22 @@ const coreModulesNavItems: NavItemGroup[] = [
 ];
 
 const financialNavItems: NavItemGroup[] = [
-  // "Invoicing & Sales" group removed as per request
+  {
+    groupLabel: 'Invoicing & Sales',
+    icon: Receipt,
+    roles: ["Super Admin", "Admin"],
+    subLinks: [
+      { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
+      { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2 },
+      { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
+      { href: '/dashboard/invoices/create', label: 'Create Invoice', icon: FilePlus2 },
+      { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
+      { href: '/dashboard/orders/create', label: 'Create Order', icon: ShoppingCart },
+      { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
+      { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
+      { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
+    ],
+  },
   {
     groupLabel: 'Inventory Management',
     icon: Package,
