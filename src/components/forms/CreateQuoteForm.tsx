@@ -455,7 +455,7 @@ export function CreateQuoteForm() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px]">Qty*</TableHead>
+                <TableHead className="w-[120px]">Qty*</TableHead>
                 <TableHead className="min-w-[200px]">Item*</TableHead>
                 <TableHead className="min-w-[250px]">Description</TableHead>
                 <TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -609,4 +609,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-
