@@ -57,12 +57,12 @@ import {
   UserPlus,
   Microscope,
   Users as UsersIcon,
-  Receipt, // New icon for Invoicing & Sales
-  ShoppingCart, // New icon for Orders
-  CreditCard, // New icon for Payments
-  Undo2, // New icon for Refunds
+  // Receipt, // Removed as "Invoicing & Sales" group is hidden
+  // ShoppingCart, // Removed as "Invoicing & Sales" group is hidden
+  // CreditCard, // Removed as "Invoicing & Sales" group is hidden
+  // Undo2, // Removed as "Invoicing & Sales" group is hidden
   PlusCircle, // For Add New Item
-  FileOutput, // For Run Automatic Statements
+  // FileOutput, // Removed as "Reporting Management" group is empty
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -114,22 +114,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 ];
 
 const financialNavItems: NavItemGroup[] = [
-  {
-    groupLabel: 'Invoicing & Sales',
-    icon: Receipt,
-    roles: ["Super Admin", "Admin"],
-    subLinks: [
-      { href: '/dashboard/invoices/create', label: 'Create New Invoice', icon: FilePlus2 },
-      { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
-      { href: '/dashboard/quotes/create', label: 'Create New Quote', icon: FilePlus2 },
-      { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
-      { href: '/dashboard/orders/create', label: 'Create New Order', icon: ShoppingCart },
-      { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
-      { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
-      { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
-      { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
-    ],
-  },
+  // "Invoicing & Sales" group removed as per request
   {
     groupLabel: 'Inventory Management',
     icon: Package,
@@ -227,7 +212,7 @@ export function AppSidebarNav() {
 
   const allAccordionGroups = [
     ...coreModulesNavItems,
-    ...financialNavItems, // Added new group
+    ...financialNavItems, 
     ...managementNavItems,
     ...demoMachineManagementNavItems,
     ...warrantyManagementNavItems,
