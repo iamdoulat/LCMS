@@ -1674,3 +1674,4 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
