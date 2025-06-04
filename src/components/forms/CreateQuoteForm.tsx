@@ -22,6 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -314,7 +317,7 @@ export function CreateQuoteForm() {
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
-          Customer Information
+          Customer & Delivery Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -336,41 +339,13 @@ export function CreateQuoteForm() {
               </FormItem>
             )}
           />
-           <FormField
-            control={control}
-            name="salesperson"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Salesperson*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter salesperson name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={control}
-            name="billingAddress"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bill To*</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Billing address" {...field} rows={3} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={control}
             name="shippingAddress"
             render={({ field }) => (
               <FormItem>
                 <div className="flex justify-between items-center mb-1.5">
-                    <FormLabel>Ship To*</FormLabel>
+                    <FormLabel>Delivery Address*</FormLabel>
                     <FormField
                         control={control}
                         name="sameAsBilling"
@@ -385,7 +360,35 @@ export function CreateQuoteForm() {
                     />
                 </div>
                 <FormControl>
-                  <Textarea placeholder="Shipping address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                  <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <FormField
+            control={control}
+            name="salesperson"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Salesperson*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter salesperson name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="billingAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bill To*</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Billing address" {...field} rows={3} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -595,3 +598,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
