@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag, Hash } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -322,8 +322,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <Users className="mr-2 h-5 w-5 text-primary" />
           Customer & Delivery Information
         </h3>
+        {/* Row 1: Customer & Delivery Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+          <div> {/* Column 1 for Customer */}
             <FormField
               control={control}
               name="customerId"
@@ -344,7 +345,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
           </div>
-          <div>
+          <div> {/* Column 2 for Delivery Address */}
             <FormField
               control={control}
               name="shippingAddress"
@@ -375,8 +376,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </div>
         </div>
 
+        {/* Row 2: Salesperson & Billing Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+          <div> {/* Column 1 for Salesperson */}
             <FormField
               control={control}
               name="salesperson"
@@ -391,7 +393,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
           </div>
-          <div>
+          <div> {/* Column 2 for Billing Address */}
             <FormField
               control={control}
               name="billingAddress"
@@ -412,7 +414,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <CalendarDays className="mr-2 h-5 w-5 text-primary" />
           Quote Details
         </h3>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <FormItem>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote ID</FormLabel>
+              <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+            </FormItem>
             <FormField
                 control={control}
                 name="quoteDate"
@@ -499,11 +505,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} />
-                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
                   </TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} />
-                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
                   </TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} />
