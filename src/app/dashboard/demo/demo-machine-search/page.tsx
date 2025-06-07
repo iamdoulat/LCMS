@@ -114,7 +114,7 @@ export default function DemoMachineSearchPage() {
     } finally {
       setIsLoadingStats(false);
     }
-  }, []);
+  }, []); // Empty dependency array because state setters are stable
 
   useEffect(() => {
     fetchAllDemoMachinesAndStats(selectedYear);
@@ -381,3 +381,4 @@ export default function DemoMachineSearchPage() {
   );
 }
 
+    

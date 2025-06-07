@@ -157,7 +157,7 @@ export default function WarrantySearchPage() {
     } finally {
       setIsLoadingStats(false);
     }
-  }, []);
+  }, []); // Empty dependency array as state setters are stable
 
   useEffect(() => {
     fetchAllReportsAndCalculateStats(selectedYear);
@@ -537,3 +537,5 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
+
+    
