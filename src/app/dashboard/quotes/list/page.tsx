@@ -19,6 +19,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge'; // Added missing import
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
