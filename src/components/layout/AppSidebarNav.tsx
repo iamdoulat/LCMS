@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -56,12 +57,12 @@ import {
   UserPlus,
   Microscope,
   Users as UsersIcon,
-  Receipt, // Re-added
-  ShoppingCart, // Re-added
-  CreditCard, // Re-added
-  Undo2, // Re-added
-  PlusCircle, 
-  // FileOutput, // Removed as "Reporting Management" group is empty
+  Receipt,
+  ShoppingCart,
+  CreditCard,
+  Undo2,
+  PlusCircle,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -136,6 +137,8 @@ const financialNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
       { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
+      { href: '/dashboard/inventory/sales', label: 'Sales', icon: DollarSign },
+      { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2 },
     ],
   },
 ];
@@ -226,7 +229,7 @@ export function AppSidebarNav() {
 
   const allAccordionGroups = [
     ...coreModulesNavItems,
-    ...financialNavItems, 
+    ...financialNavItems,
     ...managementNavItems,
     ...demoMachineManagementNavItems,
     ...warrantyManagementNavItems,

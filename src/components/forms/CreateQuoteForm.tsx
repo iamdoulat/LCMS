@@ -413,7 +413,7 @@ export function CreateQuoteForm() {
         </h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote ID</FormLabel>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
               <Input value="(Auto-generated on save)" readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField

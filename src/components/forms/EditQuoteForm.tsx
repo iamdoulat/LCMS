@@ -215,7 +215,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
   async function onSubmit(data: QuoteFormValues) {
     if (!quoteId) {
-      Swal.fire("Error", "Quote ID is missing. Cannot update.", "error");
+      Swal.fire("Error", "Quote Number is missing. Cannot update.", "error");
       return;
     }
     setIsSubmitting(true);
@@ -289,7 +289,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       await updateDoc(quoteDocRef, cleanedDataToUpdate);
       Swal.fire({
         title: "Quote Updated!",
-        text: `Quote ID: ${quoteId} successfully updated.`,
+        text: `Quote Number: ${quoteId} successfully updated.`,
         icon: "success",
       });
     } catch (error: any) {
@@ -416,7 +416,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote ID</FormLabel>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
               <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField
