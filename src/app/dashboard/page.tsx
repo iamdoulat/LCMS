@@ -622,7 +622,7 @@ export default function DashboardPage() {
                   L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="h-8 w-auto px-2 py-1 text-xs font-semibold">
+              <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-sm font-semibold px-3 py-1 h-auto">
                 {upcomingEtdShipments.length}
               </Button>
             </CardHeader>
