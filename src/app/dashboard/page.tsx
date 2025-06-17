@@ -622,7 +622,10 @@ export default function DashboardPage() {
                   L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
                 </CardDescription>
               </div>
-              <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-lg font-bold h-7 w-7 p-0 items-center justify-center">
+              <Button
+                variant="default"
+                className="rounded-full bg-accent text-accent-foreground text-xl font-bold h-8 px-2.5 flex items-center justify-center"
+              >
                 {upcomingEtdShipments.length}
               </Button>
             </CardHeader>
@@ -716,7 +719,10 @@ export default function DashboardPage() {
                 T/T and L/Cs currently in "Draft" status for {selectedYear}, sorted by most recent T/T and L/C open.
                 </CardDescription>
             </div>
-             <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-lg font-bold h-7 w-7 p-0 items-center justify-center">
+             <Button 
+                variant="default" 
+                className="rounded-full bg-accent text-accent-foreground text-xl font-bold h-8 px-2.5 flex items-center justify-center"
+             >
                 {draftLCs.length}
             </Button>
           </CardHeader>
@@ -770,7 +776,10 @@ export default function DashboardPage() {
                 L/Cs marked as "Shipment Done" in {selectedYear}, sorted by most recent update.
                 </CardDescription>
             </div>
-            <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-lg font-bold h-7 w-7 p-0 items-center justify-center">
+            <Button 
+                variant="default"
+                className="rounded-full bg-accent text-accent-foreground text-xl font-bold h-8 px-2.5 flex items-center justify-center"
+            >
                 {recentlyCompletedLCs.length}
             </Button>
           </CardHeader>
