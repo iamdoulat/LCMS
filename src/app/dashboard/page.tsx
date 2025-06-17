@@ -706,14 +706,19 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
-          <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <FileEdit className="h-6 w-6 text-primary" />
-              Draft L/Cs
-            </CardTitle>
-            <CardDescription>
-              T/T and L/Cs currently in "Draft" status for {selectedYear}, sorted by most recent T/T and L/C open.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+                <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <FileEdit className="h-6 w-6 text-primary" />
+                Draft L/Cs
+                </CardTitle>
+                <CardDescription>
+                T/T and L/Cs currently in "Draft" status for {selectedYear}, sorted by most recent T/T and L/C open.
+                </CardDescription>
+            </div>
+            <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-sm font-semibold px-3 py-1 h-auto">
+                {draftLCs.length}
+            </Button>
           </CardHeader>
           <CardContent className="h-[350px] space-y-3">
              {isLoading || draftLCs.length === 0 && !isLoading ? (
@@ -755,14 +760,19 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
-          <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <CheckCircle2 className="h-6 w-6 text-primary" />
-              Recently Completed L/Cs
-            </CardTitle>
-            <CardDescription>
-              L/Cs marked as "Shipment Done" in {selectedYear}, sorted by most recent update.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+                <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <CheckCircle2 className="h-6 w-6 text-primary" />
+                Recently Completed L/Cs
+                </CardTitle>
+                <CardDescription>
+                L/Cs marked as "Shipment Done" in {selectedYear}, sorted by most recent update.
+                </CardDescription>
+            </div>
+            <Button variant="default" className="rounded-full bg-accent text-accent-foreground text-sm font-semibold px-3 py-1 h-auto">
+                {recentlyCompletedLCs.length}
+            </Button>
           </CardHeader>
           <CardContent className="h-[350px] space-y-3">
             {isLoading || recentlyCompletedLCs.length === 0 && !isLoading ? (
