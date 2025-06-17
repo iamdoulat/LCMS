@@ -705,3 +705,40 @@ export interface QuoteDocument {
   updatedAt: any; // Firestore ServerTimestamp
 }
 // --- END Quote Types ---
+
+// --- Sale Types ---
+export interface SaleLineItemDocument {
+  itemId: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
+export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
+
+export interface SaleDocument {
+  id: string;
+  customerId: string;
+  customerName: string;
+  billingAddress: string;
+  shippingAddress: string;
+  saleDate: string; // ISO string
+  salesperson: string;
+  lineItems: SaleLineItemDocument[];
+  taxType: QuoteTaxType; // Reusing QuoteTaxType for simplicity
+  comments?: string;
+  privateComments?: string;
+  subtotal: number;
+  totalDiscountAmount: number;
+  totalTaxAmount: number;
+  totalAmount: number;
+  status: SaleStatus;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+// --- END Sale Types ---

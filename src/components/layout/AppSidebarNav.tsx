@@ -137,7 +137,8 @@ const financialNavItems: NavItemGroup[] = [
     subLinks: [
       { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
       { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
-      { href: '/dashboard/inventory/sales', label: 'Sales', icon: DollarSign },
+      { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign },
+      { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks },
       { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2 },
     ],
   },
