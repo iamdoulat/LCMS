@@ -612,14 +612,19 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
-            <CardHeader>
-              <CardTitle className="font-bold text-xl lg:text-2xl flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                <Ship className="h-6 w-6 text-primary" />
-                Upcoming ETDs
-              </CardTitle>
-              <CardDescription>
-                 L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="font-bold text-xl lg:text-2xl flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+                  <Ship className="h-6 w-6 text-primary" />
+                  Upcoming ETDs
+                </CardTitle>
+                <CardDescription>
+                  L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" className="h-8 w-auto px-2 py-1 text-xs font-semibold">
+                {upcomingEtdShipments.length}
+              </Button>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">
                  {isLoading || upcomingEtdShipments.length === 0 && !isLoading ? (
