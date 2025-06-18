@@ -741,4 +741,33 @@ export interface SaleDocument {
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
+
+const SaleLineItemSchema = z.object({
+  itemId: z.string().min(1, "Item selection is required."),
+  description: z.string().optional(),
+  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
+  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
+  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
+  total: z.string(), // Calculated, not for direct input
+});
+export type SaleLineItemFormValues = z.infer<typeof SaleLineItemSchema>;
+
+export const SaleSchema = z.object({
+  customerId: z.string().min(1, "Customer is required."),
+  billingAddress: z.string().min(1, "Billing Address is required."),
+  shippingAddress: z.string().min(1, "Shipping Address is required."),
+  sameAsBilling: z.boolean().default(true),
+  saleDate: z.date({ required_error: "Sale Date is required." }),
+  salesperson: z.string().min(1, "Salesperson is required."),
+  lineItems: z.array(SaleLineItemSchema).min(1, "At least one line item is required."),
+  taxType: z.enum(quoteTaxTypes).default("Default"), 
+  comments: z.string().optional(),
+  privateComments: z.string().optional(),
+  subtotal: z.number().optional(),
+  totalDiscountAmount: z.number().optional(),
+  totalTaxAmount: z.number().optional(),
+  totalAmount: z.number().optional(),
+});
+export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
