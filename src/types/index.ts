@@ -738,6 +738,8 @@ export interface SaleDocument {
   totalTaxAmount: number;
   totalAmount: number;
   status: SaleStatus;
+  returnReason?: string; // New field for refund/return reason
+  refundDate?: string; // New field for refund/return date (ISO string)
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
@@ -771,3 +773,4 @@ export const SaleSchema = z.object({
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
+
