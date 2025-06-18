@@ -8,8 +8,8 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Renamed ItemDocument to ItemDoc to avoid conflict
+import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore'; // Added runTransaction, setDoc
+import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; 
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ export function CreateQuoteForm() {
   const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(null);
 
   const [subtotal, setSubtotal] = React.useState(0);
   const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
@@ -214,82 +215,109 @@ export function CreateQuoteForm() {
 
   async function onSubmit(data: QuoteFormValues) {
     setIsSubmitting(true);
+    setGeneratedQuoteId(null); // Reset previous generated ID
+
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
-
-    const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty || '0'));
-      const unitPriceStr = String(item.unitPrice || '0');
-      const finalUnitPrice = parseFloat(unitPriceStr);
-      const discountPercentageStr = String(item.discountPercentage || '0');
-      const finalDiscountPercentage = parseFloat(discountPercentageStr);
-      const taxPercentageStr = String(item.taxPercentage || '0');
-      const finalTaxPercentage = parseFloat(taxPercentageStr);
-
-      const lineQtyVal = qty;
-      const lineUnitPriceVal = finalUnitPrice;
-      const lineDiscountPVal = finalDiscountPercentage;
-      const lineTaxPVal = finalTaxPercentage;
-
-      const itemTotalBeforeDiscount = lineQtyVal * lineUnitPriceVal;
-      const discountAmountVal = itemTotalBeforeDiscount * (lineDiscountPVal / 100);
-      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (lineTaxPVal / 100);
-      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
-      
-      const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-
-      return {
-        itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-        itemCode: itemDetailsFromOptions?.itemCode || undefined,
-        description: item.description || '',
-        qty: lineQtyVal,
-        unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-        discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-        taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
-        total: calculatedLineTotal,
-      };
-    });
-    
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
-    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
-
-    const dataToSave = {
-      customerId: data.customerId,
-      customerName: selectedCustomer?.label || 'N/A',
-      billingAddress: data.billingAddress,
-      shippingAddress: data.shippingAddress,
-      quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      salesperson: data.salesperson,
-      lineItems: processedLineItems,
-      taxType: data.taxType,
-      comments: data.comments || undefined,
-      privateComments: data.privateComments || undefined,
-      subtotal: finalSubtotal,
-      totalDiscountAmount: finalTotalDiscount,
-      totalTaxAmount: finalTotalTax,
-      totalAmount: finalGrandTotal,
-      status: "Draft", 
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    const cleanedDataToSave = Object.fromEntries(
-      Object.entries(dataToSave).filter(([, value]) => value !== undefined)
-    ) as typeof dataToSave;
-
+    const currentYear = new Date().getFullYear();
+    const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
     try {
-      const docRef = await addDoc(collection(firestore, "quotes"), cleanedDataToSave);
+      const newQuoteId = await runTransaction(firestore, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        let currentCount = 0;
+        if (counterDoc.exists()) {
+          const counterData = counterDoc.data();
+          currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
+        }
+        const newCount = currentCount + 1;
+        const formattedQuoteId = `QSS${currentYear}-${String(newCount).padStart(2, '0')}`;
+        
+        const processedLineItems = data.lineItems.map(item => {
+          const qty = parseFloat(String(item.qty || '0'));
+          const unitPriceStr = String(item.unitPrice || '0');
+          const finalUnitPrice = parseFloat(unitPriceStr);
+          const discountPercentageStr = String(item.discountPercentage || '0');
+          const finalDiscountPercentage = parseFloat(discountPercentageStr);
+          const taxPercentageStr = String(item.taxPercentage || '0');
+          const finalTaxPercentage = parseFloat(taxPercentageStr);
+    
+          const itemTotalBeforeDiscount = qty * finalUnitPrice;
+          const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
+          const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
+          const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
+          
+          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+    
+          return {
+            itemId: item.itemId,
+            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+            itemCode: itemDetailsFromOptions?.itemCode || undefined,
+            description: item.description || '',
+            qty: qty,
+            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
+            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+            total: calculatedLineTotal,
+          };
+        });
+        
+        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
+        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
+        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
+        const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+          customerId: data.customerId,
+          customerName: selectedCustomer?.label || 'N/A',
+          billingAddress: data.billingAddress,
+          shippingAddress: data.shippingAddress,
+          quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          salesperson: data.salesperson,
+          lineItems: processedLineItems,
+          taxType: data.taxType,
+          comments: data.comments || undefined,
+          privateComments: data.privateComments || undefined,
+          subtotal: finalSubtotal,
+          totalDiscountAmount: finalTotalDiscount,
+          totalTaxAmount: finalTotalTax,
+          totalAmount: finalGrandTotal,
+          status: "Draft", 
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        const cleanedDataToSave = Object.fromEntries(
+          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined)
+        ) as typeof quoteDataToSave;
+
+        const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
+        transaction.set(newQuoteRef, cleanedDataToSave);
+
+        const newCounters = {
+          yearlyCounts: {
+            ...(counterDoc.exists() ? counterDoc.data()?.yearlyCounts : {}),
+            [currentYear]: newCount,
+          }
+        };
+        transaction.set(counterRef, newCounters, { merge: true });
+        
+        return formattedQuoteId;
+      });
+
+      setGeneratedQuoteId(newQuoteId);
       Swal.fire({
         title: "Quote Saved!",
-        text: `Quote successfully saved with ID: ${docRef.id}.`,
+        text: `Quote successfully saved with ID: ${newQuoteId}.`,
         icon: "success",
       });
       form.reset(); 
+      // Reset calculated totals as well
+      setSubtotal(0);
+      setTotalTaxAmount(0);
+      setTotalDiscountAmount(0);
+      setGrandTotal(0);
+
     } catch (error: any) {
       console.error("Error saving quote: ", error);
       Swal.fire({
@@ -412,9 +440,9 @@ export function CreateQuoteForm() {
           Quote Details
         </h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-             <FormItem>
+            <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
-              <Input value="(Auto-generated on save)" readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+              <Input value={generatedQuoteId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField
                 control={control}
@@ -589,6 +617,7 @@ export function CreateQuoteForm() {
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
                 setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
+                setGeneratedQuoteId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
@@ -610,4 +639,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-

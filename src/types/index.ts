@@ -685,7 +685,7 @@ export interface QuoteLineItemDocument {
 }
 
 export interface QuoteDocument {
-  id: string;
+  id: string; // This will store the formatted QSS{Year}-{Serial}
   customerId: string;
   customerName: string; // Denormalized
   billingAddress: string;
@@ -738,13 +738,13 @@ export interface SaleDocument {
   totalTaxAmount: number;
   totalAmount: number;
   status: SaleStatus;
-  returnReason?: string; // New field for refund/return reason
-  refundDate?: string; // New field for refund/return date (ISO string)
+  returnReason?: string; 
+  refundDate?: string; 
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
 
-const SaleLineItemSchema = z.object({
+export const SaleLineItemSchema = z.object({
   itemId: z.string().min(1, "Item selection is required."),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
@@ -773,4 +773,3 @@ export const SaleSchema = z.object({
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
-

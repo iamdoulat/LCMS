@@ -63,7 +63,7 @@ service cloud.firestore {
     match /items/{itemId} {
       allow read, write: if request.auth != null;
     }
-
+    
     // Rules for the 'quotes' collection
     match /quotes/{quoteId} {
       allow read, write: if request.auth != null;
@@ -72,6 +72,11 @@ service cloud.firestore {
     // Rules for the 'sales' collection
     match /sales/{saleId} {
       allow read, write: if request.auth != null;
+    }
+
+    // Rules for the 'counters' collection (for quote ID generation)
+    match /counters/quoteNumberGenerator {
+      allow read, write: if request.auth != null; // Or restrict to users who can create quotes
     }
   }
 }
