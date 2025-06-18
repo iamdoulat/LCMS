@@ -738,8 +738,8 @@ export interface SaleDocument {
   totalTaxAmount: number;
   totalAmount: number;
   status: SaleStatus;
-  returnReason?: string; 
-  refundDate?: string; 
+  returnReason?: string;
+  refundDate?: string; // ISO string
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
@@ -773,3 +773,74 @@ export const SaleSchema = z.object({
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
+
+// --- Invoice Types ---
+export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void"] as const;
+export type InvoiceStatus = typeof invoiceStatusOptions[number];
+
+export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
+  itemId: z.string().min(1, "Item selection is required."),
+  description: z.string().optional(),
+  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
+  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
+  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
+  total: z.string(),
+});
+export type InvoiceLineItemFormValues = z.infer<typeof InvoiceLineItemSchema>;
+
+export const InvoiceSchema = z.object({
+  customerId: z.string().min(1, "Customer is required."),
+  billingAddress: z.string().min(1, "Billing Address is required."),
+  shippingAddress: z.string().min(1, "Shipping Address is required."),
+  sameAsBilling: z.boolean().default(true),
+  invoiceDate: z.date({ required_error: "Invoice Date is required." }), // Changed from quoteDate
+  dueDate: z.date().optional(), // Added for invoices
+  paymentTerms: z.string().optional(), // Added for invoices
+  salesperson: z.string().min(1, "Salesperson is required."),
+  lineItems: z.array(InvoiceLineItemSchema).min(1, "At least one line item is required."),
+  taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes for now
+  comments: z.string().optional(),
+  privateComments: z.string().optional(),
+  subtotal: z.number().optional(),
+  totalDiscountAmount: z.number().optional(),
+  totalTaxAmount: z.number().optional(),
+  totalAmount: z.number().optional(),
+});
+export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
+
+export interface InvoiceLineItemDocument { // Same as QuoteLineItemDocument for now
+  itemId: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
+export interface InvoiceDocument {
+  id: string; // This will store the formatted INV{Year}-{Serial}
+  customerId: string;
+  customerName: string;
+  billingAddress: string;
+  shippingAddress: string;
+  invoiceDate: string; // ISO string
+  dueDate?: string; // ISO string, optional
+  paymentTerms?: string;
+  salesperson: string;
+  lineItems: InvoiceLineItemDocument[];
+  taxType: QuoteTaxType;
+  comments?: string;
+  privateComments?: string;
+  subtotal: number;
+  totalDiscountAmount: number;
+  totalTaxAmount: number;
+  totalAmount: number;
+  status: InvoiceStatus;
+  createdAt: any;
+  updatedAt: any;
+}
+// --- END Invoice Types ---
