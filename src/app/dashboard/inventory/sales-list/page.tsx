@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown } from 'lucide-react'; // Added FileDown
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -202,6 +202,14 @@ export default function SalesListPage() {
     });
   };
 
+  const handleDownloadPdf = (saleId: string, saleIdentifier?: string) => {
+    Swal.fire({
+      title: "PDF Download",
+      text: `Invoice PDF generation for Sale ID "${saleIdentifier || saleId}" is not yet implemented. This feature will be available soon.`,
+      icon: "info",
+    });
+  };
+
   const clearFilters = () => {
     setFilterSaleId('');
     setFilterCustomerId('');
@@ -238,10 +246,10 @@ export default function SalesListPage() {
   
   const getSaleStatusBadgeVariant = (status?: SaleStatus): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
-      case "Completed": return "default"; // Greenish
+      case "Completed": return "default"; 
       case "Draft": return "outline";
       case "Cancelled": return "destructive";
-      case "Refunded": return "secondary"; // Yellowish
+      case "Refunded": return "secondary"; 
       default: return "outline";
     }
   };
@@ -378,6 +386,19 @@ export default function SalesListPage() {
                         <TooltipProvider>
                           <Tooltip><TooltipTrigger asChild><Button variant="default" size="icon" onClick={() => handleEditSale(sale.id)} className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"><FileEdit className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Edit Sale</p></TooltipContent></Tooltip>
                           <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleDeleteSale(sale.id, sale.id.substring(0,8))} className="h-7 w-7"><Trash2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Delete Sale</p></TooltipContent></Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleDownloadPdf(sale.id, sale.id.substring(0,8))}
+                                className="h-7 w-7 border-primary text-primary hover:bg-primary/10"
+                              >
+                                <FileDown className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Download Invoice PDF</p></TooltipContent>
+                          </Tooltip>
                         </TooltipProvider>
                       </TableCell>
                     </TableRow>
@@ -406,3 +427,4 @@ export default function SalesListPage() {
     </div>
   );
 }
+
