@@ -1,6 +1,5 @@
 
 # Firebase Studio
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+This is a LC Management Software by Nextjs, Firebase, Firestore, Typescript, Tailwind CSS, and React.
+https://cards.mddoulat.com/iamdoulat
