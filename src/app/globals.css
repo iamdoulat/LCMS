@@ -121,97 +121,135 @@ body {
   body {
     -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
     print-color-adjust: exact !important;         /* Standard */
-    color: #000000 !important; /* Ensure base text color is black */
-    background-color: #ffffff !important; /* Ensure background is white */
-  }
-
-  /* Ensure form inputs, textareas, and selects are visible and their text black */
-  input,
-  textarea,
-  select,
-  .input, /* Covering ShadCN classes too if they don't directly map */
-  .textarea {
+    font-family: 'Times New Roman', Times, serif !important; /* Classic print font */
+    font-size: 10pt !important; /* Standard print font size */
     color: #000000 !important;
     background-color: #ffffff !important;
-    border: 1px solid #cccccc !important; /* Add a light border for visibility */
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
-  /* Ensure form labels are black */
-  label,
-  .form-label { /* Covering ShadCN classes */
+  .print-invoice-container {
+    width: 100% !important; /* Ensure it takes full printable width */
+    margin: 0 !important;
+    padding: 15mm !important; /* Standard A4 margins */
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {
+    color: #000000 !important;
+    background: transparent !important;
+  }
+  
+  /* Ensure inputs show their values */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="url"],
+  textarea {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    /* Attempt to show value if it's part of a form field */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  input[disabled], textarea[disabled] {
+    color: #000000 !important;
+    background-color: #f0f0f0 !important; /* Light gray for disabled fields to show value */
+    opacity: 1 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+
+  label, .form-label {
     color: #000000 !important;
   }
 
   /* Hide elements not typically wanted in a printout */
-  header, /* Main app header */
-  nav,    /* Sidebar nav */
-  aside,  /* General sidebar */
-  footer, /* Main app footer */
-  button, /* Hide all buttons by default */
-  .noprint, /* Add this class to elements you want to hide from print */
-  [data-sidebar="sidebar"], /* ShadCN sidebar */
-  .sidebar-trigger, /* If your sidebar trigger has a class */
-  .app-header-class, /* Replace with actual class of AppHeader if not just 'header' */
-  .app-sidebar-nav-class /* Replace with actual class of AppSidebarNav if not just 'nav' */
+  header, 
+  nav,    
+  aside,  
+  footer, 
+  .noprint, 
+  [data-sidebar="sidebar"],
+  .sidebar-trigger,
+  .app-header-class,
+  .app-sidebar-nav-class,
+  .print-only-utility-buttons
   {
     display: none !important;
   }
 
   /* Ensure the main content area (where the form is) is printable */
   main,
-  .main-content-area /* Replace with actual class of your main content wrapper if needed */
+  .main-content-area 
   {
     margin: 0 !important;
-    padding: 15px !important; /* Add some padding for print layout */
+    padding: 0 !important; /* Minimal padding for content, container will handle margins */
     width: 100% !important;
     border: none !important;
     box-shadow: none !important;
-    background-color: #ffffff !important; /* Ensure white background for content */
+    background-color: #ffffff !important;
   }
 
-  /* Card specific overrides for printing */
   .card, .card-header, .card-content, .card-title, .card-description {
     background-color: #ffffff !important;
     color: #000000 !important;
-    border: 1px solid #dddddd !important; /* Lighten border for print */
+    border: none !important; /* Remove borders from cards for cleaner print */
     box-shadow: none !important;
   }
-
-  /* Override gradient text on titles for print */
-  .card-title.text-primary, 
-  h1.text-primary,
-  h2.text-primary,
-  h3.text-primary {
-    color: #000000 !important;
-    /* Remove gradient specific styles */
+  
+  /* Remove gradient text for print */
+  .bg-gradient-to-r {
     background-image: none !important;
+    color: #000000 !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
-    -webkit-text-fill-color: initial !important; /* For Webkit browsers */
-    text-fill-color: initial !important; /* Standard */
+    -webkit-text-fill-color: initial !important;
+    text-fill-color: initial !important;
+  }
+  .text-primary { /* For elements that specifically use text-primary for gradient */
+     color: #000000 !important;
   }
 
 
-  /* Ensure text in ShadCN badges is visible */
-  .badge { /* General badge selector */
+  .badge { 
     color: #000000 !important;
-    background-color: #eeeeee !important; /* Light grey background for badges */
+    background-color: #eeeeee !important;
     border: 1px solid #cccccc !important;
   }
 
-  /* Ensure links are distinguishable */
   a {
     color: #000000 !important;
-    text-decoration: underline !important; /* Underline links for print */
+    text-decoration: none !important; /* Remove underlines for cleaner print, unless specifically styled */
+  }
+  
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; } /* Ensure table headers repeat on each page */
+  tbody { display: table-row-group; }
+  tfoot { display: table-footer-group; }
+
+  /* Ensure table cells have borders for print if desired */
+  table, th, td {
+    border: 1px solid #ccc !important;
+  }
+  th, td {
+    padding: 4px 8px !important; /* Adjust padding for print */
+  }
+  
+  /* Ensure specific background colors print */
+  .bg-gray-100 { /* For table header example */
+    background-color: #f3f4f6 !important; /* Tailwind gray-100 */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Try to force display of disabled input values */
-  input[disabled] {
-    opacity: 1 !important;
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important; /* For Safari */
+  @page {
+    size: A4;
+    margin: 15mm; /* Standard A4 margins */
   }
 }
-

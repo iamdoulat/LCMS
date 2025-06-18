@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown } from 'lucide-react'; // Added FileDown
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -203,12 +203,10 @@ export default function SalesListPage() {
   };
 
   const handleDownloadPdf = (saleId: string, saleIdentifier?: string) => {
-    Swal.fire({
-      title: "PDF Download",
-      text: `Invoice PDF generation for Sale ID "${saleIdentifier || saleId}" is not yet implemented. This feature will be available soon.`,
-      icon: "info",
-    });
+    // Open the print page in a new tab
+    window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
   };
+
 
   const clearFilters = () => {
     setFilterSaleId('');
@@ -427,4 +425,3 @@ export default function SalesListPage() {
     </div>
   );
 }
-
