@@ -420,7 +420,9 @@ export function AppSidebarNav() {
                 Financial Management
             </SidebarGroupLabel>
             <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
-                {financialNavItems.map((item, index) => renderNavGroup(item, index))}
+                {financialNavItems
+                  .filter(item => item.groupLabel !== 'Invoicing & Sales') // Filter out "Invoicing & Sales"
+                  .map((item, index) => renderNavGroup(item, index))}
             </Accordion>
         </SidebarGroup>
 
