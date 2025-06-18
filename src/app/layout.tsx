@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { AppProviders } from '@/components/layout/AppProviders'; // Import the new wrapper
 import './globals.css'; 
+import { Analytics } from "@vercel/analytics/next"; // Import Vercel Analytics
 
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
         <AppProviders> {/* Use the wrapper component here */}
           {children}
+          <Analytics /> {/* Add Vercel Analytics component here */}
         </AppProviders>
       </body>
     </html>
