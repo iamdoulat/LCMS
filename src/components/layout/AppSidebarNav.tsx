@@ -421,7 +421,6 @@ export function AppSidebarNav() {
             </SidebarGroupLabel>
             <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
                 {financialNavItems
-                  .filter(item => item.groupLabel !== 'Invoicing & Sales') // Filter out "Invoicing & Sales"
                   .map((item, index) => renderNavGroup(item, index))}
             </Accordion>
         </SidebarGroup>
