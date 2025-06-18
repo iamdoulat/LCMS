@@ -8,9 +8,9 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Using QuoteTaxType for now
-import { quoteTaxTypes } from '@/types'; // Re-using for simplicity
+import { collection, addDoc, serverTimestamp, getDocs, doc, writeBatch, getDoc, updateDoc } from 'firebase/firestore'; // Added doc, writeBatch, getDoc, updateDoc
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
+import { SaleSchema, quoteTaxTypes, SaleLineItemSchema } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -25,37 +25,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-// Renamed Schemas and Types for Sale context
-const SaleLineItemSchema = z.object({
-  itemId: z.string().min(1, "Item selection is required."),
-  description: z.string().optional(),
-  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
-  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
-  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
-  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
-  total: z.string(), // Calculated, not for direct input
-});
-export type SaleLineItemFormValues = z.infer<typeof SaleLineItemSchema>;
-
-export const SaleSchema = z.object({
-  customerId: z.string().min(1, "Customer is required."),
-  billingAddress: z.string().min(1, "Billing Address is required."),
-  shippingAddress: z.string().min(1, "Shipping Address is required."),
-  sameAsBilling: z.boolean().default(true),
-  saleDate: z.date({ required_error: "Sale Date is required." }), // Renamed from quoteDate
-  salesperson: z.string().min(1, "Salesperson is required."),
-  lineItems: z.array(SaleLineItemSchema).min(1, "At least one line item is required."),
-  taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes
-  comments: z.string().optional(),
-  privateComments: z.string().optional(),
-  // Calculated fields, not part of the form for direct input but needed for schema
-  subtotal: z.number().optional(),
-  totalDiscountAmount: z.number().optional(),
-  totalTaxAmount: z.number().optional(),
-  totalAmount: z.number().optional(),
-});
-export type SaleFormValues = z.infer<typeof SaleSchema>;
-
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -66,7 +35,13 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  manageStock?: boolean; // Added to know if stock should be managed for this item
+  currentQuantity?: number; // Added to check current stock if needed (though primarily handled in backend)
 }
+
+type SaleFormValues = PageSaleFormValues;
+type SaleLineItemFormValues = PageSaleLineItemFormValues;
+
 
 export function CreateSaleForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -141,6 +116,8 @@ export function CreateSaleForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
+              manageStock: data.manageStock,
+              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -288,7 +265,7 @@ export function CreateSaleForm() {
       customerName: selectedCustomer?.label || 'N/A',
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
-      saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Renamed from quoteDate
+      saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesperson: data.salesperson,
       lineItems: processedLineItems,
       taxType: data.taxType,
@@ -298,7 +275,7 @@ export function CreateSaleForm() {
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: "Completed", // Example status for a sale
+      status: "Completed" as const, // Example status for a sale
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -308,12 +285,52 @@ export function CreateSaleForm() {
     ) as typeof dataToSave;
 
     try {
-      const docRef = await addDoc(collection(firestore, "sales"), cleanedDataToSave); // Changed collection to "sales"
-      Swal.fire({
-        title: "Sale Recorded!", // Updated title
-        text: `Sale successfully recorded with ID: ${docRef.id}.`, // Updated text
-        icon: "success",
-      });
+      const saleDocRef = await addDoc(collection(firestore, "sales"), cleanedDataToSave);
+      
+      // After sale is saved, update item stock
+      const stockUpdateBatch = writeBatch(firestore);
+      let stockUpdateError = false;
+
+      for (const lineItem of processedLineItems) {
+        if (!lineItem.itemId) continue;
+        const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
+        if (itemOption && itemOption.manageStock) {
+          const itemRef = doc(firestore, "items", lineItem.itemId);
+          try {
+            const itemSnap = await getDoc(itemRef);
+            if (itemSnap.exists()) {
+              const itemData = itemSnap.data() as ItemDoc;
+              const currentItemQty = itemData.currentQuantity || 0;
+              const newItemQty = currentItemQty - lineItem.qty;
+              stockUpdateBatch.update(itemRef, { 
+                currentQuantity: newItemQty,
+                updatedAt: serverTimestamp() 
+              });
+            } else {
+              console.warn(`Item with ID ${lineItem.itemId} not found for stock update.`);
+            }
+          } catch (itemError) {
+            console.error(`Error fetching item ${lineItem.itemId} for stock update:`, itemError);
+            stockUpdateError = true; // Mark that an error occurred
+          }
+        }
+      }
+
+      if (!stockUpdateError) {
+        await stockUpdateBatch.commit();
+        Swal.fire({
+          title: "Sale Recorded!",
+          text: `Sale successfully recorded with ID: ${saleDocRef.id}. Item stock levels updated.`,
+          icon: "success",
+        });
+      } else {
+        // If stock update had issues, the sale is still saved. User needs to be informed.
+        Swal.fire({
+          title: "Sale Recorded with Issues!",
+          text: `Sale recorded (ID: ${saleDocRef.id}), but there were errors updating some item stock levels. Please review item quantities manually.`,
+          icon: "warning",
+        });
+      }
       form.reset(); 
     } catch (error: any) {
       console.error("Error recording sale: ", error);
@@ -441,7 +458,7 @@ export function CreateSaleForm() {
             </FormItem>
             <FormField
                 control={control}
-                name="saleDate" // Renamed from quoteDate
+                name="saleDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Sale Date*</FormLabel>
