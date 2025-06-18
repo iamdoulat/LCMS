@@ -8,8 +8,8 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore'; // Added runTransaction, setDoc
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; 
+import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
+import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-
+import { useRouter } from 'next/navigation'; // Added for navigation
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -38,6 +38,7 @@ interface ItemOption extends ComboboxOption {
 }
 
 export function CreateQuoteForm() {
+  const router = useRouter(); // Added for navigation
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
@@ -75,7 +76,7 @@ export function CreateQuoteForm() {
     },
   });
 
-  const { control, setValue, watch, getValues, reset } = form;
+  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -213,10 +214,8 @@ export function CreateQuoteForm() {
     }
   };
 
-  async function onSubmit(data: QuoteFormValues) {
+  const saveQuoteLogic = async (data: QuoteFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    setGeneratedQuoteId(null); // Reset previous generated ID
-
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
@@ -304,31 +303,70 @@ export function CreateQuoteForm() {
         
         return formattedQuoteId;
       });
-
-      setGeneratedQuoteId(newQuoteId);
-      Swal.fire({
-        title: "Quote Saved!",
-        text: `Quote successfully saved with ID: ${newQuoteId}.`,
-        icon: "success",
-      });
-      form.reset(); 
-      // Reset calculated totals as well
-      setSubtotal(0);
-      setTotalTaxAmount(0);
-      setTotalDiscountAmount(0);
-      setGrandTotal(0);
-
+      return newQuoteId;
     } catch (error: any) {
-      console.error("Error saving quote: ", error);
+      console.error("Error in saveQuoteLogic: ", error);
       Swal.fire({
         title: "Save Failed",
         text: `Failed to save quote: ${error.message}`,
         icon: "error",
       });
+      return null;
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
+
+  const handleRegularSave = async (data: QuoteFormValues) => {
+    const newId = await saveQuoteLogic(data);
+    if (newId) {
+      setGeneratedQuoteId(newId);
+      Swal.fire({
+        title: "Quote Saved!",
+        text: `Quote successfully saved with ID: ${newId}.`,
+        icon: "success",
+      });
+      // Optionally reset form or parts of it
+      // reset(); 
+    }
+  };
+
+  const handleSaveAndPreview = async (data: QuoteFormValues) => {
+    const newId = await saveQuoteLogic(data);
+    if (newId) {
+      setGeneratedQuoteId(newId);
+      Swal.fire({
+        title: "Quote Saved!",
+        text: `Quote successfully saved with ID: ${newId}. Navigating to preview...`,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push(`/dashboard/quotes/preview/${newId}`);
+      });
+    }
+  };
+
+  const handlePreviewLastSaved = () => {
+    if (generatedQuoteId) {
+      router.push(`/dashboard/quotes/preview/${generatedQuoteId}`);
+    } else {
+      Swal.fire("No Quote Saved", "Please save a quote first to preview it.", "info");
+    }
+  };
+  
+  const handleConvertToInvoice = () => {
+    if (generatedQuoteId) {
+        Swal.fire({
+            title: "Convert to Invoice",
+            text: `Functionality to convert Quote ID: ${generatedQuoteId} to an invoice is not yet implemented. This feature will be available soon.`,
+            icon: "info",
+        });
+    } else {
+        Swal.fire("No Quote Saved", "Please save a quote first to convert it to an invoice.", "info");
+    }
+  };
+
 
   if (isLoadingDropdowns) {
     return (
@@ -338,10 +376,14 @@ export function CreateQuoteForm() {
       </div>
     );
   }
+  
+  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
+  const actionButtonsDisabled = !generatedQuoteId || isSubmitting;
+
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form className="space-y-8"> {/* Removed onSubmit here, will be handled by button clicks */}
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
@@ -621,17 +663,20 @@ export function CreateQuoteForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Quote...</>
               ) : (
                 <><Save className="mr-2 h-4 w-4" />Save Quote</>
               )}
             </Button>
-            <Button type="button" variant="outline" disabled>
+             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
-            <Button type="button" variant="outline" disabled>
+             <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
+                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
+            </Button>
+            <Button type="button" variant="outline" onClick={handleConvertToInvoice} disabled={actionButtonsDisabled}>
                 <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
         </div>
