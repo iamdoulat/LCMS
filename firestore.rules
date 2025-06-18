@@ -68,5 +68,10 @@ service cloud.firestore {
     match /quotes/{quoteId} {
       allow read, write: if request.auth != null;
     }
+
+    // Rules for the 'sales' collection
+    match /sales/{saleId} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
