@@ -270,26 +270,16 @@ export default function ItemsListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center px-2 sm:px-4"> {/* Increased colSpan */}
-                      <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap"> {/* Increased colSpan */}
-                        {fetchError}
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
-                      <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell> {/* Display Supplier Name */}
+                      <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.purchasePrice)}</TableCell>
@@ -351,17 +341,7 @@ export default function ItemsListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-64 text-center px-2 sm:px-4"> {/* Increased colSpan */}
-                        <div className="flex flex-col items-center justify-center">
-                            <Info className="h-12 w-12 text-muted-foreground mb-4" />
-                            <p className="text-xl font-semibold text-muted-foreground">No Items Found</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Item\" to get started."}
-                            </p>
-                        </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Item\" to get started."}</p></div></TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
@@ -414,3 +394,4 @@ export default function ItemsListPage() {
     </div>
   );
 }
+
