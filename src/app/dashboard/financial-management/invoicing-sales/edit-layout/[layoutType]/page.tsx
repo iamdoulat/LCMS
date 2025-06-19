@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LayoutGrid, Move, ImageIcon, Type, TextareaIcon, CalendarIcon, HashIcon, UsersIcon, PackageIcon, DollarSignIcon, InfoIcon, Columns } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Move, ImageIcon, Type, Textarea as TextareaIcon, CalendarDays as CalendarIcon, Hash as HashIcon, Users as UsersIcon, Package as PackageIcon, DollarSign as DollarSignIcon, InfoIcon, Columns } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,7 +42,7 @@ export default function EditDocumentLayoutPage() {
   useEffect(() => {
     if (layoutType) {
       const formattedType = layoutType.charAt(0).toUpperCase() + layoutType.slice(1);
-      setTitle(`${formattedType} Layout Editor`);
+      setTitle(\`\${formattedType} Layout Editor\`);
     }
   }, [layoutType]);
 
@@ -89,7 +89,7 @@ export default function EditDocumentLayoutPage() {
                     key={item.id}
                     variant="outline"
                     className="w-full justify-start text-left h-auto py-2 px-3 cursor-grab"
-                    title={`Add ${item.label}`}
+                    title={`Add \${item.label}`}
                   >
                     <item.icon className="mr-2 h-4 w-4 text-primary shrink-0" />
                     <span className="text-sm">{item.label}</span>
