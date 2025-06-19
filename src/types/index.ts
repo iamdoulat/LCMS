@@ -368,7 +368,7 @@ export const InstallationDetailItemSchema = z.object({
   installDate: z.date({ required_error: "Installation Date is required." }),
   // warrantyRemaining is calculated, not part of form data
 });
-export type InstallationDetailItemType = z.infer<typeof InstallationDetailItemSchema>;
+export type InstallationDetailItem = z.infer<typeof InstallationDetailItemSchema>;
 
 
 export const InstallationReportSchema = z.object({
@@ -429,7 +429,7 @@ export interface InstallationReportDocument {
   packingListUrl?: string;
   technicianName: string;
   reportingEngineerName: string;
-  installationDetails: Array<Omit<InstallationDetailItemType, 'installDate'> & { installDate: string; }>; // installDate as ISO string
+  installationDetails: Array<Omit<InstallationDetailItem, 'installDate'> & { installDate: string; }>; // installDate as ISO string
   totalInstalledQty: number;
   pendingQty?: number;
   missingItemInfo?: string;
@@ -763,7 +763,7 @@ export const SaleSchema = z.object({
   saleDate: z.date({ required_error: "Sale Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
   lineItems: z.array(SaleLineItemSchema).min(1, "At least one line item is required."),
-  taxType: z.enum(quoteTaxTypes).default("Default"), 
+  taxType: z.enum(quoteTaxTypes).default("Default"),
   comments: z.string().optional(),
   privateComments: z.string().optional(),
   subtotal: z.number().optional(),
@@ -844,3 +844,71 @@ export interface InvoiceDocument {
   updatedAt: any;
 }
 // --- END Invoice Types ---
+
+// --- Order Types ---
+export const orderStatusOptions = ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled", "On Hold"] as const;
+export type OrderStatus = typeof orderStatusOptions[number];
+
+export const OrderLineItemSchema = z.object({ // Same as Quote/Invoice LineItemSchema for now
+  itemId: z.string().min(1, "Item selection is required."),
+  description: z.string().optional(),
+  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
+  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
+  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
+  total: z.string(),
+});
+export type OrderLineItemFormValues = z.infer<typeof OrderLineItemSchema>;
+
+export const OrderSchema = z.object({
+  customerId: z.string().min(1, "Customer is required."),
+  billingAddress: z.string().min(1, "Billing Address is required."),
+  shippingAddress: z.string().min(1, "Shipping Address is required."),
+  sameAsBilling: z.boolean().default(true),
+  orderDate: z.date({ required_error: "Order Date is required." }),
+  salesperson: z.string().min(1, "Salesperson is required."),
+  lineItems: z.array(OrderLineItemSchema).min(1, "At least one line item is required."),
+  taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes
+  comments: z.string().optional(),
+  privateComments: z.string().optional(),
+  // Calculated fields
+  subtotal: z.number().optional(),
+  totalDiscountAmount: z.number().optional(),
+  totalTaxAmount: z.number().optional(),
+  totalAmount: z.number().optional(),
+});
+export type OrderFormValues = z.infer<typeof OrderSchema>;
+
+export interface OrderLineItemDocument { // Same as Quote/Invoice LineItemDocument
+  itemId: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
+export interface OrderDocument {
+  id: string; // This will store the formatted ORD{Year}-{Serial}
+  customerId: string;
+  customerName: string;
+  billingAddress: string;
+  shippingAddress: string;
+  orderDate: string; // ISO string
+  salesperson: string;
+  lineItems: OrderLineItemDocument[];
+  taxType: QuoteTaxType;
+  comments?: string;
+  privateComments?: string;
+  subtotal: number;
+  totalDiscountAmount: number;
+  totalTaxAmount: number;
+  totalAmount: number;
+  status: OrderStatus;
+  createdAt: any;
+  updatedAt: any;
+}
+// --- END Order Types ---
