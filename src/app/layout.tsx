@@ -5,6 +5,7 @@ import { GeistMono } from 'geist/font/mono';
 import { AppProviders } from '@/components/layout/AppProviders'; // Import the new wrapper
 import './globals.css'; 
 import { Analytics } from "@vercel/analytics/next"; // Import Vercel Analytics
+import { SpeedInsights } from "@vercel/speed-insights/next"; // Import Vercel Speed Insights
 
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
@@ -47,6 +48,7 @@ export default function RootLayout({
         <AppProviders> {/* Use the wrapper component here */}
           {children}
           <Analytics /> {/* Add Vercel Analytics component here */}
+          <SpeedInsights /> {/* Add Vercel Speed Insights component here */}
         </AppProviders>
       </body>
     </html>
