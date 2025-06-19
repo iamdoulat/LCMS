@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, ShoppingCart } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Building, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, ShoppingCart } from 'lucide-react'; // Changed Users to Building
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { OrderDocument, CustomerDocument, OrderStatus } from '@/types';
+import type { OrderDocument, SupplierDocument, OrderStatus } from '@/types'; // Changed CustomerDocument to SupplierDocument
 import { orderStatusOptions } from '@/types';
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
@@ -54,7 +54,7 @@ const getFirstItemName = (lineItems: OrderDocument['lineItems']): string => {
 
 const orderSortOptions = [
   { value: "orderDate", label: "Order Date" },
-  { value: "customerName", label: "Customer Name" },
+  { value: "beneficiaryName", label: "Beneficiary Name" }, // Changed from customerName
   { value: "salesperson", label: "Salesperson" },
   { value: "totalAmount", label: "Grand Total" },
   { value: "status", label: "Status" },
@@ -64,7 +64,7 @@ const currentSystemYear = new Date().getFullYear();
 const orderYearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_ORDER__";
-const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_ORDER__";
+const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_ORDER__"; // Changed from ALL_CUSTOMERS_VALUE
 const ALL_STATUSES_VALUE = "__ALL_STATUSES_ORDER__";
 const ORDER_ITEMS_PER_PAGE = 10;
 
@@ -76,13 +76,13 @@ export default function OrdersListPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [filterOrderNumber, setFilterOrderNumber] = useState('');
-  const [filterCustomerId, setFilterCustomerId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState(''); // Changed from filterCustomerId
   const [filterSalesperson, setFilterSalesperson] = useState('');
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
 
-  const [customerOptions, setCustomerOptions] = useState<ComboboxOption[]>([]);
-  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]); // Changed from customerOptions
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true); // Changed from isLoadingCustomers
 
   const [sortBy, setSortBy] = useState<string>('orderDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -112,22 +112,22 @@ export default function OrdersListPage() {
       }
     };
 
-    const fetchCustomerOptions = async () => {
-      setIsLoadingCustomers(true);
+    const fetchBeneficiaryOptions = async () => { // Renamed from fetchCustomerOptions
+      setIsLoadingBeneficiaries(true); // Changed from setIsLoadingCustomers
       try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setCustomerOptions(
-          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Customer' }))
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers")); // Fetch from suppliers
+        setBeneficiaryOptions( // Changed from setCustomerOptions
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
       } catch (error: any) {
-        Swal.fire("Error", `Could not load customer options. Error: ${(error as Error).message}`, "error");
+        Swal.fire("Error", `Could not load beneficiary options. Error: ${(error as Error).message}`, "error");
       } finally {
-        setIsLoadingCustomers(false);
+        setIsLoadingBeneficiaries(false); // Changed from setIsLoadingCustomers
       }
     };
 
     fetchInitialData();
-    fetchCustomerOptions();
+    fetchBeneficiaryOptions(); // Renamed
   }, []);
 
   useEffect(() => {
@@ -136,8 +136,8 @@ export default function OrdersListPage() {
     if (filterOrderNumber) {
       filtered = filtered.filter(order => order.id?.toLowerCase().includes(filterOrderNumber.toLowerCase()));
     }
-    if (filterCustomerId && filterCustomerId !== ALL_CUSTOMERS_VALUE) {
-      filtered = filtered.filter(order => order.customerId === filterCustomerId);
+    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) { // Changed from filterCustomerId
+      filtered = filtered.filter(order => order.beneficiaryId === filterBeneficiaryId); // Compare with beneficiaryId
     }
     if (filterSalesperson) {
       filtered = filtered.filter(order => order.salesperson?.toLowerCase().includes(filterSalesperson.toLowerCase()));
@@ -173,10 +173,9 @@ export default function OrdersListPage() {
     }
     setDisplayedOrders(filtered);
     setCurrentPage(1);
-  }, [allOrders, filterOrderNumber, filterCustomerId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
+  }, [allOrders, filterOrderNumber, filterBeneficiaryId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]); // Updated dependency to filterBeneficiaryId
 
   const handleEditOrder = (orderId: string) => {
-    // router.push(`/dashboard/orders/edit/${orderId}`); // Uncomment when edit page is ready
     Swal.fire("Info", `Edit functionality for Order ID ${orderId} is not yet implemented.`, "info");
   };
 
@@ -208,7 +207,7 @@ export default function OrdersListPage() {
 
   const clearFilters = () => {
     setFilterOrderNumber('');
-    setFilterCustomerId('');
+    setFilterBeneficiaryId(''); // Changed from setFilterCustomerId
     setFilterSalesperson('');
     setFilterYear(ALL_YEARS_VALUE);
     setFilterStatus('');
@@ -284,15 +283,15 @@ export default function OrdersListPage() {
                   <Input id="orderNoFilter" placeholder="Search by Order No..." value={filterOrderNumber} onChange={(e) => setFilterOrderNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="customerFilterOrder" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Customer</Label>
+                  <Label htmlFor="beneficiaryFilterOrder" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label> {/* Changed from Customer */}
                   <Combobox
-                    options={customerOptions}
-                    value={filterCustomerId || ALL_CUSTOMERS_VALUE}
-                    onValueChange={(value) => setFilterCustomerId(value === ALL_CUSTOMERS_VALUE ? '' : value)}
-                    placeholder="Search Customer..."
-                    selectPlaceholder={isLoadingCustomers ? "Loading..." : "All Customers"}
-                    emptyStateMessage="No customer found."
-                    disabled={isLoadingCustomers}
+                    options={beneficiaryOptions} // Changed from customerOptions
+                    value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE} // Changed
+                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)} // Changed
+                    placeholder="Search Beneficiary..." // Changed
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} // Changed
+                    emptyStateMessage="No beneficiary found." // Changed
+                    disabled={isLoadingBeneficiaries} // Changed
                   />
                 </div>
                 <div>
@@ -351,7 +350,7 @@ export default function OrdersListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="px-2 sm:px-4">Order No.</TableHead>
-                  <TableHead className="px-2 sm:px-4">Customer</TableHead>
+                  <TableHead className="px-2 sm:px-4">Beneficiary</TableHead> {/* Changed from Customer */}
                   <TableHead className="px-2 sm:px-4">Salesperson</TableHead>
                   <TableHead className="px-2 sm:px-4">Order Date</TableHead>
                   <TableHead className="px-2 sm:px-4">Items Summary</TableHead>
@@ -369,7 +368,7 @@ export default function OrdersListPage() {
                   currentItems.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium p-2 sm:p-4">{order.id}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{order.customerName || 'N/A'}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{order.beneficiaryName || 'N/A'}</TableCell> {/* Changed from customerName */}
                       <TableCell className="p-2 sm:p-4">{order.salesperson || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatDisplayDate(order.orderDate)}</TableCell>
                       <TableCell className="p-2 sm:p-4 truncate max-w-xs" title={getFirstItemName(order.lineItems)}>{getFirstItemName(order.lineItems)} ({getTotalQuantity(order.lineItems)} qty)</TableCell>
