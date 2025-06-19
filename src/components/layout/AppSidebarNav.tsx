@@ -63,6 +63,7 @@ import {
   Undo2,
   PlusCircle,
   Loader2,
+  LayoutGrid, // Added LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -128,6 +129,8 @@ const financialNavItems: NavItemGroup[] = [
       { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
       { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
       { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
+      { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
     ],
   },
   {
