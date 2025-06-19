@@ -253,7 +253,7 @@ export interface Supplier {
   createdAt?: any;
   updatedAt?: any;
 }
-export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any, brandLogoUrl?: string, bankInformation?: string };
+export type SupplierDocument = Supplier & { id: string, createdAt: any, updatedAt: any, brandLogoUrl?: string, bankInformation?: string, headOfficeAddress: string };
 
 
 export interface AppNotification {
@@ -652,7 +652,7 @@ export const QuoteLineItemSchema = z.object({
 export type QuoteLineItemFormValues = z.infer<typeof QuoteLineItemSchema>;
 
 export const QuoteSchema = z.object({
-  customerId: z.string().min(1, "Customer is required."),
+  beneficiaryId: z.string().min(1, "Beneficiary is required."), // Changed from customerId
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
   sameAsBilling: z.boolean().default(true),
@@ -686,8 +686,8 @@ export interface QuoteLineItemDocument {
 
 export interface QuoteDocument {
   id: string; // This will store the formatted QSS{Year}-{Serial}
-  customerId: string;
-  customerName: string; // Denormalized
+  beneficiaryId: string; // Changed from customerId
+  beneficiaryName: string; // Changed from customerName
   billingAddress: string;
   shippingAddress: string;
   quoteDate: string; // ISO string

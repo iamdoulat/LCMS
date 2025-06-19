@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
+import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Changed CustomerDocument to SupplierDocument
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation'; // Added for navigation
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_CUSTOMER_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__QUOTE_BENEFICIARY_PLACEHOLDER__"; // Changed from CUSTOMER
 const PLACEHOLDER_ITEM_VALUE = "__QUOTE_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
@@ -37,10 +37,14 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
+interface BeneficiaryOption extends ComboboxOption { // New interface for beneficiaries
+  address?: string;
+}
+
 export function CreateQuoteForm() {
   const router = useRouter(); // Added for navigation
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]); // Changed from customerOptions
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(null);
@@ -53,7 +57,7 @@ export function CreateQuoteForm() {
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
     defaultValues: {
-      customerId: '',
+      beneficiaryId: '', // Changed from customerId
       billingAddress: '',
       shippingAddress: '',
       sameAsBilling: true,
@@ -83,7 +87,7 @@ export function CreateQuoteForm() {
     name: "lineItems",
   });
 
-  const watchedCustomerId = watch("customerId");
+  const watchedBeneficiaryId = watch("beneficiaryId"); // Changed from customerId
   const watchedSameAsBilling = watch("sameAsBilling");
   const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
@@ -95,15 +99,15 @@ export function CreateQuoteForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, itemsSnap] = await Promise.all([
-          getDocs(collection(firestore, "customers")),
+        const [suppliersSnap, itemsSnap] = await Promise.all([ // Changed customersSnap to suppliersSnap
+          getDocs(collection(firestore, "suppliers")), // Fetch from suppliers
           getDocs(collection(firestore, "items"))
         ]);
 
-        setCustomerOptions(
-          customersSnap.docs.map(doc => {
-            const data = doc.data() as CustomerDocument;
-            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
+        setBeneficiaryOptions( // Changed from setCustomerOptions
+          suppliersSnap.docs.map(doc => {
+            const data = doc.data() as SupplierDocument; // Use SupplierDocument
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress }; // Use beneficiaryName and headOfficeAddress
           })
         );
 
@@ -122,7 +126,7 @@ export function CreateQuoteForm() {
 
       } catch (error) {
         console.error("Error fetching dropdown options for Quote form: ", error);
-        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
+        Swal.fire("Error", "Could not load beneficiary or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
       }
@@ -131,10 +135,10 @@ export function CreateQuoteForm() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        const billingAddr = (selectedCustomer as any).address || '';
+    if (watchedBeneficiaryId) { // Changed from watchedCustomerId
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId); // Changed from customerOptions
+      if (selectedBeneficiary) {
+        const billingAddr = selectedBeneficiary.address || ''; // Use beneficiary's address
         setValue("billingAddress", billingAddr);
         if (getValues("sameAsBilling")) {
           setValue("shippingAddress", billingAddr);
@@ -144,7 +148,7 @@ export function CreateQuoteForm() {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]); // Changed customerOptions to beneficiaryOptions
 
   React.useEffect(() => {
     if (watchedSameAsBilling) {
@@ -216,7 +220,7 @@ export function CreateQuoteForm() {
 
   const saveQuoteLogic = async (data: QuoteFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId); // Changed from selectedCustomer
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
@@ -267,8 +271,8 @@ export function CreateQuoteForm() {
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
-          customerId: data.customerId,
-          customerName: selectedCustomer?.label || 'N/A',
+          beneficiaryId: data.beneficiaryId, // Changed from customerId
+          beneficiaryName: selectedBeneficiary?.label || 'N/A', // Changed from customerName
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -326,8 +330,6 @@ export function CreateQuoteForm() {
         text: `Quote successfully saved with ID: ${newId}.`,
         icon: "success",
       });
-      // Optionally reset form or parts of it
-      // reset(); 
     }
   };
 
@@ -383,28 +385,27 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form className="space-y-8"> {/* Removed onSubmit here, will be handled by button clicks */}
+      <form className="space-y-8"> 
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
-          Customer & Delivery Information
+          Beneficiary & Delivery Information 
         </h3>
-        {/* Row 1: Customer & Delivery Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> {/* Column 1 for Customer */}
+          <div> 
             <FormField
               control={control}
-              name="customerId"
+              name="beneficiaryId" // Changed from customerId
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer*</FormLabel>
+                  <FormLabel>Beneficiary*</FormLabel> {/* Changed from Customer* */}
                   <Combobox
-                    options={customerOptions}
-                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
-                    placeholder="Search Customer..."
-                    selectPlaceholder="Select Customer"
-                    emptyStateMessage="No customer found."
+                    options={beneficiaryOptions} // Changed from customerOptions
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} // Changed placeholder constant
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..." // Changed placeholder
+                    selectPlaceholder="Select Beneficiary" // Changed placeholder
+                    emptyStateMessage="No beneficiary found." // Changed message
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -412,7 +413,7 @@ export function CreateQuoteForm() {
               )}
             />
           </div>
-          <div> {/* Column 2 for Delivery Address */}
+          <div> 
             <FormField
               control={control}
               name="shippingAddress"
@@ -443,9 +444,8 @@ export function CreateQuoteForm() {
           </div>
         </div>
 
-        {/* Row 2: Salesperson & Billing Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> {/* Column 1 for Salesperson */}
+          <div> 
             <FormField
               control={control}
               name="salesperson"
@@ -460,7 +460,7 @@ export function CreateQuoteForm() {
               )}
             />
           </div>
-          <div> {/* Column 2 for Billing Address */}
+          <div> 
             <FormField
               control={control}
               name="billingAddress"
@@ -553,9 +553,9 @@ export function CreateQuoteForm() {
                       render={({ field: itemField }) => (
                         <Combobox
                           options={itemOptions}
-                          value={itemField.value || PLACEHOLDER_ITEM_VALUE + index}
+                          value={itemField.value || PLACEHOLDER_ITEM_VALUE}
                           onValueChange={(itemId) => {
-                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE + index) ? '' : itemId);
+                            itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId);
                             handleItemSelect(itemId, index);
                           }}
                           placeholder="Search Item..."
