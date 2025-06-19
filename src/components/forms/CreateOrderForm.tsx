@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash } from 'lucide-react'; // Added ShoppingCart
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -499,7 +499,7 @@ export function CreateOrderForm() {
 
         <Separator />
         <h3 className={cn(sectionHeadingClass)}>
-          <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+          <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
         </h3>
         <div className="rounded-md border overflow-x-auto">
           <Table>
@@ -559,3 +559,4 @@ export function CreateOrderForm() {
     </Form>
   );
 }
+
