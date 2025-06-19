@@ -652,7 +652,7 @@ export const QuoteLineItemSchema = z.object({
 export type QuoteLineItemFormValues = z.infer<typeof QuoteLineItemSchema>;
 
 export const QuoteSchema = z.object({
-  beneficiaryId: z.string().min(1, "Beneficiary is required."), // Changed from customerId
+  beneficiaryId: z.string().min(1, "Beneficiary is required."),
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
   sameAsBilling: z.boolean().default(true),
@@ -686,8 +686,8 @@ export interface QuoteLineItemDocument {
 
 export interface QuoteDocument {
   id: string; // This will store the formatted QSS{Year}-{Serial}
-  beneficiaryId: string; // Changed from customerId
-  beneficiaryName: string; // Changed from customerName
+  beneficiaryId: string;
+  beneficiaryName: string;
   billingAddress: string;
   shippingAddress: string;
   quoteDate: string; // ISO string

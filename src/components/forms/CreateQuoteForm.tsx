@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation'; // Added for navigation
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_BENEFICIARY_VALUE = "__QUOTE_BENEFICIARY_PLACEHOLDER__"; // Changed from CUSTOMER
+const PLACEHOLDER_BENEFICIARY_VALUE = "__QUOTE_BENEFICIARY_PLACEHOLDER__";
 const PLACEHOLDER_ITEM_VALUE = "__QUOTE_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
@@ -37,14 +37,14 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
-interface BeneficiaryOption extends ComboboxOption { // New interface for beneficiaries
+interface BeneficiaryOption extends ComboboxOption {
   address?: string;
 }
 
 export function CreateQuoteForm() {
   const router = useRouter(); // Added for navigation
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]); // Changed from customerOptions
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(null);
@@ -57,7 +57,7 @@ export function CreateQuoteForm() {
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
     defaultValues: {
-      beneficiaryId: '', // Changed from customerId
+      beneficiaryId: '',
       billingAddress: '',
       shippingAddress: '',
       sameAsBilling: true,
@@ -87,7 +87,7 @@ export function CreateQuoteForm() {
     name: "lineItems",
   });
 
-  const watchedBeneficiaryId = watch("beneficiaryId"); // Changed from customerId
+  const watchedBeneficiaryId = watch("beneficiaryId");
   const watchedSameAsBilling = watch("sameAsBilling");
   const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
@@ -99,15 +99,15 @@ export function CreateQuoteForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [suppliersSnap, itemsSnap] = await Promise.all([ // Changed customersSnap to suppliersSnap
-          getDocs(collection(firestore, "suppliers")), // Fetch from suppliers
+        const [suppliersSnap, itemsSnap] = await Promise.all([
+          getDocs(collection(firestore, "suppliers")),
           getDocs(collection(firestore, "items"))
         ]);
 
-        setBeneficiaryOptions( // Changed from setCustomerOptions
+        setBeneficiaryOptions(
           suppliersSnap.docs.map(doc => {
-            const data = doc.data() as SupplierDocument; // Use SupplierDocument
-            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress }; // Use beneficiaryName and headOfficeAddress
+            const data = doc.data() as SupplierDocument;
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress };
           })
         );
 
@@ -135,10 +135,10 @@ export function CreateQuoteForm() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedBeneficiaryId) { // Changed from watchedCustomerId
-      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId); // Changed from customerOptions
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
-        const billingAddr = selectedBeneficiary.address || ''; // Use beneficiary's address
+        const billingAddr = selectedBeneficiary.address || '';
         setValue("billingAddress", billingAddr);
         if (getValues("sameAsBilling")) {
           setValue("shippingAddress", billingAddr);
@@ -148,7 +148,7 @@ export function CreateQuoteForm() {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]); // Changed customerOptions to beneficiaryOptions
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
 
   React.useEffect(() => {
     if (watchedSameAsBilling) {
@@ -220,7 +220,7 @@ export function CreateQuoteForm() {
 
   const saveQuoteLogic = async (data: QuoteFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId); // Changed from selectedCustomer
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
@@ -271,8 +271,8 @@ export function CreateQuoteForm() {
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
-          beneficiaryId: data.beneficiaryId, // Changed from customerId
-          beneficiaryName: selectedBeneficiary?.label || 'N/A', // Changed from customerName
+          beneficiaryId: data.beneficiaryId,
+          beneficiaryName: selectedBeneficiary?.label || 'N/A',
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -388,24 +388,24 @@ export function CreateQuoteForm() {
       <form className="space-y-8"> 
         
         <h3 className={cn(sectionHeadingClass)}>
-          <Users className="mr-2 h-5 w-5 text-primary" />
+          <Building className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon from Users */}
           Beneficiary & Delivery Information 
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div> 
             <FormField
               control={control}
-              name="beneficiaryId" // Changed from customerId
+              name="beneficiaryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Beneficiary*</FormLabel> {/* Changed from Customer* */}
+                  <FormLabel>Beneficiary*</FormLabel>
                   <Combobox
-                    options={beneficiaryOptions} // Changed from customerOptions
-                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} // Changed placeholder constant
+                    options={beneficiaryOptions}
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
                     onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
-                    placeholder="Search Beneficiary..." // Changed placeholder
-                    selectPlaceholder="Select Beneficiary" // Changed placeholder
-                    emptyStateMessage="No beneficiary found." // Changed message
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder="Select Beneficiary"
+                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
