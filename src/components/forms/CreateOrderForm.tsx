@@ -8,13 +8,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { OrderDocument, OrderLineItemFormValues, OrderFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
+import type { OrderDocument, OrderLineItemFormValues, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Changed CustomerDocument to SupplierDocument
 import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash } from 'lucide-react'; // Added ShoppingCart
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash } from 'lucide-react'; // Changed Users to Building
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__ORDER_CUSTOMER_PLACEHOLDER__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_BENEFICIARY_PLACEHOLDER__"; // Changed from CUSTOMER
 const PLACEHOLDER_ITEM_VALUE = "__ORDER_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
@@ -36,10 +36,15 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
+interface BeneficiaryOption extends ComboboxOption { // For consistency with Quote form
+  address?: string;
+}
+
+
 export function CreateOrderForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]); // Changed from customerOptions
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedOrderId, setGeneratedOrderId] = React.useState<string | null>(null);
@@ -52,7 +57,7 @@ export function CreateOrderForm() {
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
-      customerId: '',
+      beneficiaryId: '', // Changed from customerId
       billingAddress: '',
       shippingAddress: '',
       sameAsBilling: true,
@@ -80,7 +85,7 @@ export function CreateOrderForm() {
     name: "lineItems",
   });
 
-  const watchedCustomerId = watch("customerId");
+  const watchedBeneficiaryId = watch("beneficiaryId"); // Changed from customerId
   const watchedSameAsBilling = watch("sameAsBilling");
   const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
@@ -90,15 +95,15 @@ export function CreateOrderForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, itemsSnap] = await Promise.all([
-          getDocs(collection(firestore, "customers")),
+        const [suppliersSnap, itemsSnap] = await Promise.all([ // Changed from customersSnap to suppliersSnap
+          getDocs(collection(firestore, "suppliers")), // Fetch from suppliers
           getDocs(collection(firestore, "items"))
         ]);
 
-        setCustomerOptions(
-          customersSnap.docs.map(doc => {
-            const data = doc.data() as CustomerDocument;
-            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
+        setBeneficiaryOptions( // Changed from setCustomerOptions
+          suppliersSnap.docs.map(doc => {
+            const data = doc.data() as SupplierDocument; // Use SupplierDocument
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress }; // Use beneficiaryName and headOfficeAddress
           })
         );
 
@@ -117,7 +122,7 @@ export function CreateOrderForm() {
 
       } catch (error) {
         console.error("Error fetching dropdown options for Order form: ", error);
-        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
+        Swal.fire("Error", "Could not load beneficiary or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
       }
@@ -126,10 +131,10 @@ export function CreateOrderForm() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        const billingAddr = (selectedCustomer as any).address || '';
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
+      if (selectedBeneficiary) {
+        const billingAddr = selectedBeneficiary.address || ''; // Use beneficiary's address
         setValue("billingAddress", billingAddr);
         if (getValues("sameAsBilling")) {
           setValue("shippingAddress", billingAddr);
@@ -139,7 +144,7 @@ export function CreateOrderForm() {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
 
   React.useEffect(() => {
     if (watchedSameAsBilling) {
@@ -211,7 +216,7 @@ export function CreateOrderForm() {
 
   const saveOrderLogic = async (data: OrderFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId); // Changed from customer
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "orderNumberGenerator");
 
@@ -262,8 +267,8 @@ export function CreateOrderForm() {
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const orderDataToSave: Omit<OrderDocument, 'id'> & { createdAt: any, updatedAt: any } = {
-          customerId: data.customerId,
-          customerName: selectedCustomer?.label || 'N/A',
+          beneficiaryId: data.beneficiaryId, // Changed from customerId
+          beneficiaryName: selectedBeneficiary?.label || 'N/A', // Changed from customerName
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           orderDate: format(data.orderDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -365,24 +370,24 @@ export function CreateOrderForm() {
       <form className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}>
-          <Users className="mr-2 h-5 w-5 text-primary" />
-          Customer & Delivery Information
+          <Building className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon from Users */}
+          Beneficiary & Delivery Information {/* Changed from Customer */}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
               control={control}
-              name="customerId"
+              name="beneficiaryId" // Changed from customerId
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Customer*</FormLabel>
+                  <FormLabel>Beneficiary*</FormLabel> {/* Changed from Customer */}
                   <Combobox
-                    options={customerOptions}
-                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
-                    placeholder="Search Customer..."
-                    selectPlaceholder="Select Customer"
-                    emptyStateMessage="No customer found."
+                    options={beneficiaryOptions} // Changed from customerOptions
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} // Changed from PLACEHOLDER_CUSTOMER_VALUE
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..." // Changed from Customer
+                    selectPlaceholder="Select Beneficiary" // Changed from Customer
+                    emptyStateMessage="No beneficiary found." // Changed from customer
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -420,6 +425,7 @@ export function CreateOrderForm() {
             />
           </div>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -458,8 +464,8 @@ export function CreateOrderForm() {
           Order Details
         </h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
+             <FormItem>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel> {/* Changed from Order ID */}
               <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField
@@ -530,11 +536,23 @@ export function CreateOrderForm() {
 
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span className="font-medium text-foreground">{subtotal.toFixed(2)}</span>
+                </div>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Discount:</span>
+                    <span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span>
+                </div>
+                 <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Tax:</span>
+                    <span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span>
+                </div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold">
+                    <span className="text-primary">Grand Total:</span>
+                    <span className="text-primary">{grandTotal.toFixed(2)}</span>
+                </div>
             </div>
         </div>
         <Separator />
@@ -559,4 +577,3 @@ export function CreateOrderForm() {
     </Form>
   );
 }
-

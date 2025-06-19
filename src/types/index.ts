@@ -861,7 +861,7 @@ export const OrderLineItemSchema = z.object({ // Same as Quote/Invoice LineItemS
 export type OrderLineItemFormValues = z.infer<typeof OrderLineItemSchema>;
 
 export const OrderSchema = z.object({
-  customerId: z.string().min(1, "Customer is required."),
+  beneficiaryId: z.string().min(1, "Beneficiary is required."), // Changed from customerId
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
   sameAsBilling: z.boolean().default(true),
@@ -893,8 +893,8 @@ export interface OrderLineItemDocument { // Same as Quote/Invoice LineItemDocume
 
 export interface OrderDocument {
   id: string; // This will store the formatted ORD{Year}-{Serial}
-  customerId: string;
-  customerName: string;
+  beneficiaryId: string; // Changed from customerId
+  beneficiaryName: string; // Changed from customerName
   billingAddress: string;
   shippingAddress: string;
   orderDate: string; // ISO string
@@ -912,3 +912,4 @@ export interface OrderDocument {
   updatedAt: any;
 }
 // --- END Order Types ---
+
