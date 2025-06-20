@@ -775,7 +775,7 @@ export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
 
 // --- Invoice Types ---
-export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void"] as const;
+export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Refunded"] as const; // Added Refunded
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
 export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
@@ -841,8 +841,10 @@ export interface InvoiceDocument {
   totalDiscountAmount: number;
   totalTaxAmount: number;
   totalAmount: number;
-  status?: InvoiceStatus; // Made optional so existing documents without it are valid
-  amountPaid?: number;   // Added for payment tracking
+  status?: InvoiceStatus;
+  amountPaid?: number;
+  refundReason?: string; // Added
+  refundDate?: string; // Added, ISO string
   createdAt: any;
   updatedAt: any;
 }
@@ -916,3 +918,5 @@ export interface OrderDocument {
 }
 // --- END Order Types ---
 
+
+```
