@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import type { AppNotification } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,7 +17,20 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onToggleRead, onDelete }: NotificationItemProps) {
-  const timeAgo = formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true });
+  const [timeAgo, setTimeAgo] = React.useState('');
+
+  React.useEffect(() => {
+    if (notification.timestamp) {
+      try {
+        setTimeAgo(formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true }));
+      } catch (e) {
+        console.error("Error formatting date for notification:", e);
+        setTimeAgo("Invalid date");
+      }
+    } else {
+      setTimeAgo("Date unavailable");
+    }
+  }, [notification.timestamp]);
 
   return (
     <Card className={cn("mb-4 shadow-md hover:shadow-lg transition-shadow", notification.isRead ? "bg-muted/50" : "bg-card")}>
@@ -26,7 +40,7 @@ export function NotificationItem({ notification, onToggleRead, onDelete }: Notif
                 <CardTitle className={cn("text-lg", notification.isRead ? "text-muted-foreground font-normal" : "text-primary font-semibold")}>
                 {notification.title}
                 </CardTitle>
-                <CardDescription className="text-xs text-muted-foreground">{timeAgo}</CardDescription>
+                <CardDescription className="text-xs text-muted-foreground">{timeAgo || 'Calculating...'}</CardDescription>
             </div>
             {notification.isRead ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
