@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound, ArrowDownCircle } from 'lucide-react';
+import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId, orderBy } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
@@ -534,18 +534,6 @@ export default function DashboardPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button
-            onClick={() => {
-              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }}
-            variant="outline"
-            size="icon"
-            className="h-9 w-9"
-            title="Scroll to Bottom"
-          >
-            <ArrowDownCircle className="h-5 w-5" />
-            <span className="sr-only">Scroll to Bottom</span>
-          </Button>
         </div>
       </div>
       { isLoading && !authLoading ? (
