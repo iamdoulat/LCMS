@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -806,6 +807,8 @@ export const InvoiceSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  status: z.enum(invoiceStatusOptions).optional(),
+  amountPaid: z.number().optional(),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -839,7 +842,8 @@ export interface InvoiceDocument {
   totalDiscountAmount: number;
   totalTaxAmount: number;
   totalAmount: number;
-  status: InvoiceStatus;
+  status?: InvoiceStatus; // Made optional so existing documents without it are valid
+  amountPaid?: number;   // Added for payment tracking
   createdAt: any;
   updatedAt: any;
 }
