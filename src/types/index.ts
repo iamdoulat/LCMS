@@ -843,8 +843,8 @@ export interface InvoiceDocument {
   totalAmount: number;
   status?: InvoiceStatus;
   amountPaid?: number;
-  refundReason?: string; // Added
-  refundDate?: string; // Added, ISO string
+  refundReason?: string;
+  refundDate?: string; // ISO string
   createdAt: any;
   updatedAt: any;
 }
@@ -917,6 +917,3 @@ export interface OrderDocument {
   updatedAt: any;
 }
 // --- END Order Types ---
-
-
-```
