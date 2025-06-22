@@ -293,43 +293,45 @@ export default function ApplicantsListPage() {
                       <TableCell>{applicant.email || 'N/A'}</TableCell>
                       <TableCell>{applicant.phone || 'N/A'}</TableCell>
                       <TableCell>{applicant.contactPerson || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="default"
-                                size="icon"
-                                onClick={() => handleEditApplicant(applicant.id)}
-                                className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                                <span className="sr-only">Edit Applicant</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit Applicant</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                           <Tooltip>
-                            <TooltipTrigger asChild>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                            <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
                                 <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  onClick={() => handleDeleteApplicant(applicant.id, applicant.applicantName)}
-                                  className="h-7 w-7"
+                                    variant="default"
+                                    size="icon"
+                                    onClick={() => handleEditApplicant(applicant.id)}
+                                    className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete Applicant</span>
+                                    <FileEdit className="h-4 w-4" />
+                                    <span className="sr-only">Edit Applicant</span>
                                 </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Applicant</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                <p>Edit Applicant</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => handleDeleteApplicant(applicant.id, applicant.applicantName)}
+                                    className="h-7 w-7"
+                                    >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete Applicant</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                <p>Delete Applicant</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            </TooltipProvider>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -392,4 +394,3 @@ export default function ApplicantsListPage() {
     </div>
   );
 }
-
