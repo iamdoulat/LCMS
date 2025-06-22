@@ -1595,7 +1595,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             name="purchaseOrderUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Purchase Order URL</FormLabel>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />OCS / Purchase Order URL</FormLabel>
                 <div className="flex items-center gap-2">
                   <FormControl className="flex-grow">
                     <Input type="url" placeholder="https://example.com/purchase-order.pdf" {...field} value={field.value ?? ""} />
