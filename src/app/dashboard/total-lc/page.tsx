@@ -523,39 +523,43 @@ export default function TotalLCPage() {
                             {lc.status || 'N/A'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right space-x-1 px-2 sm:px-4">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                 <Button
-                                  variant="default"
-                                  size="icon"
-                                  onClick={() => lc.id && handleEditLC(lc.id)}
-                                  className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
-                                  disabled={!lc.id}
-                                >
-                                  <FileEdit className="h-4 w-4" />
-                                  <span className="sr-only">Edit L/C</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Edit L/C</p></TooltipContent>
-                            </Tooltip>
-                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                    className="h-7 w-7"
-                                    disabled={!lc.id}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete L/C</span>
-                                  </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Delete L/C</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <TableCell className="text-right px-2 sm:px-4">
+                            <div className="flex justify-end items-center gap-2">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                        variant="default"
+                                        size="icon"
+                                        onClick={() => lc.id && handleEditLC(lc.id)}
+                                        className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
+                                        disabled={!lc.id}
+                                        >
+                                        <FileEdit className="h-4 w-4" />
+                                        <span className="sr-only">Edit L/C</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Edit L/C</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
+                                            className="h-7 w-7"
+                                            disabled={!lc.id}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Delete L/C</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Delete L/C</p></TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                           </div>
                         </TableCell>
                       </TableRow>
                        <TableRow key={`${lc.id}-actions`}>
