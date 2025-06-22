@@ -640,9 +640,9 @@ export default function TotalLCPage() {
                               size="sm"
                               onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
                               disabled={!lc.purchaseOrderUrl}
-                              title="View Purchase Order"
+                              title="View OCS / Purchase Order"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Purchase
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / Purchase Order
                             </Button>
                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                 <Button
