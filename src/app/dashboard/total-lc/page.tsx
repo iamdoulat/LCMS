@@ -627,6 +627,15 @@ export default function TotalLCPage() {
                               <FileText className="mr-1.5 h-3.5 w-3.5" /> Shipping
                             </Button>
                             <Button
+                              variant={lc.packingListUrl ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleOpenLink(lc.packingListUrl)}
+                              disabled={!lc.packingListUrl}
+                              title="View Packing List"
+                            >
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> PL
+                            </Button>
+                            <Button
                               variant={lc.purchaseOrderUrl ? "default" : "outline"}
                               size="sm"
                               onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
