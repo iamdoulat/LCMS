@@ -20,6 +20,7 @@ import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fn
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
+import { Combobox } from '@/components/ui/combobox';
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -77,8 +78,6 @@ const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYe
 
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
-const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS__";
-const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
 const ITEMS_PER_PAGE = 10;
 
@@ -163,10 +162,10 @@ export default function TotalLCPage() {
     if (filterLcNumber) {
       filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     }
-    if (filterApplicantId && filterApplicantId !== ALL_APPLICANTS_VALUE) {
+    if (filterApplicantId) {
       filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
     }
-    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
+    if (filterBeneficiaryId) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
     if (filterShipmentDate) {
@@ -383,35 +382,27 @@ export default function TotalLCPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Select
-                    value={filterApplicantId === '' ? ALL_APPLICANTS_VALUE : filterApplicantId}
-                    onValueChange={(value) => setFilterApplicantId(value === ALL_APPLICANTS_VALUE ? '' : value)}
+                  <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId}
+                    onValueChange={setFilterApplicantId}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
                     disabled={isLoadingApplicants}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingApplicants ? "Loading..." : "All Applicants"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_APPLICANTS_VALUE}>All Applicants</SelectItem>
-                      {applicantOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Select
-                    value={filterBeneficiaryId === '' ? ALL_BENEFICIARIES_VALUE : filterBeneficiaryId}
-                    onValueChange={(value) => setFilterBeneficiaryId(value === ALL_BENEFICIARIES_VALUE ? '' : value)}
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId}
+                    onValueChange={setFilterBeneficiaryId}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingBeneficiaries}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_BENEFICIARIES_VALUE}>All Beneficiaries</SelectItem>
-                      {beneficiaryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                  <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
