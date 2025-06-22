@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Loader2, UserPlus, ArrowLeft, ShieldAlert, Info } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
