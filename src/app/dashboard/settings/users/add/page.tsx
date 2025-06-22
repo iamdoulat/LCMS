@@ -18,21 +18,24 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { UserRole, UserDocumentForAdmin } from '@/types';
-import { firestore } from '@/lib/firebase/config';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 const addUserProfileSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
+  password: z.string().min(6, "Password must be at least 6 characters long."),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters long."),
   contactNumber: z.string().optional(),
-  role: z.enum(["Admin", "User", "Super Admin", "Service"]).default("User"), // Added "Service"
+  role: z.enum(["Admin", "User", "Super Admin", "Service"]).default("User"),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 type AddUserProfileFormValues = z.infer<typeof addUserProfileSchema>;
 
 export default function AddUserPage() {
-  const { userRole: adminUserRole, loading: authLoading } = useAuth();
+  const { userRole: adminUserRole, loading: authLoading, register } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,6 +44,8 @@ export default function AddUserPage() {
     defaultValues: {
       displayName: '',
       email: '',
+      password: '',
+      confirmPassword: '',
       contactNumber: '',
       role: "User",
     },
@@ -62,44 +67,14 @@ export default function AddUserPage() {
 
   const onSubmit = async (data: AddUserProfileFormValues) => {
     setIsSubmitting(true);
-    
-    const profileToSave: Omit<UserDocumentForAdmin, 'id' | 'createdAt' | 'updatedAt' | 'uid' | 'photoURL'> & { createdAt: any, updatedAt: any } = {
-      displayName: data.displayName,
-      email: data.email,
-      contactNumber: data.contactNumber || undefined,
-      role: data.role,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    
-    Object.keys(profileToSave).forEach(key => {
-        if (profileToSave[key as keyof typeof profileToSave] === undefined) {
-            delete profileToSave[key as keyof typeof profileToSave];
-        }
-    });
-
     try {
-      await addDoc(collection(firestore, "users"), profileToSave);
-      Swal.fire({
-        title: "User Profile Added to Firestore!",
-        text: `Profile for ${data.displayName} (${data.email}) with role ${data.role} added to Firestore.`,
-        icon: "success",
-        timer: 3000,
-        showConfirmButton: true,
-      }).then((result) => {
-        if(result.isConfirmed || result.isDismissed) {
-            router.push('/dashboard/settings/users'); // Redirect to user list after saving
-        }
-      });
-      form.reset();
-
+      await register(data.email, data.password, data.displayName, data.role);
+      // The register function in context now handles success and error popups.
+      // It will also log out the admin, and the AuthGuard will redirect them to the login page.
     } catch (error: any) {
-      console.error("Error adding user profile to Firestore:", error);
-      Swal.fire({
-        title: "Profile Creation Failed",
-        text: error.message || "Could not add user profile to Firestore.",
-        icon: "error",
-      });
+      // The error is already shown by the context's register function Swal popup.
+      // We just need to stop the loading spinner here.
+      console.error("Error from add user page:", error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -145,10 +120,10 @@ export default function AddUserPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserPlus className="h-7 w-7 text-primary" />
-            Add New User Profile (to Firestore)
+            Add New User
           </CardTitle>
           <CardDescription>
-            Fill in the details below to add a new user profile to the application database. This does not create a Firebase Authentication login.
+            Create a new login account and application profile for a user.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -156,9 +131,8 @@ export default function AddUserPage() {
             <Info className="h-5 w-5 text-blue-600" />
             <AlertTitle className="text-blue-700 font-semibold">Important Note</AlertTitle>
             <AlertDescription className="text-blue-700/90">
-              - This form creates a user profile record in your Firestore database.
-              - It does **not** create a Firebase Authentication account (login credentials). That requires a separate process (e.g., user self-registration or a backend Admin SDK function).
-              - The assigned role is for application-level permissions.
+                - This form creates both a Firebase Authentication account (with login credentials) and a user profile in Firestore.
+                - <strong>Important:</strong> After creating the user, you (the admin) will be logged out as the new user is automatically signed in. You will need to log back in.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -189,6 +163,37 @@ export default function AddUserPage() {
                   </FormItem>
                 )}
               />
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Password*</FormLabel>
+                        <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Confirm Password*</FormLabel>
+                        <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+               </div>
+
+
               <FormField
                 control={form.control}
                 name="contactNumber"
@@ -231,12 +236,12 @@ export default function AddUserPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding Profile...
+                    Creating User Account...
                   </>
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Add User Profile to Firestore
+                    Create User
                   </>
                 )}
               </Button>

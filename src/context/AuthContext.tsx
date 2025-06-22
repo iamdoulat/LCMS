@@ -37,7 +37,7 @@ interface AuthContextType {
   userRole: UserRole | null;
   firestoreUser: UserDocumentForAdmin | null;
   login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, displayName: string) => Promise<void>;
+  register: (email: string, pass: string, displayName: string, role?: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -188,7 +188,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, []);
 
-  const register = useCallback(async (email: string, pass: string, displayName: string) => {
+  const register = useCallback(async (email: string, pass: string, displayName: string, role: UserRole = "User") => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -203,7 +203,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         displayName: displayName,
         email: firebaseUser.email,
         photoURL: firebaseUser.photoURL || null,
-        role: "User" as UserRole, // Default role for new registrations
+        role: role,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -211,10 +211,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       // onAuthStateChanged will update context state
       Swal.fire({
         title: "Registration Successful",
-        text: "Your account has been created.",
+        text: "The account has been created. If you are an admin, you will be logged out as the new user is signed in.",
         icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        timer: 3500,
+        showConfirmButton: true,
       });
     } catch (error: any) {
       console.error("AuthContext: Error registering user: ", error);
