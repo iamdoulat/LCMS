@@ -1,5 +1,6 @@
 
 import { NextResponse } from 'next/server';
+import * as admin from 'firebase-admin'; // Import the admin SDK
 import { adminAuth, adminFirestore } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
 
@@ -35,8 +36,8 @@ export async function POST(request: Request) {
       displayName: displayName,
       email: email,
       role: role,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(), // Now 'admin' is defined
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(), // And here
       // Add any other profile fields here
     });
 
