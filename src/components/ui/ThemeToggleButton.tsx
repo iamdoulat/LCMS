@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -9,10 +8,22 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggleButton() {
   const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  // useEffect only runs on the client, so we can safely set the mounted state
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
+  
+  // Until the component is mounted, we can render a placeholder or nothing to avoid mismatch
+  if (!mounted) {
+    return <Button variant="ghost" size="icon" className="h-9 w-9" disabled={true} aria-label="Toggle theme"></Button>;
+  }
 
   return (
     <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" aria-label="Toggle theme">
