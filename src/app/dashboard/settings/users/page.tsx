@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { UserDocumentForAdmin } from '@/types';
 import { firestore, getFunctions, httpsCallable } from '@/lib/firebase/config'; // Assuming getFunctions and httpsCallable are setup in your firebase config
-import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -27,6 +27,39 @@ export default function UserSettingsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+
+  const fetchUsersFromFirestore = React.useCallback(async () => {
+    setIsLoadingUsers(true);
+    setFetchError(null);
+    try {
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef); // Fetch without ordering
+      const querySnapshot = await getDocs(q);
+      const fetchedUsers = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      } as UserDocumentForAdmin));
+
+      // Sort on the client side
+      fetchedUsers.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+      
+      setUsers(fetchedUsers);
+    } catch (error: any) {
+      console.error("Error fetching user profiles from Firestore:", error);
+      let errorMessage = `Could not fetch user profiles. Code: ${error.code || 'N/A'}.`;
+      if (error.code === 'permission-denied') {
+        errorMessage = `Could not fetch user profiles: Missing or insufficient permissions for the 'users' collection. Please check your Firestore security rules to allow admins to list users.`;
+      } else if (error.code === 'failed-precondition') {
+         errorMessage = `Could not fetch user profiles: This query may require a Firestore index that is missing. Please check the browser console for a link to create it automatically.`;
+      } else if (error.message) {
+        errorMessage += ` Details: ${error.message}`;
+      }
+      setFetchError(errorMessage);
+      Swal.fire("Fetch Error", errorMessage, "error");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin") {
@@ -42,35 +75,7 @@ export default function UserSettingsPage() {
     } else if (!authLoading && (adminUserRole === "Super Admin" || adminUserRole === "Admin")) {
       fetchUsersFromFirestore();
     }
-  }, [adminUserRole, authLoading, router]);
-
-
-  const fetchUsersFromFirestore = async () => {
-    setIsLoadingUsers(true);
-    setFetchError(null);
-    try {
-      const usersCollectionRef = collection(firestore, "users");
-      const q = query(usersCollectionRef, orderBy("displayName", "asc")); // Example: order by displayName
-      const querySnapshot = await getDocs(q);
-      const fetchedUsers = querySnapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      } as UserDocumentForAdmin));
-      setUsers(fetchedUsers);
-    } catch (error: any) {
-      console.error("Error fetching user profiles from Firestore:", error);
-      let errorMessage = `Could not fetch user profiles from Firestore.`;
-      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMessage = `Could not fetch user profiles: Missing or insufficient permissions for the 'users' collection. Please check Firestore security rules.`;
-      } else if (error.message) {
-        errorMessage += ` Error: ${error.message}`;
-      }
-      setFetchError(errorMessage);
-      Swal.fire("Fetch Error", errorMessage, "error");
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
+  }, [adminUserRole, authLoading, router, fetchUsersFromFirestore]);
 
 
   const handleEditUser = (userId?: string) => {
