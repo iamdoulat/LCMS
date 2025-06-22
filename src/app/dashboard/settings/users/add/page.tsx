@@ -26,7 +26,7 @@ const addUserProfileSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long."),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters long."),
   contactNumber: z.string().optional(),
-  role: z.enum(["Admin", "User", "Super Admin", "Service"]).default("User"),
+  role: z.enum(["Admin", "User", "Super Admin", "Service", "DemoManager"]).default("User"), // Added DemoManager
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -35,7 +35,7 @@ const addUserProfileSchema = z.object({
 type AddUserProfileFormValues = z.infer<typeof addUserProfileSchema>;
 
 export default function AddUserPage() {
-  const { userRole: adminUserRole, loading: authLoading, register } = useAuth();
+  const { userRole: adminUserRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -68,13 +68,40 @@ export default function AddUserPage() {
   const onSubmit = async (data: AddUserProfileFormValues) => {
     setIsSubmitting(true);
     try {
-      await register(data.email, data.password, data.displayName, data.role);
-      // The register function in context now handles success and error popups.
-      // It will also log out the admin, and the AuthGuard will redirect them to the login page.
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          displayName: data.displayName,
+          role: data.role,
+          // contactNumber can be added here if needed in the profile
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          title: "User Created!",
+          text: result.message,
+          icon: "success",
+        });
+        form.reset();
+        router.push('/dashboard/settings/users'); // Go back to the user list
+      } else {
+        throw new Error(result.error || "An unknown error occurred");
+      }
     } catch (error: any) {
-      // The error is already shown by the context's register function Swal popup.
-      // We just need to stop the loading spinner here.
-      console.error("Error from add user page:", error.message);
+      console.error("Error creating user from admin panel:", error);
+      Swal.fire({
+        title: "Creation Failed",
+        text: error.message,
+        icon: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +117,7 @@ export default function AddUserPage() {
             </div>
         );
     }
-    return ( // This UI is for after auth load but still no permission, while redirecting
+    return (
          <div className="container mx-auto py-8">
             <Card className="shadow-xl">
                 <CardHeader>
@@ -129,10 +156,9 @@ export default function AddUserPage() {
         <CardContent>
           <Alert variant="default" className="mb-6 bg-blue-500/10 border-blue-500/30">
             <Info className="h-5 w-5 text-blue-600" />
-            <AlertTitle className="text-blue-700 font-semibold">Important Note</AlertTitle>
+            <AlertTitle className="text-blue-700 font-semibold">Admin User Creation</AlertTitle>
             <AlertDescription className="text-blue-700/90">
-                - This form creates both a Firebase Authentication account (with login credentials) and a user profile in Firestore.
-                - <strong>Important:</strong> After creating the user, you (the admin) will be logged out as the new user is automatically signed in. You will need to log back in.
+                This form uses a secure backend API route to create the user. You will remain logged in as an admin after creation.
             </AlertDescription>
           </Alert>
           <Form {...form}>
@@ -224,6 +250,7 @@ export default function AddUserPage() {
                         <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="User">User</SelectItem>
                         <SelectItem value="Service">Service</SelectItem>
+                        <SelectItem value="DemoManager">DemoManager</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>This role is stored in Firestore and used for application permissions.</FormDescription>
