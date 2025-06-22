@@ -22,3 +22,5 @@ if (!admin.apps.length) {
 export const adminAuth = admin.auth();
 export const adminFirestore = admin.firestore();
 export const adminApp = admin.apps[0];
+// Export the admin namespace itself
+export { admin };
