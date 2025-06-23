@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-// Import 'admin' from our central config file
-import { adminAuth, adminFirestore, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
 
 export async function POST(request: Request) {
@@ -14,6 +13,10 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+  
+  // Get auth and firestore instances inside the function to defer execution
+  const adminAuth = admin.auth();
+  const adminFirestore = admin.firestore();
 
   try {
     const { email, password, displayName, role } = await request.json() as {
