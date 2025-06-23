@@ -187,7 +187,7 @@ export function AddProformaInvoiceForm() {
             newTotalQty += qty;
             if (purchaseP >= 0) { 
               newTotalPurchase += qty * purchaseP;
-              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) { // Commission is on purchase price
+              if (netCommP > 0 && netCommP <= 100 && purchaseP > 0) {
                  newTotalExtraNetComm += (qty * purchaseP * netCommP) / 100;
               }
             }
@@ -251,14 +251,16 @@ export function AddProformaInvoiceForm() {
           calculatedTotalExtraNetCommission += (qty * purchasePrice * netCommP) / 100;
       }
 
-      return {
-        slNo: item.slNo || undefined, 
-        modelNo: item.modelNo,
-        qty: qty,
-        purchasePrice: purchasePrice,
-        salesPrice: salesPrice,
-        netCommissionPercentage: netCommP > 0 ? netCommP : undefined,
+      const lineItemData: ProformaInvoiceLineItem = {
+          modelNo: item.modelNo,
+          qty: qty,
+          purchasePrice: purchasePrice,
+          salesPrice: salesPrice,
       };
+      if (item.slNo) lineItemData.slNo = item.slNo;
+      if (netCommP > 0) lineItemData.netCommissionPercentage = netCommP;
+
+      return lineItemData;
     });
 
     const finalFreightAmount = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : 0;

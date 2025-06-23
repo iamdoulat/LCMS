@@ -210,7 +210,6 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       // or clear it if there was no initial PO URL (or if user cleared it manually before changing LC).
       // This behavior might need refinement based on exact UX desired.
       // For now, if user clears LC, keep the PO URL they might have typed, unless it was auto-filled and should be cleared.
-      // Let's clear it if "None" is selected and it was auto-filled.
       if (watchedConnectedLcId === NONE_LC_VALUE) {
         form.setValue("purchaseOrderUrl", '');
       }
@@ -258,7 +257,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     const miscellaneousExpensesNum = parseFloat(String(watchedMiscellaneousExpensesString || '0')) || 0;
 
     const grossSalesPriceBeforeDeductions = newTotalSalesLineItems + freightAmountNum;
-    const currentGrandTotalSalesPrice = grossSalesPriceBeforeDeductions - miscellaneousExpensesNum;
+    const currentGrandTotalSalesPrice = grossSalesBeforeDeductions - miscellaneousExpensesNum;
     setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
     const baseCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
@@ -290,26 +289,28 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     let calculatedTotalExtraNetCommission = 0;
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty));
-      const purchasePrice = parseFloat(String(item.purchasePrice));
-      const salesPrice = parseFloat(String(item.salesPrice));
-      const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
+        const qty = parseFloat(String(item.qty));
+        const purchasePrice = parseFloat(String(item.purchasePrice));
+        const salesPrice = parseFloat(String(item.salesPrice));
+        const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
 
-      calculatedTotalQty += qty;
-      calculatedTotalPurchasePrice += qty * purchasePrice;
-      calculatedTotalSalesPriceLineItems += qty * salesPrice;
-      if (netCommP > 0 && netCommP <= 100 && purchasePrice > 0) {
-          calculatedTotalExtraNetCommission += (qty * purchasePrice * netCommP) / 100;
-      }
+        calculatedTotalQty += qty;
+        calculatedTotalPurchasePrice += qty * purchasePrice;
+        calculatedTotalSalesPriceLineItems += qty * salesPrice;
+        if (netCommP > 0 && netCommP <= 100 && purchasePrice > 0) {
+            calculatedTotalExtraNetCommission += (qty * purchasePrice * netCommP) / 100;
+        }
 
-      return {
-        slNo: item.slNo || undefined,
-        modelNo: item.modelNo,
-        qty: qty,
-        purchasePrice: purchasePrice,
-        salesPrice: salesPrice,
-        netCommissionPercentage: netCommP > 0 ? netCommP : undefined,
-      };
+        const lineItemData: ProformaInvoiceLineItem = {
+            modelNo: item.modelNo,
+            qty: qty,
+            purchasePrice: purchasePrice,
+            salesPrice: salesPrice,
+        };
+        if (item.slNo) lineItemData.slNo = item.slNo;
+        if (netCommP > 0) lineItemData.netCommissionPercentage = netCommP;
+        
+        return lineItemData;
     });
 
     const finalFreightAmount = data.freightChargeOption === "Freight Excluded" ? (parseFloat(data.freightChargeAmount || '0') || 0) : 0;
