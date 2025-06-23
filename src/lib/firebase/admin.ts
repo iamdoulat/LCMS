@@ -1,23 +1,16 @@
 
 import * as admin from 'firebase-admin';
 
-// --- Check for required environment variables ---
-if (
-  !process.env.FIREBASE_ADMIN_PROJECT_ID ||
-  !process.env.FIREBASE_ADMIN_CLIENT_EMAIL ||
-  !process.env.FIREBASE_ADMIN_PRIVATE_KEY
-) {
-  throw new Error(
-    'Missing required Firebase Admin SDK environment variables. Please set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY in your .env file.'
-  );
-}
+// --- IMPORTANT ---
+// For deployment on platforms like Vercel, you must set the Firebase Admin SDK
+// environment variables in your project's settings. The build will succeed without them,
+// but API routes using this file will fail at runtime if the variables are not configured.
 
-// Ensure you have the necessary environment variables set up
 const serviceAccount: admin.ServiceAccount = {
   projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
   clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
   // Replace `\/` with `\` in the private key if you're copying from a JSON file
-  privateKey: (process.env.FIREBASE_ADMIN_PRIVATE_KEY).replace(/\\n/g, '\n'),
+  privateKey: (process.env.FIREBASE_ADMIN_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
 };
 
 if (!admin.apps.length) {
@@ -26,7 +19,9 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount),
     });
   } catch (error: any) {
-    console.error("Firebase Admin SDK initialization error: ", error.stack);
+    // We log the error during build if it happens, but don't throw an error.
+    // This allows the build to complete. The app will throw a proper error at runtime if misconfigured.
+    console.error("Firebase Admin SDK initialization error (this may be expected during build):", error.code);
   }
 }
 
