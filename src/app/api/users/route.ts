@@ -5,6 +5,16 @@ import { adminAuth, adminFirestore, admin } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
 
 export async function POST(request: Request) {
+  // Add a guard clause at the very beginning.
+  // This check ensures that the Firebase Admin SDK has been initialized.
+  if (!admin.apps.length) {
+    console.error("Firebase Admin SDK not initialized. Ensure environment variables are set.");
+    return NextResponse.json(
+      { error: "Server not configured. Firebase Admin SDK failed to initialize." },
+      { status: 500 }
+    );
+  }
+
   try {
     const { email, password, displayName, role } = await request.json() as {
       email?: string;
@@ -22,11 +32,9 @@ export async function POST(request: Request) {
       email,
       password,
       displayName,
-      // You can add photoURL here if available: photoURL: '...'
     });
 
-    // --- Set Custom Claims for Role-Based Access (Optional but Recommended) ---
-    // This allows you to secure backend resources and Firestore rules based on roles.
+    // --- Set Custom Claims for Role-Based Access ---
     await adminAuth.setCustomUserClaims(userRecord.uid, { role });
 
     // --- Create Firestore user profile document ---
@@ -38,7 +46,6 @@ export async function POST(request: Request) {
       role: role,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      // Add any other profile fields here
     });
 
     return NextResponse.json({
@@ -54,10 +61,10 @@ export async function POST(request: Request) {
 
     if (error.code === 'auth/email-already-exists') {
       errorMessage = "The email address is already in use by another account.";
-      statusCode = 409; // Conflict
+      statusCode = 409;
     } else if (error.code === 'auth/invalid-password') {
       errorMessage = "The password must be a string with at least 6 characters.";
-      statusCode = 400; // Bad Request
+      statusCode = 400;
     }
 
     return NextResponse.json({ error: errorMessage }, { status: statusCode });
