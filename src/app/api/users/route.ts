@@ -37,9 +37,6 @@ export async function POST(request: Request) {
       displayName,
     });
 
-    // --- Set Custom Claims for Role-Based Access ---
-    await adminAuth.setCustomUserClaims(userRecord.uid, { role });
-
     // --- Create Firestore user profile document ---
     const userDocRef = adminFirestore.collection("users").doc(userRecord.uid);
     await userDocRef.set({
