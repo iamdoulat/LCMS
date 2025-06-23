@@ -26,7 +26,7 @@ const addUserProfileSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long."),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters long."),
   contactNumber: z.string().optional(),
-  role: z.enum(["Admin", "User", "Super Admin", "Service", "DemoManager"]).default("User"), // Added DemoManager
+  role: z.enum(["Admin", "User", "Super Admin", "Service", "DemoManager", "Store Manager"]).default("User"),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -251,6 +251,7 @@ export default function AddUserPage() {
                         <SelectItem value="User">User</SelectItem>
                         <SelectItem value="Service">Service</SelectItem>
                         <SelectItem value="DemoManager">DemoManager</SelectItem>
+                        <SelectItem value="Store Manager">Store Manager</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>This role is stored in Firestore and used for application permissions.</FormDescription>

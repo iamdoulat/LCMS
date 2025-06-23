@@ -133,10 +133,13 @@ const financialNavItems: NavItemGroup[] = [
       { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
     ],
   },
+];
+
+const inventoryManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Inventory Management',
     icon: Package,
-    roles: ["Super Admin", "Admin"],
+    roles: ["Super Admin", "Admin", "Store Manager"],
     subLinks: [
       { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
       { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
@@ -216,9 +219,9 @@ const reportingManagementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
@@ -234,6 +237,7 @@ export function AppSidebarNav() {
   const allAccordionGroups = [
     ...coreModulesNavItems,
     ...financialNavItems,
+    ...inventoryManagementNavItems,
     ...managementNavItems,
     ...demoMachineManagementNavItems,
     ...warrantyManagementNavItems,
@@ -425,6 +429,7 @@ export function AppSidebarNav() {
             <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
                 {financialNavItems
                   .map((item, index) => renderNavGroup(item, index))}
+                 {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
             </Accordion>
         </SidebarGroup>
 
@@ -475,7 +480,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                const isVisible = userRole === "Super Admin" || (userRole === "Admin" && item.roles?.includes("Admin"));
+                const isVisible = userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
                 if (isVisible && item.href) {
                   return (
                     <SidebarMenuItem key={item.href}>

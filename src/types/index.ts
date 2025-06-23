@@ -265,7 +265,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export type UserRole = "Super Admin" | "Admin" | "User" | "Service" | "DemoManager";
+export type UserRole = "Super Admin" | "Admin" | "User" | "Service" | "DemoManager" | "Store Manager";
 
 export interface CompanyProfile {
   companyName?: string;

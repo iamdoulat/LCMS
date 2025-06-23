@@ -21,7 +21,7 @@ import type { UserRole, UserDocumentForAdmin } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-const userRoleOptions: UserRole[] = ["Super Admin", "Admin", "User", "Service"]; // Added "Service"
+const userRoleOptions: UserRole[] = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager"];
 
 const editUserProfileSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
