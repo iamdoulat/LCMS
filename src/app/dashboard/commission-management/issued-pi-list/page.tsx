@@ -8,10 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField'; // Though not used for PI date filter, kept for potential future use
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, DollarSign, Percent } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, DollarSign, Percent, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import Swal from 'sweetalert2';
 import type { ProformaInvoiceDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -437,41 +444,30 @@ export default function IssuedPIListPage() {
                       <TableCell className="p-2 sm:p-4">{formatCurrencyValue(pi.grandTotalSalesPrice)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatPercentage(pi.totalCommissionPercentage)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{pi.salesPersonName || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-1 p-2 sm:p-4">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                               <Button
-                                variant="default"
-                                size="icon"
-                                onClick={() => pi.id && handleEditPI(pi.id)}
-                                className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
-                                disabled={!pi.id}
-                                title="Edit PI"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                                <span className="sr-only">Edit PI</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Edit PI</p></TooltipContent>
-                          </Tooltip>
-                           <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  onClick={() => pi.id && handleDeletePI(pi.id, pi.piNo)}
-                                  className="h-7 w-7"
-                                  disabled={!pi.id}
-                                  title="Delete PI"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete PI</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Delete PI</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      <TableCell className="text-right p-2 sm:p-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!pi.id}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => pi.id && handleEditPI(pi.id)}>
+                              <FileEdit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => pi.id && handleDeletePI(pi.id, pi.piNo)}
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
