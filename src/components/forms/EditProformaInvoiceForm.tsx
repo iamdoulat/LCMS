@@ -206,10 +206,6 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
       }
     } else {
       setSelectedLcIssueDate(null);
-      // When "None" is selected or input cleared, revert PO URL to its initial value from loaded PI,
-      // or clear it if there was no initial PO URL (or if user cleared it manually before changing LC).
-      // This behavior might need refinement based on exact UX desired.
-      // For now, if user clears LC, keep the PO URL they might have typed, unless it was auto-filled and should be cleared.
       if (watchedConnectedLcId === NONE_LC_VALUE) {
         form.setValue("purchaseOrderUrl", '');
       }
@@ -257,7 +253,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     const miscellaneousExpensesNum = parseFloat(String(watchedMiscellaneousExpensesString || '0')) || 0;
 
     const grossSalesPriceBeforeDeductions = newTotalSalesLineItems + freightAmountNum;
-    const currentGrandTotalSalesPrice = grossSalesBeforeDeductions - miscellaneousExpensesNum;
+    const currentGrandTotalSalesPrice = grossSalesPriceBeforeDeductions - miscellaneousExpensesNum;
     setGrandTotalSalesPrice(currentGrandTotalSalesPrice);
 
     const baseCommissionUSD = currentGrandTotalSalesPrice - newTotalPurchase;
@@ -739,5 +735,3 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
     </Form>
   );
 }
-
-    
