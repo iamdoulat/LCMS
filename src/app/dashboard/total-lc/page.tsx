@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +21,14 @@ import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -524,42 +532,29 @@ export default function TotalLCPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right px-2 sm:px-4">
-                            <div className="flex justify-end items-center gap-2">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                        variant="default"
-                                        size="icon"
-                                        onClick={() => lc.id && handleEditLC(lc.id)}
-                                        className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
-                                        disabled={!lc.id}
-                                        >
-                                        <FileEdit className="h-4 w-4" />
-                                        <span className="sr-only">Edit L/C</span>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Edit L/C</p></TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                            className="h-7 w-7"
-                                            disabled={!lc.id}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Delete L/C</span>
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Delete L/C</p></TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                           </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={!lc.id}>
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)}>
+                                    <FileEdit className="mr-2 h-4 w-4" />
+                                    <span>Edit</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
+                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </TableCell>
                       </TableRow>
                        <TableRow key={`${lc.id}-actions`}>
