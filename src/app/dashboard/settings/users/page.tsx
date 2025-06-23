@@ -14,8 +14,8 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { UserDocumentForAdmin } from '@/types';
-import { firestore, getFunctions, httpsCallable } from '@/lib/firebase/config'; // Assuming getFunctions and httpsCallable are setup in your firebase config
-import { collection, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import { collection, onSnapshot, deleteDoc, doc, query } from 'firebase/firestore';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,43 +23,9 @@ export default function UserSettingsPage() {
   const { userRole: adminUserRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserDocumentForAdmin[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-
-  const fetchUsersFromFirestore = React.useCallback(async () => {
-    setIsLoadingUsers(true);
-    setFetchError(null);
-    try {
-      const usersCollectionRef = collection(firestore, "users");
-      const q = query(usersCollectionRef); // Fetch without ordering
-      const querySnapshot = await getDocs(q);
-      const fetchedUsers = querySnapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      } as UserDocumentForAdmin));
-
-      // Sort on the client side
-      fetchedUsers.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
-      
-      setUsers(fetchedUsers);
-    } catch (error: any) {
-      console.error("Error fetching user profiles from Firestore:", error);
-      let errorMessage = `Could not fetch user profiles. Code: ${error.code || 'N/A'}.`;
-      if (error.code === 'permission-denied') {
-        errorMessage = `Could not fetch user profiles: Missing or insufficient permissions for the 'users' collection. Please check your Firestore security rules to allow admins to list users.`;
-      } else if (error.code === 'failed-precondition') {
-         errorMessage = `Could not fetch user profiles: This query may require a Firestore index that is missing. Please check the browser console for a link to create it automatically.`;
-      } else if (error.message) {
-        errorMessage += ` Details: ${error.message}`;
-      }
-      setFetchError(errorMessage);
-      Swal.fire("Fetch Error", errorMessage, "error");
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin") {
@@ -72,11 +38,45 @@ export default function UserSettingsPage() {
       }).then(() => {
         router.push('/dashboard');
       });
-    } else if (!authLoading && (adminUserRole === "Super Admin" || adminUserRole === "Admin")) {
-      fetchUsersFromFirestore();
+      return;
     }
-  }, [adminUserRole, authLoading, router, fetchUsersFromFirestore]);
 
+    if (!authLoading && (adminUserRole === "Super Admin" || adminUserRole === "Admin")) {
+      setIsLoadingUsers(true);
+      setFetchError(null);
+      
+      const usersCollectionRef = collection(firestore, "users");
+      const q = query(usersCollectionRef);
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedUsers: UserDocumentForAdmin[] = [];
+        querySnapshot.forEach((doc) => {
+          fetchedUsers.push({ id: doc.id, ...doc.data() } as UserDocumentForAdmin);
+        });
+        
+        fetchedUsers.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+        
+        setUsers(fetchedUsers);
+        setIsLoadingUsers(false);
+      }, (error) => {
+        console.error("Error fetching user profiles from Firestore (onSnapshot):", error);
+        let errorMessage = `Could not fetch user profiles. Code: ${error.code || 'N/A'}.`;
+         if (error.code === 'permission-denied') {
+            errorMessage = `Could not fetch user profiles: Missing or insufficient permissions for the 'users' collection. Please check your Firestore security rules to allow admins to list users.`;
+        } else if (error.code === 'failed-precondition') {
+            errorMessage = `Could not fetch user profiles: This query may require a Firestore index that is missing. Please check the browser console for a link to create it automatically.`;
+        } else if (error.message) {
+            errorMessage += ` Details: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
+        setIsLoadingUsers(false);
+      });
+      
+      // Cleanup listener on component unmount
+      return () => unsubscribe();
+    }
+  }, [adminUserRole, authLoading, router]);
 
   const handleEditUser = (userId?: string) => {
     if (!userId) {
@@ -104,7 +104,7 @@ export default function UserSettingsPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "users", userId));
-          setUsers(prev => prev.filter(u => u.id !== userId));
+          // No need to manually filter state, onSnapshot will handle it.
           Swal.fire(
             'Profile Deleted!',
             `Firestore user profile for ${userName || userId} has been removed.`,
@@ -143,8 +143,6 @@ export default function UserSettingsPage() {
   };
 
   if (authLoading || (!authLoading && adminUserRole !== "Super Admin" && adminUserRole !== "Admin")) {
-    // This condition will be hit if auth is still loading OR if after loading, the user is not Super Admin/Admin.
-    // If it's just authLoading, the spinner is fine. If it's an access issue after auth load, the specific content for that is below.
     if (authLoading) {
         return (
             <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -153,11 +151,8 @@ export default function UserSettingsPage() {
             </div>
         );
     }
-    // If auth has loaded and user is not Super Admin/Admin, this means they tried to navigate here directly.
-    // The useEffect hook above will have already shown a Swal and started a redirect.
-    // This is a fallback UI while redirecting.
     return (
-        <div className="container mx-auto py-8">
+         <div className="container mx-auto py-8">
             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className="text-destructive flex items-center gap-2">
