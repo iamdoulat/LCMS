@@ -7,10 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
 import type { SupplierDocument } from '@/types';
 import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
@@ -280,43 +286,29 @@ export default function BeneficiariesListPage() {
                       <TableCell>{beneficiary.emailId || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.cellNumber || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.contactPersonName || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="default"
-                                size="icon"
-                                onClick={() => handleEditBeneficiary(beneficiary.id)}
-                                className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                                <span className="sr-only">Edit Beneficiary</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit Beneficiary</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                           <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  onClick={() => handleDeleteBeneficiary(beneficiary.id, beneficiary.beneficiaryName)}
-                                  className="h-7 w-7"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Delete Beneficiary</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Beneficiary</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!beneficiary.id}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => beneficiary.id && handleEditBeneficiary(beneficiary.id)}>
+                              <FileEdit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => beneficiary.id && handleDeleteBeneficiary(beneficiary.id, beneficiary.beneficiaryName)}
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
