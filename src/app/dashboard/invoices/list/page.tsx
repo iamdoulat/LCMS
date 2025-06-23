@@ -105,9 +105,17 @@ export default function InvoicesListPage() {
         });
         setAllInvoices(fetchedInvoices);
       } catch (error: any) {
-        const errorMsg = `Could not fetch invoice data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`;
-        setFetchError(errorMsg);
-        Swal.fire("Fetch Error", errorMsg, "error");
+        console.error("Error fetching invoices: ", error);
+        let errorMessage = `Could not fetch invoice data from Firestore. Please ensure Firestore rules allow reads.`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+           errorMessage = `Could not fetch invoice data: Missing or insufficient permissions. Please check Firestore security rules for the 'invoices' collection.`;
+        } else if (error.message && error.message.toLowerCase().includes("index")) {
+           errorMessage = `Could not fetch invoice data: A Firestore index might be required for this query. Please check the browser's developer console for a link to create it automatically.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
