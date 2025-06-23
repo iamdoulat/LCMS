@@ -246,20 +246,37 @@ export function AppSidebarNav() {
     ...reportingManagementNavItems,
   ];
 
+  const isGroupActive = (subLinks: NavItemGroup['subLinks']) => {
+    if (!subLinks) return false;
+    return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
+  };
+  
   React.useEffect(() => {
-    const activeAccordions = allAccordionGroups
+    const activeAccordionsBasedOnPath = allAccordionGroups
       .filter(item => {
-        if (userRole === "Super Admin") return true;
-        if (item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
-          return false;
-        }
+        // This part keeps the accordion open if a sub-link is active
         const visibleSubLinks = item.subLinks?.filter(subLink =>
           userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
         ) || [];
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
-    setDefaultOpenAccordions(activeAccordions);
+      
+    let roleBasedDefaultAccordion = '';
+    if (userRole === 'Service') {
+        roleBasedDefaultAccordion = 'Warranty Management';
+    } else if (userRole === 'DemoManager') {
+        roleBasedDefaultAccordion = 'Demo M/C Management';
+    } else if (userRole === 'Store Manager') {
+        roleBasedDefaultAccordion = 'Inventory Management';
+    }
+
+    // Combine path-based active accordions with the role-based default.
+    // Use a Set to avoid duplicates if an active path is inside the default accordion.
+    const finalOpenAccordions = [...new Set([...activeAccordionsBasedOnPath, roleBasedDefaultAccordion])].filter(Boolean);
+
+    setDefaultOpenAccordions(finalOpenAccordions);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
 
@@ -268,12 +285,6 @@ export function AppSidebarNav() {
     if (href === '/dashboard') return pathname === href;
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
-
-  const isGroupActive = (subLinks: NavItemGroup['subLinks']) => {
-    if (!subLinks) return false;
-    return subLinks.some(sub => sub.href && isActive(sub.href));
-  };
-
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const IconComponent = item.icon;

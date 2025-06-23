@@ -221,11 +221,14 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    if (!authLoading && userRole === "Service") {
-      router.push('/dashboard/warranty-management/search');
-    }
-    if (!authLoading && userRole === "DemoManager") {
-      router.push('/dashboard/demo/demo-machine-search');
+    if (!authLoading) {
+      if (userRole === "Service") {
+        router.push('/dashboard/warranty-management/search');
+      } else if (userRole === "DemoManager") {
+        router.push('/dashboard/demo/demo-machine-search');
+      } else if (userRole === "Store Manager") {
+        router.push('/dashboard/items/list');
+      }
     }
   }, [userRole, authLoading, router]);
 
@@ -828,4 +831,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
