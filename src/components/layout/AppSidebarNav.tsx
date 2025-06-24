@@ -234,7 +234,7 @@ export function AppSidebarNav() {
 
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
-  const [defaultOpenAccordions, setDefaultOpenAccordions] = React.useState<string[]>([]);
+  const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
   const allAccordionGroups = [
     ...coreModulesNavItems,
@@ -275,7 +275,7 @@ export function AppSidebarNav() {
     // Use a Set to avoid duplicates if an active path is inside the default accordion.
     const finalOpenAccordions = [...new Set([...activeAccordionsBasedOnPath, roleBasedDefaultAccordion])].filter(Boolean);
 
-    setDefaultOpenAccordions(finalOpenAccordions);
+    setOpenAccordions(finalOpenAccordions);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
@@ -398,7 +398,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && userRole !== "Service" && userRole !== "DemoManager" && (
+          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && userRole !== "Service" && userRole !== "DemoManager" && userRole !== "Store Manager" && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -424,67 +424,56 @@ export function AppSidebarNav() {
           )}
         </SidebarMenu>
 
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-            <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Core Modules
-            </SidebarGroupLabel>
-            <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
+        <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+                <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    Core Modules
+                </SidebarGroupLabel>
                 {coreModulesNavItems.map((item, index) => renderNavGroup(item, index))}
-            </Accordion>
-        </SidebarGroup>
+            </SidebarGroup>
 
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-            <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Financial Management
-            </SidebarGroupLabel>
-            <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
-                {financialNavItems
-                  .map((item, index) => renderNavGroup(item, index))}
-                 {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </Accordion>
-        </SidebarGroup>
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+                <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    Financial Management
+                </SidebarGroupLabel>
+                {financialNavItems.map((item, index) => renderNavGroup(item, index))}
+                {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
+            </SidebarGroup>
 
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            General Management
-          </SidebarGroupLabel>
-          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
-            {managementNavItems.map((item, index) => renderNavGroup(item, index))}
-          </Accordion>
-        </SidebarGroup>
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                General Management
+              </SidebarGroupLabel>
+              {managementNavItems.map((item, index) => renderNavGroup(item, index))}
+            </SidebarGroup>
 
-         <SidebarSeparator />
-         <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Demo M/C Management
-          </SidebarGroupLabel>
-          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Demo M/C Management
+              </SidebarGroupLabel>
               {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-          </Accordion>
-        </SidebarGroup>
+            </SidebarGroup>
 
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Warranty Management
-          </SidebarGroupLabel>
-          <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Warranty Management
+              </SidebarGroupLabel>
               {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-          </Accordion>
-        </SidebarGroup>
+            </SidebarGroup>
 
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Reporting Management
-          </SidebarGroupLabel>
-           <Accordion type="multiple" value={defaultOpenAccordions} onValueChange={setDefaultOpenAccordions} className="w-full">
+            <SidebarSeparator />
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Reporting Management
+              </SidebarGroupLabel>
               {reportingManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-          </Accordion>
-        </SidebarGroup>
+            </SidebarGroup>
+        </Accordion>
 
         <SidebarSeparator />
         <SidebarGroup className="p-0">
