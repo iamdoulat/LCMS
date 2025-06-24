@@ -1,5 +1,4 @@
 
-import 'dotenv/config';
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
