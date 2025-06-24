@@ -230,7 +230,7 @@ export default function DashboardPage() {
       } else if (userRole === "Store Manager") {
         router.replace('/dashboard/items/list');
       } else {
-        setIsRedirecting(false);
+        setIsRedirecting(false); // Only allow rendering for non-redirected roles
       }
     }
   }, [userRole, authLoading, router]);
@@ -833,5 +833,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
 
     

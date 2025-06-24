@@ -63,7 +63,7 @@ import {
   Undo2,
   PlusCircle,
   Loader2,
-  LayoutGrid, // Added LayoutGrid
+  LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -201,11 +201,11 @@ const warrantyManagementNavItems: NavItemGroup[] = [
     icon: ShieldCheck,
     roles: ["Super Admin", "Admin", "Service"],
     subLinks: [
-      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"] },
-      { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] },
+      { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
+      { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
+      { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
+      { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck },
+      { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff },
     ],
   },
 ];
@@ -221,8 +221,8 @@ const reportingManagementNavItems: NavItemGroup[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin"] },
+  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
+  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
@@ -252,7 +252,6 @@ export function AppSidebarNav() {
   };
   
   React.useEffect(() => {
-    // Determine active accordions based on the current URL path
     const activeAccordionsBasedOnPath = allAccordionGroups
       .filter(item => {
         const visibleSubLinks = item.subLinks?.filter(subLink =>
@@ -262,11 +261,9 @@ export function AppSidebarNav() {
       })
       .map(item => item.groupLabel || '');
 
-    // If there's an active accordion based on the path, use it.
     if (activeAccordionsBasedOnPath.length > 0) {
         setOpenAccordions(activeAccordionsBasedOnPath);
     } else {
-        // Otherwise, determine the default based on role. This will apply on the main dashboard page.
         let roleBasedDefaultAccordion = '';
         if (userRole === 'Service') {
             roleBasedDefaultAccordion = 'Warranty Management';
@@ -279,12 +276,10 @@ export function AppSidebarNav() {
         if (roleBasedDefaultAccordion) {
             setOpenAccordions([roleBasedDefaultAccordion]);
         } else {
-            // For other roles on a non-accordion page (like dashboard), close all.
             setOpenAccordions([]);
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, userRole]);
+  }, [pathname, userRole, allAccordionGroups]);
 
 
   const isActive = (href: string) => {
@@ -293,9 +288,8 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    const IconComponent = item.icon;
-
-     if (userRole !== "Super Admin" && item.roles && (!userRole || !item.roles.includes(userRole as UserRole))) {
+    const hasGroupAccess = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+    if (!hasGroupAccess) {
         return null;
     }
 
@@ -303,13 +297,15 @@ export function AppSidebarNav() {
         userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (userRole !== "Super Admin" && !item.roles && visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
-    if (userRole !== "Super Admin" && item.roles && item.roles.length > 0 && visibleSubLinks.length === 0) {
+    
+    if (!item.subLinks || visibleSubLinks.length === 0) {
         return null;
     }
 
+    const IconComponent = item.icon;
 
     return (
       <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
@@ -531,5 +527,7 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
 
     
