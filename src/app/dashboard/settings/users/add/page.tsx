@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -78,7 +77,7 @@ export default function AddUserPage() {
           password: data.password,
           displayName: data.displayName,
           role: data.role,
-          // contactNumber can be added here if needed in the profile
+          // contactNumber can be added here if the API supports it
         }),
       });
 
