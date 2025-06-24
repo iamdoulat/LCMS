@@ -252,31 +252,37 @@ export function AppSidebarNav() {
   };
   
   React.useEffect(() => {
+    // Determine active accordions based on the current URL path
     const activeAccordionsBasedOnPath = allAccordionGroups
       .filter(item => {
-        // This part keeps the accordion open if a sub-link is active
         const visibleSubLinks = item.subLinks?.filter(subLink =>
           userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
         ) || [];
         return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
       })
       .map(item => item.groupLabel || '');
-      
-    let roleBasedDefaultAccordion = '';
-    if (userRole === 'Service') {
-        roleBasedDefaultAccordion = 'Warranty Management';
-    } else if (userRole === 'DemoManager') {
-        roleBasedDefaultAccordion = 'Demo M/C Management';
-    } else if (userRole === 'Store Manager') {
-        roleBasedDefaultAccordion = 'Inventory Management';
+
+    // If there's an active accordion based on the path, use it.
+    if (activeAccordionsBasedOnPath.length > 0) {
+        setOpenAccordions(activeAccordionsBasedOnPath);
+    } else {
+        // Otherwise, determine the default based on role. This will apply on the main dashboard page.
+        let roleBasedDefaultAccordion = '';
+        if (userRole === 'Service') {
+            roleBasedDefaultAccordion = 'Warranty Management';
+        } else if (userRole === 'DemoManager') {
+            roleBasedDefaultAccordion = 'Demo M/C Management';
+        } else if (userRole === 'Store Manager') {
+            roleBasedDefaultAccordion = 'Inventory Management';
+        }
+
+        if (roleBasedDefaultAccordion) {
+            setOpenAccordions([roleBasedDefaultAccordion]);
+        } else {
+            // For other roles on a non-accordion page (like dashboard), close all.
+            setOpenAccordions([]);
+        }
     }
-
-    // Combine path-based active accordions with the role-based default.
-    // Use a Set to avoid duplicates if an active path is inside the default accordion.
-    const finalOpenAccordions = [...new Set([...activeAccordionsBasedOnPath, roleBasedDefaultAccordion])].filter(Boolean);
-
-    setOpenAccordions(finalOpenAccordions);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, userRole]);
 
@@ -398,7 +404,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
         <SidebarMenu className="gap-0 px-2 py-2">
-          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && userRole !== "Service" && userRole !== "DemoManager" && userRole !== "Store Manager" && (
+          { (userRole === "Super Admin" || userRole === "Admin" || userRole === "User") && mainDashboardLink.href && (
               <SidebarMenuItem key={mainDashboardLink.href}>
                 <Link href={mainDashboardLink.href} passHref>
                   <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
@@ -525,3 +531,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    

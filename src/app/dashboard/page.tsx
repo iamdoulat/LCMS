@@ -211,6 +211,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
+  const [isRedirecting, setIsRedirecting] = React.useState(true);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -223,11 +224,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!authLoading) {
       if (userRole === "Service") {
-        router.push('/dashboard/warranty-management/search');
+        router.replace('/dashboard/warranty-management/search');
       } else if (userRole === "DemoManager") {
-        router.push('/dashboard/demo/demo-machine-search');
+        router.replace('/dashboard/demo/demo-machine-search');
       } else if (userRole === "Store Manager") {
-        router.push('/dashboard/items/list');
+        router.replace('/dashboard/items/list');
+      } else {
+        setIsRedirecting(false);
       }
     }
   }, [userRole, authLoading, router]);
@@ -246,7 +249,6 @@ export default function DashboardPage() {
 
   const fetchDashboardData = useCallback(async (year: string) => {
     if (!authUser) {
-      // This console log is now handled by the useEffect depending on authUser
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -486,16 +488,16 @@ export default function DashboardPage() {
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
-  if (authLoading || (!authUser && isLoading)) { // Show global loader if auth is loading OR if no user and still initial data loading
+  if (authLoading || isRedirecting) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading dashboard or verifying access...</p>
+        <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
       </div>
     );
   }
 
-  if (!authUser && !authLoading) { // If auth is done loading and still no user
+  if (!authUser && !authLoading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <p className="text-muted-foreground">Please log in to view the dashboard.</p>
@@ -831,3 +833,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
