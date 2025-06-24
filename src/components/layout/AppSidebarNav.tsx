@@ -227,6 +227,16 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
+const allAccordionGroups = [
+  ...coreModulesNavItems,
+  ...financialNavItems,
+  ...inventoryManagementNavItems,
+  ...managementNavItems,
+  ...demoMachineManagementNavItems,
+  ...warrantyManagementNavItems,
+  ...reportingManagementNavItems,
+];
+
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
@@ -236,50 +246,40 @@ export function AppSidebarNav() {
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
-  const allAccordionGroups = [
-    ...coreModulesNavItems,
-    ...financialNavItems,
-    ...inventoryManagementNavItems,
-    ...managementNavItems,
-    ...demoMachineManagementNavItems,
-    ...warrantyManagementNavItems,
-    ...reportingManagementNavItems,
-  ];
-
-  const isGroupActive = (subLinks: NavItemGroup['subLinks']) => {
+  const isGroupActive = React.useCallback((subLinks: NavItemGroup['subLinks']) => {
     if (!subLinks) return false;
     return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
-  };
-  
+  }, [pathname]);
+
   React.useEffect(() => {
-    const activeAccordionsBasedOnPath = allAccordionGroups
-      .filter(item => {
-        const visibleSubLinks = item.subLinks?.filter(subLink =>
-          userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
-        ) || [];
-        return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
-      })
-      .map(item => item.groupLabel || '');
-
-    if (activeAccordionsBasedOnPath.length > 0) {
-        setOpenAccordions(activeAccordionsBasedOnPath);
+    // Determine which accordion should be open based on the current path
+    const activeGroupOnLoad = allAccordionGroups.find(group => 
+      group.subLinks && isGroupActive(group.subLinks)
+    );
+    
+    let defaultOpenGroup = '';
+    if (activeGroupOnLoad?.groupLabel) {
+        defaultOpenGroup = activeGroupOnLoad.groupLabel;
     } else {
-        let roleBasedDefaultAccordion = '';
-        if (userRole === 'Service') {
-            roleBasedDefaultAccordion = 'Warranty Management';
-        } else if (userRole === 'DemoManager') {
-            roleBasedDefaultAccordion = 'Demo M/C Management';
-        } else if (userRole === 'Store Manager') {
-            roleBasedDefaultAccordion = 'Inventory Management';
-        }
-
-        if (roleBasedDefaultAccordion) {
-            setOpenAccordions([roleBasedDefaultAccordion]);
-        } else {
-            setOpenAccordions([]);
+        // If no path matches, open the accordion based on the user's role
+        switch(userRole) {
+            case 'Service':
+                defaultOpenGroup = 'Warranty Management';
+                break;
+            case 'DemoManager':
+                defaultOpenGroup = 'Demo M/C Management';
+                break;
+            case 'Store Manager':
+                defaultOpenGroup = 'Inventory Management';
+                break;
+            default:
+                break; // No default for other roles
         }
     }
-  }, [pathname, userRole, allAccordionGroups]);
+    
+    setOpenAccordions(defaultOpenGroup ? [defaultOpenGroup] : []);
+
+  }, [pathname, userRole, isGroupActive]);
 
 
   const isActive = (href: string) => {
@@ -527,7 +527,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
-
-    
