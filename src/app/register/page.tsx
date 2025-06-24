@@ -2,7 +2,8 @@
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Briefcase, Loader2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,10 +18,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { auth } from '@/lib/firebase/config';
+import { auth, firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 
 const registerSchema = z.object({
+  displayName: z.string().min(2, "Display name must be at least 2 characters."),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters long"),
@@ -36,11 +38,12 @@ export default function RegisterPage() {
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Keep local error for inline display
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      displayName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -57,7 +60,26 @@ export default function RegisterPage() {
     setIsEmailLoading(true);
     setError(null);
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const firebaseUser = userCredential.user;
+
+      // 2. Update their auth profile with display name
+      await updateProfile(firebaseUser, {
+        displayName: data.displayName
+      });
+
+      // 3. Create user profile document in Firestore
+      const userDocRef = doc(firestore, "users", firebaseUser.uid);
+      await setDoc(userDocRef, {
+        uid: firebaseUser.uid,
+        displayName: data.displayName,
+        email: firebaseUser.email,
+        role: 'User', // Default role for self-registration
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      
       Swal.fire({
         title: "Registration Successful",
         text: "Your account has been created. Redirecting to dashboard...",
@@ -67,8 +89,13 @@ export default function RegisterPage() {
       });
       router.push('/dashboard'); 
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to register. Please try again.";
-      setError(errorMessage); // For inline error display
+      let errorMessage = "Failed to register. Please try again.";
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use by another account.";
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = "Password should be at least 6 characters.";
+      }
+      setError(errorMessage);
       Swal.fire({
         title: "Registration Failed",
         text: errorMessage,
@@ -121,6 +148,19 @@ export default function RegisterPage() {
           )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
