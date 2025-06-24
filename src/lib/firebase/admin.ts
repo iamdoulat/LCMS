@@ -1,5 +1,9 @@
 
 import * as admin from 'firebase-admin';
+import { config } from 'dotenv';
+
+// Explicitly load environment variables from .env file
+config();
 
 const hasCredentials =
   process.env.FIREBASE_ADMIN_PROJECT_ID &&
