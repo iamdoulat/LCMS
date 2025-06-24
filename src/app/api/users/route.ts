@@ -1,4 +1,5 @@
 
+import 'dotenv/config';
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
   // Add a guard clause at the very beginning.
   // This check ensures that the Firebase Admin SDK has been initialized.
   if (!admin.apps.length) {
-    console.error("Firebase Admin SDK not initialized. Ensure environment variables are set.");
+    console.error("Firebase Admin SDK not initialized. Ensure environment variables are set in your .env file and the server is restarted.");
     return NextResponse.json(
       { error: "Server not configured. Firebase Admin SDK failed to initialize." },
       { status: 500 }
