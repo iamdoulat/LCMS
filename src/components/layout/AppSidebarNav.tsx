@@ -118,7 +118,7 @@ const financialNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Invoicing & Sales',
     icon: Receipt,
-    roles: ["Super Admin", "Admin"],
+    roles: ["Super Admin", "Admin", "Store Manager"],
     subLinks: [
       { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
       { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2 },
