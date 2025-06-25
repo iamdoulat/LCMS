@@ -21,7 +21,7 @@ interface DatePickerFieldProps<TFieldValues extends FieldValues> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   field: ControllerRenderProps<TFieldValues, Path<TFieldValues>> | any;
   placeholder?: string;
-  disabled?: (date: Date) => boolean;
+  disabled?: ((date: Date) => boolean) | boolean;
   dateFormat?: string; // Optional prop for display and parsing format
 }
 
