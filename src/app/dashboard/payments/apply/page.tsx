@@ -9,8 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, query, where, runTransaction, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import type { InvoiceDocument, CustomerDocument, InvoiceStatus } from '@/types';
-import { invoiceStatusOptions } from '@/types';
+import type { InvoiceDocument, InvoiceStatus } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,14 +18,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, CreditCard, Users, CalendarDays, DollarSign, FileText, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { DatePickerField } from '@/components/forms/DatePickerField';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
-const applyPaymentSchema = z.object({
+const invoiceSelectSchema = z.object({
   invoiceId: z.string().min(1, "Invoice selection is required."),
-  // Payment details would be in a separate modal form
 });
+type InvoiceSelectFormValues = z.infer<typeof invoiceSelectSchema>;
 
-type ApplyPaymentFormValues = z.infer<typeof applyPaymentSchema>;
+const paymentMethods = ["Cash", "Bank Transfer", "Card", "Check"] as const;
 
 const PLACEHOLDER_INVOICE_VALUE = "__APPLY_PAYMENT_INVOICE__";
 
@@ -45,15 +47,16 @@ export default function ApplyPaymentPage() {
     amountDue: number;
     status: InvoiceStatus | undefined;
   } | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
 
-  const form = useForm<ApplyPaymentFormValues>({
-    resolver: zodResolver(applyPaymentSchema),
+  const invoiceSelectForm = useForm<InvoiceSelectFormValues>({
+    resolver: zodResolver(invoiceSelectSchema),
     defaultValues: {
       invoiceId: '',
     },
   });
 
-  const watchedInvoiceId = form.watch("invoiceId");
+  const watchedInvoiceId = invoiceSelectForm.watch("invoiceId");
 
   React.useEffect(() => {
     setIsLoadingDropdowns(true);
@@ -65,9 +68,10 @@ export default function ApplyPaymentPage() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedOptions = querySnapshot.docs.map(docSnap => {
             const data = docSnap.data() as InvoiceDocument;
+            const amountDue = data.totalAmount - (data.amountPaid || 0);
             return {
                 value: docSnap.id,
-                label: `${docSnap.id} - ${data.customerName} - Amount: ${data.totalAmount.toFixed(2)}`,
+                label: `${docSnap.id} - ${data.customerName} - Due: ${amountDue.toFixed(2)}`,
                 invoiceData: { ...data, id: docSnap.id },
             };
         });
@@ -79,7 +83,6 @@ export default function ApplyPaymentPage() {
         setIsLoadingDropdowns(false);
     });
 
-    // Cleanup subscription on component unmount
     return () => unsubscribe();
   }, []);
 
@@ -105,81 +108,92 @@ export default function ApplyPaymentPage() {
     }
   }, [watchedInvoiceId, invoiceOptions]);
 
-  const handleApplyPayment = async () => {
-    if (!selectedInvoiceDetails || !watchedInvoiceId) {
-      Swal.fire("Error", "Please select an invoice first.", "error");
-      return;
-    }
-
-    const paymentAmount = selectedInvoiceDetails.amountDue;
-
-    if (paymentAmount <= 0) {
-      Swal.fire("Info", "This invoice has no amount due or is already paid.", "info");
-      return;
-    }
-    
-    const { isConfirmed } = await Swal.fire({
-        title: 'Confirm Payment Application',
-        html: `
-            You are about to apply a payment of <strong>$${paymentAmount.toFixed(2)}</strong> for Invoice <strong>${watchedInvoiceId}</strong>.
-            <br/><br/>
-            Payment Method: <strong>Cash (Simulated)</strong>
-            <br/><br/>
-            This will mark the invoice as 'Paid'. Proceed?
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Apply Payment',
-        cancelButtonText: 'Cancel',
+  const paymentDetailsSchema = React.useMemo(() => {
+    const amountDue = selectedInvoiceDetails?.amountDue ?? 0;
+    return z.object({
+        paymentAmount: z.preprocess(
+            (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+            z.number({ invalid_type_error: "Amount must be a number." }).positive("Payment amount must be positive.")
+        ).refine(
+            (amount) => amount <= amountDue,
+            { message: `Payment cannot exceed amount due ($${amountDue.toFixed(2)}).`, path: ["paymentAmount"] }
+        ),
+        paymentDate: z.date({ required_error: "Payment date is required." }),
+        paymentMethod: z.enum(paymentMethods, { required_error: "Payment method is required." }),
+        notes: z.string().optional(),
     });
+  }, [selectedInvoiceDetails]);
 
-    if (isConfirmed) {
-        setIsSubmitting(true);
-        try {
-            const invoiceRef = doc(firestore, "invoices", watchedInvoiceId);
-            const paymentRef = doc(collection(firestore, "payments")); // Auto-generate ID
+  type PaymentDetailsFormValues = z.infer<typeof paymentDetailsSchema>;
 
-            await runTransaction(firestore, async (transaction) => {
-                const invoiceDoc = await transaction.get(invoiceRef);
-                if (!invoiceDoc.exists()) {
-                    throw new Error("Invoice not found.");
-                }
-                const invoiceData = invoiceDoc.data() as InvoiceDocument;
-                const currentAmountPaid = invoiceData.amountPaid || 0;
-                const newAmountPaid = currentAmountPaid + paymentAmount;
-                const newStatus: InvoiceStatus = newAmountPaid >= invoiceData.totalAmount ? "Paid" : "Partial";
+  const paymentDetailsForm = useForm<PaymentDetailsFormValues>({
+    resolver: zodResolver(paymentDetailsSchema),
+    defaultValues: {
+        paymentAmount: undefined,
+        paymentDate: new Date(),
+        paymentMethod: "Cash",
+        notes: '',
+    }
+  });
 
-                transaction.update(invoiceRef, {
-                    status: newStatus,
-                    amountPaid: newAmountPaid,
-                    updatedAt: serverTimestamp(),
-                });
+  React.useEffect(() => {
+    paymentDetailsForm.reset({
+        paymentAmount: selectedInvoiceDetails?.amountDue ?? undefined,
+        paymentDate: new Date(),
+        paymentMethod: "Cash",
+        notes: '',
+    });
+  }, [isPaymentDialogOpen, selectedInvoiceDetails, paymentDetailsForm]);
 
-                transaction.set(paymentRef, {
-                    invoiceId: watchedInvoiceId,
-                    invoiceNumber: invoiceData.id, // Storing invoice number for easier querying on payment list
-                    customerId: invoiceData.customerId,
-                    customerName: invoiceData.customerName,
-                    paymentAmount: paymentAmount,
-                    paymentDate: serverTimestamp(), // Or allow user to select
-                    paymentMethod: "Cash", // Simulated
-                    notes: "Payment applied via simulated cash transaction.",
-                    createdAt: serverTimestamp(),
-                });
+
+  async function onProcessPayment(data: PaymentDetailsFormValues) {
+    if (!watchedInvoiceId) {
+        Swal.fire("Error", "No invoice selected.", "error");
+        return;
+    }
+    setIsSubmitting(true);
+    try {
+        const invoiceRef = doc(firestore, "invoices", watchedInvoiceId);
+        const paymentRef = doc(collection(firestore, "payments"));
+
+        await runTransaction(firestore, async (transaction) => {
+            const invoiceDoc = await transaction.get(invoiceRef);
+            if (!invoiceDoc.exists()) {
+                throw new Error("Invoice not found.");
+            }
+            const invoiceData = invoiceDoc.data() as InvoiceDocument;
+            const currentAmountPaid = invoiceData.amountPaid || 0;
+            const newAmountPaid = currentAmountPaid + data.paymentAmount;
+            const newStatus: InvoiceStatus = newAmountPaid >= invoiceData.totalAmount ? "Paid" : "Partial";
+
+            transaction.update(invoiceRef, {
+                status: newStatus,
+                amountPaid: newAmountPaid,
+                updatedAt: serverTimestamp(),
             });
 
-            Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated.`, "success");
-            form.reset();
-            setSelectedInvoiceDetails(null);
-            // No need to manually refetch, onSnapshot will handle it.
+            transaction.set(paymentRef, {
+                invoiceId: watchedInvoiceId,
+                invoiceNumber: invoiceData.id,
+                customerId: invoiceData.customerId,
+                customerName: invoiceData.customerName,
+                paymentAmount: data.paymentAmount,
+                paymentDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                paymentMethod: data.paymentMethod,
+                notes: data.notes || "",
+                createdAt: serverTimestamp(),
+            });
+        });
 
-        } catch (error: any) {
-            Swal.fire("Error", `Failed to apply payment: ${error.message}`, "error");
-        } finally {
-            setIsSubmitting(false);
-        }
+        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated.`, "success");
+        setIsPaymentDialogOpen(false); // Close dialog on success
+        invoiceSelectForm.reset({ invoiceId: '' }); // Clear selection
+    } catch (error: any) {
+        Swal.fire("Error", `Failed to apply payment: ${error.message}`, "error");
+    } finally {
+        setIsSubmitting(false);
     }
-  };
+  }
 
 
   return (
@@ -195,10 +209,10 @@ export default function ApplyPaymentPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleApplyPayment)} className="space-y-8">
+          <Form {...invoiceSelectForm}>
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
               <FormField
-                control={form.control}
+                control={invoiceSelectForm.control}
                 name="invoiceId"
                 render={({ field }) => (
                   <FormItem>
@@ -231,28 +245,92 @@ export default function ApplyPaymentPage() {
                   </div>
                 </Card>
               )}
-              
-              <Alert variant="default" className="bg-blue-500/10 border-blue-500/30">
-                <Info className="h-5 w-5 text-blue-600" />
-                <AlertTitle className="text-blue-700 font-semibold">Payment Modal Placeholder</AlertTitle>
-                <AlertDescription className="text-blue-700/90">
-                  In a full implementation, clicking "Apply Payment" would open a modal to select payment method (Cash, Bank, Card), enter amount, and other details. For this demo, it will simulate a full payment of the amount due via 'Cash'.
-                </AlertDescription>
-              </Alert>
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || !watchedInvoiceId || selectedInvoiceDetails?.amountDue === 0}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Apply Payment (Simulated Full Payment)
-                  </>
-                )}
-              </Button>
+              <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button className="w-full md:w-auto" disabled={!watchedInvoiceId || selectedInvoiceDetails?.amountDue === 0}>
+                        <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Apply Payment Details</DialogTitle>
+                        <DialogDescription>
+                            Enter the payment details for invoice <strong>{watchedInvoiceId}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Form {...paymentDetailsForm}>
+                        <form onSubmit={paymentDetailsForm.handleSubmit(onProcessPayment)} className="space-y-4">
+                             <FormField
+                                control={paymentDetailsForm.control}
+                                name="paymentAmount"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Payment Amount</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={paymentDetailsForm.control}
+                                name="paymentDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Payment Date</FormLabel>
+                                        <DatePickerField field={field} placeholder="Select payment date" />
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={paymentDetailsForm.control}
+                                name="paymentMethod"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Payment Method</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a payment method" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {paymentMethods.map(method => <SelectItem key={method} value={method}>{method}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={paymentDetailsForm.control}
+                                name="notes"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Notes (Optional)</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="e.g., Transaction ID, check number" {...field} value={field.value ?? ''} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button type="button" variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Confirm Payment
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+              </Dialog>
             </form>
           </Form>
         </CardContent>
@@ -260,4 +338,3 @@ export default function ApplyPaymentPage() {
     </div>
   );
 }
-    
