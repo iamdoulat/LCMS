@@ -7,10 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
 import type { InvoiceDocument, CustomerDocument, InvoiceStatus } from '@/types';
 import { invoiceStatusOptions } from '@/types'; // Make sure this is exported from types
@@ -386,24 +393,34 @@ export default function InvoicesListPage() {
                       <TableCell className="p-2 sm:px-4 truncate max-w-xs" title={getFirstItemName(invoice.lineItems)}>{getFirstItemName(invoice.lineItems)} ({getTotalQuantity(invoice.lineItems)} qty)</TableCell>
                       <TableCell className="p-2 sm:px-4">{formatCurrencyValue(invoice.totalAmount)}</TableCell>
                       <TableCell className="p-2 sm:px-4"><Badge variant={getInvoiceStatusBadgeVariant(invoice.status)}>{invoice.status || "N/A"}</Badge></TableCell>
-                      <TableCell className="text-right space-x-1 p-2 sm:p-4">
-                        <TooltipProvider>
-                          <Tooltip><TooltipTrigger asChild><Button variant="default" size="icon" onClick={() => handleEditInvoice(invoice.id)} className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 w-7"><FileEdit className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Edit Invoice</p></TooltipContent></Tooltip>
-                          <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleDeleteInvoice(invoice.id, invoice.id)} className="h-7 w-7"><Trash2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Delete Invoice</p></TooltipContent></Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleDownloadPdf(invoice.id)}
-                                className="h-7 w-7 border-primary text-primary hover:bg-primary/10"
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Download Invoice PDF</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      <TableCell className="text-right p-2 sm:p-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!invoice.id}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => invoice.id && handleEditInvoice(invoice.id)}>
+                              <FileEdit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => invoice.id && handleDownloadPdf(invoice.id)}>
+                              <FileDown className="mr-2 h-4 w-4" />
+                              <span>Download Invoice</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => invoice.id && handleDeleteInvoice(invoice.id, invoice.id)}
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
