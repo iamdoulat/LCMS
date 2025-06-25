@@ -477,15 +477,12 @@ export function AppSidebarNav() {
             </SidebarGroup>
             
             <SidebarSeparator />
-            { (userRole === 'Super Admin' || userRole === 'Admin' || userRole === 'Service') && (
-              <SidebarGroup className="p-0">
-                <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                  Warranty Management
-                </SidebarGroupLabel>
-                {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-              </SidebarGroup>
-            )}
-
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Warranty Management
+              </SidebarGroupLabel>
+              {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
+            </SidebarGroup>
 
             <SidebarSeparator />
             <SidebarGroup className="p-0">
