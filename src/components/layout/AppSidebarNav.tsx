@@ -241,6 +241,7 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
+  const [mounted, setMounted] = React.useState(false);
 
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
@@ -252,7 +253,12 @@ export function AppSidebarNav() {
   }, [pathname]);
 
   React.useEffect(() => {
-    // Determine which accordion should be open based on the current path
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!mounted) return;
+
     const activeGroupOnLoad = allAccordionGroups.find(group => 
       group.subLinks && isGroupActive(group.subLinks)
     );
@@ -261,7 +267,6 @@ export function AppSidebarNav() {
     if (activeGroupOnLoad?.groupLabel) {
         defaultOpenGroup = activeGroupOnLoad.groupLabel;
     } else {
-        // If no path matches, open the accordion based on the user's role
         switch(userRole) {
             case 'Service':
                 defaultOpenGroup = 'Warranty Management';
@@ -273,13 +278,13 @@ export function AppSidebarNav() {
                 defaultOpenGroup = 'Inventory Management';
                 break;
             default:
-                break; // No default for other roles
+                break; 
         }
     }
     
     setOpenAccordions(defaultOpenGroup ? [defaultOpenGroup] : []);
 
-  }, [pathname, userRole, isGroupActive]);
+  }, [pathname, userRole, isGroupActive, mounted]);
 
 
   const isActive = (href: string) => {
@@ -288,10 +293,8 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    // Check for standard role-based access
     let hasAccessViaRole = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
     
-    // Check for specific email overrides
     let hasAccessViaEmail = false;
     if (item.groupLabel === 'Demo M/C Management') {
       hasAccessViaEmail = (user?.email === 'jonayedjonayed08@gmail.com');
@@ -306,11 +309,9 @@ export function AppSidebarNav() {
     }
 
     const visibleSubLinks = item.subLinks?.filter(subLink => {
-      // If the parent group has special email access, all its children are visible
       if (hasAccessViaEmail && (item.groupLabel === 'Demo M/C Management' || item.groupLabel === 'Warranty Management')) {
         return true;
       }
-      // Otherwise, apply standard role-based filtering for sublinks
       return userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole));
     }) || [];
 
