@@ -119,6 +119,9 @@ export function DatePickerField<TFieldValues extends FieldValues>({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          captionLayout="dropdown-buttons"
+          fromYear={1960}
+          toYear={new Date().getFullYear() + 10}
           selected={field.value && isValid(new Date(field.value)) ? new Date(field.value) : undefined}
           onSelect={handleCalendarSelect}
           disabled={disabled}
@@ -148,4 +151,3 @@ export function DatePickerField<TFieldValues extends FieldValues>({
     </Popover>
   );
 }
-    
