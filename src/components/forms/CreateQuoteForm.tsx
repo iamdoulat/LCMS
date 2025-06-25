@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Changed CustomerDocument to SupplierDocument
+import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ import { useRouter } from 'next/navigation'; // Added for navigation
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_BENEFICIARY_VALUE = "__QUOTE_BENEFICIARY_PLACEHOLDER__";
+const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_CUSTOMER_PLACEHOLDER__";
 const PLACEHOLDER_ITEM_VALUE = "__QUOTE_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
@@ -37,14 +38,14 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
-interface BeneficiaryOption extends ComboboxOption {
+interface CustomerOption extends ComboboxOption {
   address?: string;
 }
 
 export function CreateQuoteForm() {
   const router = useRouter(); // Added for navigation
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(null);
@@ -57,7 +58,7 @@ export function CreateQuoteForm() {
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
     defaultValues: {
-      beneficiaryId: '',
+      customerId: '',
       billingAddress: '',
       shippingAddress: '',
       sameAsBilling: true,
@@ -87,7 +88,7 @@ export function CreateQuoteForm() {
     name: "lineItems",
   });
 
-  const watchedBeneficiaryId = watch("beneficiaryId");
+  const watchedCustomerId = watch("customerId");
   const watchedSameAsBilling = watch("sameAsBilling");
   const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
@@ -99,15 +100,15 @@ export function CreateQuoteForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [suppliersSnap, itemsSnap] = await Promise.all([
-          getDocs(collection(firestore, "suppliers")),
+        const [customersSnap, itemsSnap] = await Promise.all([
+          getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "items"))
         ]);
 
-        setBeneficiaryOptions(
-          suppliersSnap.docs.map(doc => {
-            const data = doc.data() as SupplierDocument;
-            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress };
+        setCustomerOptions(
+          customersSnap.docs.map(doc => {
+            const data = doc.data() as CustomerDocument;
+            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
           })
         );
 
@@ -126,7 +127,7 @@ export function CreateQuoteForm() {
 
       } catch (error) {
         console.error("Error fetching dropdown options for Quote form: ", error);
-        Swal.fire("Error", "Could not load beneficiary or item data. Please try again.", "error");
+        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
       }
@@ -135,10 +136,10 @@ export function CreateQuoteForm() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedBeneficiaryId) {
-      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
-      if (selectedBeneficiary) {
-        const billingAddr = selectedBeneficiary.address || '';
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        const billingAddr = selectedCustomer.address || '';
         setValue("billingAddress", billingAddr);
         if (getValues("sameAsBilling")) {
           setValue("shippingAddress", billingAddr);
@@ -148,7 +149,7 @@ export function CreateQuoteForm() {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
+  }, [watchedCustomerId, customerOptions, setValue, getValues]);
 
   React.useEffect(() => {
     if (watchedSameAsBilling) {
@@ -220,7 +221,7 @@ export function CreateQuoteForm() {
 
   const saveQuoteLogic = async (data: QuoteFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
+    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
@@ -271,8 +272,8 @@ export function CreateQuoteForm() {
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
-          beneficiaryId: data.beneficiaryId,
-          beneficiaryName: selectedBeneficiary?.label || 'N/A',
+          customerId: data.customerId,
+          customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -388,24 +389,24 @@ export function CreateQuoteForm() {
       <form className="space-y-8"> 
         
         <h3 className={cn(sectionHeadingClass)}>
-          <Building className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon from Users */}
-          Beneficiary & Delivery Information 
+          <Users className="mr-2 h-5 w-5 text-primary" />
+          Customer & Delivery Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> 
+          <div>
             <FormField
               control={control}
-              name="beneficiaryId"
+              name="customerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Beneficiary*</FormLabel>
+                  <FormLabel>Customer*</FormLabel>
                   <Combobox
-                    options={beneficiaryOptions}
-                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
-                    placeholder="Search Beneficiary..."
-                    selectPlaceholder="Select Beneficiary"
-                    emptyStateMessage="No beneficiary found."
+                    options={customerOptions}
+                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
+                    placeholder="Search Customer..."
+                    selectPlaceholder="Select Customer"
+                    emptyStateMessage="No customer found."
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -413,7 +414,7 @@ export function CreateQuoteForm() {
               )}
             />
           </div>
-          <div> 
+          <div>
             <FormField
               control={control}
               name="shippingAddress"
@@ -445,7 +446,7 @@ export function CreateQuoteForm() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> 
+          <div>
             <FormField
               control={control}
               name="salesperson"
@@ -460,7 +461,7 @@ export function CreateQuoteForm() {
               )}
             />
           </div>
-          <div> 
+          <div>
             <FormField
               control={control}
               name="billingAddress"

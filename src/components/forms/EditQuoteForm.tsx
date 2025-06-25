@@ -1,16 +1,16 @@
 
+
 "use client";
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
+import type { QuoteDocument, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues } from '@/types';
+import { QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_EDIT_CUSTOMER_PLACEHOLDER__";
-const PLACEHOLDER_ITEM_VALUE_PREFIX = "__QUOTE_EDIT_ITEM_PLACEHOLDER__"; // Prefix for uniqueness
+const PLACEHOLDER_ITEM_VALUE_PREFIX = "__QUOTE_EDIT_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
   description?: string;
@@ -199,10 +199,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; 
-      if (selectedItem.description) { 
-        autoDescription = selectedItem.description;
-      }
+      let autoDescription = selectedItem.label;
+      if (selectedItem.description) autoDescription = selectedItem.description;
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
@@ -230,28 +228,22 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       const taxPercentageStr = String(item.taxPercentage || '0');
       const finalTaxPercentage = parseFloat(taxPercentageStr);
 
-      const lineQtyVal = qty;
-      const lineUnitPriceVal = finalUnitPrice;
-      const lineDiscountPVal = finalDiscountPercentage;
-      const lineTaxPVal = finalTaxPercentage;
-
-      const itemTotalBeforeDiscount = lineQtyVal * lineUnitPriceVal;
-      const discountAmountVal = itemTotalBeforeDiscount * (lineDiscountPVal / 100);
+      const itemTotalBeforeDiscount = qty * finalUnitPrice;
+      const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
       const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (lineTaxPVal / 100);
+      const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
       const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
       
       const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-
       return {
         itemId: item.itemId,
         itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
         itemCode: itemDetailsFromOptions?.itemCode || undefined,
         description: item.description || '',
-        qty: lineQtyVal,
-        unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-        discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-        taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+        qty,
+        unitPrice: finalUnitPrice,
+        discountPercentage: finalDiscountPercentage,
+        taxPercentage: finalTaxPercentage,
         total: calculatedLineTotal,
       };
     });
