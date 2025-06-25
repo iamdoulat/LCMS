@@ -184,6 +184,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
+    roles: ["Super Admin", "Admin", "DemoManager"],
     subLinks: [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
