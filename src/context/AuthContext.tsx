@@ -101,40 +101,52 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
       try {
         if (currentUser) {
-          let assignedRole: UserRole | null = null;
+          let roleFromEnv: UserRole | null = null;
           const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
 
           if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Super Admin";
+            roleFromEnv = "Super Admin";
           } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Admin";
+            roleFromEnv = "Admin";
           } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Service";
+            roleFromEnv = "Service";
           } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "DemoManager";
+            roleFromEnv = "DemoManager";
           } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            assignedRole = "Store Manager";
+            roleFromEnv = "Store Manager";
           }
 
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
+          let finalUserRole: UserRole = "User"; // Default role
+
           if (userDocSnap.exists()) {
             const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-            setFirestoreUser(userProfileData);
-            if (userProfileData.role && (assignedRole === null || assignedRole === "User")) { // Only override if no env role or default "User"
-              assignedRole = userProfileData.role;
+            const roleFromDb = userProfileData.role;
+
+            if (roleFromEnv && roleFromEnv !== roleFromDb) {
+              // ENV var role is the source of truth, update DB if different.
+              await updateDoc(userDocRef, { role: roleFromEnv, updatedAt: serverTimestamp() });
+              userProfileData.role = roleFromEnv; // Update local copy for immediate use
+              finalUserRole = roleFromEnv;
+              console.log(`User role for ${currentUser.email} updated in Firestore to: ${roleFromEnv}`);
+            } else {
+              // No ENV var role, or it matches DB. Use the role from DB.
+              finalUserRole = roleFromDb || "User";
             }
+            setFirestoreUser(userProfileData);
+
           } else {
-            setFirestoreUser(null);
-            // If no Firestore profile, create one (especially after Google Sign-In or first Email/Pass registration)
+            // User document doesn't exist, create it with the role from ENV var or default to "User"
+            finalUserRole = roleFromEnv || "User";
             if (currentUser.displayName && currentUser.email) {
                 const newProfileData = {
                     uid: currentUser.uid,
                     displayName: currentUser.displayName,
                     email: currentUser.email,
                     photoURL: currentUser.photoURL || null,
-                    role: assignedRole || "User", // Use simulated role if present, else default "User"
+                    role: finalUserRole,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                 };
@@ -142,7 +154,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
                 setFirestoreUser({id: currentUser.uid, ...newProfileData} as UserDocumentForAdmin);
             }
           }
-          setUserRole(assignedRole || "User");
+          setUserRole(finalUserRole);
         } else {
           setFirestoreUser(null);
           setUserRole(null);
