@@ -40,13 +40,16 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         let redirectPath = '';
         switch (userRole) {
           case 'Service':
-            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search';
+            const serviceRedirect = process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE;
+            redirectPath = serviceRedirect && serviceRedirect.trim() !== '' ? serviceRedirect : '/dashboard/warranty-management/search';
             break;
           case 'DemoManager':
-            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search';
+            const demoManagerRedirect = process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER;
+            redirectPath = demoManagerRedirect && demoManagerRedirect.trim() !== '' ? demoManagerRedirect : '/dashboard/demo/demo-machine-search';
             break;
           case 'Store Manager':
-            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list';
+             const storeManagerRedirect = process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER;
+             redirectPath = storeManagerRedirect && storeManagerRedirect.trim() !== '' ? storeManagerRedirect : '/dashboard/items/list';
             break;
           default:
             // No redirect for other roles, they stay on the main dashboard
