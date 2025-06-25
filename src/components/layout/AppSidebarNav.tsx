@@ -184,7 +184,7 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
-    roles: ["Super Admin", "Admin", "DemoManager"],
+    roles: ["DemoManager"],
     subLinks: [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
@@ -239,7 +239,7 @@ const allAccordionGroups = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
 
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
@@ -288,14 +288,26 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    const hasGroupAccess = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+    let hasGroupAccess: boolean;
+
+    if (item.groupLabel === 'Demo M/C Management') {
+      // Specific rule for Demo M/C Management as requested
+      hasGroupAccess = (userRole === 'DemoManager' || (user?.email === 'jonayedjonayed08@gmail.com'));
+    } else {
+      // Standard rule for all other groups
+      hasGroupAccess = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+    }
+    
     if (!hasGroupAccess) {
         return null;
     }
 
-    const visibleSubLinks = item.subLinks?.filter(subLink =>
-        userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole))
-    ) || [];
+    const visibleSubLinks = item.subLinks?.filter(subLink => {
+      if (item.groupLabel === 'Demo M/C Management') {
+        return true; // Parent group check is sufficient for this special case
+      }
+      return userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole));
+    }) || [];
 
     if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
