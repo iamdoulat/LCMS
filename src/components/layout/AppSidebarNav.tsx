@@ -116,7 +116,7 @@ const coreModulesNavItems: NavItemGroup[] = [
 
 const financialNavItems: NavItemGroup[] = [
   {
-    groupLabel: 'Invoicing & Sales',
+    groupLabel: 'Invoicing & Quote',
     icon: Receipt,
     roles: ["Super Admin", "Admin", "Store Manager"],
     subLinks: [
