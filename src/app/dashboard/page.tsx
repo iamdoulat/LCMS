@@ -237,10 +237,11 @@ export default function DashboardPage() {
         // This is a role that should see the dashboard.
         setIsRedirecting(false);
       }
+    } else if (!authLoading && !authUser) {
+        // If auth is done and there's no user, they should be at /login, but this handles edge cases.
+        setIsRedirecting(false);
     }
-    // If userRole is still null after auth is loaded, it implies an issue,
-    // but we let isRedirecting=true keep the loader visible until a role is confirmed or a user is determined to be logged out (handled by AuthGuard).
-  }, [userRole, authLoading, router]);
+  }, [userRole, authLoading, router, authUser]);
 
 
   useEffect(() => {
