@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceLineItemFormValues, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
-import { InvoiceLineItemSchema, InvoiceSchema, quoteTaxTypes } from '@/types'; // Use Invoice schemas
+import type { InvoiceDocument, InvoiceLineItemFormValues, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceStatus } from '@/types';
+import { InvoiceLineItemSchema, InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types'; // Use Invoice schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -70,6 +70,7 @@ export function CreateInvoiceForm() {
         total: '0.00'
       }],
       taxType: 'Default',
+      status: "Draft",
       comments: '',
       privateComments: '',
     },
@@ -280,7 +281,7 @@ export function CreateInvoiceForm() {
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
           totalAmount: finalGrandTotal,
-          status: "Draft", // Default status for new invoice
+          status: data.status || "Draft",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -510,11 +511,33 @@ export function CreateInvoiceForm() {
                     </FormItem>
                 )}
              />
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
             <FormField
                 control={form.control}
                 name="paymentTerms"
                 render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                     <FormLabel>Payment Terms</FormLabel>
                     <FormControl>
                         <Input placeholder="e.g., Net 30, Due on receipt" {...field} />
