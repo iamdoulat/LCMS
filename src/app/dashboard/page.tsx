@@ -211,7 +211,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
-  const [isReadyToRender, setIsReadyToRender] = React.useState(false); // New state to control rendering
+  const [isReadyToRender, setIsReadyToRender] = React.useState(false);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -223,27 +223,38 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (authLoading) {
-      return; // Wait until auth state is confirmed
+      return; // Wait until auth state is fully loaded.
     }
 
+    // If auth is loaded but there's no user, AuthGuard will handle redirection.
+    // We just wait here to avoid rendering anything.
+    if (!authUser) {
+      return;
+    }
+
+    // Once we have the user and the role is determined...
     if (userRole) {
       if (userRole === "Service") {
         router.replace('/dashboard/warranty-management/search');
-      } else if (userRole === "DemoManager") {
+        return; // Start redirect, no need to do more.
+      }
+      if (userRole === "DemoManager") {
         router.replace('/dashboard/demo/demo-machine-search');
-      } else if (userRole === "Store Manager") {
+        return; // Start redirect
+      }
+      if (userRole === "Store Manager") {
         router.replace('/dashboard/items/list');
-      } else {
-        // Any other authenticated role can see the dashboard
-        setIsReadyToRender(true);
+        return; // Start redirect
       }
-    } else {
-      // Not a special role, but need to wait for authUser check to complete
-      // If no user, AuthGuard will handle it. If user exists, but no specific role, render dashboard.
-      if(authUser) {
-         setIsReadyToRender(true);
-      }
+      
+      // If the role is any other valid role, allow rendering the dashboard.
+      setIsReadyToRender(true);
     }
+    
+    // If authUser is present but userRole is still being fetched,
+    // this effect will do nothing, keeping the loading screen active.
+    // It will re-run when userRole's state changes.
+
   }, [userRole, authLoading, router, authUser]);
 
 
@@ -480,7 +491,7 @@ export default function DashboardPage() {
   }, [authUser]); // Added authUser dependency
 
   useEffect(() => {
-    if (!authLoading && authUser) {
+    if (!authLoading && authUser && isReadyToRender) {
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
@@ -491,7 +502,7 @@ export default function DashboardPage() {
       setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
       setIsLoading(false);
     }
-  }, [selectedYear, authUser, authLoading, fetchDashboardData]);
+  }, [selectedYear, authUser, authLoading, fetchDashboardData, isReadyToRender]);
 
 
   setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef, [upcomingEtdShipments, isLoading]);
