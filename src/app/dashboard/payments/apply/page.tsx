@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, getDoc, getDocs, query, where, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, where, runTransaction, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import type { InvoiceDocument, CustomerDocument, InvoiceStatus } from '@/types';
 import { invoiceStatusOptions } from '@/types';
 
@@ -56,32 +56,31 @@ export default function ApplyPaymentPage() {
   const watchedInvoiceId = form.watch("invoiceId");
 
   React.useEffect(() => {
-    const fetchInvoices = async () => {
-      setIsLoadingDropdowns(true);
-      try {
-        // Fetch only 'Sent', 'Partial', or 'Overdue' invoices
-        const q = query(
-          collection(firestore, "invoices"),
-          where("status", "in", ["Sent", "Partial", "Overdue"])
-        );
-        const invoicesSnap = await getDocs(q);
-        const fetchedOptions = invoicesSnap.docs.map(docSnap => {
-          const data = docSnap.data() as InvoiceDocument;
-          return {
-            value: docSnap.id,
-            label: `${docSnap.id} - ${data.customerName} - Amount: ${data.totalAmount.toFixed(2)}`,
-            invoiceData: { ...data, id: docSnap.id },
-          };
+    setIsLoadingDropdowns(true);
+    const q = query(
+      collection(firestore, "invoices"),
+      where("status", "in", ["Sent", "Partial", "Overdue"])
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedOptions = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data() as InvoiceDocument;
+            return {
+                value: docSnap.id,
+                label: `${docSnap.id} - ${data.customerName} - Amount: ${data.totalAmount.toFixed(2)}`,
+                invoiceData: { ...data, id: docSnap.id },
+            };
         });
         setInvoiceOptions(fetchedOptions);
-      } catch (error) {
-        console.error("Error fetching invoices:", error);
-        Swal.fire("Error", "Could not load invoices. Please try again.", "error");
-      } finally {
         setIsLoadingDropdowns(false);
-      }
-    };
-    fetchInvoices();
+    }, (error) => {
+        console.error("Error fetching invoices with onSnapshot: ", error);
+        Swal.fire("Error", `Could not load invoices in real-time. Error: ${error.message}`, "error");
+        setIsLoadingDropdowns(false);
+    });
+
+    // Cleanup subscription on component unmount
+    return () => unsubscribe();
   }, []);
 
   React.useEffect(() => {
@@ -112,11 +111,7 @@ export default function ApplyPaymentPage() {
       return;
     }
 
-    // Placeholder for payment modal/dialog
-    // In a real app, a modal would open here to collect paymentAmount, paymentMethod, etc.
-    // For this example, we'll simulate a full payment and update the invoice.
-
-    const paymentAmount = selectedInvoiceDetails.amountDue; // Simulate paying the full due amount
+    const paymentAmount = selectedInvoiceDetails.amountDue;
 
     if (paymentAmount <= 0) {
       Swal.fire("Info", "This invoice has no amount due or is already paid.", "info");
@@ -173,16 +168,10 @@ export default function ApplyPaymentPage() {
                 });
             });
 
-            Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated to 'Paid'.`, "success");
+            Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated.`, "success");
             form.reset();
             setSelectedInvoiceDetails(null);
-            // Re-fetch invoices to update dropdown (or remove paid one)
-             const q = query(collection(firestore, "invoices"), where("status", "in", ["Sent", "Partial", "Overdue"]));
-             const invoicesSnap = await getDocs(q);
-             setInvoiceOptions(invoicesSnap.docs.map(docSnap => {
-                const data = docSnap.data() as InvoiceDocument;
-                return {value: docSnap.id, label: `${docSnap.id} - ${data.customerName} - Amount: ${data.totalAmount.toFixed(2)}`, invoiceData: {...data, id: docSnap.id}};
-             }));
+            // No need to manually refetch, onSnapshot will handle it.
 
         } catch (error: any) {
             Swal.fire("Error", `Failed to apply payment: ${error.message}`, "error");
@@ -271,3 +260,4 @@ export default function ApplyPaymentPage() {
     </div>
   );
 }
+    
