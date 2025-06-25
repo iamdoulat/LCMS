@@ -184,7 +184,6 @@ const demoMachineManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
-    roles: ["DemoManager"],
     subLinks: [
       { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
       { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
@@ -288,24 +287,29 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    let hasGroupAccess: boolean;
-
+    // Check for standard role-based access
+    let hasAccessViaRole = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+    
+    // Check for specific email overrides
+    let hasAccessViaEmail = false;
     if (item.groupLabel === 'Demo M/C Management') {
-      // Specific rule for Demo M/C Management as requested
-      hasGroupAccess = (userRole === 'DemoManager' || (user?.email === 'jonayedjonayed08@gmail.com'));
-    } else {
-      // Standard rule for all other groups
-      hasGroupAccess = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
+      hasAccessViaEmail = (user?.email === 'jonayedjonayed08@gmail.com');
+    } else if (item.groupLabel === 'Warranty Management') {
+      hasAccessViaEmail = (user?.email === 'service@smartsolution-bd.com');
     }
+
+    const hasGroupAccess = hasAccessViaRole || hasAccessViaEmail;
     
     if (!hasGroupAccess) {
         return null;
     }
 
     const visibleSubLinks = item.subLinks?.filter(subLink => {
-      if (item.groupLabel === 'Demo M/C Management') {
-        return true; // Parent group check is sufficient for this special case
+      // If the parent group has special email access, all its children are visible
+      if (hasAccessViaEmail && (item.groupLabel === 'Demo M/C Management' || item.groupLabel === 'Warranty Management')) {
+        return true;
       }
+      // Otherwise, apply standard role-based filtering for sublinks
       return userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole));
     }) || [];
 
@@ -542,5 +546,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
