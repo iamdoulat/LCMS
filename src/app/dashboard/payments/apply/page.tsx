@@ -174,7 +174,7 @@ export default function ApplyPaymentPage() {
 
             transaction.set(paymentRef, {
                 invoiceId: watchedInvoiceId,
-                invoiceNumber: invoiceData.id,
+                invoiceNumber: invoiceDoc.id, // Correctly use the document ID
                 customerId: invoiceData.customerId,
                 customerName: invoiceData.customerName,
                 paymentAmount: data.paymentAmount,
