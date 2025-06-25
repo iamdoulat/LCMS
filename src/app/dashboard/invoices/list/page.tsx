@@ -185,8 +185,7 @@ export default function InvoicesListPage() {
   }, [allInvoices, filterInvoiceNumber, filterCustomerId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditInvoice = (invoiceId: string) => {
-    // router.push(`/dashboard/invoices/edit/${invoiceId}`); // Uncomment when edit page is ready
-    Swal.fire("Info", `Edit functionality for Invoice ID ${invoiceId} is not yet implemented.`, "info");
+    router.push(`/dashboard/invoices/edit/${invoiceId}`);
   };
 
   const handleDeleteInvoice = (invoiceId: string, invoiceIdentifier?: string) => {
@@ -255,6 +254,7 @@ export default function InvoicesListPage() {
       case "Draft": return "outline";
       case "Sent": case "Partial": return "secondary";
       case "Overdue": case "Void": return "destructive";
+      case "Refunded": return "secondary";
       default: return "outline";
     }
   };
@@ -431,5 +431,6 @@ export default function InvoicesListPage() {
     </div>
   );
 }
+    
 
     
