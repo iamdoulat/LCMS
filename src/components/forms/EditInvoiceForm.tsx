@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues } from '@/types';
-import { InvoiceSchema, quoteTaxTypes } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -100,6 +100,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
             paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
+            status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               description: item.description || '',
@@ -257,7 +258,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: initialData.status, // Preserve original status unless explicitly changed
+      status: data.status,
       updatedAt: serverTimestamp(),
     };
 
@@ -299,7 +300,29 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
 
         <Separator />
@@ -342,8 +365,20 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => reset()}>
-                <X className="mr-2 h-4 w-4" />Reset Changes
+            <Button type="button" variant="outline" onClick={() => reset(initialData ? {
+                ...initialData,
+                invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : new Date(),
+                dueDate: initialData.dueDate ? parseISO(initialData.dueDate) : undefined,
+                lineItems: initialData.lineItems.map(item => ({
+                  ...item,
+                  qty: item.qty.toString(),
+                  unitPrice: item.unitPrice.toString(),
+                  discountPercentage: item.discountPercentage?.toString() || '0',
+                  taxPercentage: item.taxPercentage?.toString() || '0',
+                  total: item.total.toFixed(2),
+                })),
+              } : {} )}>
+                <X className="mr-2 h-4 w-4" />Reset
             </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
               {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
@@ -353,5 +388,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
-    
