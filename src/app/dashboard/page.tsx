@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -193,8 +192,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 
 
 export default function DashboardPage() {
-  const { user: authUser, loading: authLoading, userRole } = useAuth();
-  const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuth(); // Simplified, as AuthGuard handles loading screen
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
@@ -211,7 +209,6 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
-  const [isReadyToRender, setIsReadyToRender] = React.useState(false);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -219,44 +216,6 @@ export default function DashboardPage() {
   const upcomingEtdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const draftLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const completedLcIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-
-  useEffect(() => {
-    if (authLoading) {
-      return; // Wait until auth state is fully loaded.
-    }
-
-    // If auth is loaded but there's no user, AuthGuard will handle redirection.
-    // We just wait here to avoid rendering anything.
-    if (!authUser) {
-      return;
-    }
-
-    // Once we have the user and the role is determined...
-    if (userRole) {
-      if (userRole === "Service") {
-        router.replace('/dashboard/warranty-management/search');
-        return; // Start redirect, no need to do more.
-      }
-      if (userRole === "DemoManager") {
-        router.replace('/dashboard/demo/demo-machine-search');
-        return; // Start redirect
-      }
-      if (userRole === "Store Manager") {
-        router.replace('/dashboard/items/list');
-        return; // Start redirect
-      }
-      
-      // If the role is any other valid role, allow rendering the dashboard.
-      setIsReadyToRender(true);
-    }
-    
-    // If authUser is present but userRole is still being fetched,
-    // this effect will do nothing, keeping the loading screen active.
-    // It will re-run when userRole's state changes.
-
-  }, [userRole, authLoading, router, authUser]);
-
 
   useEffect(() => {
     const currentHour = new Date().getHours();
@@ -491,9 +450,10 @@ export default function DashboardPage() {
   }, [authUser]); // Added authUser dependency
 
   useEffect(() => {
-    if (!authLoading && authUser && isReadyToRender) {
+    if (!authLoading && authUser) {
       fetchDashboardData(selectedYear);
     } else if (!authLoading && !authUser) {
+      // Clear data if user logs out
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -502,17 +462,18 @@ export default function DashboardPage() {
       setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
       setIsLoading(false);
     }
-  }, [selectedYear, authUser, authLoading, fetchDashboardData, isReadyToRender]);
+  }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
 
   setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef, [upcomingEtdShipments, isLoading]);
   setupAutoScroll(draftLcScrollRef, draftLcIntervalRef, [draftLCs, isLoading]);
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
-
-  if (authLoading || !isReadyToRender) {
+  // AuthGuard now handles the main loading state. 
+  // We just need to handle the data loading state for the dashboard content itself.
+  if (authLoading) {
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
       </div>
@@ -555,7 +516,7 @@ export default function DashboardPage() {
           </Select>
         </div>
       </div>
-      { isLoading && !authLoading ? (
+      { isLoading ? (
          <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>

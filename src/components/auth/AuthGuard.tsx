@@ -8,23 +8,60 @@ import type { PropsWithChildren} from 'react';
 import React, { useEffect } from 'react';
 
 const publicPaths = ['/login', '/register']; // Paths accessible without authentication
+const dashboardPath = '/dashboard';
 
 export default function AuthGuard({ children }: PropsWithChildren) {
-  const { user, loading } = useAuth();
+  const { user, userRole, loading } = useAuth(); // Get userRole from context
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user && !publicPaths.includes(pathname)) {
-        router.push('/login');
-      } else if (user && publicPaths.includes(pathname)) {
-        // If user is logged in and tries to access login/register, redirect to dashboard
-        router.push('/dashboard');
+    if (loading) {
+      return; // Wait until auth state and role are fully loaded
+    }
+
+    // If not authenticated and trying to access a protected page
+    if (!user && !publicPaths.includes(pathname)) {
+      router.replace('/login');
+      return;
+    }
+
+    // If authenticated...
+    if (user) {
+      // and trying to access a public page like login/register
+      if (publicPaths.includes(pathname)) {
+        router.replace(dashboardPath);
+        return;
+      }
+
+      // Role-based redirection logic
+      // This runs only if the user is on the main dashboard page
+      if (pathname === dashboardPath) {
+        let redirectPath = '';
+        switch (userRole) {
+          case 'Service':
+            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search';
+            break;
+          case 'DemoManager':
+            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search';
+            break;
+          case 'Store Manager':
+            redirectPath = process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list';
+            break;
+          default:
+            // No redirect for other roles, they stay on the main dashboard
+            break;
+        }
+
+        if (redirectPath && redirectPath !== pathname) {
+          router.replace(redirectPath);
+        }
       }
     }
-  }, [user, loading, router, pathname]);
+  }, [user, userRole, loading, router, pathname]);
 
+  // Show loading spinner while auth state or role is being determined
+  // Or if we are about to redirect
   if (loading || (!user && !publicPaths.includes(pathname))) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -33,11 +70,6 @@ export default function AuthGuard({ children }: PropsWithChildren) {
     );
   }
   
-  // If user is logged in OR if the path is public, render children
-  if (user || publicPaths.includes(pathname)) {
-      return <>{children}</>;
-  }
-
-  // Fallback, should be covered by loading or redirect
-  return null; 
+  // Render children if authenticated and not redirecting, or on a public path
+  return <>{children}</>; 
 }
