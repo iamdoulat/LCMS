@@ -211,7 +211,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
-  const [isRedirecting, setIsRedirecting] = React.useState(true);
+  const [isReadyToRender, setIsReadyToRender] = React.useState(false); // New state to control rendering
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -234,12 +234,15 @@ export default function DashboardPage() {
       } else if (userRole === "Store Manager") {
         router.replace('/dashboard/items/list');
       } else {
-        // This is a role that should see the dashboard.
-        setIsRedirecting(false);
+        // Any other authenticated role can see the dashboard
+        setIsReadyToRender(true);
       }
-    } else if (!authLoading && !authUser) {
-        // If auth is done and there's no user, they should be at /login, but this handles edge cases.
-        setIsRedirecting(false);
+    } else {
+      // Not a special role, but need to wait for authUser check to complete
+      // If no user, AuthGuard will handle it. If user exists, but no specific role, render dashboard.
+      if(authUser) {
+         setIsReadyToRender(true);
+      }
     }
   }, [userRole, authLoading, router, authUser]);
 
@@ -496,19 +499,11 @@ export default function DashboardPage() {
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
 
-  if (authLoading || isRedirecting) {
+  if (authLoading || !isReadyToRender) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  if (!authUser && !authLoading) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
-        <p className="text-muted-foreground">Please log in to view the dashboard.</p>
       </div>
     );
   }
