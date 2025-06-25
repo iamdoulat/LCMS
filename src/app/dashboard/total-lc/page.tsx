@@ -603,9 +603,10 @@ export default function TotalLCPage() {
                               size="sm"
                               onClick={() => handleOpenLink(lc.finalLcUrl)}
                               disabled={!lc.finalLcUrl}
-                              title="View Final L/C Document"
+                              title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> L/C
+                              <FileText className="mr-1.5 h-3.5 w-3.5" />
+                              {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                             </Button>
                             <Button
                               variant={lc.finalPIUrl ? "default" : "outline"}
