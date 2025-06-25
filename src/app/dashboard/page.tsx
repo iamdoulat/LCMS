@@ -222,7 +222,11 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    if (!authLoading) {
+    if (authLoading) {
+      return; // Wait until auth state is confirmed
+    }
+
+    if (userRole) {
       if (userRole === "Service") {
         router.replace('/dashboard/warranty-management/search');
       } else if (userRole === "DemoManager") {
@@ -230,9 +234,12 @@ export default function DashboardPage() {
       } else if (userRole === "Store Manager") {
         router.replace('/dashboard/items/list');
       } else {
-        setIsRedirecting(false); // Only allow rendering for non-redirected roles
+        // This is a role that should see the dashboard.
+        setIsRedirecting(false);
       }
     }
+    // If userRole is still null after auth is loaded, it implies an issue,
+    // but we let isRedirecting=true keep the loader visible until a role is confirmed or a user is determined to be logged out (handled by AuthGuard).
   }, [userRole, authLoading, router]);
 
 
@@ -833,9 +840,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
