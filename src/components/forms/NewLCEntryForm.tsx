@@ -669,9 +669,9 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          <FormField
+           <FormField
             control={form.control}
             name="currency"
             render={({ field }) => (
@@ -758,7 +758,7 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-          <FormField
+           <FormField
             control={form.control}
             name="numberOfAmendments"
             render={({ field }) => (
@@ -917,7 +917,7 @@ export function NewLCEntryForm() {
                 name="lcIssueDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>L/C Issue Date*</FormLabel>
+                    <FormLabel>T/T or L/C Issue Date*</FormLabel>
                     <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
@@ -929,9 +929,9 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Expire Date{watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
-                    <DatePickerField
-                        field={field}
-                        placeholder="Select date"
+                    <DatePickerField 
+                        field={field} 
+                        placeholder="Select date" 
                         disabled={watchedTermsOfPay === "T/T In Advance"}
                     />
                     <FormMessage />
@@ -944,9 +944,9 @@ export function NewLCEntryForm() {
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Latest Shipment Date{watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
-                     <DatePickerField
-                        field={field}
-                        placeholder="Select date"
+                     <DatePickerField 
+                        field={field} 
+                        placeholder="Select date" 
                         disabled={watchedTermsOfPay === "T/T In Advance"}
                     />
                     <FormMessage />
@@ -1017,8 +1017,8 @@ export function NewLCEntryForm() {
             </div>
           </div>
         )}
-
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4 items-end">
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4 items-end">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1101,7 +1101,7 @@ export function NewLCEntryForm() {
             )}
         </div>
         <Separator />
-
+        
         {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
@@ -1360,7 +1360,7 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-
+        
         {/* Section: Notify Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <BellRing className="mr-2 h-5 w-5 text-primary" />
@@ -1428,15 +1428,15 @@ export function NewLCEntryForm() {
             <AccordionTrigger
               className={cn(
                 "flex w-full items-center justify-between py-3 text-foreground hover:no-underline",
-                sectionHeadingClass, "border-b-0 mb-0"
+                sectionHeadingClass, "border-b-0 mb-0" 
               )}
             >
               <div className="flex items-center gap-2">
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
-               {activeSection46A === "section46A" ?
-                <Minus className="h-5 w-5 text-primary" /> :
+               {activeSection46A === "section46A" ? 
+                <Minus className="h-5 w-5 text-primary" /> : 
                 <Plus className="h-5 w-5 text-primary" />}
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
@@ -1674,4 +1674,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-

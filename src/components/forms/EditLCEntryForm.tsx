@@ -978,7 +978,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="lcIssueDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>L/C Issue Date*</FormLabel>
+                    <FormLabel>T/T or L/C Issue Date*</FormLabel>
                     <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
