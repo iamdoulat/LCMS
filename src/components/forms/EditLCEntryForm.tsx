@@ -480,7 +480,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
         }
     }
-  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue]);
+  }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
 
   async function onSubmit(finalData: LCEditFormValues) {
@@ -498,83 +498,83 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
-      trackingCourier: finalData.trackingCourier === "" ? undefined : finalData.trackingCourier, // Store undefined if "None"
+      trackingCourier: finalData.trackingCourier || deleteField(),
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
-      invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField() as any,
-      commercialInvoiceNumber: finalData.commercialInvoiceNumber || undefined,
-      commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField() as any,
+      proformaInvoiceNumber: finalData.proformaInvoiceNumber || deleteField(),
+      invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
+      commercialInvoiceNumber: finalData.commercialInvoiceNumber || deleteField(),
+      commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
       totalMachineQty: finalData.totalMachineQty,
-      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField() as any,
-      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? deleteField() as any : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? deleteField() as any : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
-      finalPIUrl: finalData.finalPIUrl || undefined,
-      finalLcUrl: finalData.finalLcUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
-      packingListUrl: finalData.packingListUrl || undefined,
-      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? deleteField() as any : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField() as any,
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField() as any,
-      itemDescriptions: finalData.itemDescriptions || undefined,
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
-      vesselImoNumber: finalData.vesselImoNumber || undefined,
-      flightNumber: finalData.flightNumber || undefined,
-      partialShipments: finalData.partialShipments || undefined,
-      portOfLoading: finalData.portOfLoading || undefined,
-      portOfDischarge: finalData.portOfDischarge || undefined,
-      shippingMarks: finalData.shippingMarks || undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : deleteField() as any,
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: finalData.notifyPartyName || undefined,
-      notifyPartyCell: finalData.notifyPartyCell || undefined,
-      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
-      numberOfAmendments: finalData.numberOfAmendments === undefined ? deleteField() as any : finalData.numberOfAmendments,
+      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
+      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? deleteField() : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? deleteField() : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      purchaseOrderUrl: finalData.purchaseOrderUrl || deleteField(),
+      finalPIUrl: finalData.finalPIUrl || deleteField(),
+      finalLcUrl: finalData.finalLcUrl || deleteField(),
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl || deleteField(),
+      packingListUrl: finalData.packingListUrl || deleteField(),
+      trackingNumber: finalData.trackingNumber || deleteField(),
+      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
+      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
+      itemDescriptions: finalData.itemDescriptions || deleteField(),
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress || deleteField(),
+      vesselOrFlightName: finalData.vesselOrFlightName || deleteField(),
+      vesselImoNumber: finalData.vesselImoNumber || deleteField(),
+      flightNumber: finalData.flightNumber || deleteField(),
+      partialShipments: finalData.partialShipments || deleteField(),
+      portOfLoading: finalData.portOfLoading || deleteField(),
+      portOfDischarge: finalData.portOfDischarge || deleteField(),
+      shippingMarks: finalData.shippingMarks || deleteField(),
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : deleteField(),
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || deleteField(),
+      notifyPartyName: finalData.notifyPartyName || deleteField(),
+      notifyPartyCell: finalData.notifyPartyCell || deleteField(),
+      notifyPartyEmail: finalData.notifyPartyEmail || deleteField(),
+      numberOfAmendments: finalData.numberOfAmendments,
       partialShipmentAllowed: finalData.partialShipmentAllowed,
-      firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialQty) : deleteField() as any,
-      secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialQty) : deleteField() as any,
-      thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialQty) : deleteField() as any,
-      firstPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialAmount) : deleteField() as any,
-      secondPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialAmount) : deleteField() as any,
-      thirdPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialAmount) : deleteField() as any,
-      firstPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialPkgs) : deleteField() as any,
-      secondPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialPkgs) : deleteField() as any,
-      thirdPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialPkgs) : deleteField() as any,
-      firstPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialNetWeight) : deleteField() as any,
-      secondPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialNetWeight) : deleteField() as any,
-      thirdPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialNetWeight) : deleteField() as any,
-      firstPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialGrossWeight) : deleteField() as any,
-      secondPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialGrossWeight) : deleteField() as any,
-      thirdPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialGrossWeight) : deleteField() as any,
-      firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialCbm) : deleteField() as any,
-      secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialCbm) : deleteField() as any,
-      thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialCbm) : deleteField() as any,
+      firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialQty : deleteField(),
+      secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialQty : deleteField(),
+      thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialQty : deleteField(),
+      firstPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialAmount : deleteField(),
+      secondPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialAmount : deleteField(),
+      thirdPartialAmount: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialAmount : deleteField(),
+      firstPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialPkgs : deleteField(),
+      secondPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialPkgs : deleteField(),
+      thirdPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialPkgs : deleteField(),
+      firstPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialNetWeight : deleteField(),
+      secondPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialNetWeight : deleteField(),
+      thirdPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialNetWeight : deleteField(),
+      firstPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialGrossWeight : deleteField(),
+      secondPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialGrossWeight : deleteField(),
+      thirdPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialGrossWeight : deleteField(),
+      firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.firstPartialCbm : deleteField(),
+      secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.secondPartialCbm : deleteField(),
+      thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? finalData.thirdPartialCbm : deleteField(),
       totalPackageQty: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalPackageQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.totalPackageQty)),
+        : (finalData.totalPackageQty || deleteField()),
       totalNetWeight: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalNetWeight) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.totalNetWeight)),
+        : (finalData.totalNetWeight || deleteField()),
       totalGrossWeight: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalGrossWeight) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.totalGrossWeight)),
+        : (finalData.totalGrossWeight || deleteField()),
       totalCbm: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalCbm) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.totalCbm)),
-      originalBlQty: toNumberOrUndefined(finalData.originalBlQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.originalBlQty),
-      copyBlQty: toNumberOrUndefined(finalData.copyBlQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.copyBlQty),
-      originalCooQty: toNumberOrUndefined(finalData.originalCooQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.originalCooQty),
-      copyCooQty: toNumberOrUndefined(finalData.copyCooQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.copyCooQty),
-      invoiceQty: toNumberOrUndefined(finalData.invoiceQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.invoiceQty),
-      packingListQty: toNumberOrUndefined(finalData.packingListQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.packingListQty),
-      beneficiaryCertificateQty: toNumberOrUndefined(finalData.beneficiaryCertificateQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.beneficiaryCertificateQty),
-      brandNewCertificateQty: toNumberOrUndefined(finalData.brandNewCertificateQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.brandNewCertificateQty),
-      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(finalData.beneficiaryWarrantyCertificateQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.beneficiaryWarrantyCertificateQty),
-      beneficiaryComplianceCertificateQty: toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty),
-      shipmentAdviceQty: toNumberOrUndefined(finalData.shipmentAdviceQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.shipmentAdviceQty),
-      billOfExchangeQty: toNumberOrUndefined(finalData.billOfExchangeQty) === undefined ? deleteField() as any : toNumberOrUndefined(finalData.billOfExchangeQty),
+        : (finalData.totalCbm || deleteField()),
+      originalBlQty: finalData.originalBlQty || deleteField(),
+      copyBlQty: finalData.copyBlQty || deleteField(),
+      originalCooQty: finalData.originalCooQty || deleteField(),
+      copyCooQty: finalData.copyCooQty || deleteField(),
+      invoiceQty: finalData.invoiceQty || deleteField(),
+      packingListQty: finalData.packingListQty || deleteField(),
+      beneficiaryCertificateQty: finalData.beneficiaryCertificateQty || deleteField(),
+      brandNewCertificateQty: finalData.brandNewCertificateQty || deleteField(),
+      beneficiaryWarrantyCertificateQty: finalData.beneficiaryWarrantyCertificateQty || deleteField(),
+      beneficiaryComplianceCertificateQty: finalData.beneficiaryComplianceCertificateQty || deleteField(),
+      shipmentAdviceQty: finalData.shipmentAdviceQty || deleteField(),
+      billOfExchangeQty: finalData.billOfExchangeQty || deleteField(),
       isFirstShipment: finalData.isFirstShipment ?? false,
       isSecondShipment: finalData.isSecondShipment ?? false,
       isThirdShipment: finalData.isThirdShipment ?? false,
@@ -859,7 +859,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-4">
             <FormField
             control={control}
             name="termsOfPay"
@@ -1079,7 +1079,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </div>
         )}
         
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4 items-end">
             <FormField
                 control={form.control}
                 name="totalPackageQty"
@@ -1178,7 +1178,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                    <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={shipmentModeOptions.includes(field.value as ShipmentMode) ? field.value : defaultFormValues.shipmentMode}
+                      value={field.value ?? defaultFormValues.shipmentMode}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {shipmentModeOptions.map((option) => (
@@ -1288,7 +1288,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                        <RadioGroup
                           onValueChange={field.onChange}
-                          value={field.value === "" || field.value === undefined ? defaultFormValues.trackingCourier : field.value}
+                          value={field.value ?? "DHL"}
                           className="flex flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {trackingCourierOptions.map((courier) => (
@@ -1492,7 +1492,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 sectionHeadingClass, "border-b-0 mb-0" 
               )}
             >
-              <div className="flex items-center gap-2"> 
+              <div className="flex items-center gap-2">
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
@@ -1735,4 +1735,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-
