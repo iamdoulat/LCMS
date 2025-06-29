@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -91,10 +90,10 @@ interface NavItemGroup {
   roles?: UserRole[];
 }
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager"] };
+const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
-const allNavGroups: NavItemGroup[] = [
+const navGroups: NavItemGroup[] = [
   {
     groupLabel: 'T/T OR L/C Management',
     icon: FileText,
@@ -108,13 +107,13 @@ const allNavGroups: NavItemGroup[] = [
   {
     groupLabel: 'Commission Management',
     icon: Briefcase,
-    roles: ["Super Admin", "Admin"],
+    roles: ["Super Admin", "Admin", "DemoManager"],
     subLinks: [
-      { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
     ],
   },
   {
-    groupLabel: 'Invoicing & Quote',
+    groupLabel: 'Financial Management',
     icon: Receipt,
     roles: ["Super Admin", "Admin", "Store Manager"],
     subLinks: [
@@ -129,13 +128,6 @@ const allNavGroups: NavItemGroup[] = [
       { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid, roles: ["Super Admin", "Admin"] },
       { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
-    ],
-  },
-  {
-    groupLabel: 'Inventory Management',
-    icon: Package,
-    roles: ["Super Admin", "Admin", "Store Manager"],
-    subLinks: [
       { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, roles: ["Super Admin", "Admin", "Store Manager"] },
@@ -220,13 +212,16 @@ export function AppSidebarNav() {
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
   const hasAccess = React.useCallback((roles?: UserRole[]): boolean => {
+    if (!roles) { // If no roles are defined, only super admin/admin can see
+        return userRole === "Super Admin" || userRole === "Admin";
+    }
     if (userRole === "Super Admin" || userRole === "Admin") {
-      return true;
+      return true; // Admins see everything with a role
     }
-    if (!roles || !userRole) {
-      return false;
+    if (!userRole) {
+      return false; // No role, no access
     }
-    return roles.includes(userRole);
+    return roles.includes(userRole); // Check if the user's role is in the list
   }, [userRole]);
 
   const isGroupActive = React.useCallback((subLinks: NavItemGroup['subLinks']) => {
@@ -246,7 +241,7 @@ export function AppSidebarNav() {
       return visibleGroups.find(group => isGroupActive(group.subLinks));
     };
   
-    const activeGroupOnLoad = findActiveGroup(allNavGroups);
+    const activeGroupOnLoad = findActiveGroup(navGroups);
     
     let defaultOpenGroup = '';
     if (activeGroupOnLoad?.groupLabel) {
@@ -261,7 +256,7 @@ export function AppSidebarNav() {
                 defaultOpenGroup = 'Demo M/C Management';
                 break;
             case 'Store Manager':
-                defaultOpenGroup = 'Invoicing & Quote';
+                defaultOpenGroup = 'Financial Management';
                 break;
             default:
                 break; 
@@ -284,8 +279,8 @@ export function AppSidebarNav() {
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
     const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-    if (item.subLinks && visibleSubLinks.length === 0) {
-      return null;
+    if (!hasAccess(item.roles)) { // Hide the entire group if no access
+        return null;
     }
     
     const IconComponent = item.icon;
@@ -410,12 +405,7 @@ export function AppSidebarNav() {
         </SidebarMenu>
         
         <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-          {allNavGroups.map((group, index) => {
-            if (!hasAccess(group.roles)) {
-              return null;
-            }
-            return renderNavGroup(group, index);
-          })}
+          {navGroups.map((group, index) => renderNavGroup(group, index))}
         </Accordion>
 
         <SidebarSeparator />
