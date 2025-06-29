@@ -292,36 +292,26 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    let hasAccessViaRole = userRole === "Super Admin" || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
-    
-    let hasAccessViaEmail = false;
-    if (item.groupLabel === 'Demo M/C Management') {
-      hasAccessViaEmail = (user?.email === 'jonayedjonayed08@gmail.com');
-    } else if (item.groupLabel === 'Warranty Management') {
-      hasAccessViaEmail = (user?.email === 'service@smartsolution-bd.com');
-    }
+    // A user can see a group if their role is Super Admin, or if their role is in the item's role list.
+    const hasGroupAccess =
+      userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
 
-    const hasGroupAccess = hasAccessViaRole || hasAccessViaEmail;
-    
     if (!hasGroupAccess) {
         return null;
     }
 
-    const visibleSubLinks = item.subLinks?.filter(subLink => {
-      if (hasAccessViaEmail && (item.groupLabel === 'Demo M/C Management' || item.groupLabel === 'Warranty Management')) {
-        return true;
-      }
-      return userRole === "Super Admin" || !subLink.roles || (userRole && subLink.roles.includes(userRole as UserRole));
-    }) || [];
+    // Filter sublinks based on the user's role
+    const visibleSubLinks = item.subLinks?.filter(subLink => 
+        userRole === "Super Admin" || 
+        !subLink.roles || // Show if sublink has no specific role restriction (inherits from group)
+        (userRole && subLink.roles.includes(userRole as UserRole))
+    ) || [];
 
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+    // If after filtering, there are no visible sublinks, don't render the group at all.
+    if (visibleSubLinks.length === 0) {
         return null;
     }
     
-    if (!item.subLinks || visibleSubLinks.length === 0) {
-        return null;
-    }
-
     const IconComponent = item.icon;
 
     return (
