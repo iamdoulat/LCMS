@@ -241,11 +241,6 @@ const allNavSections: NavSection[] = [
     roles: ["Super Admin", "Admin", "Store Manager"],
   },
   {
-    label: 'Inventory Management',
-    items: inventoryManagementNavItems,
-    roles: ["Super Admin", "Admin", "Store Manager"],
-  },
-  {
     label: 'General Management',
     items: managementNavItems,
     roles: ["Super Admin", "Admin"],
