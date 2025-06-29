@@ -38,7 +38,6 @@ interface AuthContextType {
   userRole: UserRole | null;
   firestoreUser: UserDocumentForAdmin | null;
   login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, displayName: string, role?: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -203,50 +202,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, []);
 
-  const register = useCallback(async (email: string, pass: string, displayName: string, role: UserRole = "User") => {
-    setLoading(true);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      const firebaseUser = userCredential.user;
-      
-      await firebaseUpdateProfile(firebaseUser, { displayName });
-
-      // Create user profile in Firestore
-      const userDocRef = doc(firestore, "users", firebaseUser.uid);
-      const newProfileData = {
-        uid: firebaseUser.uid,
-        displayName: displayName,
-        email: firebaseUser.email,
-        photoURL: firebaseUser.photoURL || null,
-        role: role,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      await setDoc(userDocRef, newProfileData);
-      // onAuthStateChanged will update context state
-      Swal.fire({
-        title: "Registration Successful",
-        text: "The account has been created. If you are an admin, you will be logged out as the new user is signed in.",
-        icon: "success",
-        timer: 3500,
-        showConfirmButton: true,
-      });
-    } catch (error: any) {
-      console.error("AuthContext: Error registering user: ", error);
-      let errorMessage = "Failed to register. Please try again.";
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "This email address is already in use by another account.";
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = "The password is too weak. Please choose a stronger password.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "The email address is not valid.";
-      }
-      Swal.fire({ title: "Registration Failed", text: errorMessage, icon: "error" });
-      setLoading(false); 
-      throw error;
-    }
-  }, []);
-
   const logout = useCallback(async () => {
     setLoading(true);
     try {
@@ -335,7 +290,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
+    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );

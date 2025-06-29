@@ -54,7 +54,6 @@ import {
   FileCode,
   FileEdit,
   PackageCheck,
-  UserPlus,
   Microscope,
   Users as UsersIcon,
   Receipt,
@@ -222,7 +221,6 @@ const reportingManagementNavItems: NavItemGroup[] = [
 
 const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'Users', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
   { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
