@@ -67,7 +67,6 @@ import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
 
-
 interface NavItem {
   href: string;
   label: string;
@@ -82,6 +81,7 @@ interface NavItemGroup {
   subLinks: NavItem[];
 }
 
+// Define Navigation Items
 const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"]},
     { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
@@ -154,6 +154,7 @@ const settingsNavItems: NavItem[] = [
     { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
+// Define Group Structure
 const allNavGroups: NavItemGroup[] = [
   { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
   { groupLabel: 'Financial Management', icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
@@ -180,7 +181,12 @@ export function AppSidebarNav() {
     return roles.includes(userRole);
   }, [userRole]);
 
-  const visibleNavGroups = React.useMemo(() => {
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === href;
+    return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
+  };
+
+  const getVisibleNavGroups = React.useCallback(() => {
     if (!userRole) return [];
     return allNavGroups
       .filter(group => hasAccess(group.roles))
@@ -190,36 +196,24 @@ export function AppSidebarNav() {
       }))
       .filter(group => group.subLinks.length > 0);
   }, [userRole, hasAccess]);
+
+  const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
+  const visibleNavGroups = getVisibleNavGroups();
   
-  const isGroupActive = React.useCallback((subLinks: NavItem[]) => {
-    return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
-  }, [pathname]);
-
-  const getDefaultOpenAccordion = React.useCallback(() => {
-    if (!userRole) return [];
-
-    const activeGroup = visibleNavGroups.find(group => isGroupActive(group.subLinks));
-    if (activeGroup) return [activeGroup.groupLabel];
-
-    switch(userRole) {
-      case 'Service': return ['Warranty Management'];
-      case 'DemoManager': return ['Demo M/C Management'];
-      case 'Store Manager': return ['Inventory Management'];
-      default: return [];
-    }
-  }, [userRole, visibleNavGroups, isGroupActive]);
-
-  const [openAccordions, setOpenAccordions] = React.useState<string[]>(getDefaultOpenAccordion());
-
   React.useEffect(() => {
-    setOpenAccordions(getDefaultOpenAccordion());
-  }, [pathname, userRole, getDefaultOpenAccordion]);
+    const isGroupActive = (subLinks: NavItem[]) => subLinks.some(sub => isActive(sub.href));
+    
+    const activeGroup = visibleNavGroups.find(group => isGroupActive(group.subLinks));
+    if (activeGroup) {
+      setOpenAccordions([activeGroup.groupLabel]);
+    } else if (visibleNavGroups.length > 0) {
+      // Open the first accessible group if no other group is active
+      setOpenAccordions([visibleNavGroups[0].groupLabel]);
+    } else {
+      setOpenAccordions([]);
+    }
+  }, [pathname, userRole, visibleNavGroups]);
 
-  const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === href;
-    return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
-  };
-  
   return (
     <>
       <SidebarHeader className="border-b">
@@ -264,7 +258,7 @@ export function AppSidebarNav() {
                         <Link href={subLink.href} passHref>
                         <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
                             <span className="flex items-center gap-2">
-                            {subLink.icon && <subLink.icon className="h-5 w-5 text-primary" />}
+                            {subLink.icon && <subLink.icon className="h-5 w-5" />}
                             <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
                             </span>
                         </SidebarMenuButton>
@@ -285,11 +279,11 @@ export function AppSidebarNav() {
                               "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                               "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                               "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                              (isGroupActive(group.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
+                              (openAccordions.includes(group.groupLabel) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
                             )}
                           >
                             <span className="flex items-center gap-2">
-                              <IconComponent className="h-5 w-5 text-primary" />
+                              <IconComponent className="h-5 w-5" />
                               <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
                             </span>
                           </AccordionTrigger>
@@ -346,3 +340,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
