@@ -260,6 +260,13 @@ export default function LoginPage() {
             )}
           </Button>
 
+          <div className="mt-6 text-center text-sm">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Sign up
+            </Link>
+          </div>
+
         </CardContent>
       </Card>
     </div>

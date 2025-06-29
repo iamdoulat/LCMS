@@ -121,14 +121,9 @@ export default function UserListPage() {
                     User Management
                 </CardTitle>
                 <CardDescription>
-                    View, add, and manage user accounts and roles.
+                    View and manage user accounts and roles. User registration is public.
                 </CardDescription>
               </div>
-              {userRole === "Super Admin" && (
-                <Link href="/dashboard/settings/users/add" passHref>
-                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add New User</Button>
-                </Link>
-              )}
            </div>
         </CardHeader>
         <CardContent>

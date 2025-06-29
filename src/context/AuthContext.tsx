@@ -38,6 +38,7 @@ interface AuthContextType {
   userRole: UserRole | null;
   firestoreUser: UserDocumentForAdmin | null;
   login: (email: string, pass: string) => Promise<void>;
+  register: (email: string, pass: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -253,6 +254,66 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       throw error;
     }
   }, [router]);
+  
+  const register = useCallback(async (email: string, pass: string, displayName: string) => {
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
+
+      // Update the Firebase Auth profile with the display name
+      await firebaseUpdateProfile(user, { displayName });
+
+      // Now create the user document in Firestore
+      const userDocRef = doc(firestore, "users", user.uid);
+      
+      const lowercasedUserEmail = user.email?.toLowerCase() || '';
+      let role: UserRole = "User"; // Default role
+      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+        role = "Super Admin";
+      } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+        role = "Admin";
+      }
+
+      const newProfileData = {
+        uid: user.uid,
+        displayName: displayName,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        role: role,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(userDocRef, newProfileData);
+      
+      setUser(auth.currentUser);
+      setFirestoreUser({ id: user.uid, ...newProfileData } as UserDocumentForAdmin);
+      setUserRole(role);
+
+      Swal.fire({
+        title: "Registration Successful",
+        text: `Welcome, ${displayName}! You are now logged in.`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      // onAuthStateChanged will also run, but this ensures immediate state update
+    } catch (error: any) {
+      console.error("AuthContext: Error registering user: ", error);
+      let errorMessage = "Failed to register. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use by another account.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "The password is too weak. Please use at least 6 characters.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "The email address is not valid.";
+      } else {
+        errorMessage = error.message || 'An unknown registration error occurred.';
+      }
+      setLoading(false); // Make sure to stop loading on error
+      throw new Error(errorMessage); // Propagate error for the form to handle
+    }
+  }, []);
 
   const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
     let newName = companyName;
@@ -290,7 +351,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
+    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );
