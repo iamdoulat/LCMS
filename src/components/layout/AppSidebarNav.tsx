@@ -89,7 +89,7 @@ interface NavItemGroup {
   roles?: UserRole[];
 }
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User"] };
+const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
 const coreModulesNavItems: NavItemGroup[] = [
@@ -228,8 +228,6 @@ const settingsNavItems: NavItem[] = [
 
 const allAccordionGroups = [
   ...coreModulesNavItems,
-  ...financialNavItems,
-  ...inventoryManagementNavItems,
   ...managementNavItems,
   ...demoMachineManagementNavItems,
   ...warrantyManagementNavItems,
@@ -246,6 +244,27 @@ export function AppSidebarNav() {
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
+  const hasAccess = React.useCallback((roles?: UserRole[]): boolean => {
+    // If the user's role is not yet determined, they can't access anything.
+    if (!userRole) {
+      return false;
+    }
+    
+    // Super Admin and Admin have access to everything.
+    if (userRole === 'Super Admin' || userRole === 'Admin') {
+      return true;
+    }
+    
+    // For any other role, the item MUST have a roles array defined.
+    // If it doesn't, access is denied.
+    if (!roles) {
+      return false;
+    }
+
+    // Check if the user's role is included in the item's allowed roles.
+    return roles.includes(userRole);
+  }, [userRole]);
+
   const isGroupActive = React.useCallback((subLinks: NavItemGroup['subLinks']) => {
     if (!subLinks) return false;
     return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
@@ -255,20 +274,19 @@ export function AppSidebarNav() {
     setMounted(true);
   }, []);
 
-  const hasAccess = React.useCallback((roles: UserRole[] | undefined): boolean => {
-    if (!userRole) return false;
-    if (userRole === 'Super Admin' || userRole === 'Admin') return true;
-    if (!roles) return false;
-    return roles.includes(userRole);
-  }, [userRole]);
-
   React.useEffect(() => {
     if (!mounted) return;
 
-    const activeGroupOnLoad = allAccordionGroups.find(group => {
-        const visibleSubLinks = group.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-        return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
-    });
+    const findActiveGroup = (groups: NavItemGroup[]) => {
+      return groups.find(group => {
+          const visibleSubLinks = group.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
+          return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
+      });
+    };
+
+    let activeGroupOnLoad = findActiveGroup(allAccordionGroups);
+    if (!activeGroupOnLoad) activeGroupOnLoad = findActiveGroup(financialNavItems);
+    if (!activeGroupOnLoad) activeGroupOnLoad = findActiveGroup(inventoryManagementNavItems);
     
     let defaultOpenGroup = '';
     if (activeGroupOnLoad?.groupLabel) {
@@ -440,14 +458,18 @@ export function AppSidebarNav() {
                 {coreModulesNavItems.map((item, index) => renderNavGroup(item, index))}
             </SidebarGroup>
 
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-                <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+            {hasAccess(["Store Manager", "Admin", "Super Admin"]) && (
+              <>
+                <SidebarSeparator />
+                <SidebarGroup className="p-0">
+                  <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
                     Financial Management
-                </SidebarGroupLabel>
-                {financialNavItems.map((item, index) => renderNavGroup(item, index))}
-                {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
+                  </SidebarGroupLabel>
+                  {financialNavItems.map((item, index) => renderNavGroup(item, index))}
+                  {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
+                </SidebarGroup>
+              </>
+            )}
 
             <SidebarSeparator />
             <SidebarGroup className="p-0">
