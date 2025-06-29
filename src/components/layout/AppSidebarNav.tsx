@@ -60,6 +60,7 @@ import {
   LayoutGrid,
   Minus,
   Plus,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -83,6 +84,7 @@ interface NavItemGroup {
 
 const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"]},
+    { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
 ];
 
 const inventoryNavItems: NavItem[] = [
@@ -153,15 +155,15 @@ const settingsNavItems: NavItem[] = [
 ];
 
 const allNavGroups: NavItemGroup[] = [
-    { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
-    { groupLabel: "Financial Management", icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
-    { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: commissionManagementNavItems },
-    { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
-    { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
-    { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
-    { groupLabel: 'Demo M/C Management', icon: Laptop, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: demoNavItems },
-    { groupLabel: 'Warranty Management', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"], subLinks: serviceNavItems },
-    { groupLabel: 'Settings', icon: Settings, roles: ["Super Admin", "Admin"], subLinks: settingsNavItems },
+  { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
+  { groupLabel: 'Financial Management', icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
+  { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: commissionManagementNavItems },
+  { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
+  { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
+  { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
+  { groupLabel: 'Demo M/C Management', icon: Laptop, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: demoNavItems },
+  { groupLabel: 'Warranty Management', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"], subLinks: serviceNavItems },
+  { groupLabel: 'Settings', icon: Settings, roles: ["Super Admin", "Admin"], subLinks: settingsNavItems },
 ];
 
 export function AppSidebarNav() {
@@ -257,11 +259,11 @@ export function AppSidebarNav() {
             <Image
               src={companyLogoUrlFromSettings}
               alt="Company Logo"
-              data-ai-hint="company logo"
               width={32}
               height={32}
               className="rounded-sm object-contain"
               priority
+              data-ai-hint="company logo"
             />
             <span
               className={cn(
@@ -375,5 +377,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
