@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -90,29 +91,19 @@ interface NavItemGroup {
   roles?: UserRole[];
 }
 
-const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] };
-const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
+const mainNavItems: NavItemGroup[] = [
+  {
+    groupLabel: "Main Navigation",
+    icon: LayoutDashboard, // Placeholder, not directly shown
+    subLinks: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
+    ]
+  }
+];
 
-const navGroups: NavItemGroup[] = [
-  {
-    groupLabel: 'T/T OR L/C Management',
-    icon: FileText,
-    roles: ["Super Admin", "Admin"],
-    subLinks: [
-      { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
-      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit, roles: ["Super Admin", "Admin"] },
-      { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, roles: ["Super Admin", "Admin"] },
-    ],
-  },
-  {
-    groupLabel: 'Commission Management',
-    icon: Briefcase,
-    roles: ["Super Admin", "Admin", "DemoManager"],
-    subLinks: [
-      { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
-    ],
-  },
-  {
+const financialManagementNavItems: NavItemGroup[] = [
+    {
     groupLabel: 'Financial Management',
     icon: Receipt,
     roles: ["Super Admin", "Admin", "Store Manager"],
@@ -135,6 +126,28 @@ const navGroups: NavItemGroup[] = [
       { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
     ],
   },
+];
+
+
+const operationsNavItems: NavItemGroup[] = [
+    {
+    groupLabel: 'T/T OR L/C Management',
+    icon: FileText,
+    roles: ["Super Admin", "Admin"],
+    subLinks: [
+      { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, roles: ["Super Admin", "Admin"] },
+    ],
+  },
+  {
+    groupLabel: 'Commission Management',
+    icon: Briefcase,
+    roles: ["Super Admin", "Admin", "DemoManager"],
+    subLinks: [
+      { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
+    ],
+  },
   {
     groupLabel: 'Suppliers / Beneficiary',
     icon: Truck,
@@ -151,7 +164,7 @@ const navGroups: NavItemGroup[] = [
       { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks, roles: ["Super Admin", "Admin"] },
     ],
   },
-  {
+   {
     groupLabel: 'Shipment Management',
     icon: Ship,
     roles: ["Super Admin", "Admin"],
@@ -162,6 +175,9 @@ const navGroups: NavItemGroup[] = [
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, roles: ["Super Admin", "Admin"] },
     ],
   },
+];
+
+const demoNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
@@ -174,6 +190,9 @@ const navGroups: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, roles: ["Super Admin", "Admin", "DemoManager"] },
     ],
   },
+];
+
+const serviceNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
@@ -186,20 +205,61 @@ const navGroups: NavItemGroup[] = [
       { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] },
     ],
   },
+];
+
+const settingsNavItems: NavItemGroup[] = [
   {
-    groupLabel: 'Reporting Management',
-    icon: BarChart3,
+    groupLabel: 'Settings',
+    icon: Settings,
     roles: ["Super Admin", "Admin"],
-    subLinks: [],
+    subLinks: [
+      { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
+      { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+    ]
   },
 ];
 
-const settingsNavItems: NavItem[] = [
-  { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-  { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-  { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+interface NavSection {
+  label: string;
+  items: NavItemGroup[];
+  roles: UserRole[];
+}
+
+const allNavSections: NavSection[] = [
+  {
+    label: 'Main Navigation',
+    items: mainNavItems,
+    roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"],
+  },
+  {
+    label: 'Financial Management',
+    items: financialManagementNavItems,
+    roles: ["Super Admin", "Admin", "Store Manager"],
+  },
+  {
+    label: 'Operations',
+    items: operationsNavItems,
+    roles: ["Super Admin", "Admin"],
+  },
+  {
+    label: 'Demo Management',
+    items: demoNavItems,
+    roles: ["Super Admin", "Admin", "DemoManager"],
+  },
+  {
+    label: 'Service & Warranty',
+    items: serviceNavItems,
+    roles: ["Super Admin", "Admin", "Service"],
+  },
+  {
+    label: 'Settings',
+    items: settingsNavItems,
+    roles: ["Super Admin", "Admin"],
+  },
 ];
+
 
 export function AppSidebarNav() {
   const pathname = usePathname();
@@ -212,16 +272,16 @@ export function AppSidebarNav() {
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
   const hasAccess = React.useCallback((roles?: UserRole[]): boolean => {
-    if (!roles) { // If no roles are defined, only super admin/admin can see
+    if (!roles || roles.length === 0) { // If no roles are specified, assume it's admin-only
         return userRole === "Super Admin" || userRole === "Admin";
     }
     if (userRole === "Super Admin" || userRole === "Admin") {
-      return true; // Admins see everything with a role
+      return true;
     }
     if (!userRole) {
-      return false; // No role, no access
+      return false;
     }
-    return roles.includes(userRole); // Check if the user's role is in the list
+    return roles.includes(userRole);
   }, [userRole]);
 
   const isGroupActive = React.useCallback((subLinks: NavItemGroup['subLinks']) => {
@@ -235,19 +295,26 @@ export function AppSidebarNav() {
 
   React.useEffect(() => {
     if (!mounted || !userRole) return;
-  
-    const findActiveGroup = (groups: NavItemGroup[]) => {
-      const visibleGroups = groups.filter(group => hasAccess(group.roles));
-      return visibleGroups.find(group => isGroupActive(group.subLinks));
+
+    const findActiveGroup = () => {
+        for (const section of allNavSections) {
+            if (hasAccess(section.roles)) {
+                for (const group of section.items) {
+                    if (hasAccess(group.roles) && isGroupActive(group.subLinks)) {
+                        return group.groupLabel;
+                    }
+                }
+            }
+        }
+        return undefined;
     };
   
-    const activeGroupOnLoad = findActiveGroup(navGroups);
+    const activeGroupOnLoad = findActiveGroup();
     
     let defaultOpenGroup = '';
-    if (activeGroupOnLoad?.groupLabel) {
-        defaultOpenGroup = activeGroupOnLoad.groupLabel;
+    if (activeGroupOnLoad) {
+        defaultOpenGroup = activeGroupOnLoad;
     } else {
-        // If no link is active, open the default accordion for the role
         switch(userRole) {
             case 'Service':
                 defaultOpenGroup = 'Warranty Management';
@@ -277,16 +344,45 @@ export function AppSidebarNav() {
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
-  const renderNavGroup = (item: NavItemGroup, index: number) => {
-    const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-    if (!hasAccess(item.roles)) { // Hide the entire group if no access
+  const renderNavGroup = (item: NavItemGroup) => {
+    if (!hasAccess(item.roles)) {
         return null;
+    }
+    
+    const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
+    // Hide the group if there are no visible sublinks, unless it's a group that should always show (like 'Main Navigation')
+    if (visibleSubLinks.length === 0 && item.groupLabel !== "Main Navigation") {
+        // Special case for groups that are just a header with no sublinks
+        if (!item.subLinks || item.subLinks.length > 0) {
+            return null;
+        }
     }
     
     const IconComponent = item.icon;
 
+    // Special handling for main navigation items (Dashboard, Search) to not be in an accordion
+    if (item.groupLabel === "Main Navigation") {
+        return (
+            <SidebarMenu className="gap-0 px-2 py-2">
+                {visibleSubLinks.map(subLink => (
+                    <SidebarMenuItem key={subLink.href}>
+                        <Link href={subLink.href} passHref>
+                        <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
+                            <span className="flex items-center gap-2">
+                            {subLink.icon && <subLink.icon className="h-5 w-5 text-primary" />}
+                            <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                            </span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        );
+    }
+
+
     return (
-      <AccordionItem value={item.groupLabel || `group-${index}`} key={item.groupLabel || `group-${index}`} className="border-none">
+      <AccordionItem value={item.groupLabel!} key={item.groupLabel} className="border-none">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -317,9 +413,9 @@ export function AppSidebarNav() {
                     <Link href={subLink.href} passHref>
                       <SidebarMenuButton
                         asChild
-                        isActive={subLink.href ? isActive(subLink.href) : false}
+                        isActive={isActive(subLink.href)}
                         className={cn(
-                          (subLink.href && isActive(subLink.href)) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                          isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                           "h-8 text-xs"
                         )}
                         tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
@@ -377,65 +473,11 @@ export function AppSidebarNav() {
         </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
-        <SidebarMenu className="gap-0 px-2 py-2">
-          {mainDashboardLink.href && hasAccess(mainDashboardLink.roles) && (
-              <SidebarMenuItem key={mainDashboardLink.href}>
-                <Link href={mainDashboardLink.href} passHref>
-                  <SidebarMenuButton asChild isActive={isActive(mainDashboardLink.href)} className={cn(isActive(mainDashboardLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: mainDashboardLink.label!, side: "right", className: "ml-2"}}>
-                    <span className="flex items-center gap-2">
-                      {mainDashboardLink.icon && <mainDashboardLink.icon className="h-5 w-5 text-primary" />}
-                      <span className="group-data-[collapsible=icon]:hidden">{mainDashboardLink.label}</span>
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-          )}
-          {globalSearchLink.href && hasAccess(globalSearchLink.roles) && (
-              <SidebarMenuItem key={globalSearchLink.href}>
-                  <Link href={globalSearchLink.href} passHref>
-                  <SidebarMenuButton asChild isActive={isActive(globalSearchLink.href)} className={cn(isActive(globalSearchLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: globalSearchLink.label!, side: "right", className: "ml-2"}}>
-                       <span className="flex items-center gap-2">
-                        {globalSearchLink.icon && <globalSearchLink.icon className="h-5 w-5 text-primary" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{globalSearchLink.label}</span>
-                      </span>
-                  </SidebarMenuButton>
-                  </Link>
-              </SidebarMenuItem>
-          )}
-        </SidebarMenu>
-        
-        <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-          {navGroups.map((group, index) => renderNavGroup(group, index))}
+          <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
+            {allNavSections.flatMap(section => 
+              hasAccess(section.roles) ? section.items.map(renderNavGroup) : []
+            )}
         </Accordion>
-
-        <SidebarSeparator />
-        <SidebarGroup className="p-0">
-          <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Settings
-          </SidebarGroupLabel>
-          <SidebarMenu className="gap-0 px-2 py-1">
-             {settingsNavItems.map((item) => {
-                if (!hasAccess(item.roles)) return null;
-                return (
-                    <SidebarMenuItem key={item.href}>
-                        <Link href={item.href!} passHref>
-                        <SidebarMenuButton
-                            asChild
-                            isActive={isActive(item.href!)}
-                            className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
-                            tooltip={{children: item.label!, side: "right", className: "ml-2"}}
-                        >
-                            <span className="flex items-center gap-2">
-                            {item.icon && <item.icon className="h-5 w-5 text-primary" />}
-                            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                            </span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
         <Button
