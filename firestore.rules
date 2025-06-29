@@ -42,7 +42,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow list, read: if isAdmin();
       allow update: if isOwner(userId) || isSuperAdmin();
-      allow create, delete: if isSuperAdmin();
+      allow create: if isOwner(userId);
+      allow delete: if isSuperAdmin();
     }
     
     // SETTINGS & COUNTERS
