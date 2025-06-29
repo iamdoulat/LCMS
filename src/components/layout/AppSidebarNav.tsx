@@ -110,7 +110,7 @@ const financialNavItems: NavItem[] = [
 ];
 
 const commissionManagementNavItems: NavItem[] = [
-    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
+    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
 ];
 
 const lcManagementNavItems: NavItem[] = [
@@ -157,7 +157,7 @@ const settingsNavItems: NavItem[] = [
 const allNavGroups: NavItemGroup[] = [
   { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
   { groupLabel: 'Financial Management', icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
-  { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: commissionManagementNavItems },
+  { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin"], subLinks: commissionManagementNavItems },
   { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
   { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
   { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
@@ -170,17 +170,13 @@ export function AppSidebarNav() {
   const pathname = usePathname();
   const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
-  const [mounted, setMounted] = React.useState(false);
-
+  
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
-  const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
   const hasAccess = React.useCallback((roles: UserRole[]): boolean => {
     if (!userRole) return false;
-    // Admins see everything
     if (userRole === "Super Admin" || userRole === "Admin") return true;
-    // Otherwise, check if the user's role is in the list
     return roles.includes(userRole);
   }, [userRole]);
 
@@ -199,52 +195,25 @@ export function AppSidebarNav() {
     return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
   }, [pathname]);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const getDefaultOpenAccordion = React.useCallback(() => {
+    if (!userRole) return [];
 
-  React.useEffect(() => {
-    if (!mounted || !userRole) return;
+    const activeGroup = visibleNavGroups.find(group => isGroupActive(group.subLinks));
+    if (activeGroup) return [activeGroup.groupLabel];
 
-    const findActiveGroup = () => {
-        for (const group of visibleNavGroups) {
-            if (isGroupActive(group.subLinks)) {
-                return group.groupLabel;
-            }
-        }
-        return undefined;
-    };
-  
-    const activeGroupOnLoad = findActiveGroup();
-    
-    let defaultOpenGroup = '';
-    if (activeGroupOnLoad) {
-        defaultOpenGroup = activeGroupOnLoad;
-    } else {
-        // Fallback for restricted roles on their root dashboard
-        switch(userRole) {
-            case 'Service':
-                defaultOpenGroup = 'Warranty Management';
-                break;
-            case 'DemoManager':
-                defaultOpenGroup = 'Demo M/C Management';
-                break;
-            case 'Store Manager':
-                defaultOpenGroup = 'Inventory Management';
-                break;
-            default:
-                break; 
-        }
+    switch(userRole) {
+      case 'Service': return ['Warranty Management'];
+      case 'DemoManager': return ['Demo M/C Management'];
+      case 'Store Manager': return ['Inventory Management'];
+      default: return [];
     }
-    
-    if (defaultOpenGroup) {
-      setOpenAccordions([defaultOpenGroup]);
-    } else {
-      setOpenAccordions([]);
-    }
-  
-  }, [pathname, userRole, isGroupActive, mounted, visibleNavGroups]);
+  }, [userRole, visibleNavGroups, isGroupActive]);
 
+  const [openAccordions, setOpenAccordions] = React.useState<string[]>(getDefaultOpenAccordion());
+
+  React.useEffect(() => {
+    setOpenAccordions(getDefaultOpenAccordion());
+  }, [pathname, userRole, getDefaultOpenAccordion]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href;
