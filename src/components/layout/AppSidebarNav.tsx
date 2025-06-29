@@ -111,7 +111,7 @@ const inventoryNavItems: NavItem[] = [
 ];
 
 const commissionManagementNavItems: NavItem[] = [
-    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
+    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
 ];
 
 const lcManagementNavItems: NavItem[] = [
@@ -156,10 +156,9 @@ const settingsNavItems: NavItem[] = [
 ];
 
 const allNavGroups: NavItemGroup[] = [
-    { groupLabel: "Main Navigation", icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"], subLinks: mainNavItems },
-    { groupLabel: "Financial Management", icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
     { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
-    { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: commissionManagementNavItems },
+    { groupLabel: "Financial Management", icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
+    { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin"], subLinks: commissionManagementNavItems },
     { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
     { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
     { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
@@ -251,25 +250,6 @@ export function AppSidebarNav() {
     
     const IconComponent = item.icon;
 
-    if (item.groupLabel === "Main Navigation") {
-        return (
-            <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
-                {visibleSubLinks.map(subLink => (
-                    <SidebarMenuItem key={subLink.href}>
-                        <Link href={subLink.href} passHref>
-                        <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
-                            <span className="flex items-center gap-2">
-                            {subLink.icon && <subLink.icon className="h-5 w-5 text-primary" />}
-                            <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                            </span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-        );
-    }
-
     return (
       <AccordionItem value={item.groupLabel!} key={item.groupLabel} className="border-none">
         <TooltipProvider delayDuration={0}>
@@ -360,6 +340,20 @@ export function AppSidebarNav() {
         </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
+          <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
+                {mainNavItems.filter(item => hasAccess(item.roles)).map(subLink => (
+                    <SidebarMenuItem key={subLink.href}>
+                        <Link href={subLink.href} passHref>
+                        <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
+                            <span className="flex items-center gap-2">
+                            {subLink.icon && <subLink.icon className="h-5 w-5 text-primary" />}
+                            <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                            </span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
             {allNavGroups.map(group => renderNavGroup(group))}
           </Accordion>
