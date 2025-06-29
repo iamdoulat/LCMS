@@ -292,23 +292,20 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    // A user can see a group if their role is Super Admin, or if their role is in the item's role list.
-    const hasGroupAccess =
-      userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
+    const hasAdminAccess = userRole === "Super Admin" || userRole === "Admin";
+    const hasRoleAccess = item.roles && userRole && item.roles.includes(userRole as UserRole);
 
-    if (!hasGroupAccess) {
+    if (!hasAdminAccess && !hasRoleAccess) {
         return null;
     }
 
-    // Filter sublinks based on the user's role
     const visibleSubLinks = item.subLinks?.filter(subLink => 
-        userRole === "Super Admin" || 
-        !subLink.roles || // Show if sublink has no specific role restriction (inherits from group)
+        hasAdminAccess || 
+        !subLink.roles ||
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    // If after filtering, there are no visible sublinks, don't render the group at all.
-    if (visibleSubLinks.length === 0) {
+    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
         return null;
     }
     
@@ -491,7 +488,7 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                const isVisible = userRole === "Super Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
+                const isVisible = userRole === "Super Admin" || userRole === "Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
                 if (isVisible && item.href) {
                   return (
                     <SidebarMenuItem key={item.href}>
