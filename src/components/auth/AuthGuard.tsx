@@ -26,10 +26,11 @@ const roleAllowedPaths: Record<string, string[]> = {
 };
 
 // Define default redirect paths for restricted roles
+// Fallback values are provided in case the environment variables are not set.
 const roleRedirects: Record<string, string> = {
-  "Service": '/dashboard/warranty-management/search',
-  "DemoManager": '/dashboard/demo/demo-machine-search',
-  "Store Manager": '/dashboard/items/list',
+  "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
+  "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
+  "Store Manager": process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list',
 };
 
 
