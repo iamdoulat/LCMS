@@ -1,33 +1,34 @@
 
-"use client";
-
+import { AddUserForm } from '@/components/forms/AddUserForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export default function AddUserDisabledPage() {
+export default function AddUserPage() {
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl max-w-2xl mx-auto">
+       <div className="mb-6">
+            <Link href="/dashboard/settings/users" passHref>
+                <Button variant="outline">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to User List
+                </Button>
+            </Link>
+        </div>
+      <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2 text-destructive")}>
-            <ShieldAlert className="h-7 w-7" />
-            Feature Disabled
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary")}>
+            <UserPlus className="h-7 w-7" />
+            Add New User
           </CardTitle>
           <CardDescription>
-            User registration and management have been disabled in this version of the application.
+            Create a new user account and assign a role. An email and a temporary password are required.
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <p>Please contact your system administrator for user-related inquiries.</p>
-             <Link href="/dashboard" passHref>
-                <Button variant="outline" className="mt-6">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
-                </Button>
-            </Link>
+          <AddUserForm />
         </CardContent>
       </Card>
     </div>
