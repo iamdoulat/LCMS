@@ -1,113 +1,84 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-  // --- Helper Functions ---
+
+    // --- Helper Functions ---
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function getUserData() {
-      // Get the user's document from the 'users' collection.
-      // This is the foundation for our role-based access control.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isSuperAdmin() {
       return isAuthenticated() && getUserData().role == 'Super Admin';
     }
-  
-  
-  // Settings Collections (Only Super Admin)
-    match /company_profile/{document=**} {
-      allow read: if isAuthenticated();
-        allow write: if isSuperAdmin(); // Only Super Admins can change company settings
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role in ['Admin', 'Super Admin'];
+    }
+    
+    function isService() {
+      return isAuthenticated() && getUserData().role == 'Service';
+    }
+    
+    function isDemoManager() {
+       return isAuthenticated() && getUserData().role == 'DemoManager';
+    }
+    
+    function isStoreManager() {
+       return isAuthenticated() && getUserData().role == 'Store Manager';
     }
 
-    // Allow read and write access to lc_entries for any authenticated user
-    match /lc_entries/{lcEntryId} {
-      allow read, write: if request.auth != null;
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Allow read and write access to customers for any authenticated user
-    match /customers/{customerId} {
-      allow read, write: if isAuthenticated();
-    }
+    // --- Collection Rules ---
 
-    // Allow read and write access to suppliers for any authenticated user
-    match /suppliers/{supplierId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Rule for the company_profile collection
-    match /company_profile/main_profile {
-      allow read: if true; // Or 'if request.auth != null;' if you only want logged-in users to see it
-      allow write: if request.auth != null; // Consider restricting to admins for production
-    }
-
-    // Rules for the 'users' collection (Firestore profiles)
+    // USERS COLLECTION
     match /users/{userId} {
-      allow read: if request.auth != null;
-      // Allow a user to write to their own document, or allow admins to write to any user document
-      // You might want to adjust this based on whether admins can edit user profiles in your app
-      allow write: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Super Admin']);
-    }
-
-    // Allow read and write access to proforma_invoices for any authenticated user
-    match /proforma_invoices/{piId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Allow read and write access to installation_reports for any authenticated user
-    match /installation_reports/{reportId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // --- NEW RULES FOR DEMO MACHINE MANAGEMENT ---
-    // Allow read and write access to demo_machine_factories for any authenticated user
-    match /demo_machine_factories/{factoryId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Allow read and write access to demo_machines for any authenticated user
-    match /demo_machines/{machineId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Allow read and write access to demo_machine_applications for any authenticated user
-    match /demo_machine_applications/{applicationId} {
-      allow read, write: if request.auth != null;
-    }
-    // --- END NEW RULES FOR DEMO MACHINE MANAGEMENT ---
-
-    // Rules for the 'items' collection
-    match /items/{itemId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Rules for the 'quotes' collection
-    match /quotes/{quoteId} {
-      allow read, write: if request.auth != null;
+      allow list, read: if isAdmin();
+      allow update: if isOwner(userId) || isSuperAdmin();
+      allow create, delete: if isSuperAdmin();
     }
     
-        // Rules for the 'quotes' collection
-    match /invoices/{invoiceId} {
-      allow read, write: if isAuthenticated();
+    // SETTINGS & COUNTERS
+    match /company_profile/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin();
     }
-    
-        // Rules for the 'quotes' collection
-    match /orders/{orderId} {
-      allow read, write: if request.auth != null;
-    }
-    
-        // Rules for the 'quotes' collection
-    match /payments/{paymentId} {
-      allow read, write: if request.auth != null;
+    // This rule was missing, causing the error.
+    match /counters/{docId} {
+      allow read, write: if isAuthenticated(); 
     }
 
-    // Rules for the 'sales' collection
-    match /sales/{saleId} {
-      allow read, write: if request.auth != null;
-    }
+    // CORE MODULES
+    match /lc_entries/{docId=**} { allow read, write: if isAdmin(); }
+    match /proforma_invoices/{docId=**} { allow read, write: if isAdmin(); }
+
+    // FINANCIAL MANAGEMENT
+    match /quotes/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    match /invoices/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    match /orders/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    match /payments/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    
+    // INVENTORY MANAGEMENT
+    match /items/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    match /sales/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+
+    // GENERAL MANAGEMENT
+    match /customers/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    match /suppliers/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+
+    // DEMO M/C MANAGEMENT
+    match /demo_machine_factories/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
+    match /demo_machines/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
+    match /demo_machine_applications/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
+    
+    // WARRANTY MANAGEMENT
+    match /installation_reports/{docId=**} { allow read, write: if isAdmin() || isService(); }
   }
 }

@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
 import type { SaleDocument, SaleFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleLineItemFormValues } from '@/types';
 import { SaleSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  manageStock?: boolean;
 }
 
 interface EditSaleFormProps {
@@ -85,6 +86,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
+            manageStock: data.manageStock
           };
         });
         setItemOptions(fetchedItems);
@@ -109,7 +111,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
-            // Calculated fields will be updated by useEffect
           });
         }
       } catch (error) {
@@ -126,7 +127,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-
 
   React.useEffect(() => {
     if (watchedCustomerId && customerOptions.length > 0) {
@@ -147,19 +147,16 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     }
   }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
 
-
   React.useEffect(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -167,12 +164,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           lineTotal = itemTotalAfterDiscount + lineTaxAmount;
-          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -180,15 +175,12 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         }
       });
     }
-
     setSubtotal(currentSubtotal);
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-
   }, [watchedLineItems, watchedTaxType, setValue, getValues]);
-
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -206,70 +198,100 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   };
 
   async function onSubmit(data: SaleFormValues) {
+    if (!saleId) {
+        Swal.fire("Error", "Sale ID is missing. Cannot update.", "error");
+        return;
+    }
     setIsSubmitting(true);
-    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
-
-    const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty || '0'));
-      const unitPriceStr = String(item.unitPrice || '0');
-      const finalUnitPrice = parseFloat(unitPriceStr);
-      const discountPercentageStr = String(item.discountPercentage || '0');
-      const finalDiscountPercentage = parseFloat(discountPercentageStr);
-      const taxPercentageStr = String(item.taxPercentage || '0');
-      const finalTaxPercentage = parseFloat(taxPercentageStr);
-
-      const itemTotalBeforeDiscount = qty * finalUnitPrice;
-      const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
-      
-      const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-      return {
-        itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
-        itemCode: itemDetailsFromOptions?.itemCode || undefined,
-        description: item.description || '',
-        qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: calculatedLineTotal,
-      };
-    });
     
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
-    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
-    const dataToUpdate: Partial<Omit<SaleDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
-      customerId: data.customerId,
-      customerName: selectedCustomer?.label || initialData.customerName,
-      billingAddress: data.billingAddress,
-      shippingAddress: data.shippingAddress,
-      saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      salesperson: data.salesperson,
-      lineItems: processedLineItems,
-      taxType: data.taxType,
-      comments: data.comments || undefined,
-      privateComments: data.privateComments || undefined,
-      subtotal: finalSubtotal,
-      totalDiscountAmount: finalTotalDiscount,
-      totalTaxAmount: finalTotalTax,
-      totalAmount: finalGrandTotal,
-      status: initialData.status, // Preserve original status unless explicitly changed
-      updatedAt: serverTimestamp(),
-    };
-
-    const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    ) as typeof dataToUpdate;
-
     try {
-      const saleDocRef = doc(firestore, "sales", saleId);
-      await updateDoc(saleDocRef, cleanedDataToUpdate);
-      Swal.fire("Sale Updated!", `Sale ID: ${saleId} successfully updated.`, "success");
+        await runTransaction(firestore, async (transaction) => {
+            const saleDocRef = doc(firestore, "sales", saleId);
+            const saleDocSnap = await transaction.get(saleDocRef);
+            if (!saleDocSnap.exists()) {
+                throw new Error("Sale does not exist.");
+            }
+            const originalSaleData = saleDocSnap.data() as SaleDocument;
+
+            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+            
+            const processedLineItems = data.lineItems.map(item => {
+                const qty = parseFloat(String(item.qty || '0'));
+                const unitPrice = parseFloat(String(item.unitPrice || '0'));
+                const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
+                const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
+
+                const itemTotalBeforeDiscount = qty * unitPrice;
+                const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
+                const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
+                const taxAmount = totalAfterDiscount * (taxPercentage / 100);
+                const total = totalAfterDiscount + taxAmount;
+                
+                const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+                return {
+                    itemId: item.itemId,
+                    itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+                    itemCode: itemDetails?.itemCode,
+                    description: item.description || '',
+                    qty, unitPrice, discountPercentage, taxPercentage, total,
+                };
+            });
+
+            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0);
+            const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice * (item.discountPercentage/100)), 0);
+            const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * item.unitPrice * (1 - (item.discountPercentage/100))) * (item.taxPercentage/100)), 0);
+            const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
+            const dataToUpdate: Partial<Omit<SaleDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+                customerId: data.customerId,
+                customerName: selectedCustomer?.label || originalSaleData.customerName,
+                billingAddress: data.billingAddress,
+                shippingAddress: data.shippingAddress,
+                saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                salesperson: data.salesperson,
+                lineItems: processedLineItems,
+                taxType: data.taxType,
+                comments: data.comments || undefined,
+                privateComments: data.privateComments || undefined,
+                subtotal: finalSubtotal,
+                totalDiscountAmount: finalTotalDiscount,
+                totalTaxAmount: finalTotalTax,
+                totalAmount: finalGrandTotal,
+                updatedAt: serverTimestamp(),
+            };
+
+            const oldItemsMap = new Map(originalSaleData.lineItems.map(item => [item.itemId, item.qty]));
+            const newItemsMap = new Map(processedLineItems.map(item => [item.itemId, item.qty]));
+            const allItemIds = new Set([...oldItemsMap.keys(), ...newItemsMap.keys()]);
+            
+            for (const itemId of allItemIds) {
+                if (!itemId) continue;
+                const itemOption = itemOptions.find(opt => opt.value === itemId);
+                if (itemOption?.manageStock) {
+                    const oldQty = oldItemsMap.get(itemId) || 0;
+                    const newQty = newItemsMap.get(itemId) || 0;
+                    const qtyDifference = newQty - oldQty;
+
+                    if (qtyDifference !== 0) {
+                        const itemRef = doc(firestore, "items", itemId);
+                        const itemSnap = await transaction.get(itemRef);
+                        if (!itemSnap.exists()) throw new Error(`Item ${itemOption.label} not found.`);
+                        const currentStock = itemSnap.data().currentQuantity || 0;
+                        const adjustedStock = currentStock - qtyDifference;
+                        if (adjustedStock < 0) throw new Error(`Insufficient stock for ${itemOption.label}.`);
+                        transaction.update(itemRef, { currentQuantity: adjustedStock, updatedAt: serverTimestamp() });
+                    }
+                }
+            }
+            transaction.update(saleDocRef, dataToUpdate);
+        });
+
+        Swal.fire("Sale Updated!", `Sale ID: ${saleId} and item stock levels have been successfully updated.`, "success");
     } catch (error: any) {
-      Swal.fire("Update Failed", `Failed to update sale: ${error.message}`, "error");
+        console.error("Error updating sale:", error);
+        Swal.fire("Update Failed", `Failed to update sale: ${error.message}`, "error");
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   }
 
@@ -282,21 +304,19 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <FormField control={control} name="customerId" render={({ field }) => (
+          <div><FormField control={control} name="customerId" render={({ field }) => (
               <FormItem><FormLabel>Customer*</FormLabel>
                 <Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} placeholder="Search Customer..." selectPlaceholder="Select Customer" disabled={isLoadingDropdowns}/>
                 <FormMessage />
               </FormItem>)}
             />
           </div>
-          <div>
-            <FormField control={control} name="shippingAddress" render={({ field }) => (
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
               <FormItem>
                 <div className="flex justify-between items-center mb-1.5"><FormLabel>Delivery Address*</FormLabel>
                   <FormField control={control} name="sameAsBilling" render={({ field: cbField }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={cbField.value} onCheckedChange={cbField.onChange} id="editSaleSameAsBilling" /></FormControl><Label htmlFor="editSaleSameAsBilling" className="text-xs font-normal cursor-pointer">Same as billing</Label></FormItem>)}/>
                 </div>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} /></FormControl><FormMessage />
+                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
@@ -376,3 +396,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   );
 }
 
+    
