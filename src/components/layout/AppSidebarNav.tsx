@@ -89,6 +89,12 @@ interface NavItemGroup {
   roles?: UserRole[];
 }
 
+interface NavSection {
+  label: string;
+  items: NavItemGroup[];
+  roles: UserRole[];
+}
+
 const mainDashboardLink: NavItem = { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager"] };
 const globalSearchLink: NavItem = { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] };
 
@@ -132,9 +138,6 @@ const financialNavItems: NavItemGroup[] = [
       { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
     ],
   },
-];
-
-const inventoryManagementNavItems: NavItemGroup[] = [
   {
     groupLabel: 'Inventory Management',
     icon: Package,
@@ -226,13 +229,44 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
 ];
 
-const allAccordionGroups = [
-  ...coreModulesNavItems,
-  ...managementNavItems,
-  ...demoMachineManagementNavItems,
-  ...warrantyManagementNavItems,
-  ...reportingManagementNavItems,
+const allNavSections: NavSection[] = [
+  {
+    label: 'Core Modules',
+    items: coreModulesNavItems,
+    roles: ["Super Admin", "Admin"],
+  },
+  {
+    label: 'Financial Management',
+    items: financialNavItems,
+    roles: ["Super Admin", "Admin", "Store Manager"],
+  },
+  {
+    label: 'Inventory Management',
+    items: inventoryManagementNavItems,
+    roles: ["Super Admin", "Admin", "Store Manager"],
+  },
+  {
+    label: 'General Management',
+    items: managementNavItems,
+    roles: ["Super Admin", "Admin"],
+  },
+  {
+    label: 'Demo M/C Management',
+    items: demoMachineManagementNavItems,
+    roles: ["Super Admin", "Admin", "DemoManager"],
+  },
+  {
+    label: 'Warranty Management',
+    items: warrantyManagementNavItems,
+    roles: ["Super Admin", "Admin", "Service"],
+  },
+  {
+    label: 'Reporting Management',
+    items: reportingManagementNavItems,
+    roles: ["Super Admin", "Admin"],
+  },
 ];
+
 
 export function AppSidebarNav() {
   const pathname = usePathname();
@@ -245,23 +279,9 @@ export function AppSidebarNav() {
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
   const hasAccess = React.useCallback((roles?: UserRole[]): boolean => {
-    // If the user's role is not yet determined, they can't access anything.
-    if (!userRole) {
-      return false;
-    }
-    
-    // Super Admin and Admin have access to everything.
-    if (userRole === 'Super Admin' || userRole === 'Admin') {
-      return true;
-    }
-    
-    // For any other role, the item MUST have a roles array defined.
-    // If it doesn't, access is denied.
-    if (!roles) {
-      return false;
-    }
-
-    // Check if the user's role is included in the item's allowed roles.
+    if (!userRole) return false;
+    if (userRole === 'Super Admin' || userRole === 'Admin') return true;
+    if (!roles) return false; // For restricted roles, roles array must be defined
     return roles.includes(userRole);
   }, [userRole]);
 
@@ -275,23 +295,21 @@ export function AppSidebarNav() {
   }, []);
 
   React.useEffect(() => {
-    if (!mounted) return;
-
+    if (!mounted || !userRole) return;
+  
     const findActiveGroup = (groups: NavItemGroup[]) => {
-      return groups.find(group => {
-          const visibleSubLinks = group.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-          return visibleSubLinks.length > 0 && isGroupActive(visibleSubLinks);
-      });
+      const visibleGroups = groups.filter(group => hasAccess(group.roles));
+      return visibleGroups.find(group => isGroupActive(group.subLinks));
     };
-
-    let activeGroupOnLoad = findActiveGroup(allAccordionGroups);
-    if (!activeGroupOnLoad) activeGroupOnLoad = findActiveGroup(financialNavItems);
-    if (!activeGroupOnLoad) activeGroupOnLoad = findActiveGroup(inventoryManagementNavItems);
+  
+    const allGroups = allNavSections.flatMap(section => section.items);
+    let activeGroupOnLoad = findActiveGroup(allGroups);
     
     let defaultOpenGroup = '';
     if (activeGroupOnLoad?.groupLabel) {
         defaultOpenGroup = activeGroupOnLoad.groupLabel;
     } else {
+        // If no link is active, open the default accordion for the role
         switch(userRole) {
             case 'Service':
                 defaultOpenGroup = 'Warranty Management';
@@ -300,15 +318,19 @@ export function AppSidebarNav() {
                 defaultOpenGroup = 'Demo M/C Management';
                 break;
             case 'Store Manager':
-                defaultOpenGroup = 'Invoicing & Quote';
+                defaultOpenGroup = 'Invoicing & Quote'; // Let's default to the first one they see
                 break;
             default:
                 break; 
         }
     }
     
-    setOpenAccordions(defaultOpenGroup ? [defaultOpenGroup] : []);
-
+    if (defaultOpenGroup) {
+      setOpenAccordions([defaultOpenGroup]);
+    } else {
+      setOpenAccordions([]);
+    }
+  
   }, [pathname, userRole, isGroupActive, mounted, hasAccess]);
 
 
@@ -323,7 +345,6 @@ export function AppSidebarNav() {
     }
 
     const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-
     if (item.subLinks && visibleSubLinks.length === 0) {
         return null;
     }
@@ -448,60 +469,26 @@ export function AppSidebarNav() {
               </SidebarMenuItem>
           )}
         </SidebarMenu>
-
+        
         <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-                <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                    Core Modules
-                </SidebarGroupLabel>
-                {coreModulesNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
+            {allNavSections.map((section) => {
+              if (!hasAccess(section.roles)) return null;
 
-            {hasAccess(["Store Manager", "Admin", "Super Admin"]) && (
-              <>
-                <SidebarSeparator />
-                <SidebarGroup className="p-0">
-                  <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                    Financial Management
-                  </SidebarGroupLabel>
-                  {financialNavItems.map((item, index) => renderNavGroup(item, index))}
-                  {inventoryManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-                </SidebarGroup>
-              </>
-            )}
+              const visibleGroups = section.items.filter(group => hasAccess(group.roles));
+              if (visibleGroups.length === 0) return null;
 
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                General Management
-              </SidebarGroupLabel>
-              {managementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
-
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Demo M/C Management
-              </SidebarGroupLabel>
-              {demoMachineManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
-            
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Warranty Management
-              </SidebarGroupLabel>
-              {warrantyManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
-
-            <SidebarSeparator />
-            <SidebarGroup className="p-0">
-              <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Reporting Management
-              </SidebarGroupLabel>
-              {reportingManagementNavItems.map((item, index) => renderNavGroup(item, index))}
-            </SidebarGroup>
+              return (
+                  <React.Fragment key={section.label}>
+                    <SidebarSeparator />
+                    <SidebarGroup className="p-0">
+                        <SidebarGroupLabel className="px-4 text-xs font-semibold uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                            {section.label}
+                        </SidebarGroupLabel>
+                        {visibleGroups.map((group, index) => renderNavGroup(group, index))}
+                    </SidebarGroup>
+                  </React.Fragment>
+              );
+            })}
         </Accordion>
 
         <SidebarSeparator />
@@ -551,5 +538,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
