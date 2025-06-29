@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import React from 'react';
 import {
   useSidebar,
   SidebarHeader,
@@ -37,7 +38,6 @@ import {
   Archive,
   ShieldCheck,
   ShieldOff,
-  BarChart3,
   DollarSign,
   Package,
   Sheet,
@@ -47,7 +47,6 @@ import {
   Truck,
   Building,
   Laptop,
-  AppWindow,
   FileCode,
   FileEdit,
   PackageCheck,
@@ -57,7 +56,6 @@ import {
   ShoppingCart,
   CreditCard,
   Undo2,
-  PlusCircle,
   Loader2,
   LayoutGrid,
   Minus,
@@ -67,7 +65,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
-import React from 'react';
+
 
 interface NavItem {
   href: string;
@@ -85,7 +83,6 @@ interface NavItemGroup {
 
 const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"]},
-    { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
 ];
 
 const inventoryNavItems: NavItem[] = [
@@ -179,10 +176,23 @@ export function AppSidebarNav() {
 
   const hasAccess = React.useCallback((roles: UserRole[]): boolean => {
     if (!userRole) return false;
+    // Admins see everything
     if (userRole === "Super Admin" || userRole === "Admin") return true;
+    // Otherwise, check if the user's role is in the list
     return roles.includes(userRole);
   }, [userRole]);
 
+  const visibleNavGroups = React.useMemo(() => {
+    if (!userRole) return [];
+    return allNavGroups
+      .filter(group => hasAccess(group.roles))
+      .map(group => ({
+        ...group,
+        subLinks: group.subLinks.filter(subLink => hasAccess(subLink.roles))
+      }))
+      .filter(group => group.subLinks.length > 0);
+  }, [userRole, hasAccess]);
+  
   const isGroupActive = React.useCallback((subLinks: NavItem[]) => {
     return subLinks.some(sub => sub.href && pathname.startsWith(sub.href));
   }, [pathname]);
@@ -195,8 +205,8 @@ export function AppSidebarNav() {
     if (!mounted || !userRole) return;
 
     const findActiveGroup = () => {
-        for (const group of allNavGroups) {
-            if (hasAccess(group.roles) && isGroupActive(group.subLinks)) {
+        for (const group of visibleNavGroups) {
+            if (isGroupActive(group.subLinks)) {
                 return group.groupLabel;
             }
         }
@@ -209,6 +219,7 @@ export function AppSidebarNav() {
     if (activeGroupOnLoad) {
         defaultOpenGroup = activeGroupOnLoad;
     } else {
+        // Fallback for restricted roles on their root dashboard
         switch(userRole) {
             case 'Service':
                 defaultOpenGroup = 'Warranty Management';
@@ -230,78 +241,14 @@ export function AppSidebarNav() {
       setOpenAccordions([]);
     }
   
-  }, [pathname, userRole, isGroupActive, mounted, hasAccess]);
+  }, [pathname, userRole, isGroupActive, mounted, visibleNavGroups]);
 
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href;
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
-
-  const renderNavGroup = (item: NavItemGroup) => {
-    if (!hasAccess(item.roles)) {
-        return null;
-    }
-    
-    const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-    if (visibleSubLinks.length === 0) {
-        return null;
-    }
-    
-    const IconComponent = item.icon;
-
-    return (
-      <AccordionItem value={item.groupLabel!} key={item.groupLabel} className="border-none">
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-                <AccordionTrigger
-                  className={cn(
-                    "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-                    "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                    "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                    (isGroupActive(visibleSubLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <IconComponent className="h-5 w-5 text-primary" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.groupLabel}</span>
-                  </span>
-                </AccordionTrigger>
-            </TooltipTrigger>
-             <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
-              <p>{item.groupLabel}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <SidebarMenu className="gap-0 py-1">
-            {visibleSubLinks.map((subLink) => (
-                <SidebarMenuItem key={subLink.href}>
-                  <Link href={subLink.href} passHref>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(subLink.href)}
-                      className={cn(
-                        isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                        "h-8 text-xs"
-                      )}
-                      tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
-                    >
-                      <span className="flex items-center gap-2">
-                         {subLink.icon && <subLink.icon className="h-4 w-4" />}
-                        <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                      </span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              ))}
-          </SidebarMenu>
-        </AccordionContent>
-      </AccordionItem>
-    );
-  };
-
+  
   return (
     <>
       <SidebarHeader className="border-b">
@@ -355,7 +302,59 @@ export function AppSidebarNav() {
                 ))}
             </SidebarMenu>
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-            {allNavGroups.map(group => renderNavGroup(group))}
+            {visibleNavGroups.map((group) => {
+              const IconComponent = group.icon;
+              return (
+                <AccordionItem value={group.groupLabel} key={group.groupLabel} className="border-none">
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                          <AccordionTrigger
+                            className={cn(
+                              "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+                              "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                              "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                              (isGroupActive(group.subLinks) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium")
+                            )}
+                          >
+                            <span className="flex items-center gap-2">
+                              <IconComponent className="h-5 w-5 text-primary" />
+                              <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
+                            </span>
+                          </AccordionTrigger>
+                      </TooltipTrigger>
+                       <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
+                        <p>{group.groupLabel}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                    <SidebarMenu className="gap-0 py-1">
+                      {group.subLinks.map((subLink) => (
+                          <SidebarMenuItem key={subLink.href}>
+                            <Link href={subLink.href} passHref>
+                              <SidebarMenuButton
+                                asChild
+                                isActive={isActive(subLink.href)}
+                                className={cn(
+                                  isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                                  "h-8 text-xs"
+                                )}
+                                tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
+                              >
+                                <span className="flex items-center gap-2">
+                                   {subLink.icon && <subLink.icon className="h-4 w-4" />}
+                                  <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                                </span>
+                              </SidebarMenuButton>
+                            </Link>
+                          </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            })}
           </Accordion>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
@@ -376,3 +375,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
