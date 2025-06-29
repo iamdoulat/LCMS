@@ -192,7 +192,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 
 
 export default function DashboardPage() {
-  const { user: authUser, loading: authLoading } = useAuth(); // Simplified, as AuthGuard handles loading screen
+  const { user: authUser, loading: authLoading, userRole } = useAuth();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
@@ -229,13 +229,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser) {
-      setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
-      setSupplierPieData([]);
-      setRecentlyCompletedLCs([]);
-      setDraftLCs([]);
-      setUpcomingEtdShipments([]);
-      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
+    if (!authUser || (userRole !== "Super Admin" && userRole !== "Admin")) {
       setIsLoading(false);
       return;
     }
@@ -431,13 +425,7 @@ export default function DashboardPage() {
 
     } catch (error: any) {
       console.error("Dashboard: Detailed error fetching dashboard data: ", error);
-      let errorMessage = `Could not fetch dashboard data. Please check console for details.`;
-       if (error.code && (error.message?.toLowerCase().includes("permission") || error.message?.toLowerCase().includes("missing or insufficient"))) {
-         errorMessage = `Could not fetch dashboard data. This is often due to Firestore security rules. Please ensure your rules allow read access to the 'lc_entries' collection for authenticated users (e.g., by having 'allow read: if request.auth != null;' for the '/lc_entries/{lcEntryId}' path). Original Firebase error: ${error.message} (Code: ${error.code || 'N/A'})`;
-       } else if (error.message) {
-         errorMessage = `Could not fetch dashboard data: ${error.message} (Code: ${error.code || 'N/A'})`;
-       }
-      Swal.fire("Dashboard Error", errorMessage, "error");
+      Swal.fire("Dashboard Error", "Could not fetch dashboard data. You may not have permission to view this data. Please check the console for details.", "error");
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
       setSupplierPieData([]);
       setRecentlyCompletedLCs([]);
@@ -447,7 +435,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser]); // Added authUser dependency
+  }, [authUser, userRole]);
 
   useEffect(() => {
     if (!authLoading && authUser) {
@@ -469,8 +457,6 @@ export default function DashboardPage() {
   setupAutoScroll(draftLcScrollRef, draftLcIntervalRef, [draftLCs, isLoading]);
   setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
 
-  // AuthGuard now handles the main loading state. 
-  // We just need to handle the data loading state for the dashboard content itself.
   if (authLoading) {
     return (
        <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -481,6 +467,41 @@ export default function DashboardPage() {
   }
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
+
+  if (userRole && userRole !== 'Super Admin' && userRole !== 'Admin') {
+    return (
+        <div className="flex flex-col gap-8">
+             <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
+                <div>
+                    {greeting && authUser && (
+                        <h2 className="text-base font-semibold text-foreground mb-1">
+                        {greeting}, <span className="text-primary">{userDisplayName}</span>!
+                        </h2>
+                    )}
+                    <h1
+                        className={cn(
+                        "font-bold text-xl sm:text-2xl lg:text-3xl",
+                        "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                        )}
+                    >
+                        Welcome
+                    </h1>
+                </div>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Role-Based Access</CardTitle>
+                    <CardDescription>
+                        Your dashboard is tailored to your role. Please use the sidebar to navigate to your assigned modules.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p>You have access to the <strong>{userRole}</strong> modules.</p>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">

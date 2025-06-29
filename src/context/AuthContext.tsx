@@ -101,58 +101,48 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
       try {
         if (currentUser) {
-          let roleFromEnv: UserRole | null = null;
-          const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
-
-          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Super Admin";
-          } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Admin";
-          } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Service";
-          } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "DemoManager";
-          } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Store Manager";
-          }
-
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
-          let finalUserRole: UserRole = "User"; // Default role
+          let finalUserRole: UserRole | null = null;
 
           if (userDocSnap.exists()) {
-            const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-            const roleFromDb = userProfileData.role;
-
-            if (roleFromEnv && roleFromEnv !== roleFromDb) {
-              // ENV var role is the source of truth, update DB if different.
-              await updateDoc(userDocRef, { role: roleFromEnv, updatedAt: serverTimestamp() });
-              userProfileData.role = roleFromEnv; // Update local copy for immediate use
-              finalUserRole = roleFromEnv;
-              console.log(`User role for ${currentUser.email} updated in Firestore to: ${roleFromEnv}`);
-            } else {
-              // No ENV var role, or it matches DB. Use the role from DB.
-              finalUserRole = roleFromDb || "User";
-            }
-            setFirestoreUser(userProfileData);
-
+              // If the user document exists, Firestore is the source of truth for the role.
+              const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
+              finalUserRole = userProfileData.role || "User"; // Use DB role, fallback to "User"
+              setFirestoreUser(userProfileData);
           } else {
-            // User document doesn't exist, create it with the role from ENV var or default to "User"
-            finalUserRole = roleFromEnv || "User";
-            if (currentUser.displayName && currentUser.email) {
-                const newProfileData = {
-                    uid: currentUser.uid,
-                    displayName: currentUser.displayName,
-                    email: currentUser.email,
-                    photoURL: currentUser.photoURL || null,
-                    role: finalUserRole,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                };
-                await setDoc(userDocRef, newProfileData);
-                setFirestoreUser({id: currentUser.uid, ...newProfileData} as UserDocumentForAdmin);
-            }
+              // This is a first-time login/registration. Create the document.
+              let roleFromEnv: UserRole = "User"; // Default role
+              const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
+
+              if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                  roleFromEnv = "Super Admin";
+              } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                  roleFromEnv = "Admin";
+              } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                  roleFromEnv = "Service";
+              } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                  roleFromEnv = "DemoManager";
+              } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+                  roleFromEnv = "Store Manager";
+              }
+              
+              finalUserRole = roleFromEnv;
+
+              if (currentUser.displayName && currentUser.email) {
+                  const newProfileData = {
+                      uid: currentUser.uid,
+                      displayName: currentUser.displayName,
+                      email: currentUser.email,
+                      photoURL: currentUser.photoURL || null,
+                      role: finalUserRole,
+                      createdAt: serverTimestamp(),
+                      updatedAt: serverTimestamp(),
+                  };
+                  await setDoc(userDocRef, newProfileData);
+                  setFirestoreUser({id: currentUser.uid, ...newProfileData} as UserDocumentForAdmin);
+              }
           }
           setUserRole(finalUserRole);
         } else {
@@ -264,32 +254,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       // Update the Firebase Auth profile with the display name
       await firebaseUpdateProfile(user, { displayName });
 
-      // Now create the user document in Firestore
-      const userDocRef = doc(firestore, "users", user.uid);
+      // The onAuthStateChanged listener will handle creating the user document in Firestore.
+      // This avoids race conditions and ensures a single source of truth for profile creation.
       
-      const lowercasedUserEmail = user.email?.toLowerCase() || '';
-      let role: UserRole = "User"; // Default role
-      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-        role = "Super Admin";
-      } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-        role = "Admin";
-      }
-
-      const newProfileData = {
-        uid: user.uid,
-        displayName: displayName,
-        email: user.email,
-        photoURL: user.photoURL || null,
-        role: role,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      await setDoc(userDocRef, newProfileData);
-      
-      // No need to set state here. The onAuthStateChanged listener will fire
-      // and correctly populate the user, firestoreUser, and userRole states.
-      // This avoids race conditions and ensures a single source of truth for auth state.
-
       Swal.fire({
         title: "Registration Successful",
         text: `Welcome, ${displayName}! You are now logged in.`,
