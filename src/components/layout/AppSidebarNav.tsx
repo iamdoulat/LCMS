@@ -111,7 +111,7 @@ const inventoryNavItems: NavItem[] = [
 ];
 
 const commissionManagementNavItems: NavItem[] = [
-    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
 ];
 
 const lcManagementNavItems: NavItem[] = [
@@ -158,7 +158,7 @@ const settingsNavItems: NavItem[] = [
 const allNavGroups: NavItemGroup[] = [
     { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
     { groupLabel: "Financial Management", icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
-    { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin"], subLinks: commissionManagementNavItems },
+    { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: commissionManagementNavItems },
     { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
     { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
     { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
@@ -217,7 +217,7 @@ export function AppSidebarNav() {
                 defaultOpenGroup = 'Demo M/C Management';
                 break;
             case 'Store Manager':
-                defaultOpenGroup = 'Financial Management';
+                defaultOpenGroup = 'Inventory Management';
                 break;
             default:
                 break; 
