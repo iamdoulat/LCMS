@@ -286,9 +286,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       };
       await setDoc(userDocRef, newProfileData);
       
-      setUser(auth.currentUser);
-      setFirestoreUser({ id: user.uid, ...newProfileData } as UserDocumentForAdmin);
-      setUserRole(role);
+      // No need to set state here. The onAuthStateChanged listener will fire
+      // and correctly populate the user, firestoreUser, and userRole states.
+      // This avoids race conditions and ensures a single source of truth for auth state.
 
       Swal.fire({
         title: "Registration Successful",
@@ -297,7 +297,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         timer: 2000,
         showConfirmButton: false,
       });
-      // onAuthStateChanged will also run, but this ensures immediate state update
     } catch (error: any) {
       console.error("AuthContext: Error registering user: ", error);
       let errorMessage = "Failed to register. Please try again.";
