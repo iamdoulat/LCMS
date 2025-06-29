@@ -4,6 +4,17 @@ import { admin } from '@/lib/firebase/admin';
 import type { UserRole } from '@/types';
 
 export async function POST(request: Request) {
+  // Check if the admin app is initialized.
+  if (!admin.apps.length) {
+    console.error("Firebase Admin SDK is not initialized. Check server environment variables.");
+    return NextResponse.json(
+      { 
+        error: 'Firebase Admin SDK is not initialized. Please ensure server-side Firebase credentials (service account key) are set in your environment variables.' 
+      },
+      { status: 500 }
+    );
+  }
+  
   try {
     const { email, password, displayName, role } = (await request.json()) as {
       email?: string;
