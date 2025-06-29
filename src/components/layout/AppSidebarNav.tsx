@@ -88,6 +88,14 @@ const mainNavItems: NavItem[] = [
     { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
 ];
 
+const inventoryNavItems: NavItem[] = [
+    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, roles: ["Super Admin", "Admin", "Store Manager"] },
+    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
+    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, roles: ["Super Admin", "Admin", "Store Manager"] },
+    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
+    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
+];
+
 const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
     { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2, roles: ["Super Admin", "Admin", "Store Manager"] },
@@ -100,14 +108,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
     { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid, roles: ["Super Admin", "Admin"] },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
-];
-
-const inventoryNavItems: NavItem[] = [
-    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
 ];
 
 const commissionManagementNavItems: NavItem[] = [
