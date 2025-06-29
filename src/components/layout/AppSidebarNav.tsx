@@ -10,10 +10,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarSeparator,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -73,37 +69,31 @@ import type { UserRole } from '@/types';
 import React from 'react';
 
 interface NavItem {
-  href?: string;
-  label?: string;
-  icon: React.ElementType;
-  roles?: UserRole[];
+  href: string;
+  label: string;
+  icon?: React.ElementType;
+  roles: UserRole[];
 }
 
 interface NavItemGroup {
-  groupLabel?: string;
+  groupLabel: string;
   icon: React.ElementType;
-  subLinks?: Array<{
-    href: string;
-    label: string;
-    icon?: React.ElementType;
-    roles?: UserRole[];
-  }>;
-  roles?: UserRole[];
+  roles: UserRole[];
+  subLinks: NavItem[];
 }
 
-const mainNavItems: NavItemGroup[] = [
-  {
+// Refactored and separated navigation groups for clarity and correct role-based access
+const mainNavItems: NavItemGroup = {
     groupLabel: "Main Navigation",
-    icon: LayoutDashboard, // Placeholder, not directly shown
+    icon: LayoutDashboard,
+    roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"],
     subLinks: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin"] },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"]},
       { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
     ]
-  }
-];
+};
 
-const financialManagementNavItems: NavItemGroup[] = [
-    {
+const financialNavItems: NavItemGroup = {
     groupLabel: 'Financial Management',
     icon: Receipt,
     roles: ["Super Admin", "Admin", "Store Manager"],
@@ -119,18 +109,23 @@ const financialManagementNavItems: NavItemGroup[] = [
       { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid, roles: ["Super Admin", "Admin"] },
       { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
+    ],
+};
+
+const inventoryNavItems: NavItemGroup = {
+    groupLabel: 'Inventory Management',
+    icon: Package,
+    roles: ["Super Admin", "Admin", "Store Manager"],
+    subLinks: [
       { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, roles: ["Super Admin", "Admin", "Store Manager"] },
       { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-      { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
-    ],
-  },
-];
+      { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
+    ]
+};
 
-
-const operationsNavItems: NavItemGroup[] = [
-    {
+const lcManagementNavItems: NavItemGroup = {
     groupLabel: 'T/T OR L/C Management',
     icon: FileText,
     roles: ["Super Admin", "Admin"],
@@ -139,32 +134,28 @@ const operationsNavItems: NavItemGroup[] = [
       { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit, roles: ["Super Admin", "Admin"] },
       { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, roles: ["Super Admin", "Admin"] },
     ],
-  },
-  {
+};
+
+const commissionManagementNavItems: NavItemGroup = {
     groupLabel: 'Commission Management',
     icon: Briefcase,
     roles: ["Super Admin", "Admin", "DemoManager"],
     subLinks: [
       { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
     ],
-  },
-  {
-    groupLabel: 'Suppliers / Beneficiary',
-    icon: Truck,
+};
+
+const partiesNavItems: NavItemGroup = {
+    groupLabel: 'Parties',
+    icon: UsersIcon,
     roles: ["Super Admin", "Admin"],
     subLinks: [
-      { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: ListChecks, roles: ["Super Admin", "Admin"] },
-    ],
-  },
-  {
-    groupLabel: 'Customers / Applicants',
-    icon: Factory,
-    roles: ["Super Admin", "Admin"],
-    subLinks: [
-      { href: '/dashboard/customers', label: 'View Applicants', icon: ListChecks, roles: ["Super Admin", "Admin"] },
-    ],
-  },
-   {
+        { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: Truck, roles: ["Super Admin", "Admin"] },
+        { href: '/dashboard/customers', label: 'View Applicants', icon: Factory, roles: ["Super Admin", "Admin"] },
+    ]
+};
+
+const shipmentNavItems: NavItemGroup = {
     groupLabel: 'Shipment Management',
     icon: Ship,
     roles: ["Super Admin", "Admin"],
@@ -174,11 +165,9 @@ const operationsNavItems: NavItemGroup[] = [
       { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package, roles: ["Super Admin", "Admin"] },
       { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, roles: ["Super Admin", "Admin"] },
     ],
-  },
-];
+};
 
-const demoNavItems: NavItemGroup[] = [
-  {
+const demoNavItems: NavItemGroup = {
     groupLabel: 'Demo M/C Management',
     icon: Laptop,
     roles: ["Super Admin", "Admin", "DemoManager"],
@@ -189,11 +178,9 @@ const demoNavItems: NavItemGroup[] = [
       { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode, roles: ["Super Admin", "Admin", "DemoManager"] },
       { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, roles: ["Super Admin", "Admin", "DemoManager"] },
     ],
-  },
-];
+};
 
-const serviceNavItems: NavItemGroup[] = [
-  {
+const serviceNavItems: NavItemGroup = {
     groupLabel: 'Warranty Management',
     icon: ShieldCheck,
     roles: ["Super Admin", "Admin", "Service"],
@@ -204,11 +191,9 @@ const serviceNavItems: NavItemGroup[] = [
       { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"] },
       { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] },
     ],
-  },
-];
+};
 
-const settingsNavItems: NavItemGroup[] = [
-  {
+const settingsNavItems: NavItemGroup = {
     groupLabel: 'Settings',
     icon: Settings,
     roles: ["Super Admin", "Admin"],
@@ -218,52 +203,26 @@ const settingsNavItems: NavItemGroup[] = [
       { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
       { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
     ]
-  },
-];
+};
 
-interface NavSection {
-  label: string;
-  items: NavItemGroup[];
-  roles: UserRole[];
-}
 
-const allNavSections: NavSection[] = [
-  {
-    label: 'Main Navigation',
-    items: mainNavItems,
-    roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"],
-  },
-  {
-    label: 'Financial Management',
-    items: financialManagementNavItems,
-    roles: ["Super Admin", "Admin", "Store Manager"],
-  },
-  {
-    label: 'Operations',
-    items: operationsNavItems,
-    roles: ["Super Admin", "Admin"],
-  },
-  {
-    label: 'Demo Management',
-    items: demoNavItems,
-    roles: ["Super Admin", "Admin", "DemoManager"],
-  },
-  {
-    label: 'Service & Warranty',
-    items: serviceNavItems,
-    roles: ["Super Admin", "Admin", "Service"],
-  },
-  {
-    label: 'Settings',
-    items: settingsNavItems,
-    roles: ["Super Admin", "Admin"],
-  },
+const allNavGroups: NavItemGroup[] = [
+    mainNavItems,
+    financialNavItems,
+    inventoryNavItems,
+    lcManagementNavItems,
+    commissionManagementNavItems,
+    partiesNavItems,
+    shipmentNavItems,
+    demoNavItems,
+    serviceNavItems,
+    settingsNavItems,
 ];
 
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   const [mounted, setMounted] = React.useState(false);
 
@@ -271,10 +230,7 @@ export function AppSidebarNav() {
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
 
-  const hasAccess = React.useCallback((roles?: UserRole[]): boolean => {
-    if (!roles || roles.length === 0) { // If no roles are specified, assume it's admin-only
-        return userRole === "Super Admin" || userRole === "Admin";
-    }
+  const hasAccess = React.useCallback((roles: UserRole[]): boolean => {
     if (userRole === "Super Admin" || userRole === "Admin") {
       return true;
     }
@@ -297,13 +253,9 @@ export function AppSidebarNav() {
     if (!mounted || !userRole) return;
 
     const findActiveGroup = () => {
-        for (const section of allNavSections) {
-            if (hasAccess(section.roles)) {
-                for (const group of section.items) {
-                    if (hasAccess(group.roles) && isGroupActive(group.subLinks)) {
-                        return group.groupLabel;
-                    }
-                }
+        for (const group of allNavGroups) {
+            if (hasAccess(group.roles) && isGroupActive(group.subLinks)) {
+                return group.groupLabel;
             }
         }
         return undefined;
@@ -323,7 +275,7 @@ export function AppSidebarNav() {
                 defaultOpenGroup = 'Demo M/C Management';
                 break;
             case 'Store Manager':
-                defaultOpenGroup = 'Financial Management';
+                defaultOpenGroup = 'Financial Management'; // Or Inventory Management
                 break;
             default:
                 break; 
@@ -350,12 +302,8 @@ export function AppSidebarNav() {
     }
     
     const visibleSubLinks = item.subLinks?.filter(subLink => hasAccess(subLink.roles)) || [];
-    // Hide the group if there are no visible sublinks, unless it's a group that should always show (like 'Main Navigation')
-    if (visibleSubLinks.length === 0 && item.groupLabel !== "Main Navigation") {
-        // Special case for groups that are just a header with no sublinks
-        if (!item.subLinks || item.subLinks.length > 0) {
-            return null;
-        }
+    if (visibleSubLinks.length === 0) {
+        return null;
     }
     
     const IconComponent = item.icon;
@@ -363,7 +311,7 @@ export function AppSidebarNav() {
     // Special handling for main navigation items (Dashboard, Search) to not be in an accordion
     if (item.groupLabel === "Main Navigation") {
         return (
-            <SidebarMenu className="gap-0 px-2 py-2">
+            <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
                 {visibleSubLinks.map(subLink => (
                     <SidebarMenuItem key={subLink.href}>
                         <Link href={subLink.href} passHref>
@@ -379,7 +327,6 @@ export function AppSidebarNav() {
             </SidebarMenu>
         );
     }
-
 
     return (
       <AccordionItem value={item.groupLabel!} key={item.groupLabel} className="border-none">
@@ -405,34 +352,32 @@ export function AppSidebarNav() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        {visibleSubLinks.length > 0 && (
-          <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-            <SidebarMenu className="gap-0 py-1">
-              {visibleSubLinks.map((subLink) => (
-                  <SidebarMenuItem key={subLink.href}>
-                    <Link href={subLink.href} passHref>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(subLink.href)}
-                        className={cn(
-                          isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
-                          "h-8 text-xs"
-                        )}
-                        tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
-                      >
-                        <span className="flex items-center gap-2">
-                           {subLink.icon && <subLink.icon className="h-4 w-4" />}
-                          <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                        </span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-          </AccordionContent>
-        )}
+        <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <SidebarMenu className="gap-0 py-1">
+            {visibleSubLinks.map((subLink) => (
+                <SidebarMenuItem key={subLink.href}>
+                  <Link href={subLink.href} passHref>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(subLink.href)}
+                      className={cn(
+                        isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                        "h-8 text-xs"
+                      )}
+                      tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
+                    >
+                      <span className="flex items-center gap-2">
+                         {subLink.icon && <subLink.icon className="h-4 w-4" />}
+                        <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+          </SidebarMenu>
+        </AccordionContent>
       </AccordionItem>
-    )
+    );
   };
 
   return (
@@ -474,10 +419,8 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-            {allNavSections.flatMap(section => 
-              hasAccess(section.roles) ? section.items.map(renderNavGroup) : []
-            )}
-        </Accordion>
+            {allNavGroups.map(group => renderNavGroup(group))}
+          </Accordion>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
         <Button
