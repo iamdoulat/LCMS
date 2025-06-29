@@ -292,20 +292,23 @@ export function AppSidebarNav() {
   };
 
   const renderNavGroup = (item: NavItemGroup, index: number) => {
-    const hasAdminAccess = userRole === "Super Admin" || userRole === "Admin";
-    const hasRoleAccess = item.roles && userRole && item.roles.includes(userRole as UserRole);
+    const isAdmin = userRole === "Super Admin" || userRole === "Admin";
+    // A group is visible if the user is an admin OR the group has no specific roles OR the user's role is included.
+    const isGroupVisible = isAdmin || !item.roles || (userRole && item.roles.includes(userRole as UserRole));
 
-    if (!hasAdminAccess && !hasRoleAccess) {
+    if (!isGroupVisible) {
         return null;
     }
 
+    // Filter sublinks. A sublink is visible if the user is an admin OR it has no specific roles OR the user's role is included.
     const visibleSubLinks = item.subLinks?.filter(subLink => 
-        hasAdminAccess || 
+        isAdmin || 
         !subLink.roles ||
         (userRole && subLink.roles.includes(userRole as UserRole))
     ) || [];
 
-    if (visibleSubLinks.length === 0 && item.subLinks && item.subLinks.length > 0) {
+    // Don't render the group if there are no visible sublinks (unless it's a group without sublinks to begin with, like Reporting)
+    if (item.subLinks && visibleSubLinks.length === 0) {
         return null;
     }
     
@@ -488,15 +491,16 @@ export function AppSidebarNav() {
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0 px-2 py-1">
              {settingsNavItems.map((item) => {
-                const isVisible = userRole === "Super Admin" || userRole === "Admin" || (item.roles && userRole && item.roles.includes(userRole as UserRole));
-                if (isVisible && item.href) {
+                const isAdmin = userRole === "Super Admin" || userRole === "Admin";
+                const hasRoleAccess = item.roles && userRole && item.roles.includes(userRole as UserRole);
+                if (isAdmin || hasRoleAccess) {
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <Link href={item.href} passHref>
+                      <Link href={item.href!} passHref>
                         <SidebarMenuButton
                           asChild
-                          isActive={isActive(item.href)}
-                          className={cn(isActive(item.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+                          isActive={isActive(item.href!)}
+                          className={cn(isActive(item.href!) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
                           tooltip={{children: item.label!, side: "right", className: "ml-2"}}
                         >
                           <span className="flex items-center gap-2">
