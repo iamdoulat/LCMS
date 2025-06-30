@@ -71,100 +71,98 @@ interface NavItem {
   href: string;
   label: string;
   icon?: React.ElementType;
-  roles: UserRole[];
 }
 
 interface NavItemGroup {
   groupLabel: string;
   icon: React.ElementType;
-  roles: UserRole[];
   subLinks: NavItem[];
 }
 
 // Define Navigation Items
 const mainNavItems: NavItem[] = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ["Super Admin", "Admin", "Service", "DemoManager", "Store Manager", "User"]},
-    { href: '/dashboard/search', label: 'Global Search', icon: Search, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/search', label: 'Global Search', icon: Search },
 ];
 
 const inventoryNavItems: NavItem[] = [
-    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
+    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
+    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
+    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign },
+    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks },
+    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2 },
 ];
 
 const financialNavItems: NavItem[] = [
-    { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/invoices/create', label: 'Create Invoice', icon: FilePlus2, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/orders/create', label: 'Create Order', icon: ShoppingCart, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, roles: ["Super Admin", "Admin", "Store Manager"] },
-    { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
+    { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2 },
+    { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
+    { href: '/dashboard/invoices/create', label: 'Create Invoice', icon: FilePlus2 },
+    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
+    { href: '/dashboard/orders/create', label: 'Create Order', icon: ShoppingCart },
+    { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
+    { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
+    { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
+    { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid },
+    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings },
 ];
 
 const commissionManagementNavItems: NavItem[] = [
-    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
 ];
 
 const lcManagementNavItems: NavItem[] = [
-    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
+    { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
+    { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
 ];
 
 const partiesNavItems: NavItem[] = [
-    { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: Truck, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/customers', label: 'View Applicants', icon: Factory, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: Truck },
+    { href: '/dashboard/customers', label: 'View Applicants', icon: Factory },
 ];
 
 const shipmentNavItems: NavItem[] = [
-    { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, roles: ["Super Admin", "Admin"] },
+    { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
+    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock },
+    { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment On The Way', icon: Package },
+    { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
 ];
 
 const demoNavItems: NavItem[] = [
-    { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search, roles: ["Super Admin", "Admin", "DemoManager"] },
-    { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
-    { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks, roles: ["Super Admin", "Admin", "DemoManager"] },
-    { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode, roles: ["Super Admin", "Admin", "DemoManager"] },
-    { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, roles: ["Super Admin", "Admin", "DemoManager"] },
+    { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
+    { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
+    { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
+    { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
+    { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
 ];
 
 const serviceNavItems: NavItem[] = [
-    { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, roles: ["Super Admin", "Admin", "Service"] },
-    { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, roles: ["Super Admin", "Admin", "Service"] },
-    { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, roles: ["Super Admin", "Admin", "Service"] },
-    { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"] },
-    { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, roles: ["Super Admin", "Admin", "Service"] },
+    { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
+    { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
+    { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
+    { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck },
+    { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff },
 ];
 
 const settingsNavItems: NavItem[] = [
-    { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, roles: ["Super Admin", "Admin"] },
-    { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, roles: ["Super Admin"] },
-    { href: '/dashboard/settings/logs', label: 'Logs', icon: History, roles: ["Super Admin"] },
+    { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
+    { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon },
+    { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
+    { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
 ];
 
 // Define Group Structure
 const allNavGroups: NavItemGroup[] = [
-  { groupLabel: 'Inventory Management', icon: Package, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: inventoryNavItems },
-  { groupLabel: 'Financial Management', icon: Receipt, roles: ["Super Admin", "Admin", "Store Manager"], subLinks: financialNavItems },
-  { groupLabel: "Commission Management", icon: Briefcase, roles: ["Super Admin", "Admin"], subLinks: commissionManagementNavItems },
-  { groupLabel: "T/T OR L/C Management", icon: FileText, roles: ["Super Admin", "Admin"], subLinks: lcManagementNavItems },
-  { groupLabel: 'Parties', icon: UsersIcon, roles: ["Super Admin", "Admin"], subLinks: partiesNavItems },
-  { groupLabel: 'Shipment Management', icon: Ship, roles: ["Super Admin", "Admin"], subLinks: shipmentNavItems },
-  { groupLabel: 'Demo M/C Management', icon: Laptop, roles: ["Super Admin", "Admin", "DemoManager"], subLinks: demoNavItems },
-  { groupLabel: 'Warranty Management', icon: ShieldCheck, roles: ["Super Admin", "Admin", "Service"], subLinks: serviceNavItems },
-  { groupLabel: 'Settings', icon: Settings, roles: ["Super Admin", "Admin"], subLinks: settingsNavItems },
+  { groupLabel: 'Inventory Management', icon: Package, subLinks: inventoryNavItems },
+  { groupLabel: 'Financial Management', icon: Receipt, subLinks: financialNavItems },
+  { groupLabel: "Commission Management", icon: Briefcase, subLinks: commissionManagementNavItems },
+  { groupLabel: "T/T OR L/C Management", icon: FileText, subLinks: lcManagementNavItems },
+  { groupLabel: 'Customers / Applicants', icon: UsersIcon, subLinks: partiesNavItems },
+  { groupLabel: 'Shipment Management', icon: Ship, subLinks: shipmentNavItems },
+  { groupLabel: 'Demo M/C Management', icon: Laptop, subLinks: demoNavItems },
+  { groupLabel: 'Warranty Management', icon: ShieldCheck, subLinks: serviceNavItems },
+  { groupLabel: 'Settings', icon: Settings, subLinks: settingsNavItems },
 ];
 
 export function AppSidebarNav() {
