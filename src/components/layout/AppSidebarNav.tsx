@@ -82,7 +82,6 @@ interface NavItemGroup {
 // Define Navigation Items
 const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/dashboard/search', label: 'Global Search', icon: Search },
 ];
 
 const inventoryNavItems: NavItem[] = [
