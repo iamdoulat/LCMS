@@ -169,50 +169,32 @@ const allNavGroups: NavItemGroup[] = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
-
-  const hasAccess = React.useCallback((roles: UserRole[]): boolean => {
-    if (!userRole) return false;
-    if (userRole === "Super Admin" || userRole === "Admin") return true;
-    return roles.includes(userRole);
-  }, [userRole]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href;
     return pathname.startsWith(href) && (pathname === href || pathname.charAt(href.length) === '/');
   };
 
-  const getVisibleNavGroups = React.useCallback(() => {
-    if (!userRole) return [];
-    return allNavGroups
-      .filter(group => hasAccess(group.roles))
-      .map(group => ({
-        ...group,
-        subLinks: group.subLinks.filter(subLink => hasAccess(subLink.roles))
-      }))
-      .filter(group => group.subLinks.length > 0);
-  }, [userRole, hasAccess]);
-
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
-  const visibleNavGroups = getVisibleNavGroups();
   
   React.useEffect(() => {
     const isGroupActive = (subLinks: NavItem[]) => subLinks.some(sub => isActive(sub.href));
     
-    const activeGroup = visibleNavGroups.find(group => isGroupActive(group.subLinks));
+    const activeGroup = allNavGroups.find(group => isGroupActive(group.subLinks));
     if (activeGroup) {
       setOpenAccordions([activeGroup.groupLabel]);
-    } else if (visibleNavGroups.length > 0) {
-      // Open the first accessible group if no other group is active
-      setOpenAccordions([visibleNavGroups[0].groupLabel]);
+    } else if (allNavGroups.length > 0) {
+      // Default to opening the first group if no route is active
+      setOpenAccordions([allNavGroups[0].groupLabel]);
     } else {
       setOpenAccordions([]);
     }
-  }, [pathname, userRole, visibleNavGroups]);
+  }, [pathname]);
 
   return (
     <>
@@ -253,7 +235,7 @@ export function AppSidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-0">
           <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
-                {mainNavItems.filter(item => hasAccess(item.roles)).map(subLink => (
+                {mainNavItems.map(subLink => (
                     <SidebarMenuItem key={subLink.href}>
                         <Link href={subLink.href} passHref>
                         <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
@@ -267,7 +249,7 @@ export function AppSidebarNav() {
                 ))}
             </SidebarMenu>
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-            {visibleNavGroups.map((group) => {
+            {allNavGroups.map((group) => {
               const IconComponent = group.icon;
               return (
                 <AccordionItem value={group.groupLabel} key={group.groupLabel} className="border-none">
@@ -340,5 +322,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
