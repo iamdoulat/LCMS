@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -24,117 +25,6 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-
-const toNumberOrUndefined = (val: unknown): number | undefined => {
-  if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
-    return undefined;
-  }
-  const num = Number(String(val).trim());
-  return isNaN(num) ? undefined : num;
-};
-
-const lcEntrySchema = z.object({
-  applicantId: z.string().min(1, "Applicant Name is required"),
-  beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
-  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
-  amount: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
-  ),
-  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay is required." }),
-  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
-  proformaInvoiceNumber: z.string().optional(),
-  invoiceDate: z.date().optional().nullable(),
-  commercialInvoiceNumber: z.string().optional(),
-  commercialInvoiceDate: z.date().optional().nullable(),
-  totalMachineQty: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
-  ),
-  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be a non-negative integer.").optional().default(0)),
-  status: z.enum(lcStatusOptions, { required_error: "L/C Status is required."}),
-  itemDescriptions: z.string().optional(),
-  partialShipments: z.string().optional(),
-  portOfLoading: z.string().optional(),
-  portOfDischarge: z.string().optional(),
-  consigneeBankNameAddress: z.string().optional(),
-  notifyPartyNameAndAddress: z.string().optional(),
-  notifyPartyName: z.string().optional(),
-  notifyPartyCell: z.string().optional(),
-  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
-  lcIssueDate: z.date({ required_error: "L/C Issue Date is required." }).nullable(),
-  expireDate: z.date().optional().nullable(),
-  latestShipmentDate: z.date().optional().nullable(),
-  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions, { required_error: "Please specify if partial shipment is allowed" }),
-  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
-  firstPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  firstPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  firstPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  firstPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  secondPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  secondPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  secondPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  secondPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  thirdPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
-  thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
-  thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
-  thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional().default(0)),
-  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional().default(0)),
-  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
-  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment mode is required." }),
-  vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(),
-  flightNumber: z.string().optional(),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
-  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
-  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional().default([]),
-  shippingMarks: z.string().optional(),
-  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  packingListUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  isFirstShipment: z.boolean().optional().default(false),
-  isSecondShipment: z.boolean().optional().default(false),
-  isThirdShipment: z.boolean().optional().default(false),
-}).refine(data => {
-  if (data.termsOfPay === "T/T In Advance") {
-    return data.expireDate === null || data.expireDate === undefined;
-  }
-  return data.expireDate !== null && data.expireDate !== undefined;
-}, {
-  message: "Expire Date is required unless Terms of Pay is T/T In Advance.",
-  path: ["expireDate"],
-}).refine(data => {
-  if (data.termsOfPay === "T/T In Advance") {
-    return data.latestShipmentDate === null || data.latestShipmentDate === undefined;
-  }
-  return data.latestShipmentDate !== null && data.latestShipmentDate !== undefined;
-}, {
-  message: "Latest Shipment Date is required unless Terms of Pay is T/T In Advance.",
-  path: ["latestShipmentDate"],
-});
 
 export type LCEditFormValues = z.infer<typeof lcEntrySchema>;
 
@@ -414,6 +304,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
 
   const watchedTermsOfPay = watch("termsOfPay");
+  const watchedStatus = watch("status");
+
   React.useEffect(() => {
     if (watchedTermsOfPay === "T/T In Advance") {
       setValue("expireDate", undefined, { shouldValidate: true, shouldDirty: true });
@@ -978,7 +870,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="lcIssueDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>T/T or L/C Issue Date*</FormLabel>
+                    <FormLabel>T/T or L/C Issue Date{watchedStatus !== 'Draft' && '*'}</FormLabel>
                     <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
@@ -989,7 +881,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="expireDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Expire Date{watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
+                    <FormLabel>Expire Date{watchedStatus !== 'Draft' && watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
                     <DatePickerField 
                         field={field} 
                         placeholder="Select date" 
@@ -1004,7 +896,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 name="latestShipmentDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Latest Shipment Date{watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
+                    <FormLabel>Latest Shipment Date{watchedStatus !== 'Draft' && watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
                      <DatePickerField 
                         field={field} 
                         placeholder="Select date" 
@@ -1024,7 +916,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : defaultFormValues.partialShipmentAllowed }
+                  value={partialShipmentAllowedOptions.includes(field.value as PartialShipmentAllowed) ? field.value : defaultFormValues.partialShipmentAllowed}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
                   {partialShipmentAllowedOptions.map((option) => (

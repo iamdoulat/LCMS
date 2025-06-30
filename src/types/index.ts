@@ -124,6 +124,128 @@ export interface LCEntry {
   isThirdShipment?: boolean;
 }
 
+export const lcEntrySchema = z.object({
+  applicantId: z.string().min(1, "Applicant Name is required"),
+  beneficiaryId: z.string().min(1, "Beneficiary Name is required"),
+  currency: z.enum(currencyOptions, { required_error: "Currency is required" }),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
+  ),
+  termsOfPay: z.enum(termsOfPayOptions).optional(),
+  documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
+  proformaInvoiceNumber: z.string().optional(),
+  invoiceDate: z.date().optional().nullable(),
+  commercialInvoiceNumber: z.string().optional(),
+  commercialInvoiceDate: z.date().optional().nullable(),
+  totalMachineQty: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
+  ),
+  numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be non-negative integer.").optional().default(0)),
+  status: z.enum(lcStatusOptions).optional(),
+  itemDescriptions: z.string().optional(),
+  partialShipments: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
+  consigneeBankNameAddress: z.string().optional(),
+  notifyPartyNameAndAddress: z.string().optional(),
+  notifyPartyName: z.string().optional(),
+  notifyPartyCell: z.string().optional(),
+  notifyPartyEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
+  lcIssueDate: z.date().optional().nullable(),
+  expireDate: z.date().optional().nullable(),
+  latestShipmentDate: z.date().optional().nullable(),
+  partialShipmentAllowed: z.enum(partialShipmentAllowedOptions).optional(),
+  firstPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  secondPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  thirdPartialQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  firstPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
+  secondPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
+  thirdPartialAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount cannot be negative").optional().default(0)),
+  firstPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
+  firstPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
+  firstPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
+  firstPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
+  secondPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
+  secondPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
+  secondPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
+  secondPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
+  thirdPartialPkgs: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Pkgs cannot be negative").optional().default(0)),
+  thirdPartialNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net Weight cannot be negative").optional().default(0)),
+  thirdPartialGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross Weight cannot be negative").optional().default(0)),
+  thirdPartialCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
+  totalPackageQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Package quantity cannot be negative").optional().default(0)),
+  totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional().default(0)),
+  totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
+  totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
+  shipmentMode: z.enum(shipmentModeOptions).optional(),
+  vesselOrFlightName: z.string().optional(),
+  vesselImoNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
+  trackingNumber: z.string().optional(),
+  etd: z.date().optional().nullable(),
+  eta: z.date().optional().nullable(),
+  originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  copyCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  invoiceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  packingListQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  brandNewCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryWarrantyCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  beneficiaryComplianceCertificateQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  shipmentAdviceQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  billOfExchangeQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
+  certificateOfOrigin: z.array(z.enum(certificateOfOriginCountries)).optional().default([]),
+  shippingMarks: z.string().optional(),
+  purchaseOrderUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalPIUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  packingListUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
+  isFirstShipment: z.boolean().optional().default(true),
+  isSecondShipment: z.boolean().optional().default(false),
+  isThirdShipment: z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+    // If status is Draft, all date fields are optional, so no further validation needed for them.
+    if (data.status === 'Draft') {
+        return;
+    }
+
+    // --- Conditional Validation for Non-Draft Statuses ---
+
+    // 1. L/C Issue Date is required if not a Draft.
+    if (!data.lcIssueDate) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['lcIssueDate'],
+            message: 'T/T or L/C Issue Date is required when status is not Draft.',
+        });
+    }
+
+    // 2. Expire Date and Latest Shipment Date validation based on Terms of Pay
+    if (data.termsOfPay !== 'T/T In Advance') {
+        if (!data.expireDate) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['expireDate'],
+                message: 'Expire Date is required unless Terms of Pay is T/T In Advance.',
+            });
+        }
+        if (!data.latestShipmentDate) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['latestShipmentDate'],
+                message: 'Latest Shipment Date is required unless Terms of Pay is T/T In Advance.',
+            });
+        }
+    }
+});
+
+
 export interface LCEntryDocument {
   id: string;
   year: number;
