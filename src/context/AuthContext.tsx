@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
               finalUserRole = userProfileData.role || "User"; // Use DB role, fallback to "User"
               setFirestoreUser(userProfileData);
           } else {
-              // This is a first-time login/registration. Create the document.
+              // This is a first-time login/registration, possibly with Google where the doc isn't created yet.
               let roleFromEnv: UserRole = "User"; // Default role
               const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
 
@@ -254,8 +254,36 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       // Update the Firebase Auth profile with the display name
       await firebaseUpdateProfile(user, { displayName });
 
-      // The onAuthStateChanged listener will handle creating the user document in Firestore.
-      // This avoids race conditions and ensures a single source of truth for profile creation.
+      // Explicitly create the user document in Firestore here
+      const userDocRef = doc(firestore, "users", user.uid);
+      
+      let roleFromEnv: UserRole = "User"; // Default role
+      const lowercasedUserEmail = user.email?.toLowerCase() || '';
+
+      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+          roleFromEnv = "Super Admin";
+      } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+          roleFromEnv = "Admin";
+      } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+          roleFromEnv = "Service";
+      } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+          roleFromEnv = "DemoManager";
+      } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+          roleFromEnv = "Store Manager";
+      }
+
+      const newProfileData = {
+          uid: user.uid,
+          displayName: displayName,
+          email: user.email,
+          photoURL: user.photoURL || null,
+          role: roleFromEnv,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+      };
+      await setDoc(userDocRef, newProfileData);
+      
+      // onAuthStateChanged will then pick up this new user and created document.
       
       Swal.fire({
         title: "Registration Successful",
