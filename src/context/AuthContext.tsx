@@ -94,8 +94,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     fetchInitialCompanyProfile();
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+<<<<<<< HEAD
       setUser(currentUser);
       setLoading(true); 
 
@@ -115,22 +115,35 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
               setUserRole(null); // Role is unknown
               setFirestoreUser(null);
           }
+=======
+      setLoading(true);
+      if (currentUser) {
+        const userDocRef = doc(firestore, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
+          setUser(currentUser);
+          setFirestoreUser(userProfileData);
+          setUserRole(userProfileData.role || "User");
+>>>>>>> 7cc7269b384ba339163d3be09fe2d6370f8fa34f
         } else {
+          console.warn(`Firestore document for user ${currentUser.uid} not found. This might happen briefly after registration or if doc creation failed.`);
+          setUser(currentUser);
           setFirestoreUser(null);
           setUserRole(null);
         }
-      } catch (error) {
-        console.error("AuthContext: Error during onAuthStateChanged profile/role processing:", error);
+      } else {
+        setUser(null);
         setFirestoreUser(null);
         setUserRole(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [fetchInitialCompanyProfile]);
 
 
+<<<<<<< HEAD
   const login = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
@@ -247,32 +260,24 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
   
+=======
+>>>>>>> 7cc7269b384ba339163d3be09fe2d6370f8fa34f
   const register = useCallback(async (email: string, pass: string, displayName: string) => {
-    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // Update the Firebase Auth profile with the display name
       await firebaseUpdateProfile(user, { displayName });
 
-      // Explicitly create the user document in Firestore here
       const userDocRef = doc(firestore, "users", user.uid);
       
       let roleFromEnv: UserRole = "User"; // Default role
       const lowercasedUserEmail = user.email?.toLowerCase() || '';
-
-      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          roleFromEnv = "Super Admin";
-      } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          roleFromEnv = "Admin";
-      } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          roleFromEnv = "Service";
-      } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          roleFromEnv = "DemoManager";
-      } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-          roleFromEnv = "Store Manager";
-      }
+      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Super Admin";
+      else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Admin";
+      else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
+      else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
+      else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
 
       const newProfileData = {
           uid: user.uid,
@@ -285,8 +290,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       };
       await setDoc(userDocRef, newProfileData);
       
-      // onAuthStateChanged will then pick up this new user and created document.
-      
       Swal.fire({
         title: "Registration Successful",
         text: `Welcome, ${displayName}! You are now logged in.`,
@@ -297,19 +300,95 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     } catch (error: any) {
       console.error("AuthContext: Error registering user: ", error);
       let errorMessage = "Failed to register. Please try again.";
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "This email address is already in use by another account.";
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = "The password is too weak. Please use at least 6 characters.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "The email address is not valid.";
-      } else {
-        errorMessage = error.message || 'An unknown registration error occurred.';
-      }
-      setLoading(false); // Make sure to stop loading on error
-      throw new Error(errorMessage); // Propagate error for the form to handle
+      if (error.code === 'auth/email-already-in-use') errorMessage = "This email is already in use.";
+      else if (error.code === 'auth/weak-password') errorMessage = "Password must be at least 6 characters.";
+      else if (error.code === 'auth/invalid-email') errorMessage = "The email address is not valid.";
+      else errorMessage = error.message || 'An unknown registration error occurred.';
+      throw new Error(errorMessage);
     }
   }, []);
+  
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const userDocRef = doc(firestore, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (!userDocSnap.exists()) {
+          let roleFromEnv: UserRole = "User";
+          const lowercasedUserEmail = user.email?.toLowerCase() || '';
+          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Super Admin";
+          else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Admin";
+          else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
+          else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
+          else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
+          
+          const newProfileData = {
+              uid: user.uid,
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL,
+              role: roleFromEnv,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+          };
+          await setDoc(userDocRef, newProfileData);
+      }
+      Swal.fire({
+        title: "Sign-in Successful",
+        text: `Welcome!`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Error signing in with Google: ", error);
+      let errorMessage = "Failed to sign in with Google.";
+      if (error.code === 'auth/account-exists-with-different-credential') errorMessage = "An account with this email already exists.";
+      else if (error.code === 'auth/popup-closed-by-user') errorMessage = "Google Sign-In was cancelled.";
+      else errorMessage = error.message || errorMessage;
+      Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
+      throw error;
+    }
+  }, [router]);
+
+  const login = useCallback(async (email: string, pass: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      Swal.fire({
+        title: "Login Successful",
+        text: "Welcome back!",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error: any) {
+      console.error("AuthContext: Error logging in: ", error);
+      let errorMessage = "Invalid email or password.";
+      if (error.code === 'auth/too-many-requests') errorMessage = "Too many login attempts. Try again later.";
+      else if (error.message) errorMessage = `Login failed: ${error.message}`;
+      Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
+      throw error;
+    }
+  }, []);
+  
+  const logout = useCallback(async () => {
+    try {
+      await firebaseSignOut(auth);
+      Swal.fire({
+        title: "Logged Out",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      router.push('/login');
+    } catch (error: any) {
+      Swal.fire("Logout Error", error.message || "Failed to log out.", "error");
+    }
+  }, [router]);
 
   const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
     let newName = companyName;
@@ -328,23 +407,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
   }, [companyName, companyLogoUrl]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      }
-    };
-  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
