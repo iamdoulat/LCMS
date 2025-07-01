@@ -33,7 +33,7 @@ export const certificateOfOriginCountries = [
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
-const toNumberOrUndefined = (val: unknown): number | undefined => {
+export const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
     return undefined;
   }
@@ -132,7 +132,7 @@ export const lcEntrySchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
-  termsOfPay: z.enum(termsOfPayOptions).optional(),
+  termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay is required" }),
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),

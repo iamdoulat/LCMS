@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -410,7 +410,7 @@ export function NewLCEntryForm() {
     };
 
     const cleanedDataToSave = Object.fromEntries(
-      Object.entries(dataToSave).filter(([, value]) => value !== undefined)
+      Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
     ) as typeof dataToSave;
 
 
@@ -525,7 +525,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                <Combobox
+                 <Combobox
                   options={applicantOptions}
                   value={field.value || PLACEHOLDER_APPLICANT_VALUE}
                   onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
@@ -545,7 +545,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                <Combobox
+                 <Combobox
                   options={beneficiaryOptions}
                   value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
                   onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
