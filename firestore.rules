@@ -1,85 +1,88 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isSuperAdmin() {
-      return isAuthenticated() && getUserData().role == 'Super Admin';
-    }
-
+    // Helper function to check if a user is an Admin or Super Admin
     function isAdmin() {
-      return isAuthenticated() && getUserData().role in ['Admin', 'Super Admin'];
-    }
-    
-    function isService() {
-      return isAuthenticated() && getUserData().role == 'Service';
-    }
-    
-    function isDemoManager() {
-       return isAuthenticated() && getUserData().role == 'DemoManager';
-    }
-    
-    function isStoreManager() {
-       return isAuthenticated() && getUserData().role == 'Store Manager';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Super Admin'];
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Helper function to check if a user is a Super Admin
+    function isSuperAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super Admin';
+    }
+    
+    // By default, deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // --- Collection Rules ---
-
-    // USERS COLLECTION
+    // --- User Profiles ---
+    // Users can read/update their own profile. Admins can manage all users.
     match /users/{userId} {
-      allow list, read: if isAdmin();
-      allow update: if isOwner(userId) || isSuperAdmin();
-      allow create: if isOwner(userId);
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null; // Any authenticated user can create their own profile entry upon registration.
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Deleting users should ideally be handled by a backend function for security,
+      // but we allow Super Admins to delete the Firestore document for this app.
       allow delete: if isSuperAdmin();
     }
     
-    // SETTINGS & COUNTERS
-    match /company_profile/{docId} {
-        allow read: if isAuthenticated();
-        allow write: if isSuperAdmin();
+    // --- App Configuration ---
+    // Company profile is readable by all authenticated users, writable only by admins.
+    match /company_profile/{profileId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
     }
-    // This rule was missing, causing the error.
-    match /counters/{docId} {
-      allow read, write: if isAuthenticated(); 
+    
+    // Counters need to be writeable by authenticated users who create documents.
+    match /counters/{counterId} {
+        allow read, write: if request.auth != null;
     }
 
-    // CORE MODULES
-    match /lc_entries/{docId=**} { allow read, write: if isAdmin(); }
-    match /proforma_invoices/{docId=**} { allow read, write: if isAdmin(); }
-
-    // FINANCIAL MANAGEMENT
-    match /quotes/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /invoices/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /orders/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /payments/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    
-    // INVENTORY MANAGEMENT
-    match /items/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /sales/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-
-    // GENERAL MANAGEMENT
-    match /customers/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /suppliers/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-
-    // DEMO M/C MANAGEMENT
-    match /demo_machine_factories/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    match /demo_machines/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    match /demo_machine_applications/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    
-    // WARRANTY MANAGEMENT
-    match /installation_reports/{docId=**} { allow read, write: if isAdmin() || isService(); }
+    // --- Core Business Collections ---
+    // Allow any authenticated user to read and write to all main business collections.
+    // For a production app, you could tighten these rules further based on specific user roles.
+    match /lc_entries/{lcId} {
+      allow read, write: if request.auth != null;
+    }
+    match /customers/{customerId} {
+      allow read, write: if request.auth != null;
+    }
+    match /suppliers/{supplierId} {
+      allow read, write: if request.auth != null;
+    }
+    match /proforma_invoices/{piId} {
+      allow read, write: if request.auth != null;
+    }
+    match /items/{itemId} {
+      allow read, write: if request.auth != null;
+    }
+    match /sales/{saleId} {
+        allow read, write: if request.auth != null;
+    }
+    match /invoices/{invoiceId} {
+        allow read, write: if request.auth != null;
+    }
+    match /orders/{orderId} {
+        allow read, write: if request.auth != null;
+    }
+     match /payments/{paymentId} {
+        allow read, write: if request.auth != null;
+    }
+    match /installation_reports/{reportId} {
+        allow read, write: if request.auth != null;
+    }
+    match /demo_machines/{machineId} {
+        allow read, write: if request.auth != null;
+    }
+    match /demo_machine_factories/{factoryId} {
+        allow read, write: if request.auth != null;
+    }
+    match /demo_machine_applications/{applicationId} {
+        allow read, write: if request.auth != null;
+    }
   }
 }
