@@ -189,7 +189,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
       Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
       setLoading(false); 
-      throw error;
+      // Do not re-throw the error, as it's already handled with a Swal alert.
     }
   }, []);
 
