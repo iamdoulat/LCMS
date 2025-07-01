@@ -104,47 +104,17 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
-          let finalUserRole: UserRole | null = null;
-
           if (userDocSnap.exists()) {
-              // If the user document exists, Firestore is the source of truth for the role.
               const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-              finalUserRole = userProfileData.role || "User"; // Use DB role, fallback to "User"
+              setUserRole(userProfileData.role || "User");
               setFirestoreUser(userProfileData);
           } else {
-              // This is a first-time login/registration, possibly with Google where the doc isn't created yet.
-              let roleFromEnv: UserRole = "User"; // Default role
-              const lowercasedUserEmail = currentUser.email?.toLowerCase() || '';
-
-              if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-                  roleFromEnv = "Super Admin";
-              } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-                  roleFromEnv = "Admin";
-              } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-                  roleFromEnv = "Service";
-              } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-                  roleFromEnv = "DemoManager";
-              } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-                  roleFromEnv = "Store Manager";
-              }
-              
-              finalUserRole = roleFromEnv;
-
-              if (currentUser.displayName && currentUser.email) {
-                  const newProfileData = {
-                      uid: currentUser.uid,
-                      displayName: currentUser.displayName,
-                      email: currentUser.email,
-                      photoURL: currentUser.photoURL || null,
-                      role: finalUserRole,
-                      createdAt: serverTimestamp(),
-                      updatedAt: serverTimestamp(),
-                  };
-                  await setDoc(userDocRef, newProfileData);
-                  setFirestoreUser({id: currentUser.uid, ...newProfileData} as UserDocumentForAdmin);
-              }
+              // This can happen briefly during registration or if something went wrong.
+              // We log a warning but don't try to create the doc here anymore.
+              console.warn(`AuthContext: User document not found for UID: ${currentUser.uid}. It should have been created on sign-up.`);
+              setUserRole(null); // Role is unknown
+              setFirestoreUser(null);
           }
-          setUserRole(finalUserRole);
         } else {
           setFirestoreUser(null);
           setUserRole(null);
@@ -176,7 +146,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     } catch (error: any) {
       console.error("AuthContext: Error logging in: ", error);
       let errorMessage = "Failed to login. Please check your credentials.";
-       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
         errorMessage = "Invalid email or password.";
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = "Too many login attempts. Please try again later.";
@@ -187,9 +157,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       } else {
         errorMessage = `Login failed: ${error.message || 'An unknown error occurred.'}`;
       }
-      Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      setLoading(false); 
-      // Do not re-throw the error, as it's already handled with a Swal alert.
+      setLoading(false); // Make sure to set loading to false on error
+      throw new Error(errorMessage);
     }
   }, []);
 
@@ -219,11 +188,44 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const signInWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged takes care of user profile creation/update in Firestore and setting context state
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user document exists, if not, create it
+      const userDocRef = doc(firestore, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        let roleFromEnv: UserRole = "User"; // Default role
+        const lowercasedUserEmail = user.email?.toLowerCase() || '';
+
+        if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            roleFromEnv = "Super Admin";
+        } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            roleFromEnv = "Admin";
+        } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            roleFromEnv = "Service";
+        } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            roleFromEnv = "DemoManager";
+        } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
+            roleFromEnv = "Store Manager";
+        }
+
+        const newProfileData = {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL || null,
+            role: roleFromEnv,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newProfileData);
+      }
+      
       Swal.fire({
         title: "Sign-in Successful",
-        text: `Welcome!`,
+        text: `Welcome, ${user.displayName}!`,
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
@@ -241,7 +243,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       }
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
       setLoading(false);
-      throw error;
+      // Not re-throwing error since it's handled by Swal
     }
   }, [router]);
   
