@@ -95,42 +95,26 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     fetchInitialCompanyProfile();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-<<<<<<< HEAD
-      setUser(currentUser);
-      setLoading(true); 
-
-      try {
-        if (currentUser) {
+      setLoading(true);
+      if (currentUser) {
+        setUser(currentUser);
+        try {
           const userDocRef = doc(firestore, "users", currentUser.uid);
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
-              const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-              setUserRole(userProfileData.role || "User");
-              setFirestoreUser(userProfileData);
+            const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
+            setFirestoreUser(userProfileData);
+            setUserRole(userProfileData.role || "User");
           } else {
-              // This can happen briefly during registration or if something went wrong.
-              // We log a warning but don't try to create the doc here anymore.
-              console.warn(`AuthContext: User document not found for UID: ${currentUser.uid}. It should have been created on sign-up.`);
-              setUserRole(null); // Role is unknown
-              setFirestoreUser(null);
+            console.warn(`Firestore document for user ${currentUser.uid} not found. This might happen briefly after registration or if doc creation failed.`);
+            setFirestoreUser(null);
+            setUserRole(null);
           }
-=======
-      setLoading(true);
-      if (currentUser) {
-        const userDocRef = doc(firestore, "users", currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-          setUser(currentUser);
-          setFirestoreUser(userProfileData);
-          setUserRole(userProfileData.role || "User");
->>>>>>> 7cc7269b384ba339163d3be09fe2d6370f8fa34f
-        } else {
-          console.warn(`Firestore document for user ${currentUser.uid} not found. This might happen briefly after registration or if doc creation failed.`);
-          setUser(currentUser);
-          setFirestoreUser(null);
-          setUserRole(null);
+        } catch (error) {
+           console.error("AuthContext: Error fetching user document:", error);
+           setFirestoreUser(null);
+           setUserRole(null);
         }
       } else {
         setUser(null);
@@ -142,126 +126,44 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     return () => unsubscribe();
   }, [fetchInitialCompanyProfile]);
 
-
-<<<<<<< HEAD
   const login = useCallback(async (email: string, pass: string) => {
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting user, firestoreUser, userRole, and setLoading(false)
       Swal.fire({
         title: "Login Successful",
-        text: `Welcome back!`,
+        text: "Welcome back!",
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
       });
     } catch (error: any) {
       console.error("AuthContext: Error logging in: ", error);
-      let errorMessage = "Failed to login. Please check your credentials.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
-        errorMessage = "Invalid email or password.";
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Too many login attempts. Please try again later.";
-      } else if (error.code === 'permission-denied' || (error.message && (error.message.includes('permission') || error.message.includes('Missing or insufficient permissions')) )) {
-        errorMessage = `Login failed: Missing or insufficient permissions to access user data. Original Firebase error: ${error.message}`;
-      } else if (error.code) {
-        errorMessage = `Login failed: ${error.message} (Code: ${error.code})`;
-      } else {
-        errorMessage = `Login failed: ${error.message || 'An unknown error occurred.'}`;
+      let errorMessage = "Invalid email or password.";
+      if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many login attempts. Try again later.";
+      } else if (error.message) {
+        errorMessage = `Login failed: ${error.message}`;
       }
-      setLoading(false); // Make sure to set loading to false on error
-      throw new Error(errorMessage);
+      Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
+      throw error;
     }
   }, []);
 
   const logout = useCallback(async () => {
-    setLoading(true);
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged will handle clearing user, firestoreUser, userRole, and setting loading to false
       Swal.fire({
         title: "Logged Out",
-        text: "You have been successfully logged out.",
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       });
       router.push('/login');
     } catch (error: any) {
-      Swal.fire({
-        title: "Logout Error",
-        text: error.message || "Failed to log out. Please try again.",
-        icon: "error",
-      });
-      setLoading(false);
-    }
-  }, [router]);
-
-  const signInWithGoogle = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // Check if user document exists, if not, create it
-      const userDocRef = doc(firestore, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        let roleFromEnv: UserRole = "User"; // Default role
-        const lowercasedUserEmail = user.email?.toLowerCase() || '';
-
-        if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Super Admin";
-        } else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Admin";
-        } else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Service";
-        } else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "DemoManager";
-        } else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) {
-            roleFromEnv = "Store Manager";
-        }
-
-        const newProfileData = {
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL || null,
-            role: roleFromEnv,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        };
-        await setDoc(userDocRef, newProfileData);
-      }
-      
-      Swal.fire({
-        title: "Sign-in Successful",
-        text: `Welcome, ${user.displayName}!`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error("Error signing in with Google: ", error);
-      let errorMessage = "Failed to sign in with Google. Please try again.";
-      if (error.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = "An account already exists with the same email address but different sign-in credentials. Try signing in with the original method.";
-      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        errorMessage = "Google Sign-In was cancelled.";
-      } else if (error.code) {
-        errorMessage = `Google Sign-In error: ${error.message} (Code: ${error.code})`;
-      }
-      Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
-      setLoading(false);
-      // Not re-throwing error since it's handled by Swal
+      Swal.fire("Logout Error", error.message || "Failed to log out.", "error");
     }
   }, [router]);
   
-=======
->>>>>>> 7cc7269b384ba339163d3be09fe2d6370f8fa34f
   const register = useCallback(async (email: string, pass: string, displayName: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -352,41 +254,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       else errorMessage = error.message || errorMessage;
       Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
       throw error;
-    }
-  }, [router]);
-
-  const login = useCallback(async (email: string, pass: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      Swal.fire({
-        title: "Login Successful",
-        text: "Welcome back!",
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-    } catch (error: any) {
-      console.error("AuthContext: Error logging in: ", error);
-      let errorMessage = "Invalid email or password.";
-      if (error.code === 'auth/too-many-requests') errorMessage = "Too many login attempts. Try again later.";
-      else if (error.message) errorMessage = `Login failed: ${error.message}`;
-      Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      throw error;
-    }
-  }, []);
-  
-  const logout = useCallback(async () => {
-    try {
-      await firebaseSignOut(auth);
-      Swal.fire({
-        title: "Logged Out",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      router.push('/login');
-    } catch (error: any) {
-      Swal.fire("Logout Error", error.message || "Failed to log out.", "error");
     }
   }, [router]);
 
