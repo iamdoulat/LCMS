@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -469,17 +468,7 @@ export default function TotalLCPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="space-y-1">
-                    <label htmlFor="sortOrder" className="text-sm font-medium">Order</label>
-                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="pt-5 xl:col-start-4">
+                 <div className="pt-6">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
                   </Button>
@@ -785,3 +774,5 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
+    

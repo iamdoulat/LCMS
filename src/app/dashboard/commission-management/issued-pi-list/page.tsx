@@ -395,17 +395,7 @@ export default function IssuedPIListPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="space-y-1">
-                    <label htmlFor="sortOrderPi" className="text-sm font-medium">Order</label>
-                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="pt-5 md:col-span-2 lg:col-span-1 lg:col-start-4"> {/* Adjust for 4 column layout */}
+                <div className="self-end md:col-span-2 lg:col-span-1">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -533,5 +523,7 @@ export default function IssuedPIListPage() {
     </div>
   );
 }
+
+    
 
     

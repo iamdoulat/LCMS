@@ -327,16 +327,6 @@ export default function OrdersListPage() {
                     </Select>
                 </div>
                  <div>
-                    <Label htmlFor="sortOrderOrder" className="text-sm font-medium">Order</Label>
-                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="xl:col-start-4">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -420,4 +410,6 @@ export default function OrdersListPage() {
     </div>
   );
 }
+    
+
     
