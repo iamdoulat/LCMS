@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from '@/components/ui/separator';
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -560,6 +561,27 @@ export default function TotalLCPage() {
                        <TableRow key={`${lc.id}-actions`}>
                          <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
                           <div className="flex flex-wrap justify-center items-center gap-2">
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-full p-0">
+                                            <CalendarClock className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="p-2">
+                                        <div className="text-sm space-y-1">
+                                            <p className="font-semibold text-foreground">Shipment Info</p>
+                                            <Separator className="my-1"/>
+                                            <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
+                                            <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
+                                            <Separator className="my-1"/>
+                                            <p>1st Shipment: {lc.isFirstShipment ? 'Done' : 'Pending'}</p>
+                                            <p>2nd Shipment: {lc.isSecondShipment ? 'Done' : 'Pending'}</p>
+                                            <p>3rd Shipment: {lc.isThirdShipment ? 'Done' : 'Pending'}</p>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                              <Button
                                 variant={ (lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber) ? "default" : "outline" }
                                 size="sm"
