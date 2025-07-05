@@ -125,6 +125,7 @@ const shipmentNavItems: NavItem[] = [
     { href: '/dashboard/recent-shipments', label: 'Recent Shipments', icon: PackageCheck },
     { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock },
     { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck },
+    { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign },
     { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
 ];
 
