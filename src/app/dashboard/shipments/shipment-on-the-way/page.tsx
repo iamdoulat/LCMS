@@ -1,25 +1,35 @@
 
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
+import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, CalendarDays, Filter, XCircle, Users, Building, Hash } from 'lucide-react';
+import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, getYear } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
-interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
+interface CompletedLC extends LCEntryDocument {
   updatedAtDate: Date;
 }
 
 const ITEMS_PER_PAGE = 10;
+const ALL_YEARS_VALUE = "__ALL_YEARS_SHIPMENT_DONE__";
+const PLACEHOLDER_APPLICANT_VALUE = "__ALL_APPLICANTS_SHIPMENT_DONE__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__ALL_BENEFICIARIES_SHIPMENT_DONE__";
+
+const currentSystemYear = new Date().getFullYear();
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -57,10 +67,22 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 
 export default function ShipmentDonePage() {
-  const [completedLCs, setCompletedLCs] = useState<CompletedLC[]>([]);
+  const [allCompletedLCs, setAllCompletedLCs] = useState<CompletedLC[]>([]);
+  const [displayedCompletedLCs, setDisplayedCompletedLCs] = useState<CompletedLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterLcNumber, setFilterLcNumber] = useState('');
+  const [filterApplicantId, setFilterApplicantId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
+  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
 
 
   useEffect(() => {
@@ -69,7 +91,7 @@ export default function ShipmentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "array-contains", "Shipment Done"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "array-contains", "Shipment Done"), firestoreOrderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -83,34 +105,17 @@ export default function ShipmentDonePage() {
               const parsed = parseISO(data.updatedAt);
               if (isValid(parsed)) {
                 updatedAtDate = parsed;
-              } else {
-                console.warn(`Invalid date string for updatedAt: ${data.updatedAt} for L/C ID: ${doc.id}`);
               }
-            } else {
-               console.warn(`Unexpected type for updatedAt for L/C ID: ${doc.id}`, data.updatedAt);
             }
-          } else {
-            console.warn(`Missing updatedAt for L/C ID: ${doc.id}`);
           }
 
           return {
             id: doc.id,
-            documentaryCreditNumber: data.documentaryCreditNumber,
-            beneficiaryName: data.beneficiaryName,
-            applicantName: data.applicantName,
-            currency: data.currency,
-            amount: data.amount,
-            lcIssueDate: data.lcIssueDate,
-            etd: data.etd,
-            eta: data.eta,
+            ...data,
             updatedAtDate: updatedAtDate,
-            status: data.status,
-            isFirstShipment: data.isFirstShipment,
-            isSecondShipment: data.isSecondShipment,
-            isThirdShipment: data.isThirdShipment,
           };
         });
-        setCompletedLCs(fetchedLCs);
+        setAllCompletedLCs(fetchedLCs);
       } catch (error: any) {
         console.error("Error fetching completed L/Cs: ", error);
         let errorMessage = `Could not fetch completed L/C data. Please ensure Firestore rules allow reads.`;
@@ -130,13 +135,67 @@ export default function ShipmentDonePage() {
       }
     };
 
+    const fetchFilterOptions = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+      } catch (error: any) {
+        console.error("Error fetching filter options for Shipment Done page:", error);
+        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+
     fetchCompletedLCs();
+    fetchFilterOptions();
   }, []);
 
-  const totalPages = Math.ceil(completedLCs.length / ITEMS_PER_PAGE);
+  useEffect(() => {
+    let filtered = [...allCompletedLCs];
+
+    if (filterLcNumber) {
+      filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
+    }
+    if (filterApplicantId && filterApplicantId !== PLACEHOLDER_APPLICANT_VALUE) {
+      filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
+    }
+    if (filterBeneficiaryId && filterBeneficiaryId !== PLACEHOLDER_BENEFICIARY_VALUE) {
+      filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
+    }
+    if (filterYear && filterYear !== ALL_YEARS_VALUE) {
+      const yearNum = parseInt(filterYear);
+      filtered = filtered.filter(lc => {
+        return lc.year === yearNum;
+      });
+    }
+
+    setDisplayedCompletedLCs(filtered);
+    setCurrentPage(1);
+  }, [allCompletedLCs, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterYear]);
+
+
+  const clearFilters = () => {
+    setFilterLcNumber('');
+    setFilterApplicantId('');
+    setFilterBeneficiaryId('');
+    setFilterYear(ALL_YEARS_VALUE);
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(displayedCompletedLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = completedLCs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedCompletedLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -184,10 +243,62 @@ export default function ShipmentDonePage() {
           </CardTitle>
           <CardDescription>
             List of Letters of Credit marked as "Shipment Done", sorted by most recent completion date.
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, completedLCs.length)} of {completedLCs.length} entries.
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedCompletedLCs.length)} of {displayedCompletedLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                  <Label htmlFor="lcNoFilterShipmentDone" className="text-sm font-medium">L/C Number</Label>
+                  <Input id="lcNoFilterShipmentDone" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="applicantFilterShipmentDone" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
+                    disabled={isLoadingApplicants}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="beneficiaryFilterShipmentDone" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
+                    disabled={isLoadingBeneficiaries}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="yearFilterShipmentDone" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (L/C Issue)</Label>
+                  <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
+                    <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
+                    <SelectContent>
+                      {yearFilterOptions.map(yearOpt => <SelectItem key={yearOpt} value={yearOpt}>{yearOpt === ALL_YEARS_VALUE ? "All Years" : yearOpt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="lg:col-span-4 md:col-span-2">
+                  <Button onClick={clearFilters} variant="outline" className="w-full md:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -197,41 +308,41 @@ export default function ShipmentDonePage() {
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
-              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
+                 dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+              </p>
             </div>
           ) : currentItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as "Shipment Done" in the database, or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as "Shipment Done" matching your criteria, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
-                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
+                <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <div className="flex flex-wrap gap-1 justify-end">
-                       {lc.status ? (
-                            Array.isArray(lc.status) ? (
-                                lc.status.map(s => (
-                                    <Badge
-                                        key={s}
-                                        variant={getStatusBadgeVariant(s)}
-                                        className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
-                                    >
-                                        {s}
-                                    </Badge>
-                                ))
-                            ) : (
+                       {Array.isArray(lc.status) ? (
+                            lc.status.map(s => (
                                 <Badge
-                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                    className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                    key={s}
+                                    variant={getStatusBadgeVariant(s)}
+                                    className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                                 >
-                                    {lc.status}
+                                    {s}
                                 </Badge>
-                            )
+                            ))
+                        ) : lc.status ? (
+                            <Badge
+                                variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                            >
+                                {lc.status}
+                            </Badge>
                         ) : (
                             <Badge variant="outline">N/A</Badge>
                         )}
@@ -279,7 +390,7 @@ export default function ShipmentDonePage() {
                     </div>
                   </div>
 
-                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> {/* Added pr-28 for spacing */}
+                  <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28">
                     {lc.documentaryCreditNumber || 'N/A'}
                   </Link>
                   
@@ -360,4 +471,3 @@ export default function ShipmentDonePage() {
     </div>
   );
 }
-
