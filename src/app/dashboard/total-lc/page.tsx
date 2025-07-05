@@ -194,7 +194,14 @@ export default function TotalLCPage() {
       });
     }
     if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
-      filtered = filtered.filter(lc => lc.status?.includes(filterStatus));
+      filtered = filtered.filter(lc => {
+        if (Array.isArray(lc.status)) {
+            return lc.status.includes(filterStatus);
+        } else if (typeof lc.status === 'string') { // Handle old data
+            return lc.status === filterStatus;
+        }
+        return false;
+      });
     }
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
@@ -524,22 +531,37 @@ export default function TotalLCPage() {
                         <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
                         <TableCell className="px-2 sm:px-4">
                             <div className="flex flex-wrap gap-1">
-                                {lc.status && lc.status.length > 0 ? (
-                                    lc.status.map(s => (
+                                {lc.status ? (
+                                    Array.isArray(lc.status) ? (
+                                        lc.status.map(s => (
+                                            <Badge
+                                                key={s}
+                                                variant={getStatusBadgeVariant(s)}
+                                                className={
+                                                    s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                    s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                    s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                    s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                    s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                                }
+                                            >
+                                                {s}
+                                            </Badge>
+                                        ))
+                                    ) : (
                                         <Badge
-                                            key={s}
-                                            variant={getStatusBadgeVariant(s)}
+                                            variant={getStatusBadgeVariant(lc.status as LCStatus)}
                                             className={
-                                                s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                                s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                                s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                                s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                                s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                                lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                                             }
                                         >
-                                            {s}
+                                            {lc.status}
                                         </Badge>
-                                    ))
+                                    )
                                 ) : (
                                     <Badge variant="outline">N/A</Badge>
                                 )}

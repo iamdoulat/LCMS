@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -85,7 +86,7 @@ export default function LCPaymentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Payment Done"), firestoreOrderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "array-contains", "Payment Done"), firestoreOrderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -113,7 +114,7 @@ export default function LCPaymentDonePage() {
         console.error("Error fetching 'Payment Done' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data for 'Payment Done' status. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
+            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'updatedAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -316,12 +317,30 @@ export default function LCPaymentDonePage() {
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
-                    <Badge
-                      variant={getStatusBadgeVariant(lc.status)}
-                       className={lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
-                    >
-                      {lc.status || 'N/A'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                       {lc.status ? (
+                            Array.isArray(lc.status) ? (
+                                lc.status.map(s => (
+                                    <Badge
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                                    >
+                                        {s}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge
+                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                    className={(lc.status as LCStatus) === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                                >
+                                    {lc.status}
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
+                    </div>
                     <div className="flex gap-1.5">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                           <Button
@@ -441,3 +460,4 @@ export default function LCPaymentDonePage() {
     </div>
   );
 }
+

@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
@@ -213,19 +213,28 @@ export default function ShipmentDonePage() {
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <div className="flex flex-wrap gap-1 justify-end">
-                      {lc.status && lc.status.length > 0 ? (
-                        lc.status.map(s => (
-                          <Badge
-                            key={s}
-                            variant={getStatusBadgeVariant(s)}
-                            className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
-                          >
-                            {s}
-                          </Badge>
-                        ))
-                      ) : (
-                        <Badge variant="outline">N/A</Badge>
-                      )}
+                       {lc.status ? (
+                            Array.isArray(lc.status) ? (
+                                lc.status.map(s => (
+                                    <Badge
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                    >
+                                        {s}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge
+                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                    className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                >
+                                    {lc.status}
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
                     </div>
                     <div className="flex gap-1.5">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
@@ -351,3 +360,4 @@ export default function ShipmentDonePage() {
     </div>
   );
 }
+

@@ -109,7 +109,7 @@ export default function UpcomingLcShipmentDatesPage() {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -221,10 +221,14 @@ export default function UpcomingLcShipmentDatesPage() {
                   >
                      <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                         <div className="flex flex-wrap gap-1 justify-end">
-                            {lc.status && lc.status.length > 0 ? (
-                                lc.status.map(s => (
-                                    <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>
-                                ))
+                            {lc.status ? (
+                                Array.isArray(lc.status) ? (
+                                    lc.status.map(s => (
+                                        <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>
+                                    ))
+                                ) : (
+                                    <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)}>{lc.status}</Badge>
+                                )
                             ) : null}
                         </div>
                         <div className="flex gap-1.5">
@@ -349,3 +353,4 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
+

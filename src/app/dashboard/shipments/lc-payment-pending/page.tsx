@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -85,7 +86,7 @@ export default function LCPaymentPendingPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Payment Pending"), firestoreOrderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "array-contains", "Payment Pending"), firestoreOrderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -113,7 +114,7 @@ export default function LCPaymentPendingPage() {
         console.error("Error fetching 'Payment Pending' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data for 'Payment Pending' status. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
+            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'updatedAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -316,12 +317,30 @@ export default function LCPaymentPendingPage() {
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
-                    <Badge
-                      variant={getStatusBadgeVariant(lc.status)}
-                       className={lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' : ''}
-                    >
-                      {lc.status || 'N/A'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                       {lc.status ? (
+                            Array.isArray(lc.status) ? (
+                                lc.status.map(s => (
+                                    <Badge
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' : ''}
+                                    >
+                                        {s}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge
+                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                    className={(lc.status as LCStatus) === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' : ''}
+                                >
+                                    {lc.status}
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
+                    </div>
                     <div className="flex gap-1.5">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                           <Button

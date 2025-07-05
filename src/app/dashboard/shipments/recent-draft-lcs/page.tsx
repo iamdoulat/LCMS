@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -28,8 +29,6 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'secondary';
     case 'Shipment Pending':
       return 'default';
-    case 'Shipping going on':
-      return 'default';
     case 'Payment Pending':
       return 'destructive';
     case 'Payment Done':
@@ -58,7 +57,7 @@ export default function RecentDraftLCsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Draft"), orderBy("createdAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "array-contains", "Draft"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -95,7 +94,7 @@ export default function RecentDraftLCsPage() {
         console.error("Error fetching draft L/Cs: ", error);
         let errorMessage = `Could not fetch draft L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch draft L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'createdAt' (descending).`;
+            errorMessage = `Could not fetch draft L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'createdAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -196,12 +195,30 @@ export default function RecentDraftLCsPage() {
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 sm:mb-0 truncate">
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
-                    <Badge
-                      variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
-                    >
-                      {lc.status || 'N/A'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                        {lc.status ? (
+                            Array.isArray(lc.status) ? (
+                                lc.status.map(s => (
+                                    <Badge
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
+                                    >
+                                        {s}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge
+                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                    className={(lc.status as LCStatus) === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
+                                >
+                                    {lc.status}
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <p className="text-muted-foreground">
@@ -219,9 +236,9 @@ export default function RecentDraftLCsPage() {
                         Created: {isValid(lc.createdAtDate) && lc.createdAtDate.getFullYear() > 1 ? format(lc.createdAtDate, 'PPP p') : 'Date not available'}
                     </p>
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline mt-1 sm:mt-0 inline-flex items-center">
-                     View/Edit L/C <ExternalLink className="ml-1 h-3 w-3"/>
-                   </Link>
-                  </div>
+                        View/Edit L/C <ExternalLink className="ml-1 h-3 w-3"/>
+                    </Link>
+                   </div>
                 </li>
               ))}
             </ul>
@@ -270,3 +287,4 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
+

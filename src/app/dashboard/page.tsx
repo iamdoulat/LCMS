@@ -79,7 +79,7 @@ interface RecentlyCompletedLC {
   documentaryCreditNumber?: string;
   beneficiaryName?: string;
   applicantName?: string;
-  status?: LCStatus[];
+  status?: LCStatus[] | LCStatus;
   currency?: Currency;
   amount?: number;
   etd?: string;
@@ -93,7 +93,7 @@ interface DraftLC {
   beneficiaryName?: string;
   applicantName?: string;
   createdAtDate: Date;
-  status?: LCStatus[];
+  status?: LCStatus[] | LCStatus;
   currency?: Currency;
   amount?: number;
 }
@@ -309,7 +309,7 @@ export default function DashboardPage() {
       setSupplierPieData(pieData);
 
       const completedLCs = lcEntriesForTheYear
-        .filter(lc => lc.status?.includes('Shipment Done'))
+        .filter(lc => Array.isArray(lc.status) ? lc.status.includes('Shipment Done') : lc.status === 'Shipment Done')
         .map(lc => {
           let updatedAtDate = new Date(0);
           if(lc.updatedAt && typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
@@ -330,7 +330,7 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs(completedLCs);
 
       const currentDraftLCs = lcEntriesForTheYear
-        .filter(lc => lc.status?.includes('Draft'))
+        .filter(lc => Array.isArray(lc.status) ? lc.status.includes('Draft') : lc.status === 'Draft')
         .map(lc => {
           let createdAtDate = new Date(0);
           if (lc.createdAt) {
@@ -355,7 +355,8 @@ export default function DashboardPage() {
       today.setHours(0,0,0,0);
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
-            if (!lc.etd || lc.status?.includes('Shipment Done')) return false;
+            const isShipmentDone = Array.isArray(lc.status) ? lc.status.includes('Shipment Done') : lc.status === 'Shipment Done';
+            if (!lc.etd || isShipmentDone) return false;
             try {
                 const etdDateSource = lc.etd;
                 let etdDate: Date;
@@ -744,16 +745,25 @@ export default function DashboardPage() {
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <div className="flex flex-wrap gap-1">
-                                {lc.status && lc.status.length > 0 ? (
-                                    lc.status.map(s => (
+                                {lc.status ? (
+                                    Array.isArray(lc.status) ? (
+                                        lc.status.map(s => (
+                                            <Badge
+                                                key={s}
+                                                variant={getStatusBadgeVariant(s)}
+                                                className={s === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
+                                            >
+                                                {s}
+                                            </Badge>
+                                        ))
+                                    ) : (
                                         <Badge
-                                            key={s}
-                                            variant={getStatusBadgeVariant(s)}
-                                            className={s === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
+                                            variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                            className={(lc.status as LCStatus) === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
                                         >
-                                            {s}
+                                            {lc.status}
                                         </Badge>
-                                    ))
+                                    )
                                 ) : (
                                     <Badge variant="outline">N/A</Badge>
                                 )}
@@ -808,16 +818,25 @@ export default function DashboardPage() {
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <div className="flex flex-wrap gap-1">
-                            {lc.status && lc.status.length > 0 ? (
-                                lc.status.map(s => (
+                            {lc.status ? (
+                                Array.isArray(lc.status) ? (
+                                    lc.status.map(s => (
+                                        <Badge
+                                            key={s}
+                                            variant={getStatusBadgeVariant(s)}
+                                            className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                        >
+                                            {s}
+                                        </Badge>
+                                    ))
+                                ) : (
                                     <Badge
-                                        key={s}
-                                        variant={getStatusBadgeVariant(s)}
-                                        className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                        className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                                     >
-                                        {s}
+                                        {lc.status}
                                     </Badge>
-                                ))
+                                )
                             ) : (
                                 <Badge variant="outline">N/A</Badge>
                             )}
@@ -845,3 +864,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
