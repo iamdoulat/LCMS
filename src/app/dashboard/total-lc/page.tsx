@@ -574,10 +574,6 @@ export default function TotalLCPage() {
                                             <Separator className="my-1"/>
                                             <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
                                             <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
-                                            <Separator className="my-1"/>
-                                            <p>1st Shipment: {lc.isFirstShipment ? 'Done' : 'Pending'}</p>
-                                            <p>2nd Shipment: {lc.isSecondShipment ? 'Done' : 'Pending'}</p>
-                                            <p>3rd Shipment: {lc.isThirdShipment ? 'Done' : 'Pending'}</p>
                                         </div>
                                     </TooltipContent>
                                 </Tooltip>
@@ -768,8 +764,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-    
-
-    
-
-    
