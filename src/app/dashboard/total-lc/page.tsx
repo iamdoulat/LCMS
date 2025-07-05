@@ -564,7 +564,14 @@ export default function TotalLCPage() {
                              <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-full p-0">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className={cn(
+                                                "h-7 w-7 rounded-full p-0",
+                                                lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
+                                            )}
+                                        >
                                             <CalendarClock className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
@@ -662,45 +669,7 @@ export default function TotalLCPage() {
                             >
                               <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / PO
                             </Button>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isFirstShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                      "h-7 w-7 rounded-full p-0 text-xs",
-                                      lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="1st Shipment Status"
-                                >
-                                    1st
-                                </Button>
-                            </Link>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isSecondShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                      "h-7 w-7 rounded-full p-0 text-xs",
-                                      lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="2nd Shipment Status"
-                                >
-                                    2nd
-                                </Button>
-                            </Link>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isThirdShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                      "h-7 w-7 rounded-full p-0 text-xs",
-                                      lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="3rd Shipment Status"
-                                >
-                                    3rd
-                                </Button>
-                            </Link>
+                            
                           </div>
                         </TableCell>
                       </TableRow>
