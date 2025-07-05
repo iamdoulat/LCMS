@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/AuthContext';
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -92,6 +93,8 @@ const ITEMS_PER_PAGE = 10;
 
 export default function TotalLCPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -366,7 +369,7 @@ export default function TotalLCPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/new-lc-entry" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 New T/T OR L/C Entry
               </Button>
@@ -543,13 +546,14 @@ export default function TotalLCPage() {
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)}>
+                                <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
                                     <FileEdit className="mr-2 h-4 w-4" />
                                     <span>Edit</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
                                     className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                     disabled={isReadOnly}
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete</span>
@@ -565,7 +569,7 @@ export default function TotalLCPage() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="outline"
+                                            variant={lc.etd && lc.eta ? "default" : "outline"}
                                             size="icon"
                                             className={cn(
                                                 "h-7 w-7 rounded-full p-0",
@@ -669,6 +673,45 @@ export default function TotalLCPage() {
                             >
                               <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / PO
                             </Button>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isFirstShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="1st Shipment Status"
+                                >
+                                    1st
+                                </Button>
+                            </Link>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isSecondShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="2nd Shipment Status"
+                                >
+                                    2nd
+                                </Button>
+                            </Link>
+                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                <Button
+                                    variant={lc.isThirdShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title="3rd Shipment Status"
+                                >
+                                    3rd
+                                </Button>
+                            </Link>
                             
                           </div>
                         </TableCell>
