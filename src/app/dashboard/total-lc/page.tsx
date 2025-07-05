@@ -531,37 +531,35 @@ export default function TotalLCPage() {
                         <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
                         <TableCell className="px-2 sm:px-4">
                             <div className="flex flex-wrap gap-1">
-                                {lc.status ? (
-                                    Array.isArray(lc.status) ? (
-                                        lc.status.map(s => (
-                                            <Badge
-                                                key={s}
-                                                variant={getStatusBadgeVariant(s)}
-                                                className={
-                                                    s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                                    s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                                    s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                                    s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                                    s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                                                }
-                                            >
-                                                {s}
-                                            </Badge>
-                                        ))
-                                    ) : (
+                                {Array.isArray(lc.status) ? (
+                                    lc.status.map(s => (
                                         <Badge
-                                            variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                            key={s}
+                                            variant={getStatusBadgeVariant(s)}
                                             className={
-                                                lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                                lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                                lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                                lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                                lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                                s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
                                             }
                                         >
-                                            {lc.status}
+                                            {s}
                                         </Badge>
-                                    )
+                                    ))
+                                ) : lc.status ? (
+                                    <Badge
+                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                        className={
+                                            lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                            lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                            lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                            lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                        }
+                                    >
+                                        {lc.status}
+                                    </Badge>
                                 ) : (
                                     <Badge variant="outline">N/A</Badge>
                                 )}
@@ -705,6 +703,25 @@ export default function TotalLCPage() {
                             >
                               OCS / PO
                             </Button>
+                            {[
+                                { flag: lc.isFirstShipment, label: "1st" },
+                                { flag: lc.isSecondShipment, label: "2nd" },
+                                { flag: lc.isThirdShipment, label: "3rd" }
+                            ].map((shipment, idx) => (
+                                <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref key={idx}>
+                                    <Button
+                                        variant={shipment.flag ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn(
+                                            "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                            shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                        )}
+                                        title={`${shipment.label} Shipment Status`}
+                                    >
+                                        {shipment.label}
+                                    </Button>
+                                </Link>
+                            ))}
                           </div>
                         </TableCell>
                       </TableRow>

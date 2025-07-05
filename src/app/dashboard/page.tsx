@@ -655,7 +655,7 @@ export default function DashboardPage() {
                                         <Button
                                             variant={s.flag ? "default" : "outline"}
                                             size="icon"
-                                            className={cn("h-6 w-6 rounded-full p-0 text-xs font-bold", s.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", s.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
                                             title={`${s.label} Shipment Status`}
                                         >
                                             {s.label}
@@ -745,27 +745,23 @@ export default function DashboardPage() {
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <div className="flex flex-wrap gap-1">
-                                {lc.status ? (
-                                    Array.isArray(lc.status) ? (
-                                        lc.status.map(s => (
-                                            <Badge
-                                                key={s}
-                                                variant={getStatusBadgeVariant(s)}
-                                                className={s === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
-                                            >
-                                                {s}
-                                            </Badge>
-                                        ))
-                                    ) : (
+                                {Array.isArray(lc.status) ? (
+                                    lc.status.map(s => (
                                         <Badge
-                                            variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                            className={(lc.status as LCStatus) === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
+                                            key={s}
+                                            variant={getStatusBadgeVariant(s)}
+                                            className={s === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
                                         >
-                                            {lc.status}
+                                            {s}
                                         </Badge>
-                                    )
+                                    ))
                                 ) : (
-                                    <Badge variant="outline">N/A</Badge>
+                                    <Badge
+                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                        className={(lc.status as LCStatus) === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
+                                    >
+                                        {lc.status}
+                                    </Badge>
                                 )}
                             </div>
                           <span className="text-xs text-muted-foreground">
@@ -818,27 +814,23 @@ export default function DashboardPage() {
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
                           <div className="flex flex-wrap gap-1">
-                            {lc.status ? (
-                                Array.isArray(lc.status) ? (
-                                    lc.status.map(s => (
-                                        <Badge
-                                            key={s}
-                                            variant={getStatusBadgeVariant(s)}
-                                            className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
-                                        >
-                                            {s}
-                                        </Badge>
-                                    ))
-                                ) : (
+                            {Array.isArray(lc.status) ? (
+                                lc.status.map(s => (
                                     <Badge
-                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                        className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                                     >
-                                        {lc.status}
+                                        {s}
                                     </Badge>
-                                )
+                                ))
                             ) : (
-                                <Badge variant="outline">N/A</Badge>
+                                <Badge
+                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                    className={(lc.status as LCStatus) === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                >
+                                    {lc.status}
+                                </Badge>
                             )}
                             </div>
                       </div>
@@ -864,4 +856,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
