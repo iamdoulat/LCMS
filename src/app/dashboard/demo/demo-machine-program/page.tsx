@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -9,7 +8,7 @@ import Link from 'next/link';
 import { AppWindow, FileCode, Loader2, AlertTriangle, Info, Edit, Trash2, CalendarDays, User, Phone, FileText as NoteIcon, Filter, XCircle, Factory, Laptop, Hash, ChevronLeft, ChevronRight, PlusCircle, FileBadge } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 import { format, parseISO, isValid, isPast, isFuture, isToday, startOfDay, getYear } from 'date-fns';
 import Swal from 'sweetalert2';
@@ -18,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 const ALL_YEARS_VALUE = "__ALL_YEARS_DEMO_PROG__";
@@ -83,6 +83,8 @@ const getDemoStatusBadgeVariant = (status: DemoAppDisplayStatus): "default" | "s
 
 
 export default function DemoMachineProgramPage() {
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allApplications, setAllApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [displayedApplications, setDisplayedApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -311,7 +313,7 @@ export default function DemoMachineProgramPage() {
                     <Filter className="mr-2 h-4 w-4" /> Filter: All
                 </Button> */}
                 <Link href="/dashboard/demo/demo-machine-application" passHref>
-                    <Button variant="default">
+                    <Button variant="default" disabled={isReadOnly}>
                         <AppWindow className="mr-2 h-4 w-4" />
                         New Demo Application
                     </Button>
@@ -420,7 +422,7 @@ export default function DemoMachineProgramPage() {
                                 <Edit className="h-4 w-4" /> <span className="sr-only">Edit Application</span>
                             </Link>
                             </Button>
-                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${mainMachine?.machineModel || 'Multiple Machines'}`)}>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteApplication(app.id, `${app.factoryName} - ${mainMachine?.machineModel || 'Multiple Machines'}`)} disabled={isReadOnly}>
                             <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Application</span>
                             </Button>
                         </div>
@@ -504,8 +506,3 @@ export default function DemoMachineProgramPage() {
     </div>
   );
 }
-
-    
-
-    
-

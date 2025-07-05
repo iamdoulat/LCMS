@@ -18,6 +18,7 @@ import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from '
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 9;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
@@ -46,6 +47,8 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
 
 export default function InstallationReportsViewPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
   const [displayedReports, setDisplayedReports] = useState<InstallationReportDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -241,7 +244,7 @@ export default function InstallationReportsViewPage() {
               </CardDescription>
             </div>
              <Link href="/dashboard/warranty-management/new-installation-report" passHref>
-              <Button>
+              <Button disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Installation Report
               </Button>
             </Link>
@@ -357,11 +360,11 @@ export default function InstallationReportsViewPage() {
                               </Link>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent><p>Edit Report</p></TooltipContent>
+                          <TooltipContent><p>{isReadOnly ? 'View' : 'Edit'} Report</p></TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)}>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteReport(report.id, report.commercialInvoiceNumber || report.documentaryCreditNumber)} disabled={isReadOnly}>
                               <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Report</span>
                             </Button>
                           </TooltipTrigger>
@@ -430,4 +433,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-

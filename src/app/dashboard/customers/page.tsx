@@ -22,11 +22,14 @@ import type { CustomerDocument } from '@/types';
 import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function ApplicantsListPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allApplicants, setAllApplicants] = useState<CustomerDocument[]>([]);
   const [displayedApplicants, setDisplayedApplicants] = useState<CustomerDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,7 +207,7 @@ export default function ApplicantsListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/customers/add" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New Applicant
               </Button>
@@ -302,7 +305,7 @@ export default function ApplicantsListPage() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!applicant.id}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!applicant.id || isReadOnly}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -311,11 +314,12 @@ export default function ApplicantsListPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => applicant.id && handleEditApplicant(applicant.id)}>
                               <FileEdit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
+                              <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => applicant.id && handleDeleteApplicant(applicant.id, applicant.applicantName)}
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={isReadOnly}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               <span>Delete</span>

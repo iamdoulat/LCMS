@@ -27,6 +27,7 @@ import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { useAuth } from '@/context/AuthContext';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -75,6 +76,8 @@ const PI_ITEMS_PER_PAGE = 10;
 
 export default function IssuedPIListPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allProformaInvoices, setAllProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [displayedProformaInvoices, setDisplayedProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -312,7 +315,7 @@ export default function IssuedPIListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/commission-management/add-pi" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New PI
               </Button>
@@ -447,7 +450,7 @@ export default function IssuedPIListPage() {
                       <TableCell className="text-right p-2 sm:p-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!pi.id}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!pi.id || isReadOnly}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -455,13 +458,14 @@ export default function IssuedPIListPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => pi.id && handleEditPI(pi.id)}>
+                            <DropdownMenuItem onClick={() => pi.id && handleEditPI(pi.id)} disabled={isReadOnly}>
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => pi.id && handleDeletePI(pi.id, pi.piNo)}
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={isReadOnly}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               <span>Delete</span>

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from '@/context/AuthContext';
 
 
 const formatFactoryDate = (dateInput?: string | Timestamp | Date): string => {
@@ -50,6 +51,8 @@ const formatFactoryDate = (dateInput?: string | Timestamp | Date): string => {
 
 export default function DemoMachineFactoriesListPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [factories, setFactories] = useState<DemoMachineFactoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -138,7 +141,7 @@ export default function DemoMachineFactoriesListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/demo/add-demo-machine-factory" passHref>
-              <Button variant="default">
+              <Button variant="default" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Factory
               </Button>
@@ -184,11 +187,11 @@ export default function DemoMachineFactoriesListPage() {
                                             </Link>
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent><p>Edit Factory</p></TooltipContent>
+                                    <TooltipContent><p>{isReadOnly ? 'View' : 'Edit'} Factory</p></TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteFactory(factory.id, factory.factoryName)}>
+                                        <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteFactory(factory.id, factory.factoryName)} disabled={isReadOnly}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
@@ -263,4 +266,3 @@ export default function DemoMachineFactoriesListPage() {
     
 
     
-

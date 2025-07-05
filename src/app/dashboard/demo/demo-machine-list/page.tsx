@@ -13,6 +13,7 @@ import type { DemoMachineDocument, DemoMachineOwnerOption, DemoMachineStatusOpti
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
 
 const formatDisplayDate = (dateInput?: string | null | Timestamp): string => {
   if (!dateInput) return 'N/A';
@@ -54,6 +55,8 @@ const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "de
 
 
 export default function DemoMachineListPage() {
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [demoMachines, setDemoMachines] = useState<DemoMachineDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -142,7 +145,7 @@ export default function DemoMachineListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/demo/add-demo-machine" passHref>
-              <Button variant="default">
+              <Button variant="default" disabled={isReadOnly}>
                 <LaptopIcon className="mr-2 h-4 w-4" />
                 Add Demo Machine
               </Button>
@@ -181,7 +184,7 @@ export default function DemoMachineListPage() {
                                     <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
                                 </Button>
                             </Link>
-                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)}>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)} disabled={isReadOnly}>
                               <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
                             </Button>
                         </div>
@@ -247,5 +250,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
-

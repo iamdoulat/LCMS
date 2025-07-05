@@ -23,6 +23,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -33,6 +34,8 @@ const formatCurrency = (value?: number, currencySymbol: string = '$') => {
 
 export default function ItemsListPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allItems, setAllItems] = useState<ItemDocument[]>([]);
   const [displayedItems, setDisplayedItems] = useState<ItemDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,7 +202,7 @@ export default function ItemsListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/items/add" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Add New Item
               </Button>
@@ -311,7 +314,7 @@ export default function ItemsListPage() {
                       <TableCell className="text-right px-2 sm:px-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!item.id}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!item.id || isReadOnly}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -320,11 +323,12 @@ export default function ItemsListPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => item.id && handleEditItem(item.id)}>
                               <FileEdit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
+                              <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => item.id && handleDeleteItem(item.id, item.itemName)}
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={isReadOnly}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               <span>Delete</span>

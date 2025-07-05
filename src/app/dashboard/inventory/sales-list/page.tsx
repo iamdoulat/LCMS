@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -78,6 +79,8 @@ const SALE_ITEMS_PER_PAGE = 10;
 
 export default function SalesListPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [allSales, setAllSales] = useState<SaleDocument[]>([]);
   const [displayedSales, setDisplayedSales] = useState<SaleDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -275,7 +278,7 @@ export default function SalesListPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/inventory/sales" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Record New Sale
               </Button>
@@ -390,7 +393,7 @@ export default function SalesListPage() {
                       <TableCell className="text-right p-2 sm:p-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!sale.id}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!sale.id || isReadOnly}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -398,9 +401,9 @@ export default function SalesListPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => sale.id && handleEditSale(sale.id)}>
+                            <DropdownMenuItem onClick={() => sale.id && handleEditSale(sale.id)} disabled={isReadOnly}>
                               <FileEdit className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
+                              <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => sale.id && handleDownloadPdf(sale.id, sale.id.substring(0,8))}>
                               <FileDown className="mr-2 h-4 w-4" />
@@ -409,6 +412,7 @@ export default function SalesListPage() {
                             <DropdownMenuItem
                               onClick={() => sale.id && handleDeleteSale(sale.id, sale.id.substring(0,8))}
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              disabled={isReadOnly}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               <span>Delete</span>
@@ -442,4 +446,3 @@ export default function SalesListPage() {
     </div>
   );
 }
-
