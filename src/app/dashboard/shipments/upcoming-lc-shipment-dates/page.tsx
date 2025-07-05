@@ -4,8 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency } from '@/types'; 
+import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building } from 'lucide-react';
+import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import Link from 'next/link';
@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Label } from '@/components/ui/label';
 
 interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> { 
   latestShipmentDateObj: Date;
@@ -21,6 +24,10 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 
 const ITEMS_PER_PAGE = 10;
 const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Payment Pending"]; 
+
+const PLACEHOLDER_APPLICANT_VALUE = "__UPCOMING_LC_APPLICANT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__UPCOMING_LC_BENEFICIARY__";
+
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -58,9 +65,21 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 export default function UpcomingLcShipmentDatesPage() {
   const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
+  const [displayedUpcomingLCs, setDisplayedUpcomingLCs] = useState<UpcomingLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter states
+  const [filterLcNumber, setFilterLcNumber] = useState('');
+  const [filterApplicantId, setFilterApplicantId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
+
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
+
 
   useEffect(() => {
     const fetchUpcomingLCs = async () => {
@@ -69,13 +88,10 @@ export default function UpcomingLcShipmentDatesPage() {
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
         
-        // Query 1: For new data model (status is an array)
         const arrayQuery = query(
           lcEntriesRef,
           where("status", "array-contains-any", ACTIVE_LC_STATUSES_FOR_UPCOMING)
         );
-        
-        // Query 2: For old data model (status is a string)
         const stringQuery = query(
           lcEntriesRef,
           where("status", "in", ACTIVE_LC_STATUSES_FOR_UPCOMING)
@@ -104,7 +120,9 @@ export default function UpcomingLcShipmentDatesPage() {
               id: doc.id,
               documentaryCreditNumber: data.documentaryCreditNumber,
               beneficiaryName: data.beneficiaryName,
+              applicantId: data.applicantId,
               applicantName: data.applicantName, 
+              beneficiaryId: data.beneficiaryId,
               currency: data.currency, 
               amount: data.amount, 
               lcIssueDate: data.lcIssueDate,
@@ -125,10 +143,9 @@ export default function UpcomingLcShipmentDatesPage() {
 
         const fetchedLCs = Array.from(fetchedLCsMap.values());
         
-        // Filter and sort client-side after merging
         const sortedAndFiltered = fetchedLCs
-          .filter(lc => isValid(lc.latestShipmentDateObj) && lc.latestShipmentDateObj.getFullYear() > 1970) // Ensure date is valid
-          .sort((a, b) => compareAsc(a.latestShipmentDateObj, b.latestShipmentDateObj)); // Sort by date ascending
+          .filter(lc => isValid(lc.latestShipmentDateObj) && lc.latestShipmentDateObj.getFullYear() > 1970) 
+          .sort((a, b) => compareAsc(a.latestShipmentDateObj, b.latestShipmentDateObj)); 
           
         setAllUpcomingLCs(sortedAndFiltered);
 
@@ -150,14 +167,58 @@ export default function UpcomingLcShipmentDatesPage() {
         setIsLoading(false);
       }
     };
+    const fetchFilterOptions = async () => {
+        setIsLoadingApplicants(true);
+        setIsLoadingBeneficiaries(true);
+        try {
+            const customersSnapshot = await getDocs(collection(firestore, "customers"));
+            setApplicantOptions(
+            customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+            );
+            const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+            setBeneficiaryOptions(
+            suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+            );
+        } catch (error: any) {
+            console.error("Error fetching filter options for Upcoming Shipments page:", error);
+            Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
+        } finally {
+            setIsLoadingApplicants(false);
+            setIsLoadingBeneficiaries(false);
+        }
+    };
 
     fetchUpcomingLCs();
+    fetchFilterOptions();
   }, []);
 
-  const totalPages = Math.ceil(allUpcomingLCs.length / ITEMS_PER_PAGE);
+  useEffect(() => {
+    let filtered = [...allUpcomingLCs];
+
+    if (filterLcNumber) {
+      filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
+    }
+    if (filterApplicantId && filterApplicantId !== PLACEHOLDER_APPLICANT_VALUE) {
+      filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
+    }
+    if (filterBeneficiaryId && filterBeneficiaryId !== PLACEHOLDER_BENEFICIARY_VALUE) {
+      filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
+    }
+    setDisplayedUpcomingLCs(filtered);
+    setCurrentPage(1);
+  }, [allUpcomingLCs, filterLcNumber, filterApplicantId, filterBeneficiaryId]);
+
+  const clearFilters = () => {
+    setFilterLcNumber('');
+    setFilterApplicantId('');
+    setFilterBeneficiaryId('');
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(displayedUpcomingLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = allUpcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = displayedUpcomingLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -173,15 +234,15 @@ export default function UpcomingLcShipmentDatesPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5;
+    const maxPagesToShow = 5; 
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) {
+    if (totalPages <= maxPagesToShow + 2) { 
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1);
+      pageNumbers.push(1); 
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -189,7 +250,7 @@ export default function UpcomingLcShipmentDatesPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages);
+      pageNumbers.push(totalPages); 
     }
     return pageNumbers;
   };
@@ -204,10 +265,53 @@ export default function UpcomingLcShipmentDatesPage() {
           </CardTitle>
           <CardDescription>
             List of active Letters of Credit approaching their latest shipment date, sorted by nearest latest shipment date.
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedUpcomingLCs.length)} of {displayedUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                  <Label htmlFor="lcNoFilterUpcoming" className="text-sm font-medium">L/C Number</Label>
+                  <Input id="lcNoFilterUpcoming" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="applicantFilterUpcoming" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Combobox
+                    options={applicantOptions}
+                    value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
+                    onValueChange={(value) => setFilterApplicantId(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                    emptyStateMessage="No applicant found."
+                    disabled={isLoadingApplicants}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="beneficiaryFilterUpcoming" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(value) => setFilterBeneficiaryId(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                    emptyStateMessage="No beneficiary found."
+                    disabled={isLoadingBeneficiaries}
+                  />
+                </div>
+                <div className="lg:col-span-1 md:col-span-2">
+                  <Button onClick={clearFilters} variant="outline" className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -226,7 +330,7 @@ export default function UpcomingLcShipmentDatesPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Upcoming L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no active L/Cs nearing their shipment date, or the required Firestore index is missing/still building.
+                There are no active L/Cs nearing their shipment date matching your criteria, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
