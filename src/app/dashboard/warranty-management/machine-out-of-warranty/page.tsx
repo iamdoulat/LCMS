@@ -60,7 +60,7 @@ export default function MachineOutOfWarrantyPage() {
         const today = startOfDay(new Date());
 
         querySnapshot.docs.forEach(docSnap => {
-          const report = docSnap.data() as InstallationReportDocument;
+          const report = { id: docSnap.id, ...docSnap.data() } as InstallationReportDocument;
           report.installationDetails?.forEach(detail => {
             if (detail.installDate) {
               const installDateObj = parseISO(detail.installDate);
