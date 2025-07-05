@@ -61,6 +61,7 @@ import {
   Minus,
   Plus,
   PlusCircle,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -114,6 +115,7 @@ const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
     { href: '/dashboard/shipments/recent-draft-lcs', label: 'Recent Draft L/Cs', icon: FileEdit },
     { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
+    { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen },
 ];
 
 const partiesNavItems: NavItem[] = [
