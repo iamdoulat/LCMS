@@ -57,44 +57,62 @@ export default function RecentDraftLCsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "array-contains", "Draft"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
 
-        const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data() as LCEntryDocument;
-          let createdAtDate = new Date(0);
+        // Query 1: For new data model (status is an array)
+        const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Draft"));
+        
+        // Query 2: For old data model (status is a string)
+        const stringQuery = query(lcEntriesRef, where("status", "==", "Draft"));
 
-          if (data.createdAt) {
-            if (typeof (data.createdAt as unknown as Timestamp).toDate === 'function') {
-              createdAtDate = (data.createdAt as unknown as Timestamp).toDate();
-            } else if (typeof data.createdAt === 'string') {
-              const parsed = parseISO(data.createdAt);
-              if (isValid(parsed)) createdAtDate = parsed;
-              else console.warn(`Invalid date string for createdAt: ${data.createdAt} for L/C ID: ${doc.id}`);
-            } else {
-               console.warn(`Unexpected type for createdAt for L/C ID: ${doc.id}`, data.createdAt);
-            }
-          } else {
-            console.warn(`Missing createdAt for L/C ID: ${doc.id}`);
-          }
+        const [arraySnapshot, stringSnapshot] = await Promise.all([
+            getDocs(arrayQuery),
+            getDocs(stringQuery),
+        ]);
 
-          return {
-            id: doc.id,
-            documentaryCreditNumber: data.documentaryCreditNumber,
-            applicantName: data.applicantName,
-            beneficiaryName: data.beneficiaryName,
-            createdAtDate: createdAtDate,
-            status: data.status,
-            currency: data.currency,
-            amount: data.amount,
-          };
-        });
+        const fetchedLCsMap = new Map<string, DraftLC>();
+
+        const processSnapshot = (snapshot: typeof arraySnapshot) => {
+            snapshot.docs.forEach((doc) => {
+                if (fetchedLCsMap.has(doc.id)) return; // Avoid duplicates
+
+                const data = doc.data() as LCEntryDocument;
+                let createdAtDate = new Date(0);
+
+                if (data.createdAt) {
+                    if (typeof (data.createdAt as unknown as Timestamp).toDate === 'function') {
+                        createdAtDate = (data.createdAt as unknown as Timestamp).toDate();
+                    } else if (typeof data.createdAt === 'string') {
+                        const parsed = parseISO(data.createdAt);
+                        if (isValid(parsed)) createdAtDate = parsed;
+                    }
+                }
+
+                fetchedLCsMap.set(doc.id, {
+                    id: doc.id,
+                    documentaryCreditNumber: data.documentaryCreditNumber,
+                    applicantName: data.applicantName,
+                    beneficiaryName: data.beneficiaryName,
+                    createdAtDate: createdAtDate,
+                    status: data.status,
+                    currency: data.currency,
+                    amount: data.amount,
+                });
+            });
+        };
+
+        processSnapshot(arraySnapshot);
+        processSnapshot(stringSnapshot);
+
+        const fetchedLCs = Array.from(fetchedLCsMap.values());
+        fetchedLCs.sort((a, b) => b.createdAtDate.getTime() - a.createdAtDate.getTime());
+
         setAllDraftLCs(fetchedLCs);
+
       } catch (error: any) {
         console.error("Error fetching draft L/Cs: ", error);
         let errorMessage = `Could not fetch draft L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch draft L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'createdAt' (descending).`;
+            errorMessage = `Could not fetch draft L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -196,25 +214,12 @@ export default function RecentDraftLCsPage() {
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
                     <div className="flex flex-wrap gap-1">
-                        {lc.status ? (
-                            Array.isArray(lc.status) ? (
-                                lc.status.map(s => (
-                                    <Badge
-                                        key={s}
-                                        variant={getStatusBadgeVariant(s)}
-                                        className={s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
-                                    >
-                                        {s}
-                                    </Badge>
-                                ))
-                            ) : (
-                                <Badge
-                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                    className={(lc.status as LCStatus) === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}
-                                >
-                                    {lc.status}
-                                </Badge>
-                            )
+                        {Array.isArray(lc.status) ? (
+                            lc.status.map(s => (
+                                <Badge key={s} variant={getStatusBadgeVariant(s)} className={s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}>{s}</Badge>
+                            ))
+                        ) : lc.status ? (
+                            <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)} className={(lc.status as LCStatus) === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''}>{lc.status}</Badge>
                         ) : (
                             <Badge variant="outline">N/A</Badge>
                         )}
@@ -287,4 +292,3 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
-

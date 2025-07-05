@@ -85,30 +85,55 @@ export default function LCPaymentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "array-contains", "Payment Done"), firestoreOrderBy("updatedAt", "desc"));
-        const querySnapshot = await getDocs(q);
+        
+        // Query 1: For new data model (status is an array)
+        const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Payment Done"));
+        
+        // Query 2: For old data model (status is a string)
+        const stringQuery = query(lcEntriesRef, where("status", "==", "Payment Done"));
 
-        const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data() as LCEntryDocument;
-          let updatedAtDate = new Date(0);
+        const [arraySnapshot, stringSnapshot] = await Promise.all([
+            getDocs(arrayQuery),
+            getDocs(stringQuery),
+        ]);
 
-          if (data.updatedAt) {
-            if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
-              updatedAtDate = (data.updatedAt as unknown as Timestamp).toDate();
-            } else if (typeof data.updatedAt === 'string') {
-              const parsed = parseISO(data.updatedAt);
-              if (isValid(parsed)) {
-                updatedAtDate = parsed;
-              }
-            }
-          }
-          return {
-            ...data, // Spread all fields from LCEntryDocument
-            id: doc.id, // Ensure ID is part of the object
-            updatedAtDate: updatedAtDate,
-          };
-        });
+        const fetchedLCsMap = new Map<string, PaymentDoneLC>();
+
+        const processSnapshot = (snapshot: typeof arraySnapshot) => {
+            snapshot.docs.forEach((doc) => {
+                if (fetchedLCsMap.has(doc.id)) return; // Avoid duplicates
+
+                const data = doc.data() as LCEntryDocument;
+                let updatedAtDate = new Date(0);
+
+                if (data.updatedAt) {
+                    if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
+                        updatedAtDate = (data.updatedAt as unknown as Timestamp).toDate();
+                    } else if (typeof data.updatedAt === 'string') {
+                        const parsed = parseISO(data.updatedAt);
+                        if (isValid(parsed)) {
+                            updatedAtDate = parsed;
+                        }
+                    }
+                }
+                fetchedLCsMap.set(doc.id, {
+                    ...data,
+                    id: doc.id,
+                    updatedAtDate: updatedAtDate,
+                });
+            });
+        };
+
+        processSnapshot(arraySnapshot);
+        processSnapshot(stringSnapshot);
+
+        const fetchedLCs = Array.from(fetchedLCsMap.values());
+        
+        // Sort after merging
+        fetchedLCs.sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime());
+
         setAllPaymentDoneLCs(fetchedLCs);
+
       } catch (error: any) {
         console.error("Error fetching 'Payment Done' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data for 'Payment Done' status. Please ensure Firestore rules allow reads.`;

@@ -68,48 +68,75 @@ export default function UpcomingLcShipmentDatesPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(
+        
+        // Query 1: For new data model (status is an array)
+        const arrayQuery = query(
           lcEntriesRef,
-          where("status", "array-contains-any", ACTIVE_LC_STATUSES_FOR_UPCOMING),
-          orderBy("latestShipmentDate", "asc")
+          where("status", "array-contains-any", ACTIVE_LC_STATUSES_FOR_UPCOMING)
         );
-        const querySnapshot = await getDocs(q);
+        
+        // Query 2: For old data model (status is a string)
+        const stringQuery = query(
+          lcEntriesRef,
+          where("status", "in", ACTIVE_LC_STATUSES_FOR_UPCOMING)
+        );
 
-        const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data() as LCEntryDocument;
-          let latestShipmentDateObj = new Date(0); 
-          if (data.latestShipmentDate) {
-            const parsed = parseISO(data.latestShipmentDate);
-            if (isValid(parsed)) {
-              latestShipmentDateObj = parsed;
+        const [arraySnapshot, stringSnapshot] = await Promise.all([
+            getDocs(arrayQuery),
+            getDocs(stringQuery),
+        ]);
+
+        const fetchedLCsMap = new Map<string, UpcomingLC>();
+
+        const processSnapshot = (snapshot: typeof arraySnapshot) => {
+          snapshot.docs.forEach((doc) => {
+            if (fetchedLCsMap.has(doc.id)) return;
+            const data = doc.data() as LCEntryDocument;
+            let latestShipmentDateObj = new Date(0); 
+            if (data.latestShipmentDate) {
+              const parsed = parseISO(data.latestShipmentDate);
+              if (isValid(parsed)) {
+                latestShipmentDateObj = parsed;
+              }
             }
-          }
+            
+            fetchedLCsMap.set(doc.id, {
+              id: doc.id,
+              documentaryCreditNumber: data.documentaryCreditNumber,
+              beneficiaryName: data.beneficiaryName,
+              applicantName: data.applicantName, 
+              currency: data.currency, 
+              amount: data.amount, 
+              lcIssueDate: data.lcIssueDate,
+              latestShipmentDate: data.latestShipmentDate,
+              latestShipmentDateObj: latestShipmentDateObj,
+              etd: data.etd,
+              eta: data.eta,
+              status: data.status,
+              isFirstShipment: data.isFirstShipment,
+              isSecondShipment: data.isSecondShipment,
+              isThirdShipment: data.isThirdShipment,
+            });
+          });
+        };
+
+        processSnapshot(arraySnapshot);
+        processSnapshot(stringSnapshot);
+
+        const fetchedLCs = Array.from(fetchedLCsMap.values());
+        
+        // Filter and sort client-side after merging
+        const sortedAndFiltered = fetchedLCs
+          .filter(lc => isValid(lc.latestShipmentDateObj) && lc.latestShipmentDateObj.getFullYear() > 1970) // Ensure date is valid
+          .sort((a, b) => compareAsc(a.latestShipmentDateObj, b.latestShipmentDateObj)); // Sort by date ascending
           
-          return {
-            id: doc.id,
-            documentaryCreditNumber: data.documentaryCreditNumber,
-            beneficiaryName: data.beneficiaryName,
-            applicantName: data.applicantName, 
-            currency: data.currency, 
-            amount: data.amount, 
-            lcIssueDate: data.lcIssueDate,
-            latestShipmentDate: data.latestShipmentDate,
-            latestShipmentDateObj: latestShipmentDateObj,
-            etd: data.etd,
-            eta: data.eta,
-            status: data.status,
-            isFirstShipment: data.isFirstShipment,
-            isSecondShipment: data.isSecondShipment,
-            isThirdShipment: data.isThirdShipment,
-          };
-        });
-        setAllUpcomingLCs(fetchedLCs);
+        setAllUpcomingLCs(sortedAndFiltered);
 
       } catch (error: any) {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -221,14 +248,10 @@ export default function UpcomingLcShipmentDatesPage() {
                   >
                      <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                         <div className="flex flex-wrap gap-1 justify-end">
-                            {lc.status ? (
-                                Array.isArray(lc.status) ? (
-                                    lc.status.map(s => (
-                                        <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>
-                                    ))
-                                ) : (
-                                    <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)}>{lc.status}</Badge>
-                                )
+                            {Array.isArray(lc.status) ? (
+                                lc.status.map(s => <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>)
+                            ) : lc.status ? (
+                                <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)}>{lc.status}</Badge>
                             ) : null}
                         </div>
                         <div className="flex gap-1.5">
@@ -353,4 +376,3 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
-
