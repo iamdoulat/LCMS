@@ -624,7 +624,7 @@ export default function TotalLCPage() {
                               disabled={!lc.shippingDocumentsUrl}
                               title="View Shipping Documents"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> Shipping
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> DOC
                             </Button>
                             <Button
                               variant={lc.packingListUrl ? "default" : "outline"}
@@ -746,6 +746,8 @@ export default function TotalLCPage() {
     </div>
   );
 }
+    
+
     
 
     
