@@ -29,10 +29,12 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
-      return 'default'; 
+      return 'default';
+    case 'Payment Pending':
+      return 'destructive';
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done': // Updated from "Done"
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -172,7 +174,7 @@ export default function ShipmentOnTheWayPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Truck className="h-7 w-7 text-primary" />
             Shipments On The Way
           </CardTitle>
@@ -339,6 +341,3 @@ export default function ShipmentOnTheWayPage() {
     </div>
   );
 }
-
-
-    

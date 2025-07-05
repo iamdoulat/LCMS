@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -115,6 +116,8 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'default';
     case 'Shipping going on':
       return 'default';
+    case 'Payment Pending':
+      return 'destructive';
     case 'Payment Done':
       return 'default';
     case 'Shipment Done':

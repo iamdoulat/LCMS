@@ -26,13 +26,15 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': 
+    case 'Shipment Pending':
       return 'default';
     case 'Shipping going on':
       return 'default';
+    case 'Payment Pending':
+      return 'destructive';
     case 'Payment Done':
       return 'default';
-    case 'Shipment Done': // Updated from "Done"
+    case 'Shipment Done':
       return 'default';
     default:
       return 'outline';
@@ -212,7 +214,7 @@ export default function RecentDraftLCsPage() {
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
                   </div>
-                  <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                   <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <p className="text-xs text-muted-foreground">
                         Created: {isValid(lc.createdAtDate) && lc.createdAtDate.getFullYear() > 1 ? format(lc.createdAtDate, 'PPP p') : 'Date not available'}
                     </p>
@@ -268,4 +270,3 @@ export default function RecentDraftLCsPage() {
     </div>
   );
 }
-

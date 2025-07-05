@@ -19,22 +19,24 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on"]; 
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on", "Payment Pending"]; 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
     case 'Transmitted':
-      return 'secondary'; // Blue
+      return 'secondary';
     case 'Shipment Pending':
-      return 'default'; // Yellowish
+      return 'default';
     case 'Shipping going on':
-      return 'default'; // Orange
+      return 'default';
+    case 'Payment Pending':
+      return 'destructive';
     case 'Payment Done':
-      return 'default'; // Green
-    case 'Shipment Done': 
-      return 'default'; // Darker Green
+      return 'default';
+    case 'Shipment Done':
+      return 'default';
     default:
       return 'outline';
   }
@@ -46,7 +48,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
-    return 'N/A';
+    return 'Invalid Date Format';
   }
 };
 
@@ -198,7 +200,7 @@ export default function UpcomingLcShipmentDatesPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Upcoming L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs matching the criteria, or the required Firestore index is missing/still building.
+                There are no active L/Cs nearing their shipment date, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
