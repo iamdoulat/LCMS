@@ -114,8 +114,6 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'secondary';
     case 'Shipment Pending':
       return 'default';
-    case 'Shipping going on':
-      return 'default';
     case 'Payment Pending':
       return 'destructive';
     case 'Payment Done':

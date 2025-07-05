@@ -19,7 +19,7 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Shipping going on", "Payment Pending"]; 
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Payment Pending"]; 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -28,9 +28,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Transmitted':
       return 'secondary';
     case 'Shipment Pending':
-      return 'default';
-    case 'Shipping going on':
-      return 'default';
+      return 'default'; 
     case 'Payment Pending':
       return 'destructive';
     case 'Payment Done':
@@ -224,7 +222,6 @@ export default function UpcomingLcShipmentDatesPage() {
                         <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={cn(
-                                lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
                                 lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
                                 lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
                             )}

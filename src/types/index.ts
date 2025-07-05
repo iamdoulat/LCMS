@@ -22,7 +22,7 @@ export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
 
-export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on", "Payment Pending", "Payment Done", "Shipment Done"] as const;
+export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Payment Pending", "Payment Done", "Shipment Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
 export const partialShipmentAllowedOptions = ["Yes", "No"] as const;

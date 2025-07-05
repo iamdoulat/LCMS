@@ -28,8 +28,6 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'secondary';
     case 'Shipment Pending':
       return 'default';
-    case 'Shipping going on':
-      return 'default';
     case 'Payment Pending':
       return 'destructive';
     case 'Payment Done':
@@ -69,7 +67,7 @@ export default function ShipmentOnTheWayPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Shipping going on"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "==", "Shipment Pending"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -109,8 +107,8 @@ export default function ShipmentOnTheWayPage() {
         });
         setOngoingShipments(fetchedLCs);
       } catch (error: any) {
-        console.error("Error fetching 'Shipping going on' L/Cs: ", error);
-        let errorMessage = `Could not fetch L/C data for shipments on the way. Please ensure Firestore rules allow reads.`;
+        console.error("Error fetching 'Shipment Pending' L/Cs: ", error);
+        let errorMessage = `Could not fetch L/C data for pending shipments. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
             errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
         } else if (error.message) {
@@ -176,10 +174,10 @@ export default function ShipmentOnTheWayPage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Truck className="h-7 w-7 text-primary" />
-            Shipments On The Way
+            Pending Shipments
           </CardTitle>
           <CardDescription>
-            List of Letters of Credit with status "Shipping going on", sorted by most recent update.
+            List of Letters of Credit with status "Shipment Pending", sorted by most recent update.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, ongoingShipments.length)} of {ongoingShipments.length} entries.
           </CardDescription>
         </CardHeader>
@@ -187,7 +185,7 @@ export default function ShipmentOnTheWayPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Loading ongoing shipments...</p>
+              <p className="text-muted-foreground">Loading pending shipments...</p>
             </div>
           ) : fetchError ? (
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
@@ -200,9 +198,9 @@ export default function ShipmentOnTheWayPage() {
           ) : currentItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold text-muted-foreground">No Shipments On The Way</p>
+              <p className="text-xl font-semibold text-muted-foreground">No Pending Shipments</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as "Shipping going on", or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as "Shipment Pending", or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
@@ -212,7 +210,7 @@ export default function ShipmentOnTheWayPage() {
                    <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' : ''}
+                      className={lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>

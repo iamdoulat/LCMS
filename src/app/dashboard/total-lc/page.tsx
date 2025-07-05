@@ -40,8 +40,6 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'secondary';
     case 'Shipment Pending':
       return 'default';
-    case 'Shipping going on':
-      return 'default';
     case 'Payment Pending':
         return 'destructive'; // Needs attention
     case 'Payment Done':
@@ -527,7 +525,6 @@ export default function TotalLCPage() {
                           <Badge
                             variant={getStatusBadgeVariant(lc.status)}
                             className={
-                              lc.status === 'Shipping going on' ? 'bg-orange-500 text-white dark:bg-orange-600 dark:text-white' :
                               lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
                               lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
                               lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
@@ -656,7 +653,6 @@ export default function TotalLCPage() {
                               disabled={!lc.shippingDocumentsUrl}
                               title="View Shipping Documents"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" />
                               DOC
                             </Button>
                             <Button
@@ -675,7 +671,7 @@ export default function TotalLCPage() {
                               disabled={!lc.purchaseOrderUrl}
                               title="View OCS / Purchase Order"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / PO
+                              OCS / PO
                             </Button>
                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                 <Button
