@@ -30,6 +30,7 @@ const ADMIN_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_ADMIN_EMA
 const SERVICE_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SERVICE_EMAILS);
 const DEMO_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_DEMO_MANAGER_EMAILS);
 const STORE_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_STORE_MANAGER_EMAILS);
+const VIEWER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_VIEWER_EMAILS);
 
 
 interface AuthContextType {
@@ -141,6 +142,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       let errorMessage = "Invalid email or password.";
       if (error.code === 'auth/too-many-requests') {
         errorMessage = "Too many login attempts. Try again later.";
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password.";
       } else if (error.message) {
         errorMessage = `Login failed: ${error.message}`;
       }
@@ -180,6 +183,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
       else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
       else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
+      else if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Viewer";
 
       const newProfileData = {
           uid: user.uid,
@@ -226,6 +230,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
           else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
           else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
+          else if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Viewer";
           
           const newProfileData = {
               uid: user.uid,

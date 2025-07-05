@@ -38,6 +38,7 @@ export default function AccountDetailsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const isReadOnly = userRole === 'Viewer';
 
   const form = useForm<AccountDetailsFormValues>({
     resolver: zodResolver(accountDetailsSchema),
@@ -313,7 +314,7 @@ export default function AccountDetailsPage() {
                     <FormItem className="w-full max-w-sm">
                       <FormLabel className="flex items-center gap-1"><Link2 className="h-4 w-4 text-muted-foreground"/>Profile Picture URL</FormLabel>
                       <FormControl>
-                        <Input type="url" placeholder="https://example.com/your-image.png" {...field} value={field.value || ''} />
+                        <Input type="url" placeholder="https://example.com/your-image.png" {...field} value={field.value || ''} disabled={isReadOnly} />
                       </FormControl>
                       <FormDescription>
                         Enter a valid URL for your profile picture. (e.g., JPG, PNG, WEBP)
@@ -331,7 +332,7 @@ export default function AccountDetailsPage() {
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your display name" {...field} />
+                      <Input placeholder="Your display name" {...field} disabled={isReadOnly} />
                     </FormControl>
                     <FormDescription>
                       This name will be displayed to others.
@@ -358,7 +359,7 @@ export default function AccountDetailsPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting || isReadOnly}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -377,7 +378,7 @@ export default function AccountDetailsPage() {
             <div className="space-y-4">
                 <div>
                     <h3 className="text-lg font-semibold text-foreground">Password</h3>
-                     <Button variant="outline" onClick={handlePasswordReset} disabled={isSubmitting || !user.providerData.some(p => p.providerId === 'password')}>
+                     <Button variant="outline" onClick={handlePasswordReset} disabled={isSubmitting || !user.providerData.some(p => p.providerId === 'password') || isReadOnly}>
                         Send Password Reset Email
                      </Button>
                     <p className="text-xs text-muted-foreground mt-1">

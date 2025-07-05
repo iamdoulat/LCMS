@@ -45,9 +45,10 @@ export default function LogsPage() {
   const router = useRouter();
   const [allLogs, setAllLogs] = useState<AppLog[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const isReadOnly = userRole === 'Viewer';
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin") {
+    if (!authLoading && userRole !== "Super Admin" && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view this page.',
@@ -57,14 +58,14 @@ export default function LogsPage() {
       }).then(() => {
         router.push('/dashboard');
       });
-    } else if (!authLoading && userRole === "Super Admin") {
+    } else if (!authLoading && (userRole === "Super Admin" || isReadOnly)) {
       // Only generate logs if they haven't been cleared previously in this session
       // or if the component mounts for the first time.
       if (allLogs.length === 0) {
         setAllLogs(generatePlaceholderLogs(100));
       }
     }
-  }, [userRole, authLoading, router, allLogs.length]); 
+  }, [userRole, authLoading, router, allLogs.length, isReadOnly]); 
 
   const handleClearCache = () => {
     Swal.fire({
@@ -135,7 +136,7 @@ export default function LogsPage() {
   };
 
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin")) {
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -158,7 +159,7 @@ export default function LogsPage() {
                 View the latest 100 placeholder activity logs, sorted newest first. Actual logging requires backend integration.
               </CardDescription>
             </div>
-            <Button onClick={handleClearCache} variant="outline">
+            <Button onClick={handleClearCache} variant="outline" disabled={isReadOnly}>
               <Trash2 className="mr-2 h-4 w-4" />
               Clear App Cache & Displayed Logs
             </Button>
@@ -251,4 +252,3 @@ export default function LogsPage() {
     </div>
   );
 }
-

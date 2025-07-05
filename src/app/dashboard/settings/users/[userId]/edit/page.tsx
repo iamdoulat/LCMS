@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const userRolesForSelect: UserRole[] = ["Admin", "User", "Service", "DemoManager", "Store Manager"];
+const userRolesForSelect: UserRole[] = ["Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"];
 
 const editUserSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
@@ -31,8 +31,9 @@ type EditUserFormValues = z.infer<typeof editUserSchema>;
 export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userRole } = useAuth();
   const userId = params.userId as string;
+  const isReadOnly = userRole === 'Viewer';
 
   const [userData, setUserData] = useState<UserDocumentForAdmin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,7 +140,7 @@ export default function EditUserPage() {
                     control={form.control}
                     name="displayName"
                     render={({ field }) => (
-                        <FormItem><FormLabel>Display Name*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Display Name*</FormLabel><FormControl><Input {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>
                     )}
                 />
                  <FormField
@@ -148,7 +149,7 @@ export default function EditUserPage() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Role*</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={userData?.role === 'Super Admin'}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={userData?.role === 'Super Admin' || isReadOnly}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     {userData?.role === "Super Admin" ? (
@@ -165,7 +166,7 @@ export default function EditUserPage() {
                         </FormItem>
                     )}
                 />
-                 <Button type="submit" disabled={isSubmitting}>
+                 <Button type="submit" disabled={isSubmitting || isReadOnly}>
                     {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
                 </Button>
             </form>

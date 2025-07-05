@@ -32,9 +32,10 @@ export default function UserListPage() {
   const [users, setUsers] = useState<UserDocumentForAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const isReadOnly = userRole === 'Viewer';
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin") {
+    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view this page.',
@@ -47,7 +48,7 @@ export default function UserListPage() {
       return;
     }
 
-    if (userRole === "Super Admin" || userRole === "Admin") {
+    if (userRole === "Super Admin" || userRole === "Admin" || isReadOnly) {
       const fetchUsers = async () => {
         setIsLoading(true);
         setFetchError(null);
@@ -66,7 +67,7 @@ export default function UserListPage() {
       };
       fetchUsers();
     }
-  }, [userRole, authLoading, router]);
+  }, [userRole, authLoading, router, isReadOnly]);
 
   const handleDeleteUser = async (userId: string, userDisplayName: string) => {
     if (userId === user?.uid) {
@@ -101,7 +102,7 @@ export default function UserListPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
   
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin")) {
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -167,11 +168,19 @@ export default function UserListPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild><Link href={`/dashboard/settings/users/${u.id}/edit`}><FileEdit className="mr-2 h-4 w-4" />Edit User</Link></DropdownMenuItem>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/dashboard/settings/users/${u.id}/edit`}>
+                                                    <FileEdit className="mr-2 h-4 w-4" />Edit User
+                                                </Link>
+                                            </DropdownMenuItem>
                                             {userRole === "Super Admin" && (
                                                 <>
                                                     <DropdownMenuSeparator/>
-                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(u.id, u.displayName)} disabled={u.uid === user?.uid}>
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive focus:text-destructive focus:bg-destructive/10" 
+                                                        onClick={() => handleDeleteUser(u.id, u.displayName)} 
+                                                        disabled={u.uid === user?.uid || isReadOnly}
+                                                    >
                                                         <Trash2 className="mr-2 h-4 w-4" />Delete User
                                                     </DropdownMenuItem>
                                                 </>

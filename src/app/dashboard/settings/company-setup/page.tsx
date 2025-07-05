@@ -53,7 +53,8 @@ const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc
 export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const { user: authUser, loading: authLoading, companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile } = useAuth();
+  const { user: authUser, loading: authLoading, companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile, userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   
   const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
 
@@ -210,6 +211,7 @@ export function CompanySetupForm() {
                 <Input 
                   placeholder="Enter your company's official name" 
                   {...field}
+                  disabled={isReadOnly}
                 />
               </FormControl>
               <FormMessage />
@@ -224,7 +226,7 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Company Address*</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter company's full registered address" {...field} rows={3} />
+                <Textarea placeholder="Enter company's full registered address" {...field} rows={3} disabled={isReadOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -243,6 +245,7 @@ export function CompanySetupForm() {
                   placeholder="https://example.com/logo.png" 
                   {...field} 
                   value={field.value || ""} 
+                  disabled={isReadOnly}
                 />
               </FormControl>
               <FormDescription>
@@ -280,7 +283,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Contact Person</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -293,7 +296,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Cell Number</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -308,7 +311,7 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Email ID</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} />
+                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -323,7 +326,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>BIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -336,7 +339,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>TIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -348,7 +351,7 @@ export function CompanySetupForm() {
           This information will be used to pre-fill relevant fields in other parts of the application and for display purposes.
         </FormDescription>
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingData}>
+        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingData || isReadOnly}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -370,9 +373,10 @@ export function CompanySetupForm() {
 export default function CompanySetupPage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isReadOnly = userRole === 'Viewer';
 
   React.useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin") {
+    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view/edit company settings.',
@@ -383,13 +387,13 @@ export default function CompanySetupPage() {
         router.push('/dashboard');
       });
     }
-  }, [userRole, authLoading, router]);
+  }, [userRole, authLoading, router, isReadOnly]);
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin")) {
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading or verifying access...</p>
+        <p className="ml-3 text-muted-foreground">Verifying access...</p>
       </div>
     );
   }
@@ -413,4 +417,3 @@ export default function CompanySetupPage() {
     </div>
   );
 }
-    

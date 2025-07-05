@@ -46,6 +46,7 @@ export default function SmtpSettingsPage() {
   const router = useRouter();
   const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const isReadOnly = userRole === 'Viewer';
 
   const settingsForm = useForm<SmtpSettingsFormValues>({
     resolver: zodResolver(smtpSettingsSchema),
@@ -92,7 +93,7 @@ export default function SmtpSettingsPage() {
 
   // Access control
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin") {
+    if (!authLoading && userRole !== "Super Admin" && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view/edit SMTP settings.',
@@ -103,7 +104,7 @@ export default function SmtpSettingsPage() {
         router.push('/dashboard');
       });
     }
-  }, [userRole, authLoading, router]);
+  }, [userRole, authLoading, router, isReadOnly]);
 
   const onSaveSettings = async (data: SmtpSettingsFormValues) => {
     setIsSubmittingSettings(true);
@@ -152,11 +153,11 @@ export default function SmtpSettingsPage() {
   };
 
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin")) {
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading or verifying access...</p>
+        <p className="ml-3 text-muted-foreground">Verifying access...</p>
       </div>
     );
   }
@@ -192,7 +193,7 @@ export default function SmtpSettingsPage() {
                     <FormItem>
                       <FormLabel>SMTP Host*</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., smtp.example.com" {...field} />
+                        <Input placeholder="e.g., smtp.example.com" {...field} disabled={isReadOnly} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -205,7 +206,7 @@ export default function SmtpSettingsPage() {
                     <FormItem>
                       <FormLabel>SMTP Port*</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 587 or 465" {...field} />
+                        <Input type="number" placeholder="e.g., 587 or 465" {...field} disabled={isReadOnly} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -219,7 +220,7 @@ export default function SmtpSettingsPage() {
                   <FormItem>
                     <FormLabel>'From' Email Address*</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="e.g., no-reply@example.com" {...field} />
+                      <Input type="email" placeholder="e.g., no-reply@example.com" {...field} disabled={isReadOnly} />
                     </FormControl>
                     <FormDescription>The email address application emails will be sent from.</FormDescription>
                     <FormMessage />
@@ -234,7 +235,7 @@ export default function SmtpSettingsPage() {
                     <FormItem>
                       <FormLabel>SMTP Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter SMTP username" {...field} autoComplete="new-password" />
+                        <Input placeholder="Enter SMTP username" {...field} autoComplete="new-password" disabled={isReadOnly} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -247,7 +248,7 @@ export default function SmtpSettingsPage() {
                     <FormItem>
                       <FormLabel>SMTP Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Enter SMTP password" {...field} autoComplete="new-password" />
+                        <Input type="password" placeholder="Enter SMTP password" {...field} autoComplete="new-password" disabled={isReadOnly} />
                       </FormControl>
                       <FormDescription>Not persistently stored by this demo.</FormDescription>
                       <FormMessage />
@@ -261,7 +262,7 @@ export default function SmtpSettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Encryption*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select encryption type" />
@@ -277,7 +278,7 @@ export default function SmtpSettingsPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSubmittingSettings}>
+              <Button type="submit" disabled={isSubmittingSettings || isReadOnly}>
                 {isSubmittingSettings ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -308,13 +309,13 @@ export default function SmtpSettingsPage() {
                   <FormItem>
                     <FormLabel>Recipient Email Address*</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Enter recipient's email" {...field} />
+                      <Input type="email" placeholder="Enter recipient's email" {...field} disabled={isReadOnly} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" variant="outline" disabled={isSendingTest}>
+              <Button type="submit" variant="outline" disabled={isSendingTest || isReadOnly}>
                 {isSendingTest ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -334,4 +335,3 @@ export default function SmtpSettingsPage() {
     </div>
   );
 }
-
