@@ -642,7 +642,7 @@ export default function TotalLCPage() {
                               disabled={!lc.purchaseOrderUrl}
                               title="View OCS / Purchase Order"
                             >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / Purchase Order
+                              <FileText className="mr-1.5 h-3.5 w-3.5" /> OCS / PO
                             </Button>
                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                 <Button
@@ -746,4 +746,6 @@ export default function TotalLCPage() {
     </div>
   );
 }
+    
+
     
