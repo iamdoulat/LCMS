@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Truck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
@@ -14,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 
-interface OngoingShipmentLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'applicantName' | 'status' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
-  updatedAtDate: Date; 
+interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> {
+  updatedAtDate: Date;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -43,7 +43,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -55,32 +55,36 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 };
 
 
-export default function ShipmentOnTheWayPage() {
-  const [ongoingShipments, setOngoingShipments] = useState<OngoingShipmentLC[]>([]);
+export default function ShipmentDonePage() {
+  const [completedLCs, setCompletedLCs] = useState<CompletedLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+
   useEffect(() => {
-    const fetchOngoingShipments = async () => {
+    const fetchCompletedLCs = async () => {
       setIsLoading(true);
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Shipment Pending"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "==", "Shipment Done"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data() as LCEntryDocument;
-          let updatedAtDate = new Date(0); 
+          let updatedAtDate = new Date(0);
 
           if (data.updatedAt) {
             if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
               updatedAtDate = (data.updatedAt as unknown as Timestamp).toDate();
             } else if (typeof data.updatedAt === 'string') {
               const parsed = parseISO(data.updatedAt);
-              if (isValid(parsed)) updatedAtDate = parsed;
-              else console.warn(`Invalid date string for updatedAt: ${data.updatedAt} for L/C ID: ${doc.id}`);
+              if (isValid(parsed)) {
+                updatedAtDate = parsed;
+              } else {
+                console.warn(`Invalid date string for updatedAt: ${data.updatedAt} for L/C ID: ${doc.id}`);
+              }
             } else {
                console.warn(`Unexpected type for updatedAt for L/C ID: ${doc.id}`, data.updatedAt);
             }
@@ -105,12 +109,12 @@ export default function ShipmentOnTheWayPage() {
             isThirdShipment: data.isThirdShipment,
           };
         });
-        setOngoingShipments(fetchedLCs);
+        setCompletedLCs(fetchedLCs);
       } catch (error: any) {
-        console.error("Error fetching 'Shipment Pending' L/Cs: ", error);
-        let errorMessage = `Could not fetch L/C data for pending shipments. Please ensure Firestore rules allow reads.`;
-        if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
+        console.error("Error fetching completed L/Cs: ", error);
+        let errorMessage = `Could not fetch completed L/C data. Please ensure Firestore rules allow reads.`;
+        if (error.message && error.message.includes("indexes?create_composite")) {
+            errorMessage = `Could not fetch completed L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -125,13 +129,13 @@ export default function ShipmentOnTheWayPage() {
       }
     };
 
-    fetchOngoingShipments();
+    fetchCompletedLCs();
   }, []);
 
-  const totalPages = Math.ceil(ongoingShipments.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(completedLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = ongoingShipments.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = completedLCs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -147,15 +151,15 @@ export default function ShipmentOnTheWayPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -163,54 +167,53 @@ export default function ShipmentOnTheWayPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
+
 
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <Truck className="h-7 w-7 text-primary" />
-            Pending Shipments
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <PackageCheck className="h-7 w-7 text-primary" />
+            Shipment Done
           </CardTitle>
           <CardDescription>
-            List of Letters of Credit with status "Shipment Pending", sorted by most recent update.
-            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, ongoingShipments.length)} of {ongoingShipments.length} entries.
+            List of Letters of Credit marked as "Shipment Done", sorted by most recent completion date.
+            Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, completedLCs.length)} of {completedLCs.length} entries.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Loading pending shipments...</p>
+              <p className="text-muted-foreground">Loading completed L/Cs from database...</p>
             </div>
           ) : fetchError ? (
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
-              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
-                 dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
-              </p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
             </div>
           ) : currentItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold text-muted-foreground">No Pending Shipments</p>
+              <p className="text-xl font-semibold text-muted-foreground">No L/Cs Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no L/Cs currently marked as "Shipment Pending", or the required Firestore index is missing/still building.
+                There are no L/Cs currently marked as "Shipment Done" in the database, or the required Firestore index is missing/still building.
               </p>
             </div>
           ) : (
             <ul className="space-y-4">
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
-                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
+                  <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <Badge
                       variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' : ''}
+                      className={lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
                     >
                       {lc.status || 'N/A'}
                     </Badge>
@@ -261,18 +264,20 @@ export default function ShipmentOnTheWayPage() {
                     {lc.documentaryCreditNumber || 'N/A'}
                   </Link>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
-                    <p className="text-muted-foreground">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
+                    <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground md:col-span-1">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
+                     <p className="text-muted-foreground md:col-span-1">
+                      Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
+                    </p>
+                  </div>
+                  <div className="text-sm mb-1">
                     <p className="text-muted-foreground">
                       Beneficiary: <span className="font-medium text-foreground truncate">{lc.beneficiaryName || 'N/A'}</span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
@@ -283,11 +288,8 @@ export default function ShipmentOnTheWayPage() {
                        ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                     </p>
                   </div>
-                  <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <p className="text-xs text-muted-foreground">
-                      Last Updated: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
-                    </p>
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline mt-1 sm:mt-0 inline-flex items-center">
+                  <div className="mt-2 flex justify-end">
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
                      View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
                    </Link>
                   </div>
@@ -318,7 +320,7 @@ export default function ShipmentOnTheWayPage() {
                     {page}
                   </Button>
                 ) : (
-                  <span key={`ellipsis-ongoing-${index}`} className="px-2 py-1 text-sm">
+                  <span key={`ellipsis-completed-${index}`} className="px-2 py-1 text-sm">
                     {page}
                   </span>
                 )
