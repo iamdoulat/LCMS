@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -318,25 +317,23 @@ export default function LCPaymentDonePage() {
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <div className="flex flex-wrap gap-1 justify-end">
-                       {lc.status ? (
-                            Array.isArray(lc.status) ? (
-                                lc.status.map(s => (
-                                    <Badge
-                                        key={s}
-                                        variant={getStatusBadgeVariant(s)}
-                                        className={s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
-                                    >
-                                        {s}
-                                    </Badge>
-                                ))
-                            ) : (
+                       {Array.isArray(lc.status) ? (
+                            lc.status.map(s => (
                                 <Badge
-                                    variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                    className={(lc.status as LCStatus) === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                                    key={s}
+                                    variant={getStatusBadgeVariant(s)}
+                                    className={s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
                                 >
-                                    {lc.status}
+                                    {s}
                                 </Badge>
-                            )
+                            ))
+                        ) : lc.status ? (
+                            <Badge
+                                variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                className={(lc.status as LCStatus) === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                            >
+                                {lc.status}
+                            </Badge>
                         ) : (
                             <Badge variant="outline">N/A</Badge>
                         )}
@@ -460,4 +457,3 @@ export default function LCPaymentDonePage() {
     </div>
   );
 }
-
