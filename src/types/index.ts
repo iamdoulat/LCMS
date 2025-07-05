@@ -56,7 +56,7 @@ export interface LCEntry {
   commercialInvoiceDate?: Date | null | undefined;
   totalMachineQty: number | undefined;
   numberOfAmendments?: number;
-  status?: LCStatus;
+  status?: LCStatus[];
   itemDescriptions?: string;
   partialShipments?: string;
   portOfLoading?: string;
@@ -143,7 +143,7 @@ export const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
   ),
   numberOfAmendments: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Amendments must be non-negative integer.").optional().default(0)),
-  status: z.enum(lcStatusOptions).optional(),
+  status: z.array(z.enum(lcStatusOptions)).optional().default([lcStatusOptions[0]]),
   itemDescriptions: z.string().optional(),
   partialShipments: z.string().optional(),
   portOfLoading: z.string().optional(),
@@ -211,7 +211,7 @@ export const lcEntrySchema = z.object({
   isThirdShipment: z.boolean().optional().default(false),
 }).superRefine((data, ctx) => {
     // If status is Draft, all date fields are optional, so no further validation needed for them.
-    if (data.status === 'Draft') {
+    if (data.status?.includes('Draft')) {
         return;
     }
 
@@ -263,7 +263,7 @@ export interface LCEntryDocument {
   commercialInvoiceDate?: string; // ISO string
   totalMachineQty: number;
   numberOfAmendments?: number;
-  status?: LCStatus;
+  status?: LCStatus[];
   itemDescriptions?: string;
   partialShipments?: string;
   portOfLoading?: string;

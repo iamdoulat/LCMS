@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -32,7 +33,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
 
-const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
@@ -193,7 +194,7 @@ export default function TotalLCPage() {
       });
     }
     if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
-      filtered = filtered.filter(lc => lc.status === filterStatus);
+      filtered = filtered.filter(lc => lc.status?.includes(filterStatus));
     }
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
@@ -522,18 +523,27 @@ export default function TotalLCPage() {
                         <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
                         <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
                         <TableCell className="px-2 sm:px-4">
-                          <Badge
-                            variant={getStatusBadgeVariant(lc.status)}
-                            className={
-                              lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                              lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                              lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                              lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                              lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                            }
-                          >
-                            {lc.status || 'N/A'}
-                          </Badge>
+                            <div className="flex flex-wrap gap-1">
+                                {lc.status && lc.status.length > 0 ? (
+                                    lc.status.map(s => (
+                                        <Badge
+                                            key={s}
+                                            variant={getStatusBadgeVariant(s)}
+                                            className={
+                                                s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                            }
+                                        >
+                                            {s}
+                                        </Badge>
+                                    ))
+                                ) : (
+                                    <Badge variant="outline">N/A</Badge>
+                                )}
+                            </div>
                         </TableCell>
                         <TableCell className="text-right px-2 sm:px-4">
                             <DropdownMenu>
@@ -673,46 +683,6 @@ export default function TotalLCPage() {
                             >
                               OCS / PO
                             </Button>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isFirstShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="1st Shipment Status"
-                                >
-                                    1st
-                                </Button>
-                            </Link>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isSecondShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="2nd Shipment Status"
-                                >
-                                    2nd
-                                </Button>
-                            </Link>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isThirdShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="3rd Shipment Status"
-                                >
-                                    3rd
-                                </Button>
-                            </Link>
-                            
                           </div>
                         </TableCell>
                       </TableRow>

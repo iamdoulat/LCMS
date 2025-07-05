@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -21,13 +22,13 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 const ITEMS_PER_PAGE = 10;
 const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Payment Pending"]; 
 
-const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending':
+    case 'Shipment Pending': 
       return 'default'; 
     case 'Payment Pending':
       return 'destructive';
@@ -69,7 +70,7 @@ export default function UpcomingLcShipmentDatesPage() {
         const lcEntriesRef = collection(firestore, "lc_entries");
         const q = query(
           lcEntriesRef,
-          where("status", "in", ACTIVE_LC_STATUSES_FOR_UPCOMING),
+          where("status", "array-contains-any", ACTIVE_LC_STATUSES_FOR_UPCOMING),
           orderBy("latestShipmentDate", "asc")
         );
         const querySnapshot = await getDocs(q);
@@ -108,7 +109,7 @@ export default function UpcomingLcShipmentDatesPage() {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN array) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data. This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -175,7 +176,7 @@ export default function UpcomingLcShipmentDatesPage() {
             Upcoming L/C Shipment Dates
           </CardTitle>
           <CardDescription>
-            List of L/Cs with active shipment statuses, sorted by nearest latest shipment date.
+            List of active Letters of Credit approaching their latest shipment date, sorted by nearest latest shipment date.
             Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allUpcomingLCs.length)} of {allUpcomingLCs.length} entries.
           </CardDescription>
         </CardHeader>
@@ -219,15 +220,13 @@ export default function UpcomingLcShipmentDatesPage() {
                     )}
                   >
                      <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
-                        <Badge
-                            variant={getStatusBadgeVariant(lc.status)}
-                            className={cn(
-                                lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                lc.status === 'Transmitted' ? 'bg-blue-500 text-white dark:bg-blue-600' : ''
-                            )}
-                            >
-                            {lc.status || 'N/A'}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1 justify-end">
+                            {lc.status && lc.status.length > 0 ? (
+                                lc.status.map(s => (
+                                    <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>
+                                ))
+                            ) : null}
+                        </div>
                         <div className="flex gap-1.5">
                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                 <Button

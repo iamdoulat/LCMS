@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -78,7 +79,7 @@ interface RecentlyCompletedLC {
   documentaryCreditNumber?: string;
   beneficiaryName?: string;
   applicantName?: string;
-  status?: LCStatus;
+  status?: LCStatus[];
   currency?: Currency;
   amount?: number;
   etd?: string;
@@ -92,7 +93,7 @@ interface DraftLC {
   beneficiaryName?: string;
   applicantName?: string;
   createdAtDate: Date;
-  status?: LCStatus;
+  status?: LCStatus[];
   currency?: Currency;
   amount?: number;
 }
@@ -106,7 +107,7 @@ const PIE_CHART_COLORS = [
   'hsl(var(--chart-5))',
 ];
 
-const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
@@ -308,7 +309,7 @@ export default function DashboardPage() {
       setSupplierPieData(pieData);
 
       const completedLCs = lcEntriesForTheYear
-        .filter(lc => lc.status === 'Shipment Done')
+        .filter(lc => lc.status?.includes('Shipment Done'))
         .map(lc => {
           let updatedAtDate = new Date(0);
           if(lc.updatedAt && typeof (lc.updatedAt as unknown as Timestamp)?.toDate === 'function') {
@@ -329,7 +330,7 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs(completedLCs);
 
       const currentDraftLCs = lcEntriesForTheYear
-        .filter(lc => lc.status === 'Draft')
+        .filter(lc => lc.status?.includes('Draft'))
         .map(lc => {
           let createdAtDate = new Date(0);
           if (lc.createdAt) {
@@ -354,7 +355,7 @@ export default function DashboardPage() {
       today.setHours(0,0,0,0);
       const filteredUpcomingEtds = lcEntriesForTheYear
         .filter(lc => {
-            if (!lc.etd || lc.status === 'Shipment Done') return false;
+            if (!lc.etd || lc.status?.includes('Shipment Done')) return false;
             try {
                 const etdDateSource = lc.etd;
                 let etdDate: Date;
@@ -742,14 +743,21 @@ export default function DashboardPage() {
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                          <Badge
-                            variant={getStatusBadgeVariant(lc.status)}
-                            className={
-                              lc.status === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''
-                            }
-                          >
-                            {lc.status || 'N/A'}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                                {lc.status && lc.status.length > 0 ? (
+                                    lc.status.map(s => (
+                                        <Badge
+                                            key={s}
+                                            variant={getStatusBadgeVariant(s)}
+                                            className={s === 'Draft' ? 'bg-primary/20 text-primary border-primary/30' : ''}
+                                        >
+                                            {s}
+                                        </Badge>
+                                    ))
+                                ) : (
+                                    <Badge variant="outline">N/A</Badge>
+                                )}
+                            </div>
                           <span className="text-xs text-muted-foreground">
                           Created: {isValid(lc.createdAtDate) && lc.createdAtDate.getFullYear() > 1 ? format(lc.createdAtDate, 'PPP') : 'Date N/A'}
                           </span>
@@ -799,14 +807,21 @@ export default function DashboardPage() {
                         {lc.documentaryCreditNumber || 'N/A'}
                       </Link>
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                          <Badge
-                            variant={getStatusBadgeVariant(lc.status)}
-                            className={
-                              lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''
-                            }
-                          >
-                            {lc.status || 'N/A'}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {lc.status && lc.status.length > 0 ? (
+                                lc.status.map(s => (
+                                    <Badge
+                                        key={s}
+                                        variant={getStatusBadgeVariant(s)}
+                                        className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                                    >
+                                        {s}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <Badge variant="outline">N/A</Badge>
+                            )}
+                            </div>
                       </div>
                     </div>
                      <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">

@@ -41,7 +41,7 @@ const defaultFormValues: NewLCFormValues = {
   commercialInvoiceDate: undefined,
   totalMachineQty: undefined,
   numberOfAmendments: 0,
-  status: lcStatusOptions[0],
+  status: [lcStatusOptions[0]],
   itemDescriptions: '',
   partialShipments: "ALLOWED",
   portOfLoading: "CHINA",
@@ -716,31 +716,48 @@ export function NewLCEntryForm() {
           <FormField
             control={control}
             name="status"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="flex items-center"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                     value={field.value ?? defaultFormValues.status}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {lcStatusOptions.map((statusOpt) => (
-                      <FormItem key={statusOpt} className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value={statusOpt} />
-                        </FormControl>
-                        <FormLabel className="font-normal text-sm">{statusOpt}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+            render={() => (
+                <FormItem>
+                    <div className="mb-2">
+                        <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                        <FormDescription>Select one or more statuses that apply.</FormDescription>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {lcStatusOptions.map((item) => (
+                            <FormField
+                                key={item}
+                                control={control}
+                                name="status"
+                                render={({ field }) => {
+                                    return (
+                                        <FormItem key={item} className="flex flex-row items-center space-x-2 space-y-0">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value?.includes(item)}
+                                                    onCheckedChange={(checked) => {
+                                                        const currentValue = field.value || [];
+                                                        return checked
+                                                            ? field.onChange([...currentValue, item])
+                                                            : field.onChange(
+                                                                currentValue.filter(
+                                                                    (value) => value !== item
+                                                                )
+                                                            );
+                                                    }}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="text-sm font-normal">{item}</FormLabel>
+                                        </FormItem>
+                                    );
+                                }}
+                            />
+                        ))}
+                    </div>
+                    <FormMessage />
+                </FormItem>
             )}
           />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
                 control={control}

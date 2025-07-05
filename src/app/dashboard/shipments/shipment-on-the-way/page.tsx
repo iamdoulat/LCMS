@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ interface CompletedLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNum
 
 const ITEMS_PER_PAGE = 10;
 
-const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
@@ -68,7 +69,7 @@ export default function ShipmentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const q = query(lcEntriesRef, where("status", "==", "Shipment Done"), orderBy("updatedAt", "desc"));
+        const q = query(lcEntriesRef, where("status", "array-contains", "Shipment Done"), orderBy("updatedAt", "desc"));
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
@@ -114,7 +115,7 @@ export default function ShipmentDonePage() {
         console.error("Error fetching completed L/Cs: ", error);
         let errorMessage = `Could not fetch completed L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch completed L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (ascending) and 'updatedAt' (descending).`;
+            errorMessage = `Could not fetch completed L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'updatedAt' (descending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -211,12 +212,21 @@ export default function ShipmentDonePage() {
               {currentItems.map((lc) => (
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
-                    <Badge
-                      variant={getStatusBadgeVariant(lc.status)}
-                      className={lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
-                    >
-                      {lc.status || 'N/A'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {lc.status && lc.status.length > 0 ? (
+                        lc.status.map(s => (
+                          <Badge
+                            key={s}
+                            variant={getStatusBadgeVariant(s)}
+                            className={s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' : ''}
+                          >
+                            {s}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge variant="outline">N/A</Badge>
+                      )}
+                    </div>
                     <div className="flex gap-1.5">
                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                           <Button
@@ -268,7 +278,7 @@ export default function ShipmentDonePage() {
                     <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
-                    <p className="text-muted-foreground md:col-span-1">
+                     <p className="text-muted-foreground md:col-span-1">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
                      <p className="text-muted-foreground md:col-span-1">
