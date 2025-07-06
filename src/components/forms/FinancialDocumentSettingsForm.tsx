@@ -33,8 +33,8 @@ interface FinancialSettingsProfile {
 }
 
 const financialSettingsSchema = z.object({
-  companyName: z.string().min(1, "Company name is required"),
-  address: z.string().min(1, "Company address is required"),
+  companyName: z.string().optional(),
+  address: z.string().optional(),
   invoiceLogoUrl: z.preprocess(
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
@@ -163,7 +163,7 @@ export function FinancialDocumentSettingsForm() {
           name="companyName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Company Name*</FormLabel>
+              <FormLabel>Company Name</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Enter company name for invoices/quotes" 
@@ -181,7 +181,7 @@ export function FinancialDocumentSettingsForm() {
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Company Address*</FormLabel>
+              <FormLabel>Company Address</FormLabel>
               <FormControl>
                 <Textarea placeholder="Enter company address for invoices/quotes" {...field} rows={3} disabled={isReadOnly} />
               </FormControl>
