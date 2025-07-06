@@ -82,7 +82,7 @@ export function CreateQuoteForm() {
         total: '0.00'
       }],
       taxType: 'Default',
-      comments: '',
+      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment:  Allowed\nPI Expiry Date : 30 days from above date",
       privateComments: '',
       showItemCodeColumn: true,
       showDiscountColumn: true,
@@ -437,9 +437,7 @@ export function CreateQuoteForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Salesperson*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter salesperson name" {...field} />
-                  </FormControl>
+                  <FormControl><Input placeholder="Salesperson name" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -452,9 +450,7 @@ export function CreateQuoteForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
-                  </FormControl>
+                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -595,7 +591,7 @@ export function CreateQuoteForm() {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} className="font-bold" rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
@@ -637,4 +633,5 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
 
