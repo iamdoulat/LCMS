@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -74,15 +75,15 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
   });
 
   const { control, setValue, watch, getValues, reset } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -136,6 +137,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
+            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+            showDiscountColumn: initialData.showDiscountColumn ?? true,
+            showTaxColumn: initialData.showTaxColumn ?? true,
           });
         }
       } catch (error) {
@@ -262,6 +266,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
       status: initialData.status, // Retain current status unless explicitly changed
+      showItemCodeColumn: data.showItemCodeColumn,
+      showDiscountColumn: data.showDiscountColumn,
+      showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
     };
 
@@ -340,21 +347,21 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
+                 <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
-                    onCheckedChange={setShowItemCodeColumn}
+                    onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
                 >
                     Item Code
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
-                    onCheckedChange={setShowDiscountColumn}
+                    onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}
                 >
                     Discount %
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showTaxColumn}
-                    onCheckedChange={setShowTaxColumn}
+                    onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}
                 >
                     Tax %
                 </DropdownMenuCheckboxItem>
@@ -424,9 +431,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             </TableBody>
           </Table>
         </div>
-         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
-            <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
-        )}
+        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
@@ -476,6 +481,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+                showDiscountColumn: initialData.showDiscountColumn ?? true,
+                showTaxColumn: initialData.showTaxColumn ?? true,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -487,3 +495,5 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+
+    

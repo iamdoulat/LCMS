@@ -3,7 +3,7 @@
 "use client";
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
@@ -62,10 +62,6 @@ export function CreateQuoteForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
     defaultValues: {
@@ -87,6 +83,9 @@ export function CreateQuoteForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
     },
   });
 
@@ -96,6 +95,10 @@ export function CreateQuoteForm() {
     control,
     name: "lineItems",
   });
+  
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
@@ -274,6 +277,9 @@ export function CreateQuoteForm() {
           status: "Draft", 
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          showItemCodeColumn: data.showItemCodeColumn,
+          showDiscountColumn: data.showDiscountColumn,
+          showTaxColumn: data.showTaxColumn,
         };
 
         const cleanedDataToSave = Object.fromEntries(
@@ -510,19 +516,19 @@ export function CreateQuoteForm() {
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
-                    onCheckedChange={setShowItemCodeColumn}
+                    onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
                 >
                     Item Code
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
-                    onCheckedChange={setShowDiscountColumn}
+                    onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}
                 >
                     Discount %
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showTaxColumn}
-                    onCheckedChange={setShowTaxColumn}
+                    onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}
                 >
                     Tax %
                 </DropdownMenuCheckboxItem>
@@ -530,8 +536,7 @@ export function CreateQuoteForm() {
             </DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
             <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -658,3 +663,5 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
+    

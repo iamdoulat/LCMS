@@ -793,6 +793,10 @@ export const QuoteSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  // Column visibility
+  showItemCodeColumn: z.boolean().optional().default(true),
+  showDiscountColumn: z.boolean().optional().default(true),
+  showTaxColumn: z.boolean().optional().default(true),
 });
 export type QuoteFormValues = z.infer<typeof QuoteSchema>;
 
@@ -827,6 +831,9 @@ export interface QuoteDocument {
   status: "Draft" | "Sent" | "Accepted" | "Rejected" | "Invoiced"; // Example statuses
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
+  showItemCodeColumn?: boolean;
+  showDiscountColumn?: boolean;
+  showTaxColumn?: boolean;
 }
 // --- END Quote Types ---
 
@@ -1045,3 +1052,6 @@ export interface OrderDocument {
 }
 // --- END Order Types ---
 
+
+
+    

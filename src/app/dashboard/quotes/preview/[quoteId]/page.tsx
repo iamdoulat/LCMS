@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -156,6 +157,12 @@ export default function PrintQuotePage() {
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
+  // Default column visibility to true if not specified in the document
+  const showItemCodeColumn = quoteData.showItemCodeColumn ?? true;
+  const showDiscountColumn = quoteData.showDiscountColumn ?? true;
+  const showTaxColumn = quoteData.showTaxColumn ?? true;
+
+
   return (
     <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
       <div className="flex justify-between items-start mb-4">
@@ -209,16 +216,17 @@ export default function PrintQuotePage() {
       </div>
 
       <section className="mb-8">
-        <table className="w-full text-sm border-collapse table-fixed">
+        <table className="w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
-              <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
-              <th className="p-2 border border-gray-300 text-left font-semibold w-[35%]">Item Description</th>
-              <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
+              <th className="p-2 border border-gray-300 text-left font-semibold">#</th>
+              <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
+              {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
+              <th className="p-2 border border-gray-300 text-center font-semibold">Qty</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold">Unit Price</th>
+              {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold">Discount (%)</th>}
+              {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold">Tax (%)</th>}
+              <th className="p-2 border border-gray-300 text-right font-semibold">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -229,10 +237,11 @@ export default function PrintQuotePage() {
                   <p className="font-medium text-gray-900">{item.itemName}</p>
                   {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                 </td>
+                {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                 <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
                 <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
-                <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>
-                <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>
+                {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
                 <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
               </tr>
             ))}
@@ -285,3 +294,5 @@ export default function PrintQuotePage() {
     </div>
   );
 }
+
+    
