@@ -203,17 +203,17 @@ export default function PrintQuotePage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase">To:</h3>
+        <div className="flex gap-4 mb-4">
+          <div className="w-1/2 border p-2 rounded-md text-xs">
+              <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
               <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
               {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
               {customerData?.tinNo && <p className="text-gray-600">TIN NO: {customerData.tinNo}</p>}
               {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
           </div>
-          <div className="border p-2 rounded-md text-xs">
+          <div className="w-1/2 border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-              {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
+              {(quoteData.shippingAddress || quoteData.billingAddress) && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress}</p>}
           </div>
         </div>
 
@@ -257,7 +257,7 @@ export default function PrintQuotePage() {
           </table>
         </section>
 
-        <section className="flex justify-between items-start mb-8">
+        <section className="flex justify-between items-start">
             <div className="w-1/2 pr-4 text-xs">
                 {quoteData.comments && (
                 <div className="space-y-1">

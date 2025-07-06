@@ -31,7 +31,7 @@ const formatDisplayDate = (dateString?: string) => {
 
 const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function PrintOrderPage() {
@@ -198,14 +198,14 @@ export default function PrintOrderPage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+        <div className="flex gap-4 mb-4">
+          <div className="w-1/2 border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
             {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
           </div>
-          <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-            {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
+          <div className="w-1/2 border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+            {(orderData.shippingAddress || orderData.billingAddress) && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress}</p>}
           </div>
         </div>
 

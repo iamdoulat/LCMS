@@ -202,14 +202,14 @@ export default function PrintSaleInvoicePage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+        <div className="flex gap-4 mb-4">
+          <div className="w-1/2 border p-2 rounded-md text-xs">
+              <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Bill To:</h3>
               {invoiceData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress}</p>}
           </div>
-          <div className="border p-2 rounded-md text-xs">
+          <div className="w-1/2 border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-              {invoiceData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress}</p>}
+              {(invoiceData.shippingAddress || invoiceData.billingAddress) && <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress || invoiceData.billingAddress}</p>}
           </div>
         </div>
 
