@@ -230,7 +230,7 @@ export default function PrintInvoicePage() {
 
         {invoiceData.subject && (
           <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
-            <p className="text-[10px]">{invoiceData.subject}</p>
+            <p className="text-sm font-normal">{invoiceData.subject}</p>
           </section>
         )}
         

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -384,7 +385,7 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form className="space-y-8"> 
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8"> 
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
@@ -511,7 +512,7 @@ export function CreateQuoteForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-xs font-normal"
+                  className="text-sm font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}

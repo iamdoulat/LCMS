@@ -433,7 +433,7 @@ export function CreateInvoiceForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-xs font-normal"
+                  className="text-sm font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}
