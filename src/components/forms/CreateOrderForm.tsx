@@ -388,12 +388,12 @@ export function CreateOrderForm() {
           <div>
             <FormField
               control={control}
-              name="shippingAddress"
+              name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormLabel>Bill To*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                    <Textarea placeholder="Billing address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -421,12 +421,12 @@ export function CreateOrderForm() {
           <div>
             <FormField
               control={control}
-              name="billingAddress"
+              name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill To*</FormLabel>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -494,7 +494,7 @@ export function CreateOrderForm() {
                 <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                 <DropdownMenuCheckboxItem
+                <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
                     onCheckedChange={setShowItemCodeColumn}
                 >

@@ -140,7 +140,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
-  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -294,17 +293,17 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
               </FormItem>)}
             />
           </div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
+          <div><FormField control={control} name="billingAddress" render={({ field }) => (
               <FormItem>
-                <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
+                <FormLabel>Bill To*</FormLabel>
+                <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="billingAddress" render={({ field }) => (<FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
@@ -400,10 +399,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Terms and conditions or public notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
