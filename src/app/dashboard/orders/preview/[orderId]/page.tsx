@@ -26,6 +26,7 @@ interface FinancialSettingsProfile {
   emailId?: string;
   cellNumber?: string;
   invoiceLogoUrl?: string;
+  hideCompanyName?: boolean;
 }
 
 
@@ -160,6 +161,7 @@ export default function PrintOrderPage() {
   const displayCompanyAddress = financialSettings?.address || DEFAULT_FINANCIAL_ADDRESS;
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
+  const hideCompanyName = financialSettings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = orderData.showItemCodeColumn ?? true; 
   const showDiscountColumn = orderData.showDiscountColumn ?? true;
@@ -181,7 +183,9 @@ export default function PrintOrderPage() {
                 data-ai-hint="company logo"
               />
             )}
-            <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+            {!hideCompanyName && (
+                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+            )}
             <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
             {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
@@ -300,7 +304,8 @@ export default function PrintOrderPage() {
 
         <footer className="text-center text-xs text-gray-500">
             <p>Thank you for your business!</p>
-            <p>{displayCompanyName} - {displayCompanyEmail}</p>
+            {!hideCompanyName && <p>{displayCompanyName} - {displayCompanyEmail}</p>}
+            {hideCompanyName && <p>{displayCompanyEmail}</p>}
         </footer>
       </div>
 

@@ -182,19 +182,6 @@ export function FinancialDocumentSettingsForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Address</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter company address for documents" {...field} rows={3} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
              <FormField
                 control={form.control}
                 name="hideCompanyName"
@@ -218,6 +205,19 @@ export function FinancialDocumentSettingsForm() {
                     </div>
                     </FormItem>
                 )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Address</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter company address for documents" {...field} rows={3} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
           <div className="space-y-6">

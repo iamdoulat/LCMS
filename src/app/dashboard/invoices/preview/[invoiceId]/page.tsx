@@ -20,13 +20,13 @@ const DEFAULT_FINANCIAL_ADDRESS = 'Your Company Address';
 const DEFAULT_FINANCIAL_EMAIL = 'your@email.com';
 const DEFAULT_FINANCIAL_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
-// Local type for financial settings to avoid importing CompanyProfile and creating confusion
 interface FinancialSettingsProfile {
   companyName?: string;
   address?: string;
   emailId?: string;
   cellNumber?: string;
   invoiceLogoUrl?: string;
+  hideCompanyName?: boolean;
 }
 
 const formatDisplayDate = (dateString?: string) => {
@@ -160,6 +160,7 @@ export default function PrintInvoicePage() {
   const displayCompanyAddress = financialSettings?.address || DEFAULT_FINANCIAL_ADDRESS;
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
+  const hideCompanyName = financialSettings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = invoiceData.showItemCodeColumn ?? false; 
   const showDiscountColumn = invoiceData.showDiscountColumn ?? false;
@@ -181,7 +182,9 @@ export default function PrintInvoicePage() {
                 data-ai-hint="company logo"
               />
             )}
-            <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+            {!hideCompanyName && (
+              <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+            )}
             <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
             {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
@@ -314,7 +317,8 @@ export default function PrintInvoicePage() {
 
         <footer className="text-center text-xs text-gray-500">
             <p>Thank you for your business!</p>
-            <p>{displayCompanyName} - {displayCompanyEmail}</p>
+            {!hideCompanyName && <p>{displayCompanyName} - {displayCompanyEmail}</p>}
+            {hideCompanyName && <p>{displayCompanyEmail}</p>}
         </footer>
       </div>
 
