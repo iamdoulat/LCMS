@@ -160,7 +160,7 @@ export default function PrintSaleInvoicePage() {
 
   return (
     <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <header className="grid grid-cols-2 gap-8 mb-8 items-start">
+      <div className="grid grid-cols-2 gap-8 mb-8 items-start">
         {/* Company Info */}
         <div>
           {displayCompanyLogo && (
@@ -194,7 +194,7 @@ export default function PrintSaleInvoicePage() {
             {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
           </div>
         </div>
-      </header>
+      </div>
 
       <Separator className="my-6 border-gray-300" />
       
