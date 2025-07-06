@@ -281,8 +281,8 @@ export default function PrintOrderPage() {
         )}
       </div>
 
-      <div className="mt-auto">
-        <section className="flex justify-between pt-16">
+      <div className="mt-auto pt-16">
+        <section className="flex justify-between mb-8">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
@@ -293,7 +293,7 @@ export default function PrintOrderPage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500 pt-8 mt-8">
+        <footer className="text-center text-xs text-gray-500">
             <p>Thank you for your business!</p>
             <p>{displayCompanyName} - {displayCompanyEmail}</p>
         </footer>
@@ -310,4 +310,3 @@ export default function PrintOrderPage() {
     </div>
   );
 }
-

@@ -134,7 +134,7 @@ body {
     padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    min-height: auto !important;
+    min-height: 98vh; /* Use viewport height to force flexbox to fill the page */
     background-color: #ffffff !important;
   }
 

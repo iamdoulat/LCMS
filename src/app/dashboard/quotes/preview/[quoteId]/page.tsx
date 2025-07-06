@@ -272,24 +272,24 @@ export default function PrintQuotePage() {
                 )}
             </div>
             <div className="w-full max-w-sm text-sm space-y-1">
-                <div className="grid grid-cols-2">
+                <div className="flex justify-between">
                   <span className="text-gray-600 text-right">Subtotal:</span>
                   <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
-                    <div className="grid grid-cols-2">
+                    <div className="flex justify-between">
                         <span className="text-gray-600 text-right">Total Discount:</span>
                         <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
                     </div>
                 )}
                 {showTaxColumn && (
-                    <div className="grid grid-cols-2">
+                    <div className="flex justify-between">
                         <span className="text-gray-600 text-right">Total Tax ({quoteData.taxType}):</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 text-base font-bold">
+                <div className="flex justify-between text-base font-bold">
                     <span className="text-gray-900 text-right">Grand Total:</span>
                     <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
@@ -297,8 +297,8 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="mt-auto">
-        <section className="flex justify-between pt-16">
+      <div className="mt-auto pt-16">
+        <section className="flex justify-between mb-8">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
@@ -309,7 +309,7 @@ export default function PrintQuotePage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500 pt-8 mt-8">
+        <footer className="text-center text-xs text-gray-500">
             <p>Thank you for your business!</p>
             <p>{displayCompanyName} - {displayCompanyEmail}</p>
         </footer>
@@ -326,4 +326,3 @@ export default function PrintQuotePage() {
     </div>
   );
 }
-
