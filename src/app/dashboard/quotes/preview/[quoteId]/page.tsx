@@ -267,26 +267,26 @@ export default function PrintQuotePage() {
                 )}
             </div>
             <div className="w-full max-w-xs text-sm">
-                <div className="flex justify-between py-1">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="text-gray-800">{formatCurrency(quoteData.subtotal, '')}</span>
+                <div className="grid grid-cols-2 gap-4 py-1">
+                  <span className="text-gray-600 text-right">Subtotal:</span>
+                  <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
-                    <div className="flex justify-between py-1">
-                        <span className="text-gray-600">Total Discount:</span>
-                        <span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
+                    <div className="grid grid-cols-2 gap-4 py-1">
+                        <span className="text-gray-600 text-right">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
                     </div>
                 )}
                 {showTaxColumn && (
-                    <div className="flex justify-between py-1">
-                        <span className="text-gray-600">Total Tax ({quoteData.taxType}):</span>
-                        <span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
+                    <div className="grid grid-cols-2 gap-4 py-1">
+                        <span className="text-gray-600 text-right">Total Tax ({quoteData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="flex justify-between py-1 text-base font-bold">
-                    <span className="text-gray-900">Grand Total:</span>
-                    <span className="text-blue-600">{formatCurrency(quoteData.totalAmount, '')}</span>
+                <div className="grid grid-cols-2 gap-4 py-1 text-base font-bold">
+                    <span className="text-gray-900 text-right">Grand Total:</span>
+                    <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
             </div>
         </section>

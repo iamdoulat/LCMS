@@ -173,7 +173,7 @@ export default function PrintOrderPage() {
                 data-ai-hint="company logo"
               />
             )}
-            <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
             <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
             {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
@@ -239,22 +239,22 @@ export default function PrintOrderPage() {
 
         <section className="flex justify-end mb-8">
           <div className="w-full max-w-xs text-sm">
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="text-gray-800">{formatCurrency(orderData.subtotal, '')}</span>
+            <div className="grid grid-cols-2 gap-4 py-1">
+              <span className="text-gray-600 text-right">Subtotal:</span>
+              <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Discount:</span>
-              <span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
+            <div className="grid grid-cols-2 gap-4 py-1">
+              <span className="text-gray-600 text-right">Total Discount:</span>
+              <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Tax ({orderData.taxType}):</span>
-              <span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
+            <div className="grid grid-cols-2 gap-4 py-1">
+              <span className="text-gray-600 text-right">Total Tax ({orderData.taxType}):</span>
+              <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
             </div>
             <Separator className="my-2 border-gray-300" />
-            <div className="flex justify-between py-1 text-lg font-bold">
-              <span className="text-gray-900">Grand Total:</span>
-              <span className="text-blue-600">{formatCurrency(orderData.totalAmount, '')}</span>
+            <div className="grid grid-cols-2 gap-4 py-1 text-lg font-bold">
+              <span className="text-gray-900 text-right">Grand Total:</span>
+              <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
             </div>
           </div>
         </section>
