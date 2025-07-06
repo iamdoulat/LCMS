@@ -284,12 +284,12 @@ export function CompanySetupForm() {
         />
          {currentLogoUrlForPreview && currentLogoUrlForPreview.trim() !== "" && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
           <div className="space-y-2">
-            <Label>Logo Preview (495x72)</Label>
+            <Label>Logo Preview (32x32)</Label>
             <Image 
               src={currentLogoUrlForPreview} 
               alt="Company Logo Preview" 
-              width={495} 
-              height={72} 
+              width={32} 
+              height={32} 
               className="rounded-sm border object-contain"
               onError={() => {
                 console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
