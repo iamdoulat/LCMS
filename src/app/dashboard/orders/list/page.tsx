@@ -183,7 +183,7 @@ export default function OrdersListPage() {
   }, [allOrders, filterOrderNumber, filterBeneficiaryId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditOrder = (orderId: string) => {
-    Swal.fire("Info", `Edit functionality for Order ID ${orderId} is not yet implemented.`, "info");
+    router.push(`/dashboard/orders/edit/${orderId}`);
   };
 
   const handleDeleteOrder = (orderId: string, orderIdentifier?: string) => {
