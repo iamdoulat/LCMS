@@ -124,7 +124,7 @@ export default function PrintQuotePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-gray-600">Loading quote...</p>
       </div>
@@ -133,7 +133,7 @@ export default function PrintQuotePage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-red-600 font-semibold">Error loading quote</p>
         <p className="text-gray-700 text-sm mb-4">{error}</p>
@@ -144,7 +144,7 @@ export default function PrintQuotePage() {
 
   if (!quoteData) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <p className="text-gray-700">Quote data could not be loaded.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
@@ -207,13 +207,13 @@ export default function PrintQuotePage() {
           <div className="w-1/2 border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
               <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
-              {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+              <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
               {customerData?.tinNo && <p className="text-gray-600">TIN NO: {customerData.tinNo}</p>}
               {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
           </div>
           <div className="w-1/2 border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-              {(quoteData.shippingAddress || quoteData.billingAddress) && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress}</p>}
+              <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
           </div>
         </div>
 
@@ -266,7 +266,7 @@ export default function PrintQuotePage() {
                 </div>
                 )}
             </div>
-            <div className="w-full max-w-xs text-sm">
+            <div className="w-full max-w-sm text-sm">
                 <div className="flex justify-between py-1">
                   <span className="text-gray-600 text-right">Subtotal:</span>
                   <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
@@ -321,3 +321,4 @@ export default function PrintQuotePage() {
     </div>
   );
 }
+

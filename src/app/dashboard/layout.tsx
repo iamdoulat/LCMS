@@ -1,4 +1,5 @@
 
+
 "use client"; // Make this a client component to use AuthGuard
 
 import type { PropsWithChildren } from 'react';
@@ -16,9 +17,12 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset className="flex flex-col min-h-screen"> {/* Ensure SidebarInset takes full height */}
           <AppHeader />
-          <main className="flex-1 overflow-y-auto pt-4 px-6 pb-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
+          <main className="flex-1 overflow-y-auto pt-4 px-6 pb-6 bg-gradient-to-br from-background to-muted noprint"> {/* Ensure main has a background, hide on print */}
             {children}
           </main>
+          <div className="print-only">
+             {/* This area is only for printing, children from pages with print layouts will be rendered here */}
+          </div>
           <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card noprint">
             © 2025 - Designed and Developed by{' '}
             <a
@@ -36,3 +40,4 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
     </AuthGuard>
   );
 }
+

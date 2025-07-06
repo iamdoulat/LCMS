@@ -124,7 +124,7 @@ export default function PrintOrderPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-gray-600">Loading order...</p>
       </div>
@@ -133,7 +133,7 @@ export default function PrintOrderPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-red-600 font-semibold">Error loading order</p>
         <p className="text-gray-700 text-sm mb-4">{error}</p>
@@ -144,7 +144,7 @@ export default function PrintOrderPage() {
 
   if (!orderData) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <p className="text-gray-700">Order data could not be loaded.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
@@ -156,6 +156,10 @@ export default function PrintOrderPage() {
   const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
+  
+  const showItemCodeColumn = orderData.showItemCodeColumn ?? false;
+  const showDiscountColumn = orderData.showDiscountColumn ?? false;
+  const showTaxColumn = orderData.showTaxColumn ?? false;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800">
@@ -201,22 +205,31 @@ export default function PrintOrderPage() {
         <div className="flex gap-4 mb-4">
           <div className="w-1/2 border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-            {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
+            <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
           </div>
           <div className="w-1/2 border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-            {(orderData.shippingAddress || orderData.billingAddress) && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress}</p>}
+            <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
           </div>
         </div>
+
+        {orderData.subject && (
+          <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
+            <p>{orderData.subject}</p>
+          </section>
+        )}
 
         <section className="mb-8">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold w-[55%]">Item Description</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
                 <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
                 <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
               </tr>
             </thead>
@@ -228,8 +241,11 @@ export default function PrintOrderPage() {
                     <p className="font-medium text-gray-900">{item.itemName}</p>
                     {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                   </td>
+                  {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
                   <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
+                  {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                  {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
                   <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
                 </tr>
               ))}
@@ -238,21 +254,25 @@ export default function PrintOrderPage() {
         </section>
 
         <section className="flex justify-end mb-8">
-          <div className="w-full max-w-xs text-sm">
-            <div className="grid grid-cols-2 gap-4 py-1">
+          <div className="w-full max-w-sm text-sm">
+            <div className="flex justify-between py-1">
               <span className="text-gray-600 text-right">Subtotal:</span>
               <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
             </div>
-            <div className="grid grid-cols-2 gap-4 py-1">
-              <span className="text-gray-600 text-right">Total Discount:</span>
-              <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 py-1">
-              <span className="text-gray-600 text-right">Total Tax ({orderData.taxType}):</span>
-              <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
-            </div>
+             {showDiscountColumn && (
+              <div className="flex justify-between py-1">
+                <span className="text-gray-600 text-right">Total Discount:</span>
+                <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
+              </div>
+            )}
+            {showTaxColumn && (
+              <div className="flex justify-between py-1">
+                <span className="text-gray-600 text-right">Total Tax ({orderData.taxType}):</span>
+                <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
+              </div>
+            )}
             <Separator className="my-2 border-gray-300" />
-            <div className="grid grid-cols-2 gap-4 py-1 text-lg font-bold">
+            <div className="flex justify-between py-1 text-base font-bold">
               <span className="text-gray-900 text-right">Grand Total:</span>
               <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
             </div>
@@ -296,3 +316,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+

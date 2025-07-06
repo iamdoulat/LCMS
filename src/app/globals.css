@@ -1,4 +1,5 @@
 
+
 @import 'sweetalert2/dist/sweetalert2.min.css';
 
 @tailwind base;
@@ -130,10 +131,10 @@ body {
   .print-invoice-container {
     width: 100% !important; /* Ensure it takes full printable width */
     margin: 0 !important;
-    padding: 0 !important; /* Removed padding */
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    min-height: 100% !important; /* Changed this line */
+    min-height: auto !important;
     background-color: #ffffff !important;
   }
 
