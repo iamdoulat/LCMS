@@ -166,7 +166,7 @@ export default function PrintSaleInvoicePage() {
 
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ minHeight: 'calc(297mm - 0.6in)' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
       <div className="flex-grow">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
@@ -206,8 +206,8 @@ export default function PrintSaleInvoicePage() {
           </div>
         </div>
         
-        <div className="flex gap-4 mb-4">
-          <div className="w-1/2 border p-2 rounded-md text-xs">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
               <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
               <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
@@ -219,7 +219,7 @@ export default function PrintSaleInvoicePage() {
                 </p>
               )}
           </div>
-          <div className="w-1/2 border p-2 rounded-md text-xs">
+          <div className="border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
               <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress || invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
           </div>
@@ -305,7 +305,7 @@ export default function PrintSaleInvoicePage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
+        <footer className="text-center text-xs text-gray-500 pt-8 mt-8">
             <p>Thank you for your business!</p>
             <p>{displayCompanyName} - {displayCompanyEmail}</p>
         </footer>
@@ -322,3 +322,4 @@ export default function PrintSaleInvoicePage() {
     </div>
   );
 }
+

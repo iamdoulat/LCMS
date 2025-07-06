@@ -162,7 +162,7 @@ export default function PrintOrderPage() {
   const showTaxColumn = true; // Assume always shown for order
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ minHeight: 'calc(297mm - 0.6in)' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
       <div className="flex-grow">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
@@ -202,12 +202,12 @@ export default function PrintOrderPage() {
           </div>
         </div>
         
-        <div className="flex gap-4 mb-4">
-          <div className="w-1/2 border p-2 rounded-md text-xs">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
             <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
           </div>
-          <div className="w-1/2 border p-2 rounded-md text-xs">
+          <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
             <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
           </div>
@@ -310,3 +310,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+
