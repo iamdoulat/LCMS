@@ -40,8 +40,6 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
-  manageStock?: boolean;
-  currentQuantity?: number;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -126,8 +124,6 @@ export function CreateInvoiceForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
-              manageStock: data.manageStock,
-              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -148,7 +144,7 @@ export function CreateInvoiceForm() {
       if (selectedCustomer) {
         const addr = selectedCustomer.address || '';
         setValue("billingAddress", addr);
-        setValue("shippingAddress", addr); // Set both, user can edit manually
+        setValue("shippingAddress", addr);
       }
     } else {
       setValue("billingAddress", "");
@@ -594,7 +590,7 @@ export function CreateInvoiceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormLabel>Terms and Conditions</FormLabel>
                 <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -620,7 +616,7 @@ export function CreateInvoiceForm() {
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
+              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview Invoice
@@ -633,4 +629,3 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
-
