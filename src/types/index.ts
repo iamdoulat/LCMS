@@ -766,6 +766,7 @@ export type QuoteTaxType = typeof quoteTaxTypes[number];
 
 export const QuoteLineItemSchema = z.object({
   itemId: z.string().min(1, "Item selection is required."),
+  itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
   unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
@@ -869,6 +870,7 @@ export interface SaleDocument {
 
 export const SaleLineItemSchema = z.object({
   itemId: z.string().min(1, "Item selection is required."),
+  itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
   unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
@@ -892,6 +894,7 @@ export const SaleSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
@@ -902,6 +905,7 @@ export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
 export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
   itemId: z.string().min(1, "Item selection is required."),
+  itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
   unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
@@ -929,6 +933,7 @@ export const InvoiceSchema = z.object({
   totalAmount: z.number().optional(),
   status: z.enum(invoiceStatusOptions).optional(),
   amountPaid: z.number().optional(),
+  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -977,6 +982,7 @@ export type OrderStatus = typeof orderStatusOptions[number];
 
 export const OrderLineItemSchema = z.object({ // Same as Quote/Invoice LineItemSchema for now
   itemId: z.string().min(1, "Item selection is required."),
+  itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
   unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
@@ -1001,6 +1007,7 @@ export const OrderSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 

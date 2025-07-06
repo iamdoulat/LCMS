@@ -1,5 +1,6 @@
 
 
+
 "use client";
 
 import * as React from 'react';
@@ -63,6 +64,7 @@ export function CreateOrderForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
+  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
   const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
   const [showTaxColumn, setShowTaxColumn] = React.useState(true);
 
@@ -72,10 +74,12 @@ export function CreateOrderForm() {
       beneficiaryId: '', // Changed from customerId
       billingAddress: '',
       shippingAddress: '',
+      sameAsBilling: true,
       orderDate: new Date(),
       salesperson: '',
       lineItems: [{
         itemId: '',
+        itemCode: '',
         description: '',
         qty: '1',
         unitPrice: '0',
@@ -96,6 +100,9 @@ export function CreateOrderForm() {
     name: "lineItems",
   });
 
+  const watchedBeneficiaryId = watch("beneficiaryId");
+  const watchedSameAsBilling = watch("sameAsBilling");
+  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -137,6 +144,24 @@ export function CreateOrderForm() {
     };
     fetchOptions();
   }, []);
+
+  React.useEffect(() => {
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
+      if (selectedBeneficiary) {
+        setValue("billingAddress", selectedBeneficiary.address || "");
+        if (getValues("sameAsBilling")) {
+          setValue("shippingAddress", selectedBeneficiary.address || "");
+        }
+      }
+    }
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
+
+  React.useEffect(() => {
+    if (watchedSameAsBilling) {
+      setValue("shippingAddress", getValues("billingAddress"));
+    }
+  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -189,10 +214,12 @@ export function CreateOrderForm() {
       if (selectedItem.description) { 
         autoDescription = selectedItem.description;
       }
+      setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
     } else {
+      setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
@@ -280,7 +307,7 @@ export function CreateOrderForm() {
 
         const newCounters = {
           yearlyCounts: {
-            ...(counterDoc.exists() ? counterDoc.data()?.yearlyCounts : {}),
+            ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
             [currentYear]: newCount,
           }
         };
@@ -386,9 +413,23 @@ export function CreateOrderForm() {
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
+                  <div className="flex justify-between items-center mb-1.5">
+                      <FormLabel>Delivery Address*</FormLabel>
+                      <FormField
+                          control={control}
+                          name="sameAsBilling"
+                          render={({ field: checkboxField }) => (
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxOrder" />
+                              </FormControl>
+                              <Label htmlFor="sameAsBillingCheckboxOrder" className="text-xs font-normal cursor-pointer">Same as billing</Label>
+                          </FormItem>
+                          )}
+                      />
+                  </div>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -489,6 +530,12 @@ export function CreateOrderForm() {
                 <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                 <DropdownMenuCheckboxItem
+                    checked={showItemCodeColumn}
+                    onCheckedChange={setShowItemCodeColumn}
+                >
+                    Item Code
+                </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
                     onCheckedChange={setShowDiscountColumn}
@@ -506,7 +553,7 @@ export function CreateOrderForm() {
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
             <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -515,10 +562,11 @@ export function CreateOrderForm() {
                 <TableRow key={field.id}>
                   <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE} onValueChange={(itemId) => { itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
+                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -526,16 +574,16 @@ export function CreateOrderForm() {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Terms and Conditions:</FormLabel>
-                  <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                  <FormMessage />
-                </FormItem>
+              <FormItem>
+                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
@@ -565,18 +613,20 @@ export function CreateOrderForm() {
         
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
-                form.reset(); setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0); setGeneratedOrderId(null);
+                form.reset();
+                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
+                setGeneratedOrderId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Order...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Order</> )}
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Order...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Order</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Save and Preview Order
+                <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
             <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Preview Last Saved Order
+                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
             </Button>
         </div>
       </form>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -59,6 +60,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
+  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
   const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
   const [showTaxColumn, setShowTaxColumn] = React.useState(true);
 
@@ -112,6 +114,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
+              itemCode: item.itemCode || '',
               description: item.description || '',
               qty: item.qty?.toString() || '1',
               unitPrice: item.unitPrice?.toString() || '0',
@@ -176,10 +179,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     if (selectedItem) {
       let autoDescription = selectedItem.label;
       if (selectedItem.description) autoDescription = selectedItem.description;
+      setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
     } else {
+      setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
@@ -340,6 +345,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
+                    checked={showItemCodeColumn}
+                    onCheckedChange={setShowItemCodeColumn}
+                >
+                    Item Code
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
                     onCheckedChange={setShowDiscountColumn}
                 >
@@ -355,7 +366,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             </DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
           <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -364,6 +375,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 <TableRow key={field.id}>
                   <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} onValueChange={(itemId) => { itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
+                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
@@ -375,18 +387,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Terms and Conditions:</FormLabel><FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="flex justify-end space-y-2 mt-6">
@@ -407,6 +413,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 dueDate: initialData.dueDate ? parseISO(initialData.dueDate) : undefined,
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
+                  itemCode: item.itemCode || '',
                   qty: item.qty.toString(),
                   unitPrice: item.unitPrice.toString(),
                   discountPercentage: item.discountPercentage?.toString() || '0',

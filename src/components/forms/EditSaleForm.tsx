@@ -9,8 +9,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
-import type { SaleDocument, SaleFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleLineItemFormValues } from '@/types';
-import { SaleSchema, quoteTaxTypes } from '@/types';
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
+import { SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -61,10 +61,11 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
+  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
   const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
   const [showTaxColumn, setShowTaxColumn] = React.useState(true);
 
-  const form = useForm<SaleFormValues>({
+  const form = useForm<PageSaleFormValues>({
     resolver: zodResolver(SaleSchema),
   });
 
@@ -112,6 +113,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             salesperson: initialData.salesperson || '',
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
+              itemCode: item.itemCode || '',
               description: item.description || '',
               qty: item.qty?.toString() || '1',
               unitPrice: item.unitPrice?.toString() || '0',
@@ -176,17 +178,19 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     if (selectedItem) {
       let autoDescription = selectedItem.label;
       if (selectedItem.description) autoDescription = selectedItem.description;
+      setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
     } else {
+      setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
   };
 
-  async function onSubmit(data: SaleFormValues) {
+  async function onSubmit(data: PageSaleFormValues) {
     if (!saleId) {
         Swal.fire("Error", "Sale ID is missing. Cannot update.", "error");
         return;
@@ -209,7 +213,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 const unitPrice = parseFloat(String(item.unitPrice || '0'));
                 const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
                 const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
-
                 const itemTotalBeforeDiscount = qty * unitPrice;
                 const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
                 const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
@@ -226,9 +229,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 };
             });
 
-            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0);
-            const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice * (item.discountPercentage/100)), 0);
-            const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * item.unitPrice * (1 - (item.discountPercentage/100))) * (item.taxPercentage/100)), 0);
+            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
+            const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
+            const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
             const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
             const dataToUpdate: Partial<Omit<SaleDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
@@ -336,6 +339,12 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
+                    checked={showItemCodeColumn}
+                    onCheckedChange={setShowItemCodeColumn}
+                >
+                    Item Code
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
                     onCheckedChange={setShowDiscountColumn}
                 >
@@ -351,7 +360,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             </DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
           <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -360,10 +369,11 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 <TableRow key={field.id}>
                   <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} onValueChange={(itemId) => { itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
+                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -371,7 +381,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -396,6 +406,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 saleDate: initialData.saleDate ? parseISO(initialData.saleDate) : new Date(),
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
+                  itemCode: item.itemCode || '',
                   qty: item.qty.toString(),
                   unitPrice: item.unitPrice.toString(),
                   discountPercentage: item.discountPercentage?.toString() || '0',
@@ -413,5 +424,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
-
-
