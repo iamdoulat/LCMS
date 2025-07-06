@@ -103,7 +103,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
     { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
-    { href: '/dashboard/financial-management/invoicing-sales/layout', label: 'Layout', icon: LayoutGrid },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Setting', icon: Settings },
 ];
 
