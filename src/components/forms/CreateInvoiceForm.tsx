@@ -12,7 +12,7 @@ import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -42,6 +42,8 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  manageStock?: boolean;
+  currentQuantity?: number;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -119,6 +121,8 @@ export function CreateInvoiceForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
+              manageStock: data.manageStock,
+              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -292,6 +296,34 @@ export function CreateInvoiceForm() {
 
         const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
         transaction.set(newInvoiceRef, cleanedDataToSave);
+
+        // Deduct stock if status is not 'Draft'
+        if (data.status !== "Draft") {
+            for (const lineItem of processedLineItems) {
+                if (!lineItem.itemId) continue;
+                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
+                if (itemOption?.manageStock) {
+                    const itemRef = doc(firestore, "items", lineItem.itemId);
+                    const itemSnap = await transaction.get(itemRef);
+
+                    if (!itemSnap.exists()) {
+                        throw new Error(`Item "${itemOption.label}" not found. Invoice cannot be completed.`);
+                    }
+
+                    const itemData = itemSnap.data() as ItemDoc;
+                    const currentItemQty = itemData.currentQuantity || 0;
+                    if (currentItemQty < lineItem.qty) {
+                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
+                    }
+                    const newItemQty = currentItemQty - lineItem.qty;
+                    transaction.update(itemRef, { 
+                        currentQuantity: newItemQty,
+                        updatedAt: serverTimestamp() 
+                    });
+                }
+            }
+        }
+
 
         const newCounters = {
           yearlyCounts: {
@@ -606,8 +638,8 @@ export function CreateInvoiceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Terms and Conditions:</FormLabel>
-                  <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                  <FormLabel>Comments (Public)</FormLabel>
+                  <FormControl><Textarea placeholder="Public comments visible on the invoice" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
             )}/>
