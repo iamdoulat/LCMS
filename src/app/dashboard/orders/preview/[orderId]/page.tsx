@@ -158,114 +158,127 @@ export default function PrintOrderPage() {
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="flex justify-between items-start mb-4">
-        <div className="w-2/3 pr-8">
-          {displayCompanyLogo && (
-            <Image
-              src={displayCompanyLogo}
-              alt={`${displayCompanyName} Logo`}
-              width={396}
-              height={58}
-              className="object-contain mb-2"
-              priority
-              data-ai-hint="company logo"
-            />
-          )}
-          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
-          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-          {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-          {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
-        </div>
-
-        <div className="text-right">
-            <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
-            <div className="flex justify-end items-baseline gap-2 text-sm">
-                <span className="font-semibold">Order Number :</span>
-                <span>{orderData.id}</span>
-            </div>
-            <div className="flex justify-end items-baseline gap-2 text-sm">
-                <span className="font-semibold">Date :</span>
-                <span>{formatDisplayDate(orderData.orderDate)}</span>
-            </div>
-            {orderData.salesperson && (
-                <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Sales Person :</span>
-                    <span>{orderData.salesperson}</span>
-                </div>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+      <div className="flex-grow">
+        <div className="flex justify-between items-start mb-4">
+          <div className="w-2/3 pr-8">
+            {displayCompanyLogo && (
+              <Image
+                src={displayCompanyLogo}
+                alt={`${displayCompanyName} Logo`}
+                width={396}
+                height={58}
+                className="object-contain mb-2"
+                priority
+                data-ai-hint="company logo"
+              />
             )}
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="border p-2 rounded-md text-xs">
-          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
-          {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
-        </div>
-        <div className="border p-2 rounded-md text-xs">
-          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-          {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
-        </div>
-      </div>
+            <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
+            <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+            {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+            {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+          </div>
 
-      <section className="mb-8">
-        <table className="w-full text-sm border-collapse table-fixed">
-          <thead className="bg-gray-100 text-gray-700">
-            <tr>
-              <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
-              <th className="p-2 border border-gray-300 text-left font-semibold w-[55%]">Item Description</th>
-              <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderData.lineItems.map((item, index) => (
-              <tr key={item.itemId || index} className="border-b border-gray-200">
-                <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
-                <td className="p-2 border border-gray-300 align-top break-words">
-                  <p className="font-medium text-gray-900">{item.itemName}</p>
-                  {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
-                </td>
-                <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
-                <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
-                <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
+          <div className="text-right">
+              <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+              <div className="flex justify-end items-baseline gap-2 text-sm">
+                  <span className="font-semibold">Order Number :</span>
+                  <span>{orderData.id}</span>
+              </div>
+              <div className="flex justify-end items-baseline gap-2 text-sm">
+                  <span className="font-semibold">Date :</span>
+                  <span>{formatDisplayDate(orderData.orderDate)}</span>
+              </div>
+              {orderData.salesperson && (
+                  <div className="flex justify-end items-baseline gap-2 text-sm">
+                      <span className="font-semibold">Sales Person :</span>
+                      <span>{orderData.salesperson}</span>
+                  </div>
+              )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+            {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
+          </div>
+          <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+            {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
+          </div>
+        </div>
+
+        <section className="mb-8">
+          <table className="w-full text-sm border-collapse table-fixed">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold w-[55%]">Item Description</th>
+                <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {orderData.lineItems.map((item, index) => (
+                <tr key={item.itemId || index} className="border-b border-gray-200">
+                  <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
+                  <td className="p-2 border border-gray-300 align-top break-words">
+                    <p className="font-medium text-gray-900">{item.itemName}</p>
+                    {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
+                  </td>
+                  <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
+                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
+                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
 
-      <section className="flex justify-end mb-8">
-        <div className="w-full max-w-xs text-sm">
-          <div className="flex justify-between py-1">
-            <span className="text-gray-600">Subtotal:</span>
-            <span className="text-gray-800">{formatCurrency(orderData.subtotal, '')}</span>
+        <section className="flex justify-end mb-8">
+          <div className="w-full max-w-xs text-sm">
+            <div className="flex justify-between py-1">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="text-gray-800">{formatCurrency(orderData.subtotal, '')}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-gray-600">Total Discount:</span>
+              <span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-gray-600">Total Tax ({orderData.taxType}):</span>
+              <span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
+            </div>
+            <Separator className="my-2 border-gray-300" />
+            <div className="flex justify-between py-1 text-lg font-bold">
+              <span className="text-gray-900">Grand Total:</span>
+              <span className="text-blue-600">{formatCurrency(orderData.totalAmount, '')}</span>
+            </div>
           </div>
-          <div className="flex justify-between py-1">
-            <span className="text-gray-600">Total Discount:</span>
-            <span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
-          </div>
-          <div className="flex justify-between py-1">
-            <span className="text-gray-600">Total Tax ({orderData.taxType}):</span>
-            <span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
-          </div>
-          <Separator className="my-2 border-gray-300" />
-          <div className="flex justify-between py-1 text-lg font-bold">
-            <span className="text-gray-900">Grand Total:</span>
-            <span className="text-blue-600">{formatCurrency(orderData.totalAmount, '')}</span>
-          </div>
+        </section>
+
+        {orderData.comments && (
+          <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
+            <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Terms and Conditions:</h4>
+            <p className="text-xs text-gray-600 whitespace-pre-line">{orderData.comments}</p>
+          </section>
+        )}
+      </div>
+
+      <section className="flex justify-between pt-16">
+        <div className="w-1/3 text-center">
+          <div className="border-t border-dotted border-gray-400"></div>
+          <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+        </div>
+        <div className="w-1/3 text-center">
+          <div className="border-t border-dotted border-gray-400"></div>
+          <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
         </div>
       </section>
 
-      {orderData.comments && (
-        <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
-          <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Terms and Conditions:</h4>
-          <p className="text-xs text-gray-600 whitespace-pre-line">{orderData.comments}</p>
-        </section>
-      )}
-
-      <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200">
+      <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
         <p>Thank you for your business!</p>
         <p>{displayCompanyName} - {displayCompanyEmail}</p>
       </footer>
