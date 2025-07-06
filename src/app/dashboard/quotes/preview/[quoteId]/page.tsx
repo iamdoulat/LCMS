@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -272,25 +271,25 @@ export default function PrintQuotePage() {
                 )}
             </div>
             <div className="w-full max-w-sm text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 text-right">Subtotal:</span>
+                <div className="grid grid-cols-2">
+                  <span className="text-gray-600 text-right pr-4">Subtotal:</span>
                   <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
-                    <div className="flex justify-between">
-                        <span className="text-gray-600 text-right">Total Discount:</span>
+                    <div className="grid grid-cols-2">
+                        <span className="text-gray-600 text-right pr-4">Total Discount:</span>
                         <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
                     </div>
                 )}
                 {showTaxColumn && (
-                    <div className="flex justify-between">
-                        <span className="text-gray-600 text-right">Total Tax ({quoteData.taxType}):</span>
+                    <div className="grid grid-cols-2">
+                        <span className="text-gray-600 text-right pr-4">Total Tax ({quoteData.taxType}):</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="flex justify-between text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total:</span>
+                <div className="grid grid-cols-2 text-base font-bold">
+                    <span className="text-gray-900 text-right pr-4">Grand Total:</span>
                     <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
             </div>
