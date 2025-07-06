@@ -8,13 +8,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,12 +42,10 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
-  manageStock?: boolean;
-  currentQuantity?: number;
 }
 
 interface CustomerOption extends ComboboxOption {
-    address?: string;
+  address?: string;
 }
 
 export function CreateInvoiceForm() {
@@ -74,22 +72,12 @@ export function CreateInvoiceForm() {
       shippingAddress: '',
       sameAsBilling: true,
       invoiceDate: new Date(),
-      dueDate: undefined,
-      paymentTerms: '',
       salesperson: '',
-      lineItems: [{
-        itemId: '',
-        description: '',
-        qty: '1',
-        unitPrice: '0',
-        discountPercentage: '0',
-        taxPercentage: '0',
-        total: '0.00'
-      }],
+      lineItems: [{ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' }],
       taxType: 'Default',
-      status: "Draft",
       comments: '',
       privateComments: '',
+      status: "Draft",
     },
   });
 
@@ -131,8 +119,6 @@ export function CreateInvoiceForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
-              manageStock: data.manageStock,
-              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -146,15 +132,15 @@ export function CreateInvoiceForm() {
     };
     fetchOptions();
   }, []);
-
+  
   React.useEffect(() => {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        const addr = (selectedCustomer as any).address || '';
-        setValue("billingAddress", addr);
+        const billingAddr = (selectedCustomer as any).address || '';
+        setValue("billingAddress", billingAddr);
         if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", addr);
+          setValue("shippingAddress", billingAddr);
         }
       }
     } else {
@@ -162,13 +148,12 @@ export function CreateInvoiceForm() {
       setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue, getValues]);
-  
+
   React.useEffect(() => {
     if (watchedSameAsBilling) {
       setValue("shippingAddress", getValues("billingAddress"));
     }
   }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
-
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -181,7 +166,7 @@ export function CreateInvoiceForm() {
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-
+        
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -189,12 +174,12 @@ export function CreateInvoiceForm() {
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           lineTotal = itemTotalAfterDiscount + lineTaxAmount;
-
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-
+        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -209,16 +194,13 @@ export function CreateInvoiceForm() {
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-
   }, [watchedLineItems, watchedTaxType, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
       let autoDescription = selectedItem.label;
-      if (selectedItem.description) {
-        autoDescription = selectedItem.description;
-      }
+      if (selectedItem.description) autoDescription = selectedItem.description;
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
@@ -265,13 +247,13 @@ export function CreateInvoiceForm() {
     
           return {
             itemId: item.itemId,
-            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
+            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
             itemCode: itemDetailsFromOptions?.itemCode || undefined,
             description: item.description || '',
             qty: qty,
-            unitPrice: finalUnitPrice,
-            discountPercentage: finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage,
+            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
+            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
             total: calculatedLineTotal,
           };
         });
@@ -298,7 +280,8 @@ export function CreateInvoiceForm() {
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
           totalAmount: finalGrandTotal,
-          status: data.status || "Draft",
+          status: data.status,
+          amountPaid: 0,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -361,7 +344,7 @@ export function CreateInvoiceForm() {
       });
     }
   };
-
+  
   const handlePreviewLastSaved = () => {
     if (generatedInvoiceId) {
       router.push(`/dashboard/invoices/preview/${generatedInvoiceId}`);
@@ -426,9 +409,9 @@ export function CreateInvoiceForm() {
                           render={({ field: checkboxField }) => (
                           <FormItem className="flex items-center space-x-2 space-y-0">
                               <FormControl>
-                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxSale" />
+                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxInvoice" />
                               </FormControl>
-                              <Label htmlFor="sameAsBillingCheckboxSale" className="text-xs font-normal cursor-pointer">Same as billing</Label>
+                              <Label htmlFor="sameAsBillingCheckboxInvoice" className="text-xs font-normal cursor-pointer">Same as billing</Label>
                           </FormItem>
                           )}
                       />
@@ -510,7 +493,7 @@ export function CreateInvoiceForm() {
                 control={form.control}
                 name="taxType"
                 render={({ field }) => (
-                    <FormItem className="md:col-span-1">
+                    <FormItem>
                     <FormLabel>Tax</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
                         <FormControl>
@@ -530,6 +513,19 @@ export function CreateInvoiceForm() {
              />
              <FormField
                 control={form.control}
+                name="paymentTerms"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Payment Terms</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., Net 30, Due on receipt" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
                 name="status"
                 render={({ field }) => (
                     <FormItem>
@@ -546,19 +542,6 @@ export function CreateInvoiceForm() {
                         ))}
                         </SelectContent>
                     </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="paymentTerms"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Payment Terms</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., Net 30, Due on receipt" {...field} />
-                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -622,13 +605,13 @@ export function CreateInvoiceForm() {
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Terms and Conditions</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                <FormMessage />
-              </FormItem>
+                <FormItem>
+                  <FormLabel>Terms and Conditions:</FormLabel>
+                  <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                  <FormMessage />
+                </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="flex justify-end space-y-2 mt-6">
@@ -644,12 +627,14 @@ export function CreateInvoiceForm() {
         
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
-                form.reset(); setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0); setGeneratedInvoiceId(null);
+                form.reset();
+                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
+                setGeneratedInvoiceId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview
