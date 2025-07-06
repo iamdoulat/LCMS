@@ -160,9 +160,9 @@ export default function PrintSaleInvoicePage() {
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
   
-  const showItemCodeColumn = true; 
-  const showDiscountColumn = true;
-  const showTaxColumn = true;
+  const showItemCodeColumn = invoiceData.showItemCodeColumn ?? false; 
+  const showDiscountColumn = invoiceData.showDiscountColumn ?? false;
+  const showTaxColumn = invoiceData.showTaxColumn ?? false;
 
 
   return (
