@@ -157,7 +157,8 @@ export default function PrintQuotePage() {
 
   return (
     <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <header className="flex justify-between items-start mb-8">
+      <header className="grid grid-cols-2 gap-8 mb-8 items-start">
+        {/* Company Info */}
         <div>
           {displayCompanyLogo && (
             <Image
@@ -170,36 +171,31 @@ export default function PrintQuotePage() {
               data-ai-hint="company logo"
             />
           )}
-          <h1 className="text-3xl font-bold text-gray-900">{displayCompanyName}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
           <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
           {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
+        
+        {/* Quote To and Details Info */}
         <div className="text-right">
           <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Quote</h2>
           <p className="text-sm"><strong>Quote No:</strong> {quoteData.id}</p>
           <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
+          
+          <div className="mt-6 text-left">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Quote For:</h3>
+            <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+            {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
+            {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
+            {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
+          </div>
         </div>
       </header>
 
       <Separator className="my-6 border-gray-300" />
 
-      <section className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Quote For:</h3>
-          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-          {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
-          {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
-          {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
-        </div>
-        {quoteData.shippingAddress && quoteData.shippingAddress !== quoteData.billingAddress && (
-          <div className="text-right">
-            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Ship To:</h3>
-            <p className="text-xs text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>
-          </div>
-        )}
-      </section>
-
+      {/* Line Items Table */}
       <section className="mb-8">
         <table className="w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
@@ -233,6 +229,7 @@ export default function PrintQuotePage() {
         </table>
       </section>
 
+      {/* Totals Section */}
       <section className="flex justify-end mb-8">
         <div className="w-full max-w-xs text-sm">
           <div className="flex justify-between py-1">
@@ -255,6 +252,7 @@ export default function PrintQuotePage() {
         </div>
       </section>
 
+      {/* Comments and Footer */}
       {quoteData.comments && (
         <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
           <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Comments:</h4>
@@ -267,6 +265,7 @@ export default function PrintQuotePage() {
         <p>{displayCompanyName} - {displayCompanyEmail}</p>
       </footer>
 
+      {/* Utility Buttons (No Print) */}
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Quote

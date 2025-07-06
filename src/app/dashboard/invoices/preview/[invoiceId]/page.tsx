@@ -160,7 +160,8 @@ export default function PrintSaleInvoicePage() {
 
   return (
     <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <header className="flex justify-between items-start mb-8">
+      <header className="grid grid-cols-2 gap-8 mb-8 items-start">
+        {/* Company Info */}
         <div>
           {displayCompanyLogo && (
             <Image
@@ -173,35 +174,36 @@ export default function PrintSaleInvoicePage() {
               priority
             />
           )}
-          <h1 className="text-3xl font-bold text-gray-900">{displayCompanyName}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
           <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
           {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
+        
+        {/* Invoice To and Details Info */}
         <div className="text-right">
           <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Invoice</h2>
           <p className="text-sm"><strong>Invoice No:</strong> {invoiceData.id.substring(0, 10).toUpperCase()}</p>
           <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(invoiceData.invoiceDate)}</p>
+          
+          <div className="mt-6 text-left">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Bill To:</h3>
+            <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
+            {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
+            {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
+            {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
+          </div>
         </div>
       </header>
 
       <Separator className="my-6 border-gray-300" />
-
-      <section className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Bill To:</h3>
-          <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
-          {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
-          {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
-          {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
-        </div>
-        {invoiceData.shippingAddress && invoiceData.shippingAddress !== invoiceData.billingAddress && (
-          <div className="text-right">
+      
+      {invoiceData.shippingAddress && invoiceData.shippingAddress !== invoiceData.billingAddress && (
+        <section className="mb-8">
             <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Ship To:</h3>
             <p className="text-xs text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress}</p>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="mb-8">
         <table className="w-full text-sm border-collapse">

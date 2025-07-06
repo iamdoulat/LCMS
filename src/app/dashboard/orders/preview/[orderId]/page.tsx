@@ -22,7 +22,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -156,7 +156,8 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <header className="flex justify-between items-start mb-8">
+      <header className="grid grid-cols-2 gap-8 mb-8 items-start">
+        {/* Company Info */}
         <div>
           {displayCompanyLogo && (
             <Image
@@ -169,35 +170,36 @@ export default function PrintOrderPage() {
               data-ai-hint="company logo"
             />
           )}
-          <h1 className="text-3xl font-bold text-gray-900">{displayCompanyName}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
           <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
           {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
+
+        {/* Order To and Details Info */}
         <div className="text-right">
           <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Order</h2>
           <p className="text-sm"><strong>Order No:</strong> {orderData.id}</p>
           <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
+
+          <div className="mt-6 text-left">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Beneficiary:</h3>
+            <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
+            {beneficiaryData?.headOfficeAddress && <p className="text-xs text-gray-600 whitespace-pre-line">{beneficiaryData.headOfficeAddress}</p>}
+            {beneficiaryData?.emailId && <p className="text-xs text-gray-600">Email: {beneficiaryData.emailId}</p>}
+            {beneficiaryData?.cellNumber && <p className="text-xs text-gray-600">Phone: {beneficiaryData.cellNumber}</p>}
+          </div>
         </div>
       </header>
-
+      
       <Separator className="my-6 border-gray-300" />
 
-      <section className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Beneficiary:</h3>
-          <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-          {beneficiaryData?.headOfficeAddress && <p className="text-xs text-gray-600 whitespace-pre-line">{beneficiaryData.headOfficeAddress}</p>}
-          {beneficiaryData?.emailId && <p className="text-xs text-gray-600">Email: {beneficiaryData.emailId}</p>}
-          {beneficiaryData?.cellNumber && <p className="text-xs text-gray-600">Phone: {beneficiaryData.cellNumber}</p>}
-        </div>
-        {orderData.shippingAddress && orderData.shippingAddress !== orderData.billingAddress && (
-          <div className="text-right">
+      {orderData.shippingAddress && orderData.shippingAddress !== orderData.billingAddress && (
+        <section className="mb-8">
             <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Ship To:</h3>
             <p className="text-xs text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="mb-8">
         <table className="w-full text-sm border-collapse">
