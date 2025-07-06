@@ -251,6 +251,6 @@ body {
 
   @page {
     size: A4;
-    margin: 0; /* Changed margin to 0 */
+    margin: 0.30in;
   }
 }
