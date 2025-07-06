@@ -164,8 +164,8 @@ export default function PrintOrderPage() {
             <Image
               src={displayCompanyLogo}
               alt={`${displayCompanyName} Logo`}
-              width={495}
-              height={72}
+              width={396}
+              height={58}
               className="object-contain mb-2"
               priority
               data-ai-hint="company logo"
