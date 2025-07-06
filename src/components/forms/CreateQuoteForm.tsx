@@ -516,8 +516,9 @@ export function CreateQuoteForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
-                  className="text-xs font-normal"
+                  className="text-[10px] font-normal"
                   {...field}
+                  value={field.value ?? ''}
                   rows={2}
                 />
               </FormControl>
