@@ -1,8 +1,9 @@
+
 "use client";
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings, Loader2 } from 'lucide-react';
+import { LayoutGrid, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -44,11 +45,11 @@ export default function FinancialManagementSettingPage() {
       <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <Settings className="h-7 w-7 text-primary" />
-            Financial Document Settings
+            <LayoutGrid className="h-7 w-7 text-primary" />
+            Layout Settings
           </CardTitle>
           <CardDescription>
-            Manage company details that appear on quotes, invoices, and orders. These settings are separate from the main company profile.
+            Manage company details and logo for printable documents like Quotes, Invoices, and Orders.
           </CardDescription>
         </CardHeader>
         <CardContent>
