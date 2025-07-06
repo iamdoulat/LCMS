@@ -154,7 +154,7 @@ export function CreateInvoiceForm() {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
+  }, [watchedCustomerId, customerOptions, setValue]);
 
 
   React.useEffect(() => {
@@ -391,8 +391,8 @@ export function CreateInvoiceForm() {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Terms and Conditions:</FormLabel><FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Terms and conditions or public notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">

@@ -69,6 +69,7 @@ type QuoteLineItemFormValues = PageQuoteLineItemFormValues;
 
 
 export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
@@ -84,7 +85,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   });
 
   const { control, setValue, watch, getValues, reset } = form;
-  
+
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
@@ -166,6 +167,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
         setValue("shippingAddress", selectedCustomer.address || "");
       }
     }
@@ -335,7 +337,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (
               <FormItem>
                 <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} /></FormControl><FormMessage />
+                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>

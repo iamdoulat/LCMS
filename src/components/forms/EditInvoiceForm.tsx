@@ -141,17 +141,18 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   }, [initialData, reset]);
 
   const watchedCustomerId = watch("customerId");
+  const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+
   React.useEffect(() => {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
         setValue("shippingAddress", selectedCustomer.address || "");
       }
     }
   }, [watchedCustomerId, customerOptions, setValue]);
-
-  const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -204,7 +205,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
   };
-
+  
   const handleViewPdf = () => {
     window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
   };
@@ -409,8 +410,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Terms and Conditions:</FormLabel><FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Terms and conditions or public notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="flex justify-end space-y-2 mt-6">
@@ -425,7 +426,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleViewPdf}>
+             <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
