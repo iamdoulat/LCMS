@@ -158,8 +158,8 @@ export default function PrintOrderPage() {
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
   return (
-    <div className="print-invoice-container bg-white p-0 sm:p-8 font-sans text-gray-800 flex flex-col min-h-screen">
-      <div className="flex-grow">
+    <div className="print-invoice-container bg-white font-sans text-gray-800">
+      <div className="">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
@@ -198,7 +198,7 @@ export default function PrintOrderPage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
             {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
@@ -267,21 +267,23 @@ export default function PrintOrderPage() {
         )}
       </div>
 
-      <section className="flex justify-between pt-16">
-        <div className="w-1/3 text-center">
-          <div className="border-t border-dotted border-gray-400"></div>
-          <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
-        </div>
-        <div className="w-1/3 text-center">
-          <div className="border-t border-dotted border-gray-400"></div>
-          <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
-        </div>
-      </section>
+      <div className="">
+        <section className="flex justify-between pt-16">
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+          </div>
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+          </div>
+        </section>
 
-      <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
-        <p>Thank you for your business!</p>
-        <p>{displayCompanyName} - {displayCompanyEmail}</p>
-      </footer>
+        <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
+            <p>Thank you for your business!</p>
+            <p>{displayCompanyName} - {displayCompanyEmail}</p>
+        </footer>
+      </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">

@@ -163,8 +163,8 @@ export default function PrintQuotePage() {
 
 
   return (
-    <div className="print-invoice-container bg-white p-0 sm:p-8 font-sans text-gray-800 flex flex-col min-h-screen">
-      <div className="flex-grow">
+    <div className="print-invoice-container bg-white font-sans text-gray-800">
+      <div className="">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
@@ -203,7 +203,7 @@ export default function PrintQuotePage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="border p-2 rounded-md text-xs">
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">To:</h3>
               <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
@@ -267,24 +267,24 @@ export default function PrintQuotePage() {
                 )}
             </div>
             <div className="w-full max-w-xs text-sm">
-                <div className="grid grid-cols-2 gap-4 py-1">
+                <div className="flex justify-between py-1">
                   <span className="text-gray-600 text-right">Subtotal:</span>
                   <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
-                    <div className="grid grid-cols-2 gap-4 py-1">
+                    <div className="flex justify-between py-1">
                         <span className="text-gray-600 text-right">Total Discount:</span>
                         <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
                     </div>
                 )}
                 {showTaxColumn && (
-                    <div className="grid grid-cols-2 gap-4 py-1">
+                    <div className="flex justify-between py-1">
                         <span className="text-gray-600 text-right">Total Tax ({quoteData.taxType}):</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-4 py-1 text-base font-bold">
+                <div className="flex justify-between py-1 text-base font-bold">
                     <span className="text-gray-900 text-right">Grand Total:</span>
                     <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
@@ -292,7 +292,7 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="flex-shrink-0">
+      <div className="">
         <section className="flex justify-between pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
