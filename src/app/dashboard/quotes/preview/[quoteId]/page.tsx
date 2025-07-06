@@ -6,18 +6,27 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { QuoteDocument, CustomerDocument, CompanyProfile } from '@/types';
-import { useAuth } from '@/context/AuthContext';
-import { Loader2, Printer, AlertTriangle, ArrowLeft } from 'lucide-react';
+import type { QuoteDocument, CustomerDocument } from '@/types';
+import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
 
-const COMPANY_PROFILE_COLLECTION = 'company_profile';
-const COMPANY_PROFILE_DOC_ID = 'main_profile';
-const DEFAULT_COMPANY_NAME = 'Smart Solution';
-const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
+const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
+const DEFAULT_FINANCIAL_COMPANY_NAME = 'Your Company Name';
+const DEFAULT_FINANCIAL_ADDRESS = 'Your Company Address';
+const DEFAULT_FINANCIAL_EMAIL = 'your@email.com';
+const DEFAULT_FINANCIAL_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
+interface FinancialSettingsProfile {
+  companyName?: string;
+  address?: string;
+  emailId?: string;
+  cellNumber?: string;
+  invoiceLogoUrl?: string;
+}
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -39,48 +48,42 @@ export default function PrintQuotePage() {
   const router = useRouter();
   const quoteId = params.quoteId as string;
 
-  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, invoiceLogoUrl: contextInvoiceLogoUrl } = useAuth();
   const [quoteData, setQuoteData] = useState<QuoteDocument | null>(null);
   const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [financialSettings, setFinancialSettings] = useState<FinancialSettingsProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCompanyProfile = useCallback(async () => {
+  const fetchFinancialSettings = useCallback(async () => {
     try {
-      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
-      const profileDocSnap = await getDoc(profileDocRef);
-      if (profileDocSnap.exists()) {
-        setCompanyProfile(profileDocSnap.data() as CompanyProfile);
+      const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+      const settingsDocSnap = await getDoc(settingsDocRef);
+      if (settingsDocSnap.exists()) {
+        setFinancialSettings(settingsDocSnap.data() as FinancialSettingsProfile);
       } else {
-        setCompanyProfile({
-          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          address: 'Default Company Address, City, Country',
-          emailId: 'company@example.com',
+        setFinancialSettings({
+          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
+          address: DEFAULT_FINANCIAL_ADDRESS,
+          emailId: DEFAULT_FINANCIAL_EMAIL,
+          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
         });
       }
     } catch (e) {
-      console.error("Error fetching company profile for print:", e);
-      setCompanyProfile({
-          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          address: 'Default Company Address, City, Country',
-          emailId: 'company@example.com',
+      console.error("Error fetching financial settings for print:", e);
+      setFinancialSettings({
+          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
+          address: DEFAULT_FINANCIAL_ADDRESS,
+          emailId: DEFAULT_FINANCIAL_EMAIL,
+          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
       });
     }
-  }, [contextCompanyName, contextCompanyLogoUrl, contextInvoiceLogoUrl]);
+  }, []);
 
-  const fetchQuoteAndCustomerData = useCallback(async () => {
+  const fetchQuoteData = useCallback(async () => {
     if (!quoteId) {
       setError("No Quote ID provided.");
-      setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    setError(null);
     try {
       const quoteDocRef = doc(firestore, "quotes", quoteId);
       const quoteDocSnap = await getDoc(quoteDocRef);
@@ -94,8 +97,6 @@ export default function PrintQuotePage() {
           const customerDocSnap = await getDoc(customerDocRef);
           if (customerDocSnap.exists()) {
             setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
-          } else {
-            console.warn(`Customer with ID ${quote.customerId} not found.`);
           }
         }
       } else {
@@ -103,24 +104,26 @@ export default function PrintQuotePage() {
       }
     } catch (err: any) {
       setError(`Failed to fetch quote data: ${err.message}`);
-    } finally {
-      setIsLoading(false);
     }
   }, [quoteId]);
 
   useEffect(() => {
-    fetchCompanyProfile();
-    fetchQuoteAndCustomerData();
-  }, [fetchCompanyProfile, fetchQuoteAndCustomerData]);
+    const loadAllData = async () => {
+        setIsLoading(true);
+        await Promise.all([fetchFinancialSettings(), fetchQuoteData()]);
+        setIsLoading(false);
+    }
+    loadAllData();
+  }, [fetchFinancialSettings, fetchQuoteData]);
 
    useEffect(() => {
-    if (!isLoading && quoteData && companyProfile) {
+    if (!isLoading && quoteData && financialSettings) {
       const timer = setTimeout(() => {
         window.print();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, quoteData, companyProfile]);
+  }, [isLoading, quoteData, financialSettings]);
 
   if (isLoading) {
     return (
@@ -151,16 +154,15 @@ export default function PrintQuotePage() {
     );
   }
 
-  const displayCompanyName = companyProfile?.companyName || contextCompanyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-  const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
-  const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
-  const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
+  const displayCompanyName = financialSettings?.companyName || DEFAULT_FINANCIAL_COMPANY_NAME;
+  const displayCompanyLogo = financialSettings?.invoiceLogoUrl || DEFAULT_FINANCIAL_LOGO_URL;
+  const displayCompanyAddress = financialSettings?.address || DEFAULT_FINANCIAL_ADDRESS;
+  const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
+  const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
 
   const showItemCodeColumn = quoteData.showItemCodeColumn ?? false;
   const showDiscountColumn = quoteData.showDiscountColumn ?? false;
   const showTaxColumn = quoteData.showTaxColumn ?? false;
-
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
@@ -262,7 +264,7 @@ export default function PrintQuotePage() {
           </table>
         </section>
 
-        <section className="flex justify-between items-start pt-4">
+        <div className="flex justify-between items-start pt-4">
             <div className="w-1/2 pr-4 text-xs">
                 {quoteData.comments && (
                 <div className="space-y-1">
@@ -294,7 +296,7 @@ export default function PrintQuotePage() {
                     <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
             </div>
-        </section>
+        </div>
       </div>
 
       <div className="mt-auto pt-16">

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { CompanySetupForm } from '@/components/forms/CompanySetupForm';
+import { FinancialDocumentSettingsForm } from '@/components/forms/FinancialDocumentSettingsForm';
 
 export default function FinancialManagementSettingPage() {
   const { userRole, loading: authLoading } = useAuth();
@@ -48,11 +48,11 @@ export default function FinancialManagementSettingPage() {
             Financial Document Settings
           </CardTitle>
           <CardDescription>
-            Manage company details that appear on quotes, invoices, and orders. Changes made here are global and will also be reflected in the main Company Setup page.
+            Manage company details that appear on quotes, invoices, and orders. These settings are separate from the main company profile.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CompanySetupForm />
+          <FinancialDocumentSettingsForm />
         </CardContent>
       </Card>
     </div>
