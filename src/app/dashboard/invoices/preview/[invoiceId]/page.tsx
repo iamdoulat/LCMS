@@ -24,7 +24,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -206,7 +206,7 @@ export default function PrintSaleInvoicePage() {
       )}
 
       <section className="mb-8">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse table-fixed">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
               <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>

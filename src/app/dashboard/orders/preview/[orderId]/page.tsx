@@ -202,7 +202,7 @@ export default function PrintOrderPage() {
       )}
 
       <section className="mb-8">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse table-fixed">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
               <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
