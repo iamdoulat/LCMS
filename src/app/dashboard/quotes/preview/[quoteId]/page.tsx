@@ -181,12 +181,18 @@ export default function PrintQuotePage() {
             <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTE</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Quote Number :</span>
-                <span>{quoteData.id}</span>
+                <span>{quoteData.id.startsWith('QT') ? quoteData.id : `${quoteData.id.substring(0,8)}...`}</span>
             </div>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Date :</span>
                 <span>{formatDisplayDate(quoteData.quoteDate)}</span>
             </div>
+            {quoteData.salesperson && (
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Sales Person :</span>
+                    <span>{quoteData.salesperson}</span>
+                </div>
+            )}
         </div>
       </div>
       
@@ -282,4 +288,3 @@ export default function PrintQuotePage() {
   );
 }
 
-    

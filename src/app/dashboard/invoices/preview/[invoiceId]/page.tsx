@@ -191,6 +191,12 @@ export default function PrintSaleInvoicePage() {
                 <span className="font-semibold">Date :</span>
                 <span>{formatDisplayDate(invoiceData.invoiceDate)}</span>
             </div>
+             {invoiceData.salesperson && (
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Sales Person :</span>
+                    <span>{invoiceData.salesperson}</span>
+                </div>
+            )}
         </div>
       </div>
       
@@ -286,4 +292,3 @@ export default function PrintSaleInvoicePage() {
   );
 }
 
-    

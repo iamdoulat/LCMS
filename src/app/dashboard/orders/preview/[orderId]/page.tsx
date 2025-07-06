@@ -187,6 +187,12 @@ export default function PrintOrderPage() {
                 <span className="font-semibold">Date :</span>
                 <span>{formatDisplayDate(orderData.orderDate)}</span>
             </div>
+            {orderData.salesperson && (
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Sales Person :</span>
+                    <span>{orderData.salesperson}</span>
+                </div>
+            )}
         </div>
       </div>
       
@@ -278,4 +284,3 @@ export default function PrintOrderPage() {
   );
 }
 
-    
