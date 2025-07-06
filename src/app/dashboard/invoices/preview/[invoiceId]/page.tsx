@@ -159,8 +159,8 @@ export default function PrintSaleInvoicePage() {
 
 
   return (
-    <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="grid grid-cols-2 gap-8 mb-8 items-start">
+    <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+      <div className="grid grid-cols-2 gap-8 mb-6 items-start">
         {/* Company Info */}
         <div>
           {displayCompanyLogo && (
