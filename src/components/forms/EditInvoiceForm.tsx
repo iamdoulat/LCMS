@@ -225,10 +225,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
       return {
         itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
         itemCode: itemDetailsFromOptions?.itemCode || undefined,
         description: item.description || '',
-        qty: qty,
+        qty,
         unitPrice: finalUnitPrice,
         discountPercentage: finalDiscountPercentage,
         taxPercentage: finalTaxPercentage,
@@ -286,8 +286,22 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="customerId" render={({ field }) => (<FormItem><FormLabel>Customer*</FormLabel><Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} placeholder="Search Customer..." selectPlaceholder="Select Customer" disabled={isLoadingDropdowns}/><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><div className="flex justify-between items-center mb-1.5"><FormLabel>Delivery Address*</FormLabel><FormField control={control} name="sameAsBilling" render={({ field: cbField }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={cbField.value} onCheckedChange={cbField.onChange} id="editInvoiceSameAsBilling" /></FormControl><Label htmlFor="editInvoiceSameAsBilling" className="text-xs font-normal cursor-pointer">Same as billing</Label></FormItem>)}/></div><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="customerId" render={({ field }) => (
+              <FormItem><FormLabel>Customer*</FormLabel>
+                <Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} placeholder="Search Customer..." selectPlaceholder="Select Customer" disabled={isLoadingDropdowns}/>
+                <FormMessage />
+              </FormItem>)}
+            />
+          </div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center mb-1.5"><FormLabel>Delivery Address*</FormLabel>
+                  <FormField control={control} name="sameAsBilling" render={({ field: cbField }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={cbField.value} onCheckedChange={cbField.onChange} id="editInvoiceSameAsBilling" /></FormControl><Label htmlFor="editInvoiceSameAsBilling" className="text-xs font-normal cursor-pointer">Same as billing</Label></FormItem>)}/>
+                </div>
+                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} /></FormControl><FormMessage />
+              </FormItem>)}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
@@ -349,7 +363,13 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 

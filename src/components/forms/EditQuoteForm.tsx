@@ -64,13 +64,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     name: "lineItems",
   });
 
-  const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
-  const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
-
-
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
       setIsLoadingDropdowns(true);
@@ -133,6 +126,14 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }, [initialData, reset]);
 
 
+  const watchedCustomerId = watch("customerId");
+  const watchedSameAsBilling = watch("sameAsBilling");
+  const watchedBillingAddress = watch("billingAddress");
+  const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+  const watchedGlobalDiscount = watch("globalDiscount");
+  const watchedGlobalTaxRate = watch("globalTaxRate");
+
   React.useEffect(() => {
     if (watchedCustomerId && customerOptions.length > 0) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
@@ -193,7 +194,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
 
-  }, [watchedLineItems, setValue, getValues]);
+  }, [watchedLineItems, watchedTaxType, watchedGlobalDiscount, watchedGlobalTaxRate, setValue, getValues]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -490,7 +491,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                         />
                       )}
                     />
-                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage>
+                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage>
                   </TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} />
@@ -529,32 +530,14 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-                control={control}
-                name="comments"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Comments (Public)</FormLabel>
-                    <FormControl>
-                    <Textarea placeholder="Enter comments visible to the customer" {...field} rows={3} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="privateComments"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Private Comments (Internal)</FormLabel>
-                    <FormControl>
-                    <Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+            <FormField control={control} name="comments" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="flex justify-end space-y-2 mt-6">
@@ -581,12 +564,22 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={() => reset(initialData ? {
+                ...initialData,
+                quoteDate: initialData.quoteDate ? parseISO(initialData.quoteDate) : new Date(),
+                lineItems: initialData.lineItems.map(item => ({
+                  ...item,
+                  qty: item.qty.toString(),
+                  unitPrice: item.unitPrice.toString(),
+                  discountPercentage: item.discountPercentage?.toString() || '0',
+                  taxPercentage: item.taxPercentage?.toString() || '0',
+                  total: item.total.toFixed(2),
+                })),
+              } : {} )}>
+                <X className="mr-2 h-4 w-4" />Reset
+            </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
-              {isSubmitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>
-              ) : (
-                <><Save className="mr-2 h-4 w-4" />Save Changes</>
-              )}
+              {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
             </Button>
              <Button type="button" variant="outline" disabled>
                 <Printer className="mr-2 h-4 w-4" />Preview

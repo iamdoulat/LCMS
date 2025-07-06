@@ -157,7 +157,7 @@ export default function PrintOrderPage() {
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
   return (
-    <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
       <div className="flex justify-between items-start mb-4">
         <div className="w-2/3 pr-8">
           {displayCompanyLogo && (
@@ -178,7 +178,7 @@ export default function PrintOrderPage() {
         </div>
 
         <div className="text-right">
-            <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+            <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Order Number :</span>
                 <span>{orderData.id}</span>
@@ -262,7 +262,7 @@ export default function PrintOrderPage() {
 
       {orderData.comments && (
         <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
-          <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Comments:</h4>
+          <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Terms and Conditions:</h4>
           <p className="text-xs text-gray-600 whitespace-pre-line">{orderData.comments}</p>
         </section>
       )}
@@ -283,4 +283,3 @@ export default function PrintOrderPage() {
     </div>
   );
 }
-
