@@ -299,17 +299,17 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
               </FormItem>)}
             />
           </div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
+          <div><FormField control={control} name="billingAddress" render={({ field }) => (
               <FormItem>
-                <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
+                <FormLabel>Bill To*</FormLabel>
+                <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="billingAddress" render={({ field }) => (<FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
