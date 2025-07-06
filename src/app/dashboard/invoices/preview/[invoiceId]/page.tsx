@@ -160,9 +160,9 @@ export default function PrintSaleInvoicePage() {
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
   
-  const showItemCodeColumn = false; // Invoices don't have this field from the user request
-  const showDiscountColumn = true; // Assume always shown for invoice
-  const showTaxColumn = true; // Assume always shown for invoice
+  const showItemCodeColumn = true; 
+  const showDiscountColumn = true;
+  const showTaxColumn = true;
 
 
   return (
@@ -259,38 +259,39 @@ export default function PrintSaleInvoicePage() {
           </table>
         </section>
 
-        <section className="flex justify-end mb-8">
-          <div className="w-full max-w-sm text-sm space-y-1">
-            <div className="grid grid-cols-2">
-              <span className="text-gray-600 text-right pr-4">Subtotal:</span>
-              <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal, '')}</span>
-            </div>
-            {showDiscountColumn && (
-                <div className="grid grid-cols-2">
-                    <span className="text-gray-600 text-right pr-4">Total Discount:</span>
-                    <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount, '')}</span>
+        <section className="flex justify-between items-start">
+            <div className="w-1/2 pr-4 text-xs">
+                {invoiceData.comments && (
+                <div className="space-y-1">
+                    <h4 className="font-semibold text-gray-700 uppercase tracking-wide">Terms and Conditions:</h4>
+                    <div className="text-gray-600 whitespace-pre-line">{invoiceData.comments}</div>
                 </div>
-            )}
-            {showTaxColumn && (
-                <div className="grid grid-cols-2">
-                    <span className="text-gray-600 text-right pr-4">Total Tax ({invoiceData.taxType}):</span>
-                    <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount, '')}</span>
-                </div>
-            )}
-            <Separator className="my-2 border-gray-300" />
-            <div className="grid grid-cols-2 text-base font-bold">
-              <span className="text-gray-900 text-right pr-4">Grand Total:</span>
-              <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount, '')}</span>
+                )}
             </div>
-          </div>
+            <div className="w-full max-w-sm text-sm space-y-1">
+                <div className="grid grid-cols-2">
+                    <span className="text-gray-600 text-right pr-4">Subtotal:</span>
+                    <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal, '')}</span>
+                </div>
+                {showDiscountColumn && (
+                    <div className="grid grid-cols-2">
+                        <span className="text-gray-600 text-right pr-4">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount, '')}</span>
+                    </div>
+                )}
+                {showTaxColumn && (
+                    <div className="grid grid-cols-2">
+                        <span className="text-gray-600 text-right pr-4">Total Tax ({invoiceData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount, '')}</span>
+                    </div>
+                )}
+                <Separator className="my-2 border-gray-300" />
+                <div className="grid grid-cols-2 text-base font-bold">
+                    <span className="text-gray-900 text-right pr-4">Grand Total:</span>
+                    <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount, '')}</span>
+                </div>
+            </div>
         </section>
-
-        {invoiceData.comments && (
-          <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
-            <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Terms and Conditions:</h4>
-            <p className="text-xs text-gray-600 whitespace-pre-line">{invoiceData.comments}</p>
-          </section>
-        )}
       </div>
 
       <div className="mt-auto pt-16">
