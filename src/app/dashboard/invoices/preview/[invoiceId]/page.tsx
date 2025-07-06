@@ -162,54 +162,46 @@ export default function PrintSaleInvoicePage() {
 
   return (
     <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="flex justify-between items-start mb-8">
-        {/* Left column for company and bill-to info */}
-        <div className="w-1/2 pr-8">
-            {/* Company Info */}
-            <div>
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  data-ai-hint="company logo"
-                  width={240}
-                  height={120}
-                  className="object-contain mb-2"
-                  priority
-                />
-              )}
-              <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
-              <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-              {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-              {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
-            </div>
-
-            {/* Bill To Info */}
-            <div className="mt-8">
-                <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Bill To:</h3>
-                <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
-                {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
-                {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
-                {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
-            </div>
+      <div className="flex justify-between items-start mb-4">
+        <div className="w-2/3 pr-8">
+          {displayCompanyLogo && (
+            <Image
+              src={displayCompanyLogo}
+              alt={`${displayCompanyName} Logo`}
+              width={240}
+              height={120}
+              className="object-contain mb-2"
+              priority
+              data-ai-hint="company logo"
+            />
+          )}
+          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
+          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+          {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+          {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
 
-        {/* Right column for invoice details */}
-        <div className="w-1/2 text-right">
+        <div className="w-1/3 text-right">
           <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Invoice</h2>
           <p className="text-sm"><strong>Invoice No:</strong> {invoiceData.id.substring(0, 10).toUpperCase()}</p>
           <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(invoiceData.invoiceDate)}</p>
         </div>
       </div>
 
-      <Separator className="my-6 border-gray-300" />
+      <Separator className="my-4 border-gray-300" />
       
-      {invoiceData.shippingAddress && invoiceData.shippingAddress !== invoiceData.billingAddress && (
-        <section className="mb-8">
-            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Ship To:</h3>
-            <p className="text-xs text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress}</p>
-        </section>
-      )}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+            <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
+            {invoiceData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress}</p>}
+        </div>
+        <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+            <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
+            {invoiceData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress}</p>}
+        </div>
+      </div>
 
       <section className="mb-8">
         <table className="w-full text-sm border-collapse table-fixed">
