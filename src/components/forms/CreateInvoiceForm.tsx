@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceLineItemFormValues, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceStatus } from '@/types';
-import { InvoiceLineItemSchema, InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types'; // Use Invoice schemas
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag, Hash } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag, Hash, Columns } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,6 +25,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -35,6 +43,8 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  manageStock?: boolean;
+  currentQuantity?: number;
 }
 
 export function CreateInvoiceForm() {
@@ -50,15 +60,18 @@ export function CreateInvoiceForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
+  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
+  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
+
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema),
     defaultValues: {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      invoiceDate: new Date(), // Changed from quoteDate
-      dueDate: undefined, // Added for invoice
-      paymentTerms: '', // Added for invoice
+      invoiceDate: new Date(),
+      dueDate: undefined,
+      paymentTerms: '',
       salesperson: '',
       lineItems: [{
         itemId: '',
@@ -111,6 +124,8 @@ export function CreateInvoiceForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
+              manageStock: data.manageStock,
+              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -190,7 +205,7 @@ export function CreateInvoiceForm() {
     setIsSubmitting(true);
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "invoiceNumberGenerator"); // Changed counter ID
+    const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
 
     try {
       const newInvoiceId = await runTransaction(firestore, async (transaction) => {
@@ -201,7 +216,7 @@ export function CreateInvoiceForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(2, '0')}`; // Changed ID format
+        const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0'));
@@ -243,7 +258,7 @@ export function CreateInvoiceForm() {
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
-          invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Changed from quoteDate
+          invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
           paymentTerms: data.paymentTerms || undefined,
           salesperson: data.salesperson,
@@ -264,7 +279,7 @@ export function CreateInvoiceForm() {
           Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined)
         ) as typeof invoiceDataToSave;
 
-        const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId); // Changed collection
+        const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
         transaction.set(newInvoiceRef, cleanedDataToSave);
 
         const newCounters = {
@@ -314,14 +329,14 @@ export function CreateInvoiceForm() {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(`/dashboard/invoices/preview/${newId}`); // Updated path
+        router.push(`/dashboard/invoices/preview/${newId}`);
       });
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedInvoiceId) {
-      router.push(`/dashboard/invoices/preview/${generatedInvoiceId}`); // Updated path
+      router.push(`/dashboard/invoices/preview/${generatedInvoiceId}`);
     } else {
       Swal.fire("No Invoice Saved", "Please save an invoice first to preview it.", "info");
     }
@@ -341,7 +356,7 @@ export function CreateInvoiceForm() {
 
   return (
     <Form {...form}>
-      <form className="space-y-8">
+      <form onSubmit={handleSubmit(handleRegularSave)} className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
@@ -429,10 +444,10 @@ export function CreateInvoiceForm() {
             </FormItem>
             <FormField
                 control={control}
-                name="invoiceDate" // Changed from quoteDate
+                name="invoiceDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Invoice Date*</FormLabel> {/* Changed from Quote Date */}
+                    <FormLabel>Invoice Date*</FormLabel>
                     <DatePickerField field={field} placeholder="Select invoice date" />
                     <FormMessage />
                 </FormItem>
@@ -509,12 +524,41 @@ export function CreateInvoiceForm() {
         </div>
 
         <Separator />
-        <h3 className={cn(sectionHeadingClass)}>
-          <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
-        </h3>
+        <div className="flex justify-between items-center">
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Columns className="mr-2 h-4 w-4" />
+                    Columns
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                    checked={showDiscountColumn}
+                    onCheckedChange={setShowDiscountColumn}
+                >
+                    Discount %
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                    checked={showTaxColumn}
+                    onCheckedChange={setShowTaxColumn}
+                >
+                    Tax %
+                </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
         <div className="rounded-md border overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead><TableHead className="w-[100px]">Discount %</TableHead><TableHead className="w-[100px]">Tax %</TableHead><TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+            {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
+            {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
+            <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -522,8 +566,8 @@ export function CreateInvoiceForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE} onValueChange={(itemId) => { itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -537,7 +581,7 @@ export function CreateInvoiceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormLabel>Comments (Public)</FormLabel>
                 <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -562,8 +606,8 @@ export function CreateInvoiceForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview Invoice
