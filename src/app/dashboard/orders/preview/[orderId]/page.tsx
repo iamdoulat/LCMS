@@ -205,25 +205,25 @@ export default function PrintOrderPage() {
         <table className="w-full text-sm border-collapse">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
-              <th className="p-2 border border-gray-300 text-left font-semibold">#</th>
-              <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
-              <th className="p-2 border border-gray-300 text-center font-semibold">Qty</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold">Unit Price</th>
-              <th className="p-2 border border-gray-300 text-right font-semibold">Total</th>
+              <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
+              <th className="p-2 border border-gray-300 text-left font-semibold w-[55%]">Item Description</th>
+              <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
             </tr>
           </thead>
           <tbody>
             {orderData.lineItems.map((item, index) => (
               <tr key={item.itemId || index} className="border-b border-gray-200">
-                <td className="p-2 border border-gray-300 text-center">{index + 1}</td>
-                <td className="p-2 border border-gray-300">
+                <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
+                <td className="p-2 border border-gray-300 align-top break-words">
                   <p className="font-medium text-gray-900">{item.itemName}</p>
                   {item.itemCode && <p className="text-xs text-gray-500">Code: {item.itemCode}</p>}
                   {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                 </td>
-                <td className="p-2 border border-gray-300 text-center">{item.qty}</td>
-                <td className="p-2 border border-gray-300 text-right">{formatCurrency(item.unitPrice, '')}</td>
-                <td className="p-2 border border-gray-300 text-right font-medium">{formatCurrency(item.total, '')}</td>
+                <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
+                <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
+                <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
               </tr>
             ))}
           </tbody>
