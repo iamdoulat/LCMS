@@ -144,20 +144,6 @@ export function CreateInvoiceForm() {
   }, []);
 
   React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
-        setValue("shippingAddress", selectedCustomer.address || "");
-      }
-    } else {
-      setValue("billingAddress", "");
-      setValue("shippingAddress", "");
-    }
-  }, [watchedCustomerId, customerOptions, setValue]);
-
-
-  React.useEffect(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -404,6 +390,7 @@ export function CreateInvoiceForm() {
             </div>
         </div>
         <Separator />
+        
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => { form.reset(); setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0); setGeneratedInvoiceId(null);}}><X className="mr-2 h-4 w-4" />Cancel</Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>

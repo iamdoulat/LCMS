@@ -14,7 +14,7 @@ import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DatePickerField } from './DatePickerField';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag, Hash, Columns } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -145,19 +145,6 @@ export function CreateQuoteForm() {
     };
     fetchOptions();
   }, []);
-
-  React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        setValue("shippingAddress", selectedCustomer.address || "");
-        setValue("billingAddress", selectedCustomer.address || "");
-      }
-    } else {
-      setValue("shippingAddress", "");
-      setValue("billingAddress", "");
-    }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -429,7 +416,7 @@ export function CreateQuoteForm() {
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

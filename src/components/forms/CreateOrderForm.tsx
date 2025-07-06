@@ -1,6 +1,5 @@
 
 
-
 "use client";
 
 import * as React from 'react';
@@ -141,19 +140,6 @@ export function CreateOrderForm() {
     };
     fetchOptions();
   }, []);
-
-  React.useEffect(() => {
-    if (watchedBeneficiaryId) {
-      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
-      if (selectedBeneficiary) {
-        setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", selectedBeneficiary.address || "");
-      }
-    } else {
-        setValue("billingAddress", "");
-        setValue("shippingAddress", "");
-    }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;

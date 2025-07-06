@@ -164,16 +164,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const watchedGlobalTaxRate = watch("globalTaxRate");
   
   React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
-        setValue("shippingAddress", selectedCustomer.address || "");
-      }
-    }
-  }, [watchedCustomerId, customerOptions, setValue]);
-
-  React.useEffect(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
