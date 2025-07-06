@@ -372,7 +372,9 @@ export function CreateInvoiceForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., Regarding supply of capital machinery..."
+                  className="text-xs"
                   {...field}
+                  value={field.value ?? ''}
                   rows={2}
                 />
               </FormControl>

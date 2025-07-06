@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -403,6 +402,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  className="text-xs"
                   {...field}
                   rows={2}
                 />
@@ -489,8 +489,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>

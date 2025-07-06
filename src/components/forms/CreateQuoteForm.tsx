@@ -162,14 +162,12 @@ export function CreateQuoteForm() {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -177,28 +175,22 @@ export function CreateQuoteForm() {
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           lineTotal = itemTotalAfterDiscount + lineTaxAmount;
-          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
-        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
-
     setSubtotal(currentSubtotal);
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
-
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-
   }, [watchedLineItems, watchedTaxType, watchedGlobalDiscount, watchedGlobalTaxRate, setValue, getValues]);
 
 
@@ -436,7 +428,6 @@ export function CreateQuoteForm() {
             />
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -524,6 +515,7 @@ export function CreateQuoteForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  className="text-xs"
                   {...field}
                   rows={2}
                 />
