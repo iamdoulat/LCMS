@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -218,6 +218,10 @@ export default function QuotesListPage() {
     });
   };
 
+  const handleDownloadPdf = (quoteId: string) => {
+    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
+  };
+
   const clearFilters = () => {
     setFilterQuoteNumber('');
     setFilterCustomerId('');
@@ -382,6 +386,10 @@ export default function QuotesListPage() {
                             <DropdownMenuItem onClick={() => quote.id && handleEditQuote(quote.id)}>
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => quote.id && handleDownloadPdf(quote.id)}>
+                              <FileDown className="mr-2 h-4 w-4" />
+                              <span>Download PDF</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => quote.id && handleDeleteQuote(quote.id, quote.id.substring(0,8))}
