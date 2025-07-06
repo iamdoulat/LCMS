@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
 import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -64,15 +64,15 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema),
   });
 
   const { control, setValue, watch, getValues, reset } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -129,6 +129,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
+            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+            showDiscountColumn: initialData.showDiscountColumn ?? true,
+            showTaxColumn: initialData.showTaxColumn ?? true,
           });
         }
       } catch (error) {
@@ -259,6 +262,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
       status: data.status,
+      showItemCodeColumn: data.showItemCodeColumn,
+      showDiscountColumn: data.showDiscountColumn,
+      showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
     };
 
@@ -339,9 +345,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
-                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
-            </h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -354,19 +358,19 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
-                    onCheckedChange={setShowItemCodeColumn}
+                    onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
                 >
                     Item Code
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
-                    onCheckedChange={setShowDiscountColumn}
+                    onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}
                 >
                     Discount %
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showTaxColumn}
-                    onCheckedChange={setShowTaxColumn}
+                    onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}
                 >
                     Tax %
                 </DropdownMenuCheckboxItem>

@@ -941,6 +941,9 @@ export const InvoiceSchema = z.object({
   totalAmount: z.number().optional(),
   status: z.enum(invoiceStatusOptions).optional(),
   amountPaid: z.number().optional(),
+  showItemCodeColumn: z.boolean().optional().default(true),
+  showDiscountColumn: z.boolean().optional().default(true),
+  showTaxColumn: z.boolean().optional().default(true),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -980,6 +983,9 @@ export interface InvoiceDocument {
   refundDate?: string; // ISO string
   createdAt: any;
   updatedAt: any;
+  showItemCodeColumn?: boolean;
+  showDiscountColumn?: boolean;
+  showTaxColumn?: boolean;
 }
 // --- END Invoice Types ---
 
