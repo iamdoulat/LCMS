@@ -44,6 +44,10 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
+interface CustomerOption extends ComboboxOption {
+  address?: string;
+}
+
 interface EditInvoiceFormProps {
   initialData: InvoiceDocument;
   invoiceId: string;
@@ -51,7 +55,7 @@ interface EditInvoiceFormProps {
 
 export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -136,6 +140,17 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
+  const watchedCustomerId = watch("customerId");
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
+        setValue("shippingAddress", selectedCustomer.address || "");
+      }
+    }
+  }, [watchedCustomerId, customerOptions, setValue]);
+
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -218,7 +233,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       return {
         itemId: item.itemId,
         itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
-        itemCode: itemDetailsFromOptions?.itemCode || undefined,
+        itemCode: itemDetailsFromOptions?.itemCode,
         description: item.description || '',
         qty,
         unitPrice: finalUnitPrice,

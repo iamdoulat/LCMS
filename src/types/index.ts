@@ -901,7 +901,6 @@ export const SaleSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
-  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
@@ -940,7 +939,6 @@ export const InvoiceSchema = z.object({
   totalAmount: z.number().optional(),
   status: z.enum(invoiceStatusOptions).optional(),
   amountPaid: z.number().optional(),
-  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -1014,7 +1012,6 @@ export const OrderSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
-  sameAsBilling: z.boolean().optional().default(true), // This is for form logic, not saved
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 

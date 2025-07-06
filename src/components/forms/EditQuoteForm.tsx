@@ -55,6 +55,10 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
+interface CustomerOption extends ComboboxOption {
+  address?: string;
+}
+
 interface EditQuoteFormProps {
   initialData: QuoteDocument;
   quoteId: string;
@@ -66,7 +70,7 @@ type QuoteLineItemFormValues = PageQuoteLineItemFormValues;
 
 export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -101,7 +105,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
         const fetchedCustomers = customersSnap.docs.map(docSnap => {
           const data = docSnap.data() as CustomerDocument;
-          return { value: docSnap.id, label: data.applicantName || 'Unnamed Customer' };
+          return { value: docSnap.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
         });
         setCustomerOptions(fetchedCustomers);
 
@@ -150,11 +154,22 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-
+  
+  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
   const watchedGlobalTaxRate = watch("globalTaxRate");
+  
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
+        setValue("shippingAddress", selectedCustomer.address || "");
+      }
+    }
+  }, [watchedCustomerId, customerOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -284,7 +299,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         text: `Quote Number: ${quoteId} successfully updated.`,
         icon: "success",
       });
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error("Error updating quote: ", error);
       Swal.fire({
         title: "Update Failed",
@@ -475,6 +490,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 quoteDate: initialData.quoteDate ? parseISO(initialData.quoteDate) : new Date(),
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
+                  itemCode: item.itemCode || '',
                   qty: item.qty.toString(),
                   unitPrice: item.unitPrice.toString(),
                   discountPercentage: item.discountPercentage?.toString() || '0',

@@ -46,13 +46,17 @@ interface ItemOption extends ComboboxOption {
   currentQuantity?: number;
 }
 
+interface CustomerOption extends ComboboxOption {
+  address?: string;
+}
+
 type SaleFormValues = PageSaleFormValues;
 type SaleLineItemFormValues = PageSaleLineItemFormValues;
 
 
 export function CreateSaleForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -71,7 +75,6 @@ export function CreateSaleForm() {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      sameAsBilling: true,
       saleDate: new Date(),
       salesperson: '',
       lineItems: [{
@@ -98,8 +101,6 @@ export function CreateSaleForm() {
   });
 
   const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -148,24 +149,14 @@ export function CreateSaleForm() {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        const billingAddr = (selectedCustomer as any).address || '';
-        setValue("billingAddress", billingAddr);
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", billingAddr);
-        }
+        setValue("billingAddress", selectedCustomer.address || "");
+        setValue("shippingAddress", selectedCustomer.address || "");
       }
     } else {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
-
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
-
+  }, [watchedCustomerId, customerOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -387,23 +378,9 @@ export function CreateSaleForm() {
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center mb-1.5">
-                      <FormLabel>Delivery Address*</FormLabel>
-                      <FormField
-                          control={control}
-                          name="sameAsBilling"
-                          render={({ field: checkboxField }) => (
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxSale" />
-                              </FormControl>
-                              <Label htmlFor="sameAsBillingCheckboxSale" className="text-xs font-normal cursor-pointer">Same as billing</Label>
-                          </FormItem>
-                          )}
-                      />
-                  </div>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

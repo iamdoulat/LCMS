@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues } from '@/types';
+import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +62,7 @@ export function CreateQuoteForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const form = useForm<QuoteFormValues>({
+  const form = useForm<PageQuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
     defaultValues: {
       customerId: '',
@@ -83,9 +83,9 @@ export function CreateQuoteForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
-      showItemCodeColumn: false,
-      showDiscountColumn: false,
-      showTaxColumn: false,
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
     },
   });
 
@@ -100,6 +100,7 @@ export function CreateQuoteForm() {
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
 
+  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
@@ -143,6 +144,19 @@ export function CreateQuoteForm() {
     };
     fetchOptions();
   }, []);
+
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
+        setValue("shippingAddress", selectedCustomer.address || "");
+      }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
+    }
+  }, [watchedCustomerId, customerOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -421,7 +435,6 @@ export function CreateQuoteForm() {
             />
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField

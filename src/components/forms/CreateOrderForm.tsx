@@ -74,7 +74,6 @@ export function CreateOrderForm() {
       beneficiaryId: '', // Changed from customerId
       billingAddress: '',
       shippingAddress: '',
-      sameAsBilling: true,
       orderDate: new Date(),
       salesperson: '',
       lineItems: [{
@@ -101,8 +100,6 @@ export function CreateOrderForm() {
   });
 
   const watchedBeneficiaryId = watch("beneficiaryId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -150,18 +147,13 @@ export function CreateOrderForm() {
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
         setValue("billingAddress", selectedBeneficiary.address || "");
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", selectedBeneficiary.address || "");
-        }
+        setValue("shippingAddress", selectedBeneficiary.address || "");
       }
+    } else {
+        setValue("billingAddress", "");
+        setValue("shippingAddress", "");
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
-
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -413,23 +405,9 @@ export function CreateOrderForm() {
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center mb-1.5">
-                      <FormLabel>Delivery Address*</FormLabel>
-                      <FormField
-                          control={control}
-                          name="sameAsBilling"
-                          render={({ field: checkboxField }) => (
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxOrder" />
-                              </FormControl>
-                              <Label htmlFor="sameAsBillingCheckboxOrder" className="text-xs font-normal cursor-pointer">Same as billing</Label>
-                          </FormItem>
-                          )}
-                      />
-                  </div>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -477,7 +455,7 @@ export function CreateOrderForm() {
         </h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel> {/* Changed from Order ID */}
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
               <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField

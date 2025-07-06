@@ -74,7 +74,6 @@ export function CreateInvoiceForm() {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      sameAsBilling: true,
       invoiceDate: new Date(),
       dueDate: undefined,
       paymentTerms: '',
@@ -104,8 +103,6 @@ export function CreateInvoiceForm() {
   });
 
   const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -151,18 +148,14 @@ export function CreateInvoiceForm() {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
         setValue("billingAddress", selectedCustomer.address || "");
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", selectedCustomer.address || "");
-        }
+        setValue("shippingAddress", selectedCustomer.address || "");
       }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue, getValues]);
 
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -233,23 +226,26 @@ export function CreateInvoiceForm() {
         const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(3, '0')}`;
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0'));
-          const unitPrice = parseFloat(String(item.unitPrice || '0'));
-          const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
-          const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
-          const itemTotalBeforeDiscount = qty * unitPrice;
-          const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
+          const unitPriceStr = String(item.unitPrice || '0');
+          const finalUnitPrice = parseFloat(unitPriceStr);
+          const discountPercentageStr = String(item.discountPercentage || '0');
+          const finalDiscountPercentage = parseFloat(discountPercentageStr);
+          const taxPercentageStr = String(item.taxPercentage || '0');
+          const finalTaxPercentage = parseFloat(taxPercentageStr);
+          const itemTotalBeforeDiscount = qty * finalUnitPrice;
+          const discountAmount = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
           const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
-          const taxAmount = totalAfterDiscount * (taxPercentage / 100);
+          const taxAmount = totalAfterDiscount * (finalTaxPercentage / 100);
           const total = totalAfterDiscount + taxAmount;
           const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
             itemId: item.itemId, itemName: itemDetails?.label.split(' (')[0] || 'N/A', itemCode: itemDetails?.itemCode,
-            description: item.description || '', qty, unitPrice, discountPercentage, taxPercentage, total,
+            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
           };
         });
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0);
-        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * item.unitPrice * (item.discountPercentage/100)), 0);
-        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * item.unitPrice * (1 - (item.discountPercentage/100))) * (item.taxPercentage/100)), 0);
+        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
+        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
+        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
         const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: any, updatedAt: any } = {
           customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
@@ -320,10 +316,10 @@ export function CreateInvoiceForm() {
   return (
     <Form {...form}>
       <form className="space-y-8">
-        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="customerId" render={({ field }) => (<FormItem><FormLabel>Customer*</FormLabel><Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)} placeholder="Search Customer..." selectPlaceholder="Select Customer" emptyStateMessage="No customer found." disabled={isLoadingDropdowns}/><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><div className="flex justify-between items-center mb-1.5"><FormLabel>Delivery Address*</FormLabel><FormField control={control} name="sameAsBilling" render={({ field: checkboxField }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckbox" /></FormControl><Label htmlFor="sameAsBillingCheckbox" className="text-xs font-normal cursor-pointer">Same as billing</Label></FormItem>)}/></div><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Enter salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
