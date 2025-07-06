@@ -8,19 +8,21 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceStatus } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
@@ -40,6 +42,8 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  manageStock?: boolean;
+  currentQuantity?: number;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -68,6 +72,7 @@ export function CreateInvoiceForm() {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
+      sameAsBilling: true,
       invoiceDate: new Date(),
       dueDate: undefined,
       paymentTerms: '',
@@ -96,6 +101,8 @@ export function CreateInvoiceForm() {
   });
 
   const watchedCustomerId = watch("customerId");
+  const watchedSameAsBilling = watch("sameAsBilling");
+  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -124,6 +131,8 @@ export function CreateInvoiceForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
+              manageStock: data.manageStock,
+              currentQuantity: data.currentQuantity,
             };
           })
         );
@@ -142,15 +151,24 @@ export function CreateInvoiceForm() {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        const addr = selectedCustomer.address || '';
+        const addr = (selectedCustomer as any).address || '';
         setValue("billingAddress", addr);
-        setValue("shippingAddress", addr);
+        if (getValues("sameAsBilling")) {
+          setValue("shippingAddress", addr);
+        }
       }
     } else {
       setValue("billingAddress", "");
       setValue("shippingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue]);
+  }, [watchedCustomerId, customerOptions, setValue, getValues]);
+  
+  React.useEffect(() => {
+    if (watchedSameAsBilling) {
+      setValue("shippingAddress", getValues("billingAddress"));
+    }
+  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
+
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -163,7 +181,7 @@ export function CreateInvoiceForm() {
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        
+
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -171,12 +189,12 @@ export function CreateInvoiceForm() {
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           lineTotal = itemTotalAfterDiscount + lineTaxAmount;
-          
+
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
+
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -197,8 +215,8 @@ export function CreateInvoiceForm() {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; 
-      if (selectedItem.description) { 
+      let autoDescription = selectedItem.label;
+      if (selectedItem.description) {
         autoDescription = selectedItem.description;
       }
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
@@ -247,13 +265,13 @@ export function CreateInvoiceForm() {
     
           return {
             itemId: item.itemId,
-            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
             itemCode: itemDetailsFromOptions?.itemCode || undefined,
             description: item.description || '',
             qty: qty,
-            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+            unitPrice: finalUnitPrice,
+            discountPercentage: finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage,
             total: calculatedLineTotal,
           };
         });
@@ -367,6 +385,7 @@ export function CreateInvoiceForm() {
   return (
     <Form {...form}>
       <form className="space-y-8">
+        
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
           Customer & Delivery Information
@@ -399,9 +418,23 @@ export function CreateInvoiceForm() {
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
+                  <div className="flex justify-between items-center mb-1.5">
+                      <FormLabel>Delivery Address*</FormLabel>
+                      <FormField
+                          control={control}
+                          name="sameAsBilling"
+                          render={({ field: checkboxField }) => (
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxSale" />
+                              </FormControl>
+                              <Label htmlFor="sameAsBillingCheckboxSale" className="text-xs font-normal cursor-pointer">Same as billing</Label>
+                          </FormItem>
+                          )}
+                      />
+                  </div>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -616,13 +649,13 @@ export function CreateInvoiceForm() {
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
+              {isSubmitting && form.formState.isSubmitting && form.formState.isValid ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Save and Preview Invoice
+                <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
             <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Preview Last Saved Invoice
+                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
             </Button>
         </div>
       </form>
