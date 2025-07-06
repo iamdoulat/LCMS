@@ -349,12 +349,12 @@ export function CreateInvoiceForm() {
           <div>
             <FormField
               control={control}
-              name="shippingAddress"
+              name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormLabel>Bill To*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                    <Textarea placeholder="Billing address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -381,12 +381,12 @@ export function CreateInvoiceForm() {
           <div>
             <FormField
               control={control}
-              name="billingAddress"
+              name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill To*</FormLabel>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -434,7 +434,7 @@ export function CreateInvoiceForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-xs"
+                  className="text-xs font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}

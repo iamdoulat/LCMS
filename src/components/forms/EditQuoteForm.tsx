@@ -403,7 +403,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
-                  className="text-xs"
+                  className="text-xs font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}
