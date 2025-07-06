@@ -1,101 +1,280 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import type { QuoteDocument, CustomerDocument, CompanyProfile } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { Loader2, Printer, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, Loader2, Printer } from 'lucide-react';
-import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
+import Image from 'next/image';
+import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
-// Placeholder: Add imports for fetching quote data and types if you implement full preview
 
-export default function QuotePreviewPage() {
+const COMPANY_PROFILE_COLLECTION = 'company_profile';
+const COMPANY_PROFILE_DOC_ID = 'main_profile';
+const DEFAULT_COMPANY_NAME = 'Smart Solution';
+const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
+const formatDisplayDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
+const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
+  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export default function PrintQuotePage() {
   const params = useParams();
   const router = useRouter();
   const quoteId = params.quoteId as string;
 
-  // Placeholder: State and useEffect for fetching actual quote data would go here
-  const [isLoading, setIsLoading] = React.useState(false); // Set to true if fetching data
-  const [quoteData, setQuoteData] = React.useState<any>(null); // Replace 'any' with actual QuoteDocument type
+  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl } = useAuth();
+  const [quoteData, setQuoteData] = useState<QuoteDocument | null>(null);
+  const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const fetchCompanyProfile = useCallback(async () => {
+    try {
+      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      const profileDocSnap = await getDoc(profileDocRef);
+      if (profileDocSnap.exists()) {
+        setCompanyProfile(profileDocSnap.data() as CompanyProfile);
+      } else {
+        setCompanyProfile({
+          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
+          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          address: 'Default Company Address, City, Country',
+          emailId: 'company@example.com',
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching company profile for print:", e);
+      setCompanyProfile({
+          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
+          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          address: 'Default Company Address, City, Country',
+          emailId: 'company@example.com',
+      });
+    }
+  }, [contextCompanyName, contextCompanyLogoUrl]);
 
-  // Placeholder: useEffect to fetch quote data based on quoteId
-  // React.useEffect(() => {
-  //   if (quoteId) {
-  //     setIsLoading(true);
-  //     // Fetch quote data from Firestore using quoteId
-  //     // setQuoteData(fetchedData);
-  //     // setIsLoading(false);
-  //   }
-  // }, [quoteId]);
+  const fetchQuoteAndCustomerData = useCallback(async () => {
+    if (!quoteId) {
+      setError("No Quote ID provided.");
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const quoteDocRef = doc(firestore, "quotes", quoteId);
+      const quoteDocSnap = await getDoc(quoteDocRef);
+
+      if (quoteDocSnap.exists()) {
+        const quote = { id: quoteDocSnap.id, ...quoteDocSnap.data() } as QuoteDocument;
+        setQuoteData(quote);
+
+        if (quote.customerId) {
+          const customerDocRef = doc(firestore, "customers", quote.customerId);
+          const customerDocSnap = await getDoc(customerDocRef);
+          if (customerDocSnap.exists()) {
+            setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
+          } else {
+            console.warn(`Customer with ID ${quote.customerId} not found.`);
+          }
+        }
+      } else {
+        setError("Quote record not found.");
+      }
+    } catch (err: any) {
+      setError(`Failed to fetch quote data: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [quoteId]);
+
+  useEffect(() => {
+    fetchCompanyProfile();
+    fetchQuoteAndCustomerData();
+  }, [fetchCompanyProfile, fetchQuoteAndCustomerData]);
+
+  useEffect(() => {
+    if (!isLoading && quoteData && companyProfile) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, quoteData, companyProfile]);
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading quote preview...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-gray-600">Loading quote...</p>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+        <p className="text-red-600 font-semibold">Error loading quote</p>
+        <p className="text-gray-700 text-sm mb-4">{error}</p>
+        <Button onClick={() => router.back()}>Go Back</Button>
+      </div>
+    );
+  }
+
+  if (!quoteData) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <p className="text-gray-700">Quote data could not be loaded.</p>
+        <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+      </div>
+    );
+  }
+
+  const displayCompanyName = companyProfile?.companyName || contextCompanyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyLogo = companyProfile?.companyLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+  const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
+  const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
+  const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
+
   return (
-    <div className="container mx-auto py-8 print-invoice-container"> {/* Added print-invoice-container for print styles */}
-      <div className="mb-6 flex justify-between items-center noprint">
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+    <div className="print-invoice-container bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+      <header className="flex justify-between items-start mb-8">
+        <div>
+          {displayCompanyLogo && (
+            <Image
+              src={displayCompanyLogo}
+              alt={`${displayCompanyName} Logo`}
+              width={120}
+              height={60}
+              className="object-contain mb-2"
+              priority
+              data-ai-hint="company logo"
+            />
+          )}
+          <h1 className="text-3xl font-bold text-gray-900">{displayCompanyName}</h1>
+          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+          {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+          {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+        </div>
+        <div className="text-right">
+          <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Quote</h2>
+          <p className="text-sm"><strong>Quote No:</strong> {quoteData.id}</p>
+          <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
+        </div>
+      </header>
+
+      <Separator className="my-6 border-gray-300" />
+
+      <section className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Quote For:</h3>
+          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+          {customerData?.address && <p className="text-xs text-gray-600 whitespace-pre-line">{customerData.address}</p>}
+          {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
+          {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
+        </div>
+        {quoteData.shippingAddress && quoteData.shippingAddress !== quoteData.billingAddress && (
+          <div className="text-right">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Ship To:</h3>
+            <p className="text-xs text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>
+          </div>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-100 text-gray-700">
+            <tr>
+              <th className="p-2 border border-gray-300 text-left font-semibold">#</th>
+              <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
+              <th className="p-2 border border-gray-300 text-center font-semibold">Qty</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold">Unit Price</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold">Discount (%)</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold">Tax (%)</th>
+              <th className="p-2 border border-gray-300 text-right font-semibold">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quoteData.lineItems.map((item, index) => (
+              <tr key={item.itemId || index} className="border-b border-gray-200">
+                <td className="p-2 border border-gray-300 text-center">{index + 1}</td>
+                <td className="p-2 border border-gray-300">
+                  <p className="font-medium text-gray-900">{item.itemName}</p>
+                  {item.itemCode && <p className="text-xs text-gray-500">Code: {item.itemCode}</p>}
+                  {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
+                </td>
+                <td className="p-2 border border-gray-300 text-center">{item.qty}</td>
+                <td className="p-2 border border-gray-300 text-right">{formatCurrency(item.unitPrice, '')}</td>
+                <td className="p-2 border border-gray-300 text-right">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>
+                <td className="p-2 border border-gray-300 text-right">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>
+                <td className="p-2 border border-gray-300 text-right font-medium">{formatCurrency(item.total, '')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="flex justify-end mb-8">
+        <div className="w-full max-w-xs text-sm">
+          <div className="flex justify-between py-1">
+            <span className="text-gray-600">Subtotal:</span>
+            <span className="text-gray-800">{formatCurrency(quoteData.subtotal, '')}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-gray-600">Total Discount:</span>
+            <span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-gray-600">Total Tax ({quoteData.taxType}):</span>
+            <span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
+          </div>
+          <Separator className="my-2 border-gray-300" />
+          <div className="flex justify-between py-1 text-lg font-bold">
+            <span className="text-gray-900">Grand Total:</span>
+            <span className="text-blue-600">{formatCurrency(quoteData.totalAmount, '')}</span>
+          </div>
+        </div>
+      </section>
+
+      {quoteData.comments && (
+        <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
+          <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Comments:</h4>
+          <p className="text-xs text-gray-600 whitespace-pre-line">{quoteData.comments}</p>
+        </section>
+      )}
+
+      <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200">
+        <p>Thank you for your business!</p>
+        <p>{displayCompanyName} - {displayCompanyEmail}</p>
+      </footer>
+
+      <div className="print-only-utility-buttons mt-8 text-center noprint">
+        <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
+          <Printer className="mr-2 h-4 w-4" /> Print Quote
         </Button>
-        <Button variant="default" onClick={handlePrint}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print Quote
+        <Button onClick={() => router.back()} variant="outline" className="ml-2">
+          Close
         </Button>
       </div>
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <FileText className="h-7 w-7 text-primary" />
-            Quote Preview
-          </CardTitle>
-          <CardDescription>
-            Previewing Quote ID: <span className="font-semibold text-foreground">{quoteId}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* 
-            Placeholder for actual quote content rendering.
-            You would map over quoteData.lineItems here, display customer info, totals, etc.
-            For now, just showing a placeholder message.
-          */}
-          <div className="py-10 text-center text-muted-foreground">
-            <p className="text-lg">Full Quote Preview Content Will Be Displayed Here.</p>
-            <p>This includes company details, customer information, line items, and totals.</p>
-            <p className="mt-4">Quote ID: <strong>{quoteId}</strong></p>
-          </div>
-          
-          {/* Example of how you might display some data if quoteData was populated */}
-          {quoteData && (
-            <div className="mt-6 space-y-4">
-              <div>
-                <h4 className="font-semibold">Customer:</h4>
-                <p>{quoteData.customerName || 'N/A'}</p>
-                <p className="text-sm text-muted-foreground">{quoteData.billingAddress || 'N/A'}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold">Line Items:</h4>
-                {/* Map through quoteData.lineItems here */}
-              </div>
-              <div className="text-right">
-                <p><span className="text-muted-foreground">Subtotal:</span> {quoteData.subtotal?.toFixed(2) || '0.00'}</p>
-                <p><span className="text-muted-foreground">Grand Total:</span> <span className="font-bold text-primary">{quoteData.totalAmount?.toFixed(2) || '0.00'}</span></p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
