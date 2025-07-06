@@ -83,9 +83,9 @@ export function CreateQuoteForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
-      showItemCodeColumn: true,
-      showDiscountColumn: true,
-      showTaxColumn: true,
+      showItemCodeColumn: false,
+      showDiscountColumn: false,
+      showTaxColumn: false,
     },
   });
 
@@ -663,5 +663,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-
-    

@@ -137,9 +137,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
-            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
-            showDiscountColumn: initialData.showDiscountColumn ?? true,
-            showTaxColumn: initialData.showTaxColumn ?? true,
+            showItemCodeColumn: initialData.showItemCodeColumn ?? false,
+            showDiscountColumn: initialData.showDiscountColumn ?? false,
+            showTaxColumn: initialData.showTaxColumn ?? false,
           });
         }
       } catch (error) {
@@ -347,7 +347,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                 <DropdownMenuCheckboxItem
+                <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
                     onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
                 >
@@ -481,9 +481,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
-                showItemCodeColumn: initialData.showItemCodeColumn ?? true,
-                showDiscountColumn: initialData.showDiscountColumn ?? true,
-                showTaxColumn: initialData.showTaxColumn ?? true,
+                showItemCodeColumn: initialData.showItemCodeColumn ?? false,
+                showDiscountColumn: initialData.showDiscountColumn ?? false,
+                showTaxColumn: initialData.showTaxColumn ?? false,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -495,5 +495,3 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
-
-    
