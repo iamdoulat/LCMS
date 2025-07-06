@@ -134,6 +134,7 @@ body {
     box-shadow: none !important;
     border: none !important;
     min-height: 0 !important; /* Reset min-height for print */
+    background-color: #ffffff !important;
   }
 
   h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {
