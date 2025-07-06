@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { z } from 'zod';
 import { Loader2, Save } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore, auth } from '@/lib/firebase/config'; // Import auth
+import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
@@ -18,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label'; // Make sure Label is imported
+import { Label } from '@/components/ui/label';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -35,6 +34,10 @@ const companySetupSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Company Logo" }).optional()
   ),
+  invoiceLogoUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
+  ),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -48,9 +51,11 @@ const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc
 export function CompanySetupForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile } = useAuth();
+  const { user: authUser, loading: authLoading, companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile, userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   
   const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+  const [currentInvoiceLogoUrlForPreview, setCurrentInvoiceLogoUrlForPreview] = React.useState<string | undefined>(undefined);
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
@@ -59,30 +64,28 @@ export function CompanySetupForm() {
       address: DEFAULT_ADDRESS,
       contactPerson: '',
       cellNumber: '',
-      emailId: contextCompanyName || DEFAULT_EMAIL,
+      emailId: DEFAULT_EMAIL,
       binNumber: '',
       tinNumber: '',
       companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+      invoiceLogoUrl: '',
     },
   });
 
   React.useEffect(() => {
     const fetchCompanyData = async () => {
       setIsLoadingData(true);
-      console.log("CompanySetupForm: Attempting to fetch company profile. User UID:", auth.currentUser?.uid);
       try {
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
         
         let initialProfileData: CompanySetupFormValues = {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          address: DEFAULT_ADDRESS, // Default if not found
-          emailId: DEFAULT_EMAIL, // Default if not found
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          contactPerson: '',
-          cellNumber: '',
-          binNumber: '',
-          tinNumber: '',
+          invoiceLogoUrl: '',
+          contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         };
 
         if (profileDocSnap.exists()) {
@@ -96,57 +99,46 @@ export function CompanySetupForm() {
             binNumber: data.binNumber || '',
             tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            invoiceLogoUrl: data.invoiceLogoUrl || '',
           };
-        } else {
-          console.log("Company profile document does not exist in Firestore. Using defaults/context values.");
         }
-        
         form.reset(initialProfileData);
         setCurrentLogoUrlForPreview(initialProfileData.companyLogoUrl);
-
+        setCurrentInvoiceLogoUrlForPreview(initialProfileData.invoiceLogoUrl);
       } catch (error) {
-        console.error("CompanySetupForm: Error fetching company profile from Firestore:", error);
-        Swal.fire("Error", "Could not load company profile from Firestore. Using default or cached values.", "error");
-        // Fallback to context or defaults if Firestore fetch fails
+        console.error("CompanySetupForm: Error fetching company profile:", error);
+        Swal.fire("Error", "Could not load company profile. Using defaults.", "error");
         form.reset({
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          address: DEFAULT_ADDRESS,
-          emailId: contextCompanyName || DEFAULT_EMAIL,
+          address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          contactPerson: '',
-          cellNumber: '',
-          binNumber: '',
-          tinNumber: '',
+          invoiceLogoUrl: '',
+          contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         });
         setCurrentLogoUrlForPreview(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+        setCurrentInvoiceLogoUrlForPreview(undefined);
       } finally {
         setIsLoadingData(false);
       }
     };
-    if(auth.currentUser) { // Ensure user is loaded before fetching
+
+    if (!authLoading) { 
+      if (authUser) { 
         fetchCompanyData();
-    } else {
-        // Handle case where user is not loaded, perhaps wait or use default
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            if (user) {
-                fetchCompanyData();
-                unsubscribe(); // Unsubscribe after first auth state change
-            } else if (!auth.currentUser && !isLoadingData) { // If still no user and not loading, probably unauth access
-                setIsLoadingData(false); // Stop loading
-                form.reset({ // Use defaults
-                    companyName: DEFAULT_COMPANY_NAME,
-                    address: DEFAULT_ADDRESS,
-                    emailId: DEFAULT_EMAIL,
-                    companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
-                    contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
-                });
-                setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
-            }
+      } else { 
+        setIsLoadingData(false); 
+         form.reset({
+          companyName: DEFAULT_COMPANY_NAME, address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
+          companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: '',
+          contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         });
-        return () => unsubscribe(); // Cleanup listener
+        setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
+        setCurrentInvoiceLogoUrlForPreview(undefined);
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.reset, contextCompanyName, contextCompanyLogoUrl]); // Dependencies for re-fetch or re-init
+  }, [form, contextCompanyName, contextCompanyLogoUrl, authLoading, authUser]);
+
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
@@ -159,7 +151,8 @@ export function CompanySetupForm() {
       emailId: data.emailId || undefined,
       binNumber: data.binNumber || undefined,
       tinNumber: data.tinNumber || undefined,
-      companyLogoUrl: data.companyLogoUrl || undefined, // Save as undefined if empty
+      companyLogoUrl: data.companyLogoUrl || undefined,
+      invoiceLogoUrl: data.invoiceLogoUrl || undefined,
       updatedAt: serverTimestamp(),
     };
 
@@ -173,8 +166,13 @@ export function CompanySetupForm() {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
-      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl || undefined });
+      updateCompanyProfile({ 
+        name: data.companyName, 
+        logoUrl: data.companyLogoUrl || undefined,
+        invoiceLogoUrl: data.invoiceLogoUrl || undefined 
+      });
       setCurrentLogoUrlForPreview(data.companyLogoUrl || undefined);
+      setCurrentInvoiceLogoUrlForPreview(data.invoiceLogoUrl || undefined);
 
       Swal.fire({
         title: "Company Information Saved!",
@@ -196,16 +194,23 @@ export function CompanySetupForm() {
     }
   }
 
-  // Watch the URL input to update the preview locally on the form
   const watchedLogoUrl = form.watch("companyLogoUrl");
+  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
+
   React.useEffect(() => {
     if (watchedLogoUrl !== currentLogoUrlForPreview) {
       setCurrentLogoUrlForPreview(watchedLogoUrl);
     }
   }, [watchedLogoUrl, currentLogoUrlForPreview]);
 
+  React.useEffect(() => {
+    if (watchedInvoiceLogoUrl !== currentInvoiceLogoUrlForPreview) {
+      setCurrentInvoiceLogoUrlForPreview(watchedInvoiceLogoUrl);
+    }
+  }, [watchedInvoiceLogoUrl, currentInvoiceLogoUrlForPreview]);
 
-  if (isLoadingData) {
+
+  if (isLoadingData || authLoading) {
     return (
       <div className="flex items-center justify-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -227,6 +232,7 @@ export function CompanySetupForm() {
                 <Input 
                   placeholder="Enter your company's official name" 
                   {...field}
+                  disabled={isReadOnly}
                 />
               </FormControl>
               <FormMessage />
@@ -241,7 +247,7 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Company Address*</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter company's full registered address" {...field} rows={3} />
+                <Textarea placeholder="Enter company's full registered address" {...field} rows={3} disabled={isReadOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -259,7 +265,8 @@ export function CompanySetupForm() {
                   type="url" 
                   placeholder="https://example.com/logo.png" 
                   {...field} 
-                  value={field.value || ""} // Ensure controlled component by providing empty string for null/undefined
+                  value={field.value || ""} 
+                  disabled={isReadOnly}
                 />
               </FormControl>
               <FormDescription>
@@ -286,6 +293,44 @@ export function CompanySetupForm() {
           </div>
         )}
 
+        <FormField
+          control={form.control}
+          name="invoiceLogoUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Logo URL</FormLabel>
+              <FormControl>
+                <Input 
+                  type="url" 
+                  placeholder="https://example.com/invoice-logo.png" 
+                  {...field} 
+                  value={field.value || ""} 
+                  disabled={isReadOnly}
+                />
+              </FormControl>
+              <FormDescription>
+                A specific logo for invoices. If blank, the main company logo will be used.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         {currentInvoiceLogoUrlForPreview && currentInvoiceLogoUrlForPreview.trim() !== "" && (currentInvoiceLogoUrlForPreview.startsWith('http://') || currentInvoiceLogoUrlForPreview.startsWith('https://')) && (
+          <div className="space-y-2">
+            <Label>Invoice Logo Preview (495x72)</Label>
+            <Image 
+              src={currentInvoiceLogoUrlForPreview} 
+              alt="Invoice Logo Preview" 
+              width={495} 
+              height={72} 
+              className="rounded-sm border object-contain"
+              onError={() => {
+                console.warn("Error loading invoice logo preview from URL:", currentInvoiceLogoUrlForPreview);
+              }}
+              data-ai-hint="invoice logo"
+            />
+          </div>
+        )}
 
         <Separator />
 
@@ -297,7 +342,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Contact Person</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -310,7 +355,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>Cell Number</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} />
+                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -325,7 +370,7 @@ export function CompanySetupForm() {
             <FormItem>
               <FormLabel>Email ID</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} />
+                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -340,7 +385,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>BIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -353,7 +398,7 @@ export function CompanySetupForm() {
               <FormItem>
                 <FormLabel>TIN No.</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} />
+                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -365,7 +410,7 @@ export function CompanySetupForm() {
           This information will be used to pre-fill relevant fields in other parts of the application and for display purposes.
         </FormDescription>
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingData}>
+        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingData || isReadOnly}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

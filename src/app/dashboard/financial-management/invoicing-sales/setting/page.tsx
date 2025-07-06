@@ -1,23 +1,58 @@
+"use client";
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Settings } from 'lucide-react';
+import { Settings, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import { CompanySetupForm } from '@/components/forms/CompanySetupForm';
 
 export default function FinancialManagementSettingPage() {
+  const { userRole, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const isReadOnly = userRole === 'Viewer';
+
+  React.useEffect(() => {
+    // A non-admin can't change settings, but a viewer might be allowed to see them
+    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
+      Swal.fire({
+        title: 'Access Denied',
+        text: 'You do not have permission to view or edit these settings.',
+        icon: 'error',
+        timer: 2000,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push('/dashboard');
+      });
+    }
+  }, [userRole, authLoading, router, isReadOnly]);
+
+  // Show loading indicator while auth state is being resolved.
+  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Verifying access...</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl">
+      <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Settings className="h-7 w-7 text-primary" />
-            Financial Management Settings
+            Financial Document Settings
           </CardTitle>
           <CardDescription>
-            This page is under construction. Functionality for configuring settings related to invoicing and sales will be implemented here.
+            Manage company details that appear on quotes, invoices, and orders. Changes made here are global and will also be reflected in the main Company Setup page.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>Content for Financial Management Settings goes here.</p>
+          <CompanySetupForm />
         </CardContent>
       </Card>
     </div>
