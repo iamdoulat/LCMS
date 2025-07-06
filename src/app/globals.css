@@ -133,7 +133,7 @@ body {
     padding: 0 !important; /* Removed padding */
     box-shadow: none !important;
     border: none !important;
-    min-height: 0 !important; /* Reset min-height for print */
+    min-height: 100% !important; /* Changed this line */
     background-color: #ffffff !important;
   }
 
@@ -174,7 +174,6 @@ body {
   header, 
   nav,    
   aside,  
-  footer, 
   .noprint, 
   [data-sidebar="sidebar"],
   .sidebar-trigger,
@@ -183,6 +182,10 @@ body {
   .print-only-utility-buttons
   {
     display: none !important;
+  }
+  
+  .print-invoice-container footer {
+      display: block !important; /* Make sure the invoice footer is visible */
   }
 
   /* Ensure the main content area (where the form is) is printable */

@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
           <main className="flex-1 overflow-y-auto pt-4 px-6 pb-6 bg-gradient-to-br from-background to-muted"> {/* Ensure main has a background */}
             {children}
           </main>
-          <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card">
+          <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card noprint">
             © 2025 - Designed and Developed by{' '}
             <a
               href="https://vcard.mddoulat.com/iamdoulat"
