@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -435,6 +435,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+                showDiscountColumn: initialData.showDiscountColumn ?? true,
+                showTaxColumn: initialData.showTaxColumn ?? true,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
