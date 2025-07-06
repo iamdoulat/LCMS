@@ -247,7 +247,7 @@ export default function PrintOrderPage() {
           </table>
         </section>
 
-        <section className="flex justify-between items-start">
+        <section className="flex justify-between items-start mt-auto pt-8">
             <div className="w-1/2 pr-4 text-xs">
                 {orderData.comments && (
                 <div className="space-y-1">
@@ -256,26 +256,26 @@ export default function PrintOrderPage() {
                 </div>
                 )}
             </div>
-            <div className="w-full max-w-sm text-sm space-y-1">
-                <div className="grid grid-cols-2">
-                    <span className="text-gray-600 text-right pr-4">Subtotal:</span>
+            <div className="w-full max-w-xs text-sm space-y-1">
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                     <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
-                <div className="grid grid-cols-2">
-                    <span className="text-gray-600 text-right pr-4">Total Discount:</span>
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Total Discount:</span>
                     <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
                 </div>
                 )}
                 {showTaxColumn && (
-                <div className="grid grid-cols-2">
-                    <span className="text-gray-600 text-right pr-4">Total Tax ({orderData.taxType}):</span>
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
                     <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
                 </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 text-base font-bold">
-                    <span className="text-gray-900 text-right pr-4">Grand Total:</span>
+                <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
+                    <span className="text-gray-900 text-right">Grand Total:</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
                 </div>
             </div>
