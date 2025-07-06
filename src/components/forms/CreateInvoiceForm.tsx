@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -9,21 +8,19 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceStatus } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingBag, Hash, Columns } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
@@ -47,10 +44,14 @@ interface ItemOption extends ComboboxOption {
   currentQuantity?: number;
 }
 
+interface CustomerOption extends ComboboxOption {
+    address?: string;
+}
+
 export function CreateInvoiceForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
@@ -96,6 +97,7 @@ export function CreateInvoiceForm() {
     name: "lineItems",
   });
 
+  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
@@ -141,6 +143,20 @@ export function CreateInvoiceForm() {
   }, []);
 
   React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        const addr = selectedCustomer.address || '';
+        setValue("billingAddress", addr);
+        setValue("shippingAddress", addr); // Set both, user can edit manually
+      }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
+    }
+  }, [watchedCustomerId, customerOptions, setValue]);
+
+  React.useEffect(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -166,7 +182,6 @@ export function CreateInvoiceForm() {
         }
         
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
-        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -182,7 +197,6 @@ export function CreateInvoiceForm() {
     setGrandTotal(currentGrandTotal);
 
   }, [watchedLineItems, watchedTaxType, setValue, getValues]);
-
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -356,8 +370,7 @@ export function CreateInvoiceForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(handleRegularSave)} className="space-y-8">
-        
+      <form className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
           Customer & Delivery Information
@@ -581,7 +594,7 @@ export function CreateInvoiceForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel>Comments (Public)</FormLabel>
+                <FormLabel>Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -606,7 +619,7 @@ export function CreateInvoiceForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
@@ -620,3 +633,4 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
+
