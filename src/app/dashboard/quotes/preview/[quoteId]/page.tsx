@@ -185,7 +185,7 @@ export default function PrintQuotePage() {
         </div>
 
         <div className="text-right">
-            <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
+            <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Quote Number :</span>
                 <span>{quoteData.id}</span>

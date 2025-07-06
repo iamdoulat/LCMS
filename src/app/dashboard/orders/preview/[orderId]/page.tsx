@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -178,7 +179,7 @@ export default function PrintOrderPage() {
         </div>
 
         <div className="text-right">
-            <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+            <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Order Number :</span>
                 <span>{orderData.id}</span>
