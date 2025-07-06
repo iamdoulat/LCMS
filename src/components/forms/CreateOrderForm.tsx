@@ -174,12 +174,12 @@ export function CreateOrderForm() {
           const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
+          lineTotal = itemTotalAfterDiscount + taxAmountVal;
           
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
+          currentTotalTax += taxAmountVal;
         }
         
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
@@ -563,7 +563,7 @@ export function CreateOrderForm() {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>

@@ -74,7 +74,7 @@ export function CreateInvoiceForm() {
       dueDate: undefined,
       paymentTerms: '',
       salesperson: '',
-      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -433,7 +433,7 @@ export function CreateInvoiceForm() {
               <FormLabel>Invoice Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY."
                   className="text-[10px] font-normal"
                   {...field}
                   value={field.value ?? ''}
@@ -487,7 +487,7 @@ export function CreateInvoiceForm() {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>

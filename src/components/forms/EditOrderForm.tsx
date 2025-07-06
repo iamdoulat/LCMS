@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -7,20 +8,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
 import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types';
-import { OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
+import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Save, X, ShoppingCart, Hash, Columns, Printer, Edit, ShoppingBag } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +55,7 @@ interface EditOrderFormProps {
 }
 
 export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
@@ -284,15 +289,37 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}><Building className="mr-2 h-5 w-5 text-primary" />Beneficiary & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="beneficiaryId" render={({ field }) => (
-              <FormItem><FormLabel>Beneficiary*</FormLabel>
-                <Combobox options={beneficiaryOptions} value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_BENEFICIARY_VALUE ? '' : val)} placeholder="Search Beneficiary..." selectPlaceholder="Select Beneficiary" disabled={isLoadingDropdowns}/>
-                <FormMessage />
-              </FormItem>)}
+          <div>
+            <FormField
+              control={control}
+              name="beneficiaryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Beneficiary*</FormLabel>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(val) => field.onChange(val === PLACEHOLDER_BENEFICIARY_VALUE ? '' : val)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder="Select Beneficiary"
+                    disabled={isLoadingDropdowns}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <div><FormField control={control} name="billingAddress" render={({ field }) => (
-              <FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}
+          <div>
+            <FormField
+              control={control}
+              name="billingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bill To*</FormLabel>
+                  <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
         </div>
@@ -309,9 +336,8 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         </div>
         
         <Separator className="my-6" />
-
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
@@ -346,9 +372,16 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Terms and Conditions:</FormLabel><FormControl><Textarea placeholder="Terms and conditions" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
+
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>

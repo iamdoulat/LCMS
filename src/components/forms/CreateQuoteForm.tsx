@@ -70,7 +70,7 @@ export function CreateQuoteForm() {
       shippingAddress: '',
       quoteDate: new Date(),
       salesperson: '',
-      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -84,9 +84,9 @@ export function CreateQuoteForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
-      showItemCodeColumn: false,
-      showDiscountColumn: false,
-      showTaxColumn: false,
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
     },
   });
 
@@ -515,7 +515,7 @@ export function CreateQuoteForm() {
               <FormLabel>Quote Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY."
                   className="text-[10px] font-normal"
                   {...field}
                   value={field.value ?? ''}
@@ -595,7 +595,7 @@ export function CreateQuoteForm() {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} className="font-bold" rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
@@ -637,3 +637,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+

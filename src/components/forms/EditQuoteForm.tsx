@@ -84,7 +84,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     resolver: zodResolver(QuoteSchema),
   });
 
-  const { control, setValue, watch, getValues, reset } = form;
+  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
 
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
@@ -143,9 +143,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
-            showItemCodeColumn: initialData.showItemCodeColumn,
-            showDiscountColumn: initialData.showDiscountColumn,
-            showTaxColumn: initialData.showTaxColumn,
+            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+            showDiscountColumn: initialData.showDiscountColumn ?? true,
+            showTaxColumn: initialData.showTaxColumn ?? true,
           });
         }
       } catch (error) {
@@ -386,7 +386,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
-        
+
         <Separator className="my-6" />
         <FormField
           control={control}
@@ -396,7 +396,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               <FormLabel>Quote Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY."
                   className="text-[10px] font-normal"
                   {...field}
                   value={field.value ?? ''}
@@ -453,7 +453,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} className="font-bold" rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
