@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -373,7 +372,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-[10px] font-normal"
+                  className="text-xs font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}
@@ -429,7 +428,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
                 <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} className="font-bold" rows={3} /></FormControl>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
@@ -477,4 +476,3 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
-

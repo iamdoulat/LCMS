@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -434,7 +433,7 @@ export function CreateInvoiceForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-[10px] font-normal"
+                  className="text-xs font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}

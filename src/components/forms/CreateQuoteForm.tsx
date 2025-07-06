@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -82,7 +81,7 @@ export function CreateQuoteForm() {
         total: '0.00'
       }],
       taxType: 'Default',
-      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment:  Allowed\nPI Expiry Date : 30 days from above date",
+      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment: Allowed\nPI Expiry Date : 30 days from above date",
       privateComments: '',
       showItemCodeColumn: true,
       showDiscountColumn: true,
@@ -91,12 +90,12 @@ export function CreateQuoteForm() {
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
-
+  
   const { fields, append, remove } = useFieldArray({
     control,
     name: "lineItems",
   });
-  
+
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
@@ -512,7 +511,7 @@ export function CreateQuoteForm() {
               <FormControl>
                 <Textarea
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-[10px] font-normal"
+                  className="text-xs font-normal"
                   {...field}
                   value={field.value ?? ''}
                   rows={2}
@@ -633,6 +632,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-
-
-
