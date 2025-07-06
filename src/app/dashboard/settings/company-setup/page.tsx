@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'; // Make sure Label is imported
 import { useRouter } from 'next/navigation'; // Added useRouter
 import { cn } from '@/lib/utils'; // Added cn
 import { Building } from 'lucide-react'; // Added Building icon
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
