@@ -271,7 +271,7 @@ export default function PrintQuotePage() {
                 </div>
                 )}
             </div>
-            <div className="w-full max-w-xs text-sm space-y-1">
+            <div className="w-auto text-sm space-y-1">
                 <div className="grid grid-cols-[auto_1fr] gap-x-4">
                     <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                     <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
