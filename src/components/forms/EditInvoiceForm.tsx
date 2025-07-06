@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -115,6 +115,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
             paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
+            subject: initialData.subject || '',
             status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
@@ -253,6 +254,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       paymentTerms: data.paymentTerms || undefined,
       salesperson: data.salesperson,
+      subject: data.subject || undefined,
       lineItems: processedLineItems,
       taxType: data.taxType,
       comments: data.comments || undefined,
@@ -343,7 +345,30 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             />
         </div>
 
-        <Separator />
+        <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Regarding supply of capital machinery..."
+                  {...field}
+                  value={field.value ?? ''}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the invoice.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
+
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
@@ -441,9 +466,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
-                showItemCodeColumn: initialData.showItemCodeColumn ?? true,
-                showDiscountColumn: initialData.showDiscountColumn ?? true,
-                showTaxColumn: initialData.showTaxColumn ?? true,
+                showItemCodeColumn: initialData.showItemCodeColumn,
+                showDiscountColumn: initialData.showDiscountColumn,
+                showTaxColumn: initialData.showTaxColumn,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>

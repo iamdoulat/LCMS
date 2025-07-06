@@ -224,6 +224,12 @@ export default function PrintSaleInvoicePage() {
               <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress || invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
           </div>
         </div>
+
+        {invoiceData.subject && (
+          <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
+            <p>{invoiceData.subject}</p>
+          </section>
+        )}
         
         <section className="mb-8">
           <table className="w-full text-sm border-collapse table-fixed">

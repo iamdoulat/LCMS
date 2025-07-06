@@ -931,6 +931,7 @@ export const InvoiceSchema = z.object({
   dueDate: z.date().optional(), // Added for invoices
   paymentTerms: z.string().optional(), // Added for invoices
   salesperson: z.string().min(1, "Salesperson is required."),
+  subject: z.string().optional(),
   lineItems: z.array(InvoiceLineItemSchema).min(1, "At least one line item is required."),
   taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes for now
   comments: z.string().optional(),
@@ -969,6 +970,7 @@ export interface InvoiceDocument {
   dueDate?: string; // ISO string, optional
   paymentTerms?: string;
   salesperson: string;
+  subject?: string;
   lineItems: InvoiceLineItemDocument[];
   taxType: QuoteTaxType;
   comments?: string;

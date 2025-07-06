@@ -64,10 +64,6 @@ export function CreateInvoiceForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema),
     defaultValues: {
@@ -78,6 +74,7 @@ export function CreateInvoiceForm() {
       dueDate: undefined,
       paymentTerms: '',
       salesperson: '',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -92,10 +89,17 @@ export function CreateInvoiceForm() {
       comments: '',
       privateComments: '',
       status: "Draft",
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
     },
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -252,11 +256,15 @@ export function CreateInvoiceForm() {
           invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
           paymentTerms: data.paymentTerms || undefined, salesperson: data.salesperson,
+          subject: data.subject || undefined,
           lineItems: processedLineItems, taxType: data.taxType,
           comments: data.comments || undefined, privateComments: data.privateComments || undefined,
           subtotal: finalSubtotal, totalDiscountAmount: finalTotalDiscount, totalTaxAmount: finalTotalTax,
           totalAmount: finalGrandTotal, status: data.status || "Draft", amountPaid: 0,
           createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          showItemCodeColumn: data.showItemCodeColumn,
+          showDiscountColumn: data.showDiscountColumn,
+          showTaxColumn: data.showTaxColumn,
         };
         const cleanedData = Object.fromEntries(Object.entries(invoiceDataToSave).filter(([,v]) => v !== undefined)) as typeof invoiceDataToSave;
         const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
@@ -354,15 +362,36 @@ export function CreateInvoiceForm() {
                 )}
             />
         </div>
-        <Separator />
+        <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Regarding supply of capital machinery..."
+                  {...field}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the invoice.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={setShowItemCodeColumn}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={setShowDiscountColumn}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={setShowTaxColumn}>Tax %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
                 </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
