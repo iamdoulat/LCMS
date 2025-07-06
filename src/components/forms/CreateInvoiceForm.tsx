@@ -325,12 +325,74 @@ export function CreateInvoiceForm() {
       <form className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="customerId" render={({ field }) => (<FormItem><FormLabel>Customer*</FormLabel><Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)} placeholder="Search Customer..." selectPlaceholder="Select Customer" emptyStateMessage="No customer found." disabled={isLoadingDropdowns}/><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="billingAddress" render={({ field }) => (<FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div>
+            <FormField
+              control={control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer*</FormLabel>
+                  <Combobox
+                    options={customerOptions}
+                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CUSTOMER_VALUE ? '' : value)}
+                    placeholder="Search Customer..."
+                    selectPlaceholder="Select Customer"
+                    emptyStateMessage="No customer found."
+                    disabled={isLoadingDropdowns}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div>
+            <FormField
+              control={control}
+              name="shippingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Enter salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div>
+            <FormField
+              control={control}
+              name="salesperson"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Salesperson*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter salesperson name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div>
+            <FormField
+              control={control}
+              name="billingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bill To*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -371,7 +433,7 @@ export function CreateInvoiceForm() {
               <FormLabel>Invoice Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., Regarding supply of capital machinery..."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
                   className="text-xs"
                   {...field}
                   value={field.value ?? ''}
@@ -429,7 +491,7 @@ export function CreateInvoiceForm() {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">

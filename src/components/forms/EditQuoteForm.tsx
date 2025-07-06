@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -45,8 +46,8 @@ import {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_EDIT_CUSTOMER_PLACEHOLDER__";
-const PLACEHOLDER_ITEM_VALUE_PREFIX = "__QUOTE_EDIT_ITEM_PLACEHOLDER__";
+const PLACEHOLDER_CUSTOMER_VALUE = "__EDIT_QUOTE_CUSTOMER_PLACEHOLDER__";
+const PLACEHOLDER_ITEM_VALUE_PREFIX = "__EDIT_QUOTE_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
   description?: string;
@@ -404,6 +405,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
                   className="text-xs"
                   {...field}
+                  value={field.value ?? ''}
                   rows={2}
                 />
               </FormControl>
