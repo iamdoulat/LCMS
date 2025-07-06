@@ -22,7 +22,7 @@ import Swal from 'sweetalert2';
 import type { InvoiceDocument, CustomerDocument, InvoiceStatus } from '@/types';
 import { invoiceStatusOptions } from '@/types'; // Make sure this is exported from types
 import { format, parseISO, isValid, getYear } from 'date-fns';
-import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, where, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
@@ -33,7 +33,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -451,3 +451,4 @@ export default function InvoicesListPage() {
     
 
     
+

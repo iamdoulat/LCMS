@@ -15,7 +15,7 @@ import Swal from 'sweetalert2';
 import type { InvoiceDocument, CustomerDocument, InvoiceStatus, ItemDocument } from '@/types'; // Changed from SaleDocument
 import { invoiceStatusOptions } from '@/types'; // Import invoiceStatusOptions
 import { format, parseISO, isValid, getYear } from 'date-fns';
-import { collection, getDocs, doc, query, orderBy as firestoreOrderBy, writeBatch, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, query, where, orderBy as firestoreOrderBy, writeBatch, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
@@ -175,7 +175,7 @@ export default function InvoiceRefundsPage() {
           try {
             const itemDocSnap = await getDoc(itemDocRef); // Read outside batch
             if (itemDocSnap.exists()) {
-              const itemData = itemDocSnap.data() as ItemDocument;
+              const itemData = itemDocSnap.data() as ItemDoc;
               if (itemData.manageStock) {
                 const newQuantity = (itemData.currentQuantity || 0) + lineItem.qty;
                 batch.update(itemDocRef, { currentQuantity: newQuantity, updatedAt: serverTimestamp() });
@@ -349,4 +349,5 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
+
 
