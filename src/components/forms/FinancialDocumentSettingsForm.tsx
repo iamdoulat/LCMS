@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Save } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Image from 'next/image';
@@ -15,10 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/context/AuthContext';
 import { Label } from '@/components/ui/label';
 
-// New Firestore location
+// Firestore location for financial document settings
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 
@@ -258,7 +258,7 @@ export function FinancialDocumentSettingsForm() {
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Financial Settings
+              Save Layout Settings
             </>
           )}
         </Button>
