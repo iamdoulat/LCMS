@@ -157,7 +157,7 @@ export default function PrintQuotePage() {
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
       <div className="flex justify-between items-start mb-4">
         <div className="w-2/3 pr-8">
           {displayCompanyLogo && (
@@ -178,16 +178,16 @@ export default function PrintQuotePage() {
         </div>
 
         <div className="text-right">
-            <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTE</h2>
+            <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Quote Number :</span>
-                <span>{quoteData.id}</span>
+                <span>{quoteData.id.startsWith('QT') ? quoteData.id : `${quoteData.id.substring(0, 8)}...`}</span>
             </div>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Date :</span>
                 <span>{formatDisplayDate(quoteData.quoteDate)}</span>
             </div>
-            {quoteData.salesperson && (
+             {quoteData.salesperson && (
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Sales Person :</span>
                     <span>{quoteData.salesperson}</span>
@@ -200,12 +200,12 @@ export default function PrintQuotePage() {
         <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
             <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-            {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+            {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
             <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-            {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
+            {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
         </div>
       </div>
 
