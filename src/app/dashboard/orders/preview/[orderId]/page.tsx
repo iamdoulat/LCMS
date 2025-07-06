@@ -22,7 +22,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'dd/MM/yyyy') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -178,24 +178,22 @@ export default function PrintOrderPage() {
         </div>
 
         <div className="w-1/3 text-right">
-          <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Order</h2>
-          <p className="text-sm"><strong>Order No:</strong> {orderData.id}</p>
-          <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
+            <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+            <p className="text-sm"><strong>Order Number :</strong> {orderData.id}</p>
+            <p className="text-sm"><strong>Date :</strong> {formatDisplayDate(orderData.orderDate)}</p>
         </div>
       </div>
-      
-      <Separator className="my-4 border-gray-300" />
       
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="border p-2 rounded-md text-xs">
           <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
           <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-          {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
+          {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
           <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
           <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-          {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
+          {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
         </div>
       </div>
 

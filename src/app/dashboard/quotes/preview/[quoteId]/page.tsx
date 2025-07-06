@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -23,7 +22,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'dd/MM/yyyy') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -179,22 +178,22 @@ export default function PrintQuotePage() {
         </div>
 
         <div className="w-1/3 text-right">
-          <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Quote</h2>
-          <p className="text-sm"><strong>Quote No:</strong> {quoteData.id}</p>
-          <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
+            <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTE</h2>
+            <p className="text-sm"><strong>Quote Number :</strong> {quoteData.id}</p>
+            <p className="text-sm"><strong>Date :</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
         </div>
       </div>
-
+      
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="border p-2 rounded-md text-xs">
-          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
-          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-          {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+            <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+            {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
-          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-          {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+            <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+            {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
         </div>
       </div>
 
