@@ -13,13 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
 const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -36,8 +34,7 @@ const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-
-export default function PrintSaleInvoicePage() {
+export default function PrintInvoicePage() {
   const params = useParams();
   const router = useRouter();
   const invoiceId = params.invoiceId as string;
@@ -76,7 +73,7 @@ export default function PrintSaleInvoicePage() {
     }
   }, [contextCompanyName, contextCompanyLogoUrl, contextInvoiceLogoUrl]);
 
-  const fetchSaleAndCustomerData = useCallback(async () => {
+  const fetchInvoiceData = useCallback(async () => {
     if (!invoiceId) {
       setError("No Invoice ID provided.");
       setIsLoading(false);
@@ -85,20 +82,20 @@ export default function PrintSaleInvoicePage() {
     setIsLoading(true);
     setError(null);
     try {
-      const saleDocRef = doc(firestore, "invoices", invoiceId);
-      const saleDocSnap = await getDoc(saleDocRef);
+      const invoiceDocRef = doc(firestore, "invoices", invoiceId);
+      const invoiceDocSnap = await getDoc(invoiceDocRef);
 
-      if (saleDocSnap.exists()) {
-        const sale = { id: saleDocSnap.id, ...saleDocSnap.data() } as InvoiceDocument;
-        setInvoiceData(sale);
+      if (invoiceDocSnap.exists()) {
+        const invoice = { id: invoiceDocSnap.id, ...invoiceDocSnap.data() } as InvoiceDocument;
+        setInvoiceData(invoice);
 
-        if (sale.customerId) {
-          const customerDocRef = doc(firestore, "customers", sale.customerId);
+        if (invoice.customerId) {
+          const customerDocRef = doc(firestore, "customers", invoice.customerId);
           const customerDocSnap = await getDoc(customerDocRef);
           if (customerDocSnap.exists()) {
             setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
           } else {
-            console.warn(`Customer with ID ${sale.customerId} not found.`);
+            console.warn(`Customer with ID ${invoice.customerId} not found.`);
           }
         }
       } else {
@@ -113,8 +110,8 @@ export default function PrintSaleInvoicePage() {
 
   useEffect(() => {
     fetchCompanyProfile();
-    fetchSaleAndCustomerData();
-  }, [fetchCompanyProfile, fetchSaleAndCustomerData]);
+    fetchInvoiceData();
+  }, [fetchCompanyProfile, fetchInvoiceData]);
 
    useEffect(() => {
     if (!isLoading && invoiceData && companyProfile) {
@@ -163,7 +160,6 @@ export default function PrintSaleInvoicePage() {
   const showItemCodeColumn = invoiceData.showItemCodeColumn ?? false; 
   const showDiscountColumn = invoiceData.showDiscountColumn ?? false;
   const showTaxColumn = invoiceData.showTaxColumn ?? false;
-
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
@@ -274,7 +270,7 @@ export default function PrintSaleInvoicePage() {
                 </div>
                 )}
             </div>
-            <div className="w-full max-w-xs text-sm space-y-1">
+            <div className="w-auto text-sm space-y-1">
                 <div className="grid grid-cols-[auto_1fr] gap-x-4">
                     <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                     <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal, '')}</span>
