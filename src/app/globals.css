@@ -130,9 +130,10 @@ body {
   .print-invoice-container {
     width: 100% !important; /* Ensure it takes full printable width */
     margin: 0 !important;
-    padding: 15mm !important; /* Standard A4 margins */
+    padding: 0 !important; /* Removed padding */
     box-shadow: none !important;
     border: none !important;
+    min-height: 0 !important; /* Reset min-height for print */
   }
 
   h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {
@@ -250,6 +251,6 @@ body {
 
   @page {
     size: A4;
-    margin: 15mm; /* Standard A4 margins */
+    margin: 0; /* Changed margin to 0 */
   }
 }

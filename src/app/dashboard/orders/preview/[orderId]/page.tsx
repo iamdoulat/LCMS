@@ -158,7 +158,7 @@ export default function PrintOrderPage() {
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white p-0 sm:p-8 font-sans text-gray-800 flex flex-col min-h-screen">
       <div className="flex-grow">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
