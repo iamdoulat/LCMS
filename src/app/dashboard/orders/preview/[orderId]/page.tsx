@@ -157,9 +157,9 @@ export default function PrintOrderPage() {
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
   
-  const showItemCodeColumn = orderData.showItemCodeColumn ?? false;
-  const showDiscountColumn = orderData.showDiscountColumn ?? false;
-  const showTaxColumn = orderData.showTaxColumn ?? false;
+  const showItemCodeColumn = false; // Orders don't have this field from the user request
+  const showDiscountColumn = true; // Assume always shown for order
+  const showTaxColumn = true; // Assume always shown for order
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800">
@@ -213,12 +213,6 @@ export default function PrintOrderPage() {
           </div>
         </div>
 
-        {orderData.subject && (
-          <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
-            <p>{orderData.subject}</p>
-          </section>
-        )}
-
         <section className="mb-8">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
@@ -254,25 +248,25 @@ export default function PrintOrderPage() {
         </section>
 
         <section className="flex justify-end mb-8">
-          <div className="w-full max-w-sm text-sm">
-            <div className="flex justify-between py-1">
+          <div className="w-full max-w-sm text-sm space-y-1">
+            <div className="grid grid-cols-2">
               <span className="text-gray-600 text-right">Subtotal:</span>
               <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
             </div>
              {showDiscountColumn && (
-              <div className="flex justify-between py-1">
+              <div className="grid grid-cols-2">
                 <span className="text-gray-600 text-right">Total Discount:</span>
                 <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
               </div>
             )}
             {showTaxColumn && (
-              <div className="flex justify-between py-1">
+              <div className="grid grid-cols-2">
                 <span className="text-gray-600 text-right">Total Tax ({orderData.taxType}):</span>
                 <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
               </div>
             )}
             <Separator className="my-2 border-gray-300" />
-            <div className="flex justify-between py-1 text-base font-bold">
+            <div className="grid grid-cols-2 text-base font-bold">
               <span className="text-gray-900 text-right">Grand Total:</span>
               <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
             </div>
@@ -299,7 +293,7 @@ export default function PrintOrderPage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
+        <footer className="text-center text-xs text-gray-500 pt-8 mt-8">
             <p>Thank you for your business!</p>
             <p>{displayCompanyName} - {displayCompanyEmail}</p>
         </footer>
@@ -316,4 +310,3 @@ export default function PrintOrderPage() {
     </div>
   );
 }
-
