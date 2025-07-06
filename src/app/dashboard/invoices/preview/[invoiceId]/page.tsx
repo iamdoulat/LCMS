@@ -181,10 +181,16 @@ export default function PrintSaleInvoicePage() {
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
 
-        <div className="w-1/3 text-right">
+        <div className="text-right">
             <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
-            <p className="text-sm"><strong>Invoice Number :</strong> {invoiceData.id}</p>
-            <p className="text-sm"><strong>Date :</strong> {formatDisplayDate(invoiceData.invoiceDate)}</p>
+            <div className="flex justify-end items-baseline gap-2 text-sm">
+                <span className="font-semibold">Invoice Number :</span>
+                <span>{invoiceData.id}</span>
+            </div>
+            <div className="flex justify-end items-baseline gap-2 text-sm">
+                <span className="font-semibold">Date :</span>
+                <span>{formatDisplayDate(invoiceData.invoiceDate)}</span>
+            </div>
         </div>
       </div>
       

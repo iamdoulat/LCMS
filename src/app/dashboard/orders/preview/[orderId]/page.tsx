@@ -177,10 +177,16 @@ export default function PrintOrderPage() {
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
 
-        <div className="w-1/3 text-right">
+        <div className="text-right">
             <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
-            <p className="text-sm"><strong>Order Number :</strong> {orderData.id}</p>
-            <p className="text-sm"><strong>Date :</strong> {formatDisplayDate(orderData.orderDate)}</p>
+            <div className="flex justify-end items-baseline gap-2 text-sm">
+                <span className="font-semibold">Order Number :</span>
+                <span>{orderData.id}</span>
+            </div>
+            <div className="flex justify-end items-baseline gap-2 text-sm">
+                <span className="font-semibold">Date :</span>
+                <span>{formatDisplayDate(orderData.orderDate)}</span>
+            </div>
         </div>
       </div>
       

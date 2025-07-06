@@ -177,23 +177,29 @@ export default function PrintQuotePage() {
           {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
         </div>
 
-        <div className="w-1/3 text-right">
-            <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTE</h2>
-            <p className="text-sm"><strong>Quote Number :</strong> {quoteData.id}</p>
-            <p className="text-sm"><strong>Date :</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
+        <div className="text-right">
+          <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTE</h2>
+          <div className="flex justify-end items-baseline gap-2 text-sm">
+            <span className="font-semibold">Quote Number :</span>
+            <span>{quoteData.id}</span>
+          </div>
+          <div className="flex justify-end items-baseline gap-2 text-sm">
+            <span className="font-semibold">Date :</span>
+            <span>{formatDisplayDate(quoteData.quoteDate)}</span>
+          </div>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
-            <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-            {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
+          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+          {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-            <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-            {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
+          <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+          <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+          {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
         </div>
       </div>
 
