@@ -213,7 +213,7 @@ export default function PrintOrderPage() {
           </div>
         </div>
 
-        <section className="mb-8">
+        <section className="mb-4">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -247,7 +247,7 @@ export default function PrintOrderPage() {
           </table>
         </section>
 
-        <section className="flex justify-between items-start mt-auto pt-8">
+        <section className="flex justify-between items-start pt-4">
             <div className="w-1/2 pr-4 text-xs">
                 {orderData.comments && (
                 <div className="space-y-1">
