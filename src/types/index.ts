@@ -399,6 +399,7 @@ export interface CompanyProfile {
   binNumber?: string;
   tinNumber?: string;
   companyLogoUrl?: string;
+  invoiceLogoUrl?: string;
   updatedAt?: any;
 }
 

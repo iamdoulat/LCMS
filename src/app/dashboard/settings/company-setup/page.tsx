@@ -14,7 +14,6 @@ import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -40,6 +39,10 @@ const companySetupSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Company Logo" }).optional()
   ),
+  invoiceLogoUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
+  ),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -57,6 +60,7 @@ export function CompanySetupForm() {
   const isReadOnly = userRole === 'Viewer';
   
   const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+  const [currentInvoiceLogoUrlForPreview, setCurrentInvoiceLogoUrlForPreview] = React.useState<string | undefined>(undefined);
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
@@ -69,6 +73,7 @@ export function CompanySetupForm() {
       binNumber: '',
       tinNumber: '',
       companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+      invoiceLogoUrl: '',
     },
   });
 
@@ -84,6 +89,7 @@ export function CompanySetupForm() {
           address: DEFAULT_ADDRESS,
           emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         };
 
@@ -98,10 +104,12 @@ export function CompanySetupForm() {
             binNumber: data.binNumber || '',
             tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            invoiceLogoUrl: data.invoiceLogoUrl || '',
           };
         }
         form.reset(initialProfileData);
         setCurrentLogoUrlForPreview(initialProfileData.companyLogoUrl);
+        setCurrentInvoiceLogoUrlForPreview(initialProfileData.invoiceLogoUrl);
       } catch (error) {
         console.error("CompanySetupForm: Error fetching company profile:", error);
         Swal.fire("Error", "Could not load company profile. Using defaults.", "error");
@@ -109,9 +117,11 @@ export function CompanySetupForm() {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         });
         setCurrentLogoUrlForPreview(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+        setCurrentInvoiceLogoUrlForPreview(undefined);
       } finally {
         setIsLoadingData(false);
       }
@@ -125,9 +135,11 @@ export function CompanySetupForm() {
          form.reset({
           companyName: DEFAULT_COMPANY_NAME, address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
           companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         });
         setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
+        setCurrentInvoiceLogoUrlForPreview(undefined);
       }
     }
   }, [form, contextCompanyName, contextCompanyLogoUrl, authLoading, authUser]);
@@ -145,6 +157,7 @@ export function CompanySetupForm() {
       binNumber: data.binNumber || undefined,
       tinNumber: data.tinNumber || undefined,
       companyLogoUrl: data.companyLogoUrl || undefined, // Save as undefined if empty
+      invoiceLogoUrl: data.invoiceLogoUrl || undefined,
       updatedAt: serverTimestamp(),
     };
 
@@ -158,8 +171,13 @@ export function CompanySetupForm() {
       const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
-      updateCompanyProfile({ name: data.companyName, logoUrl: data.companyLogoUrl || undefined });
+      updateCompanyProfile({ 
+        name: data.companyName, 
+        logoUrl: data.companyLogoUrl || undefined,
+        invoiceLogoUrl: data.invoiceLogoUrl || undefined 
+      });
       setCurrentLogoUrlForPreview(data.companyLogoUrl || undefined);
+      setCurrentInvoiceLogoUrlForPreview(data.invoiceLogoUrl || undefined);
 
       Swal.fire({
         title: "Company Information Saved!",
@@ -182,11 +200,19 @@ export function CompanySetupForm() {
   }
 
   const watchedLogoUrl = form.watch("companyLogoUrl");
+  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
+
   React.useEffect(() => {
     if (watchedLogoUrl !== currentLogoUrlForPreview) {
       setCurrentLogoUrlForPreview(watchedLogoUrl);
     }
   }, [watchedLogoUrl, currentLogoUrlForPreview]);
+
+  React.useEffect(() => {
+    if (watchedInvoiceLogoUrl !== currentInvoiceLogoUrlForPreview) {
+      setCurrentInvoiceLogoUrlForPreview(watchedInvoiceLogoUrl);
+    }
+  }, [watchedInvoiceLogoUrl, currentInvoiceLogoUrlForPreview]);
 
 
   if (isLoadingData || authLoading) { // Check authLoading as well
@@ -272,6 +298,44 @@ export function CompanySetupForm() {
           </div>
         )}
 
+        <FormField
+          control={form.control}
+          name="invoiceLogoUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Logo URL</FormLabel>
+              <FormControl>
+                <Input 
+                  type="url" 
+                  placeholder="https://example.com/invoice-logo.png" 
+                  {...field} 
+                  value={field.value || ""} 
+                  disabled={isReadOnly}
+                />
+              </FormControl>
+              <FormDescription>
+                A specific logo for invoices. If blank, the main company logo will be used.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         {currentInvoiceLogoUrlForPreview && currentInvoiceLogoUrlForPreview.trim() !== "" && (currentInvoiceLogoUrlForPreview.startsWith('http://') || currentInvoiceLogoUrlForPreview.startsWith('https://')) && (
+          <div className="space-y-2">
+            <Label>Invoice Logo Preview (32x32)</Label>
+            <Image 
+              src={currentInvoiceLogoUrlForPreview} 
+              alt="Invoice Logo Preview" 
+              width={32} 
+              height={32} 
+              className="rounded-sm border object-contain"
+              onError={() => {
+                console.warn("Error loading invoice logo preview from URL:", currentInvoiceLogoUrlForPreview);
+              }}
+              data-ai-hint="invoice logo"
+            />
+          </div>
+        )}
 
         <Separator />
 

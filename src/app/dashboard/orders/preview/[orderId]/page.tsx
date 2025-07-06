@@ -38,7 +38,7 @@ export default function PrintOrderPage() {
   const router = useRouter();
   const orderId = params.orderId as string;
 
-  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl } = useAuth();
+  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, invoiceLogoUrl: contextInvoiceLogoUrl } = useAuth();
   const [orderData, setOrderData] = useState<OrderDocument | null>(null);
   const [beneficiaryData, setBeneficiaryData] = useState<SupplierDocument | null>(null);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
@@ -55,6 +55,7 @@ export default function PrintOrderPage() {
         setCompanyProfile({
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           address: 'Default Company Address, City, Country',
           emailId: 'company@example.com',
         });
@@ -64,11 +65,12 @@ export default function PrintOrderPage() {
       setCompanyProfile({
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           address: 'Default Company Address, City, Country',
           emailId: 'company@example.com',
       });
     }
-  }, [contextCompanyName, contextCompanyLogoUrl]);
+  }, [contextCompanyName, contextCompanyLogoUrl, contextInvoiceLogoUrl]);
 
   const fetchOrderAndBeneficiaryData = useCallback(async () => {
     if (!orderId) {
@@ -149,7 +151,7 @@ export default function PrintOrderPage() {
   }
 
   const displayCompanyName = companyProfile?.companyName || contextCompanyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.companyLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
   const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';

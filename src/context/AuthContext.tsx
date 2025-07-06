@@ -16,6 +16,7 @@ const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
+const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
 const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
@@ -45,7 +46,8 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   companyName: string;
   companyLogoUrl: string;
-  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => void;
+  invoiceLogoUrl: string;
+  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +61,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [companyName, setCompanyName] = useState<string>(DEFAULT_COMPANY_NAME);
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
+  const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const router = useRouter();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
@@ -69,11 +72,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const profileData = profileDocSnap.data() as CompanyProfile;
         const newName = profileData.companyName || DEFAULT_COMPANY_NAME;
         const newLogoUrl = profileData.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+        const newInvoiceLogoUrl = profileData.invoiceLogoUrl || newLogoUrl;
+        
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);
+        setInvoiceLogoUrl(newInvoiceLogoUrl);
+
         if (typeof window !== 'undefined') {
           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, newName);
           localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, newLogoUrl);
+          localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, newInvoiceLogoUrl);
         }
       } else {
         const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
@@ -83,6 +91,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
         setCompanyLogoUrl(storedLogoUrl || DEFAULT_COMPANY_LOGO_URL);
         if (!storedLogoUrl && typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+
+        const storedInvoiceLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(INVOICE_LOGO_URL_STORAGE_KEY) : null;
+        setInvoiceLogoUrl(storedInvoiceLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+        if (!storedInvoiceLogoUrl && typeof window !== 'undefined') localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
       }
     } catch (error: any) {
       console.error("AuthContext: Error fetching company profile from Firestore:", error);
@@ -90,6 +102,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setCompanyName(storedName || DEFAULT_COMPANY_NAME);
       const storedLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_LOGO_URL_STORAGE_KEY) : null;
       setCompanyLogoUrl(storedLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+      const storedInvoiceLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(INVOICE_LOGO_URL_STORAGE_KEY) : null;
+      setInvoiceLogoUrl(storedInvoiceLogoUrl || DEFAULT_COMPANY_LOGO_URL);
     }
   }, []);
 
@@ -262,9 +276,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl'>>) => {
+  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl'>>) => {
     let newName = companyName;
     let newLogoUrl = companyLogoUrl;
+    let newInvoiceLogoUrl = invoiceLogoUrl;
 
     if (profile.companyName !== undefined) {
       newName = profile.companyName || DEFAULT_COMPANY_NAME;
@@ -272,16 +287,20 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
     if (profile.companyLogoUrl !== undefined) {
       newLogoUrl = profile.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, newLogoUrl);
-      }
+      if (typeof window !== 'undefined') localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, newLogoUrl);
     }
+    if (profile.invoiceLogoUrl !== undefined) {
+      newInvoiceLogoUrl = profile.invoiceLogoUrl || newLogoUrl; // Fallback to main logo if cleared
+      if (typeof window !== 'undefined') localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, newInvoiceLogoUrl);
+    }
+
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
-  }, [companyName, companyLogoUrl]);
+    setInvoiceLogoUrl(newInvoiceLogoUrl);
+  }, [companyName, companyLogoUrl, invoiceLogoUrl]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, updateCompanyProfile }}>
+    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, invoiceLogoUrl, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );

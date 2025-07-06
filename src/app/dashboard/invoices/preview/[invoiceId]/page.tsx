@@ -41,7 +41,7 @@ export default function PrintSaleInvoicePage() {
   const router = useRouter();
   const invoiceId = params.invoiceId as string;
 
-  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl } = useAuth();
+  const { companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, invoiceLogoUrl: contextInvoiceLogoUrl } = useAuth();
   const [invoiceData, setInvoiceData] = useState<InvoiceDocument | null>(null);
   const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
@@ -58,6 +58,7 @@ export default function PrintSaleInvoicePage() {
         setCompanyProfile({
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230', // Default address
           emailId: 'info@smartsolution-bd.com', // Default email
         });
@@ -67,11 +68,12 @@ export default function PrintSaleInvoicePage() {
       setCompanyProfile({ // Fallback on error
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           address: 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230',
           emailId: 'info@smartsolution-bd.com',
       });
     }
-  }, [contextCompanyName, contextCompanyLogoUrl]);
+  }, [contextCompanyName, contextCompanyLogoUrl, contextInvoiceLogoUrl]);
 
   const fetchSaleAndCustomerData = useCallback(async () => {
     if (!invoiceId) {
@@ -152,7 +154,7 @@ export default function PrintSaleInvoicePage() {
   }
 
   const displayCompanyName = companyProfile?.companyName || contextCompanyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.companyLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || contextInvoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
   const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
