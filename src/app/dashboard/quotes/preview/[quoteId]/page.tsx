@@ -164,8 +164,8 @@ export default function PrintQuotePage() {
             <Image
               src={displayCompanyLogo}
               alt={`${displayCompanyName} Logo`}
-              width={240}
-              height={120}
+              width={495}
+              height={72}
               className="object-contain mb-2"
               priority
               data-ai-hint="company logo"
@@ -181,7 +181,7 @@ export default function PrintQuotePage() {
             <h2 className="text-3xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Quote Number :</span>
-                <span>{quoteData.id.startsWith('QT') ? quoteData.id : `${quoteData.id.substring(0, 8)}...`}</span>
+                <span>{quoteData.id}</span>
             </div>
             <div className="flex justify-end items-baseline gap-2 text-sm">
                 <span className="font-semibold">Date :</span>
@@ -198,13 +198,12 @@ export default function PrintQuotePage() {
       
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">TO:</h3>
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
             <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
             {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">DELIVER TO:</h3>
-            
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
             {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
         </div>
       </div>
@@ -228,7 +227,6 @@ export default function PrintQuotePage() {
                 <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                 <td className="p-2 border border-gray-300 align-top break-words">
                   <p className="font-medium text-gray-900">{item.itemName}</p>
-                  {item.itemCode && <p className="text-xs text-gray-500">Code: {item.itemCode}</p>}
                   {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                 </td>
                 <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>

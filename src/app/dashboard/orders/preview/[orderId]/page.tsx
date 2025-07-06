@@ -164,8 +164,8 @@ export default function PrintOrderPage() {
             <Image
               src={displayCompanyLogo}
               alt={`${displayCompanyName} Logo`}
-              width={240}
-              height={120}
+              width={495}
+              height={72}
               className="object-contain mb-2"
               priority
               data-ai-hint="company logo"
@@ -199,12 +199,10 @@ export default function PrintOrderPage() {
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="border p-2 rounded-md text-xs">
           <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
-          <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
           {orderData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress}</p>}
         </div>
         <div className="border p-2 rounded-md text-xs">
           <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-          
           {orderData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress}</p>}
         </div>
       </div>
@@ -226,7 +224,6 @@ export default function PrintOrderPage() {
                 <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                 <td className="p-2 border border-gray-300 align-top break-words">
                   <p className="font-medium text-gray-900">{item.itemName}</p>
-                  {item.itemCode && <p className="text-xs text-gray-500">Code: {item.itemCode}</p>}
                   {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                 </td>
                 <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
