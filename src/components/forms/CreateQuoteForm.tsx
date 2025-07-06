@@ -70,6 +70,7 @@ export function CreateQuoteForm() {
       shippingAddress: '',
       quoteDate: new Date(),
       salesperson: '',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -83,9 +84,9 @@ export function CreateQuoteForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
-      showItemCodeColumn: true,
-      showDiscountColumn: true,
-      showTaxColumn: true,
+      showItemCodeColumn: false,
+      showDiscountColumn: false,
+      showTaxColumn: false,
     },
   });
 
@@ -149,14 +150,14 @@ export function CreateQuoteForm() {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
         setValue("shippingAddress", selectedCustomer.address || "");
+        setValue("billingAddress", selectedCustomer.address || "");
       }
     } else {
-      setValue("billingAddress", "");
       setValue("shippingAddress", "");
+      setValue("billingAddress", "");
     }
-  }, [watchedCustomerId, customerOptions, setValue]);
+  }, [watchedCustomerId, customerOptions, setValue, getValues]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -280,6 +281,7 @@ export function CreateQuoteForm() {
           shippingAddress: data.shippingAddress,
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           salesperson: data.salesperson,
+          subject: data.subject || undefined,
           lineItems: processedLineItems,
           taxType: data.taxType,
           comments: data.comments || undefined,
@@ -427,7 +429,7 @@ export function CreateQuoteForm() {
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                    <Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -511,8 +513,30 @@ export function CreateQuoteForm() {
                 )}
              />
         </div>
+        
+        <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quote Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  {...field}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the quote.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
 
-        <Separator />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -589,9 +613,7 @@ export function CreateQuoteForm() {
                       />
                     </TableCell>
                   )}
-                  <TableCell>
-                    <FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} />
-                  </TableCell>
+                  <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} />
                      <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
@@ -611,9 +633,7 @@ export function CreateQuoteForm() {
             </TableBody>
           </Table>
         </div>
-         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
-            <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
-        )}
+         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />

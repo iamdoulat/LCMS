@@ -782,6 +782,7 @@ export const QuoteSchema = z.object({
   shippingAddress: z.string().min(1, "Shipping Address is required."),
   quoteDate: z.date({ required_error: "Quote Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
+  subject: z.string().optional(),
   lineItems: z.array(QuoteLineItemSchema).min(1, "At least one line item is required."),
   taxType: z.enum(quoteTaxTypes).default("Default"),
   globalDiscount: z.string().optional(), // For future use
@@ -820,6 +821,7 @@ export interface QuoteDocument {
   shippingAddress: string;
   quoteDate: string; // ISO string
   salesperson: string;
+  subject?: string;
   lineItems: QuoteLineItemDocument[];
   taxType: QuoteTaxType;
   comments?: string;

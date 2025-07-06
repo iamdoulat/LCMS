@@ -24,7 +24,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X, Printer } from 'lucide-react';
+import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X, Printer, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -128,6 +128,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             shippingAddress: initialData.shippingAddress || '',
             quoteDate: initialData.quoteDate && isValid(parseISO(initialData.quoteDate)) ? parseISO(initialData.quoteDate) : new Date(),
             salesperson: initialData.salesperson || '',
+            subject: initialData.subject || '',
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               itemCode: item.itemCode || '',
@@ -275,6 +276,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       shippingAddress: data.shippingAddress,
       quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesperson: data.salesperson,
+      subject: data.subject || undefined,
       lineItems: processedLineItems,
       taxType: data.taxType,
       comments: data.comments || undefined,
@@ -333,7 +335,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (
               <FormItem>
                 <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
+                <FormControl><Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
@@ -349,8 +351,30 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
+        
+        <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quote Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY..."
+                  {...field}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the quote.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
 
-        <Separator />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -395,55 +419,15 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
                   <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
-                  <TableCell>
-                    <FormField
-                      control={control}
-                      name={`lineItems.${index}.itemId`}
-                      render={({ field: itemField }) => (
-                        <Combobox
-                          options={itemOptions}
-                          value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index}
-                          onValueChange={(itemId) => {
-                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId);
-                            handleItemSelect(itemId, index);
-                          }}
-                          placeholder="Search Item..."
-                          selectPlaceholder="Select Item"
-                          emptyStateMessage="No item found."
-                          className="h-9"
-                        />
-                      )}
-                    />
-                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage>
-                  </TableCell>
-                  {showItemCodeColumn && (
-                    <TableCell>
-                      <FormField
-                        control={control}
-                        name={`lineItems.${index}.itemCode`}
-                        render={({ field: itemField }) => (
-                          <Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />
-                        )}
-                      />
-                    </TableCell>
-                  )}
+                  <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} onValueChange={(itemId) => { itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
+                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
-                  <TableCell>
-                    <FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} />
-                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
-                  </TableCell>
+                  <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
                   {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
-                  <TableCell className="text-right">
-                     <FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
+                  <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                </TableRow>))}
             </TableBody>
           </Table>
         </div>
@@ -461,26 +445,13 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             )}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal:</span>
-                    <span className="font-medium text-foreground">{subtotal.toFixed(2)}</span>
-                </div>
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Discount:</span>
-                    <span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span>
-                </div>
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Tax:</span>
-                    <span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span>
-                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold">
-                    <span className="text-primary">Grand Total:</span>
-                    <span className="text-primary">{grandTotal.toFixed(2)}</span>
-                </div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />

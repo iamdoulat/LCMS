@@ -31,7 +31,7 @@ const formatDisplayDate = (dateString?: string) => {
 
 const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function PrintQuotePage() {
@@ -178,7 +178,7 @@ export default function PrintQuotePage() {
                 data-ai-hint="company logo"
               />
             )}
-            <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
             <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
             {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
@@ -205,28 +205,36 @@ export default function PrintQuotePage() {
         
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">To:</h3>
-              <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-              {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
+              <h3 className="font-semibold text-gray-700 mb-1 uppercase">To:</h3>
+              <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
+              {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+              {customerData?.tinNo && <p className="text-gray-600">TIN NO: {customerData.tinNo}</p>}
+              {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
           </div>
           <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
-              {quoteData.billingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress}</p>}
+              <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+              {quoteData.shippingAddress && <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress}</p>}
           </div>
         </div>
 
+        {quoteData.subject && (
+          <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
+            <p>{quoteData.subject}</p>
+          </section>
+        )}
+
         <section className="mb-8">
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
                 <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold">Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold">Unit Price</th>
-                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold">Discount (%)</th>}
-                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold">Tax (%)</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold">Total</th>
+                <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -249,51 +257,58 @@ export default function PrintQuotePage() {
           </table>
         </section>
 
-        <section className="flex justify-end mb-8">
-          <div className="w-full max-w-xs text-sm">
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="text-gray-800">{formatCurrency(quoteData.subtotal, '')}</span>
+        <section className="flex justify-between items-start mb-8">
+            <div className="w-1/2 pr-4 text-xs">
+                {quoteData.comments && (
+                <div className="space-y-1">
+                    <h4 className="font-semibold text-gray-700 uppercase tracking-wide">Terms and Conditions:</h4>
+                    <div className="text-gray-600 whitespace-pre-line">{quoteData.comments}</div>
+                </div>
+                )}
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Discount:</span>
-              <span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
+            <div className="w-full max-w-xs text-sm">
+                <div className="flex justify-between py-1">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="text-gray-800">{formatCurrency(quoteData.subtotal, '')}</span>
+                </div>
+                {showDiscountColumn && (
+                    <div className="flex justify-between py-1">
+                        <span className="text-gray-600">Total Discount:</span>
+                        <span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
+                    </div>
+                )}
+                {showTaxColumn && (
+                    <div className="flex justify-between py-1">
+                        <span className="text-gray-600">Total Tax ({quoteData.taxType}):</span>
+                        <span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
+                    </div>
+                )}
+                <Separator className="my-2 border-gray-300" />
+                <div className="flex justify-between py-1 text-base font-bold">
+                    <span className="text-gray-900">Grand Total:</span>
+                    <span className="text-blue-600">{formatCurrency(quoteData.totalAmount, '')}</span>
+                </div>
             </div>
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Total Tax ({quoteData.taxType}):</span>
-              <span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
-            </div>
-            <Separator className="my-2 border-gray-300" />
-            <div className="flex justify-between py-1 text-lg font-bold">
-              <span className="text-gray-900">Grand Total:</span>
-              <span className="text-blue-600">{formatCurrency(quoteData.totalAmount, '')}</span>
-            </div>
+        </section>
+      </div>
+
+      <div className="flex-shrink-0">
+        <section className="flex justify-between pt-16">
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+          </div>
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
 
-        {quoteData.comments && (
-          <section className="mb-8 p-3 border border-gray-200 rounded-md bg-gray-50">
-            <h4 className="text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Terms and Conditions:</h4>
-            <p className="text-xs text-gray-600 whitespace-pre-line">{quoteData.comments}</p>
-          </section>
-        )}
+        <footer className="text-center text-xs text-gray-500 pt-8 mt-8">
+            <p>Thank you for your business!</p>
+            <p>{displayCompanyName} - {displayCompanyEmail}</p>
+        </footer>
       </div>
-
-      <section className="flex justify-between pt-16">
-        <div className="w-1/3 text-center">
-          <div className="border-t border-dotted border-gray-400"></div>
-          <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
-        </div>
-        <div className="w-1/3 text-center">
-          <div className="border-t border-dotted border-gray-400"></div>
-          <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
-        </div>
-      </section>
-
-      <footer className="text-center text-xs text-gray-500 pt-8 border-t border-gray-200 mt-8">
-        <p>Thank you for your business!</p>
-        <p>{displayCompanyName} - {displayCompanyEmail}</p>
-      </footer>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
