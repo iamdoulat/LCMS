@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -16,7 +15,7 @@ import type {
   QuoteFormValues as PageQuoteFormValues,
   QuoteLineItemFormValues as PageQuoteLineItemFormValues
 } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema } from '@/types';
+import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag } from 'lucide-react';
+import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
