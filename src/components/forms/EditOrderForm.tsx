@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Save, X, ShoppingCart, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -67,9 +68,9 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(initialData.showItemCodeColumn ?? true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(initialData.showDiscountColumn ?? true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(initialData.showTaxColumn ?? true);
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
   
   const { fields, append, remove } = useFieldArray({
     control,
@@ -123,6 +124,9 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
+            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+            showDiscountColumn: initialData.showDiscountColumn ?? true,
+            showTaxColumn: initialData.showTaxColumn ?? true,
           });
         }
       } catch (error) {
@@ -250,6 +254,10 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
+      status: initialData.status,
+      showItemCodeColumn: data.showItemCodeColumn,
+      showDiscountColumn: data.showDiscountColumn,
+      showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
     };
 
@@ -309,9 +317,9 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={setShowItemCodeColumn}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={setShowDiscountColumn}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={setShowTaxColumn}>Tax %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
                 </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
@@ -371,6 +379,9 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                showItemCodeColumn: initialData.showItemCodeColumn,
+                showDiscountColumn: initialData.showDiscountColumn,
+                showTaxColumn: initialData.showTaxColumn,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>

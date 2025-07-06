@@ -157,9 +157,9 @@ export default function PrintOrderPage() {
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
   
-  const showItemCodeColumn = true;
-  const showDiscountColumn = true;
-  const showTaxColumn = true;
+  const showItemCodeColumn = orderData.showItemCodeColumn ?? true; 
+  const showDiscountColumn = orderData.showDiscountColumn ?? true;
+  const showTaxColumn = orderData.showTaxColumn ?? true;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
@@ -311,3 +311,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+

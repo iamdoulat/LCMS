@@ -63,10 +63,6 @@ export function CreateOrderForm() {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
@@ -88,10 +84,17 @@ export function CreateOrderForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
     },
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -140,6 +143,19 @@ export function CreateOrderForm() {
     };
     fetchOptions();
   }, []);
+
+  React.useEffect(() => {
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
+      if (selectedBeneficiary) {
+        setValue("billingAddress", selectedBeneficiary.address || "");
+        setValue("shippingAddress", selectedBeneficiary.address || "");
+      }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
+    }
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -274,6 +290,9 @@ export function CreateOrderForm() {
           status: "Pending", // Default status for new order
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          showItemCodeColumn: data.showItemCodeColumn,
+          showDiscountColumn: data.showDiscountColumn,
+          showTaxColumn: data.showTaxColumn,
         };
 
         const cleanedDataToSave = Object.fromEntries(
@@ -496,19 +515,19 @@ export function CreateOrderForm() {
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                     checked={showItemCodeColumn}
-                    onCheckedChange={setShowItemCodeColumn}
+                    onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
                 >
                     Item Code
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showDiscountColumn}
-                    onCheckedChange={setShowDiscountColumn}
+                    onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}
                 >
                     Discount %
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={showTaxColumn}
-                    onCheckedChange={setShowTaxColumn}
+                    onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}
                 >
                     Tax %
                 </DropdownMenuCheckboxItem>
@@ -516,8 +535,7 @@ export function CreateOrderForm() {
             </DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
             <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -585,3 +603,4 @@ export function CreateOrderForm() {
     </Form>
   );
 }
+

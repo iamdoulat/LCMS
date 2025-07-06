@@ -748,14 +748,12 @@ export const itemSchema = z.object({
     z.number({ invalid_type_error: "Warning Quantity must be a number." }).int().nonnegative("Warning Quantity must be a non-negative integer.").optional()
   ),
 }).superRefine((data, ctx) => {
-  if (data.manageStock) {
-    if (data.currentQuantity === undefined || data.currentQuantity === null) {
+  if (data.manageStock && data.currentQuantity === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Current Quantity is required when managing stock.",
         path: ["currentQuantity"],
       });
-    }
   }
 
   if (data.manageStock && data.warningQuantity !== undefined && data.idealQuantity !== undefined) {
@@ -1017,11 +1015,13 @@ export const OrderSchema = z.object({
   taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes
   comments: z.string().optional(),
   privateComments: z.string().optional(),
-  // Calculated fields
   subtotal: z.number().optional(),
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  showItemCodeColumn: z.boolean().optional().default(true),
+  showDiscountColumn: z.boolean().optional().default(true),
+  showTaxColumn: z.boolean().optional().default(true),
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 
@@ -1056,9 +1056,13 @@ export interface OrderDocument {
   status: OrderStatus;
   createdAt: any;
   updatedAt: any;
+  showItemCodeColumn?: boolean;
+  showDiscountColumn?: boolean;
+  showTaxColumn?: boolean;
 }
 // --- END Order Types ---
 
 
 
     
+
