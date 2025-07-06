@@ -141,9 +141,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
-            showItemCodeColumn: initialData.showItemCodeColumn ?? false,
-            showDiscountColumn: initialData.showDiscountColumn ?? false,
-            showTaxColumn: initialData.showTaxColumn ?? false,
+            showItemCodeColumn: initialData.showItemCodeColumn,
+            showDiscountColumn: initialData.showDiscountColumn,
+            showTaxColumn: initialData.showTaxColumn,
           });
         }
       } catch (error) {
@@ -165,7 +165,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
         setValue("shippingAddress", selectedCustomer.address || "");
       }
     }
@@ -299,7 +298,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         text: `Quote Number: ${quoteId} successfully updated.`,
         icon: "success",
       });
-    } catch (error: any) => {
+    } catch (error: any) {
       console.error("Error updating quote: ", error);
       Swal.fire({
         title: "Update Failed",
@@ -327,11 +326,19 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               </FormItem>)}
             />
           </div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
-              </FormItem>)}
+          <div>
+            <FormField
+              control={control}
+              name="shippingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
         </div>
@@ -424,9 +431,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                       />
                     </TableCell>
                   )}
-                  <TableCell>
-                    <FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} />
-                  </TableCell>
+                  <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell>
                     <FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} />
                      <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
@@ -497,9 +502,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
-                showItemCodeColumn: initialData.showItemCodeColumn ?? false,
-                showDiscountColumn: initialData.showDiscountColumn ?? false,
-                showTaxColumn: initialData.showTaxColumn ?? false,
+                showItemCodeColumn: initialData.showItemCodeColumn,
+                showDiscountColumn: initialData.showDiscountColumn,
+                showTaxColumn: initialData.showTaxColumn,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
