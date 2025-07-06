@@ -158,39 +158,43 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white p-4 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="grid grid-cols-2 gap-8 mb-6 items-start">
-        {/* Company Info */}
-        <div>
-          {displayCompanyLogo && (
-            <Image
-              src={displayCompanyLogo}
-              alt={`${displayCompanyName} Logo`}
-              width={120}
-              height={60}
-              className="object-contain mb-2"
-              priority
-              data-ai-hint="company logo"
-            />
-          )}
-          <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
-          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-          {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-          {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+      <div className="flex justify-between items-start mb-8">
+        {/* Left column for company and bill-to info */}
+        <div className="w-1/2 pr-8">
+            {/* Company Info */}
+            <div>
+              {displayCompanyLogo && (
+                <Image
+                  src={displayCompanyLogo}
+                  alt={`${displayCompanyName} Logo`}
+                  width={240}
+                  height={120}
+                  className="object-contain mb-2"
+                  priority
+                  data-ai-hint="company logo"
+                />
+              )}
+              <h1 className="text-2xl font-bold text-gray-900">{displayCompanyName}</h1>
+              <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+              {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+              {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+            </div>
+
+            {/* Bill To Info */}
+            <div className="mt-8">
+                <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Beneficiary:</h3>
+                <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
+                {beneficiaryData?.headOfficeAddress && <p className="text-xs text-gray-600 whitespace-pre-line">{beneficiaryData.headOfficeAddress}</p>}
+                {beneficiaryData?.emailId && <p className="text-xs text-gray-600">Email: {beneficiaryData.emailId}</p>}
+                {beneficiaryData?.cellNumber && <p className="text-xs text-gray-600">Phone: {beneficiaryData.cellNumber}</p>}
+            </div>
         </div>
 
-        {/* Order To and Details Info */}
-        <div className="text-right">
+        {/* Right column for order details */}
+        <div className="w-1/2 text-right">
           <h2 className="text-3xl font-semibold text-blue-600 uppercase tracking-wider">Order</h2>
           <p className="text-sm"><strong>Order No:</strong> {orderData.id}</p>
           <p className="text-sm"><strong>Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
-
-          <div className="mt-6 text-left">
-            <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">Beneficiary:</h3>
-            <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-            {beneficiaryData?.headOfficeAddress && <p className="text-xs text-gray-600 whitespace-pre-line">{beneficiaryData.headOfficeAddress}</p>}
-            {beneficiaryData?.emailId && <p className="text-xs text-gray-600">Email: {beneficiaryData.emailId}</p>}
-            {beneficiaryData?.cellNumber && <p className="text-xs text-gray-600">Phone: {beneficiaryData.cellNumber}</p>}
-          </div>
         </div>
       </div>
       
