@@ -86,14 +86,14 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
 
-  const showItemCodeColumn = watch("showItemCodeColumn");
-  const showDiscountColumn = watch("showDiscountColumn");
-  const showTaxColumn = watch("showTaxColumn");
-
   const { fields, append, remove } = useFieldArray({
     control,
     name: "lineItems",
   });
+  
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
@@ -246,7 +246,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       return {
         itemId: item.itemId,
         itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
-        itemCode: itemDetailsFromOptions?.itemCode || undefined,
+        itemCode: itemDetailsFromOptions?.itemCode,
         description: item.description || '',
         qty,
         unitPrice: finalUnitPrice,
@@ -352,32 +352,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <FormField
-              control={control}
-              name="salesperson"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Salesperson*</FormLabel>
-                  <FormControl><Input placeholder="Salesperson name" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div>
-            <FormField
-              control={control}
-              name="shippingAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
@@ -396,7 +372,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               <FormLabel>Quote Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
                   className="text-[10px] font-normal"
                   {...field}
                   value={field.value ?? ''}
@@ -501,3 +477,4 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+

@@ -70,7 +70,7 @@ export function CreateQuoteForm() {
       shippingAddress: '',
       quoteDate: new Date(),
       salesperson: '',
-      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY.',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -511,7 +511,7 @@ export function CreateQuoteForm() {
               <FormLabel>Quote Subject</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GERMENTS INDUSTRY."
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
                   className="text-[10px] font-normal"
                   {...field}
                   value={field.value ?? ''}
@@ -633,5 +633,6 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
 
 
