@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -189,6 +189,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
   };
+  
+  const handleViewPdf = () => {
+    window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
+  };
 
   async function onSubmit(data: PageSaleFormValues) {
     if (!saleId) {
@@ -306,7 +310,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (
               <FormItem>
                 <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
+                <FormControl><Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
@@ -401,6 +405,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
+             <Button type="button" variant="outline" onClick={handleViewPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                View PDF
+            </Button>
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
                 saleDate: initialData.saleDate ? parseISO(initialData.saleDate) : new Date(),

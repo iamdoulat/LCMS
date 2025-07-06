@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -145,7 +145,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
         setValue("shippingAddress", selectedCustomer.address || "");
       }
     }
@@ -204,6 +203,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
+  };
+
+  const handleViewPdf = () => {
+    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
   };
 
   async function onSubmit(data: InvoiceFormValues) {
@@ -422,6 +425,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={handleViewPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                View PDF
+            </Button>
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
                 invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : new Date(),

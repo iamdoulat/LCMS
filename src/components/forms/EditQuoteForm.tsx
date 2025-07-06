@@ -24,7 +24,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X } from 'lucide-react';
+import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -84,7 +84,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   });
 
   const { control, setValue, watch, getValues, reset } = form;
-
+  
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
@@ -222,6 +222,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     }
   };
 
+  const handleViewPdf = () => {
+    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
+  };
+
   async function onSubmit(data: QuoteFormValues) {
     if (!quoteId) {
       Swal.fire("Error", "Quote Number is missing. Cannot update.", "error");
@@ -279,7 +283,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: initialData.status, // Retain current status unless explicitly changed
+      status: initialData.status,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
@@ -326,19 +330,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               </FormItem>)}
             />
           </div>
-          <div>
-            <FormField
-              control={control}
-              name="shippingAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Delivery Address*</FormLabel>
+                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
+              </FormItem>)}
             />
           </div>
         </div>
@@ -490,6 +486,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={handleViewPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                View PDF
+            </Button>
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
                 quoteDate: initialData.quoteDate ? parseISO(initialData.quoteDate) : new Date(),
