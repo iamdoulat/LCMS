@@ -230,7 +230,7 @@ export default function PrintInvoicePage() {
 
         {invoiceData.subject && (
           <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
-            <p>{invoiceData.subject}</p>
+            <p className="text-[10px]">{invoiceData.subject}</p>
           </section>
         )}
         
@@ -273,7 +273,7 @@ export default function PrintInvoicePage() {
                 {invoiceData.comments && (
                 <div className="space-y-1">
                     <h4 className="font-semibold text-gray-700 uppercase tracking-wide">Terms and Conditions:</h4>
-                    <div className="text-gray-600 whitespace-pre-line">{invoiceData.comments}</div>
+                    <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
                 </div>
                 )}
             </div>
