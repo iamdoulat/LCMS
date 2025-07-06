@@ -722,7 +722,7 @@ export const itemSchema = z.object({
   itemName: z.string().min(1, "Item Name is required."),
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
-  supplierId: z.string().optional(), // For storing selected supplier's ID
+  supplierId: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),
   salesPrice: z.preprocess(
@@ -747,23 +747,26 @@ export const itemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Warning Quantity must be a number." }).int().nonnegative("Warning Quantity must be a non-negative integer.").optional()
   ),
-}).refine(data => {
+}).superRefine((data, ctx) => {
   if (data.manageStock) {
-    const qty = data.currentQuantity;
-    return qty !== undefined && qty !== null && !isNaN(qty) && qty >= 0;
+    if (data.currentQuantity === undefined || data.currentQuantity === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Current Quantity is required when managing stock.",
+        path: ["currentQuantity"],
+      });
+    }
   }
-  return true;
-}, {
-  message: "Current Quantity is required and must be a non-negative number when managing stock.",
-  path: ["currentQuantity"],
-}).refine(data => {
+
   if (data.manageStock && data.warningQuantity !== undefined && data.idealQuantity !== undefined) {
-    return data.warningQuantity <= data.idealQuantity;
+    if (data.warningQuantity > data.idealQuantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Warning Quantity should not be greater than Ideal Quantity.",
+        path: ["warningQuantity"],
+      });
+    }
   }
-  return true;
-}, {
-  message: "Warning Quantity should generally be less than or equal to Ideal Quantity.",
-  path: ["warningQuantity"],
 });
 
 export type ItemFormValues = z.infer<typeof itemSchema>;
