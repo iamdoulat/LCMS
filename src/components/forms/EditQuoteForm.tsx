@@ -97,7 +97,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             customerId: initialData.customerId || '',
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
-            sameAsBilling: initialData.billingAddress === initialData.shippingAddress, // Infer if not explicitly stored
             quoteDate: initialData.quoteDate && isValid(parseISO(initialData.quoteDate)) ? parseISO(initialData.quoteDate) : new Date(),
             salesperson: initialData.salesperson || '',
             lineItems: initialData.lineItems.map(item => ({
@@ -126,33 +125,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }, [initialData, reset]);
 
 
-  const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
   const watchedGlobalTaxRate = watch("globalTaxRate");
-
-  React.useEffect(() => {
-    if (watchedCustomerId && customerOptions.length > 0) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        const billingAddr = (selectedCustomer as any).address || '';
-        setValue("billingAddress", billingAddr);
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", billingAddr);
-        }
-      }
-    }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
-
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
-
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -315,9 +291,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <Users className="mr-2 h-5 w-5 text-primary" />
           Customer & Delivery Information
         </h3>
-        {/* Row 1: Customer & Delivery Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> {/* Column 1 for Customer */}
+          <div>
             <FormField
               control={control}
               name="customerId"
@@ -338,29 +313,15 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
           </div>
-          <div> {/* Column 2 for Delivery Address */}
+          <div>
             <FormField
               control={control}
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center mb-1.5">
-                      <FormLabel>Delivery Address*</FormLabel>
-                      <FormField
-                          control={control}
-                          name="sameAsBilling"
-                          render={({ field: checkboxField }) => (
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxQuoteEdit" />
-                              </FormControl>
-                              <Label htmlFor="sameAsBillingCheckboxQuoteEdit" className="text-xs font-normal cursor-pointer">Same as billing</Label>
-                          </FormItem>
-                          )}
-                      />
-                  </div>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -369,9 +330,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </div>
         </div>
 
-        {/* Row 2: Salesperson & Billing Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div> {/* Column 1 for Salesperson */}
+          <div>
             <FormField
               control={control}
               name="salesperson"
@@ -386,7 +346,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
           </div>
-          <div> {/* Column 2 for Billing Address */}
+          <div>
             <FormField
               control={control}
               name="billingAddress"
@@ -453,18 +413,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </h3>
         <div className="rounded-md border overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Qty*</TableHead>
-                <TableHead className="min-w-[200px]">Item*</TableHead>
-                <TableHead className="min-w-[250px]">Description</TableHead>
-                <TableHead className="w-[120px]">Unit Price*</TableHead>
-                <TableHead className="w-[100px]">Discount %</TableHead>
-                <TableHead className="w-[100px]">Tax %</TableHead>
-                <TableHead className="w-[130px] text-right">Line Total</TableHead>
-                <TableHead className="w-[50px] text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead><TableHead className="w-[100px]">Discount %</TableHead><TableHead className="w-[100px]">Tax %</TableHead><TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -589,3 +538,4 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+

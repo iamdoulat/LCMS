@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -96,7 +97,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             customerId: initialData.customerId || '',
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
-            sameAsBilling: initialData.billingAddress === initialData.shippingAddress,
             saleDate: initialData.saleDate && isValid(parseISO(initialData.saleDate)) ? parseISO(initialData.saleDate) : new Date(),
             salesperson: initialData.salesperson || '',
             lineItems: initialData.lineItems.map(item => ({
@@ -122,30 +122,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
-  const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-
-  React.useEffect(() => {
-    if (watchedCustomerId && customerOptions.length > 0) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        const billingAddr = (selectedCustomer as any).address || '';
-        setValue("billingAddress", billingAddr);
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", billingAddr);
-        }
-      }
-    }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
-
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -275,7 +253,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                     if (qtyDifference !== 0) {
                         const itemRef = doc(firestore, "items", itemId);
                         const itemSnap = await transaction.get(itemRef);
-                        if (!itemSnap.exists()) throw new Error(`Item ${itemOption.label} not found.`);
+                        if (!itemSnap.exists()) throw new Error(`Item "${itemOption.label}" not found.`);
                         const currentStock = itemSnap.data().currentQuantity || 0;
                         const adjustedStock = currentStock - qtyDifference;
                         if (adjustedStock < 0) throw new Error(`Insufficient stock for ${itemOption.label}.`);
@@ -313,10 +291,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           </div>
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (
               <FormItem>
-                <div className="flex justify-between items-center mb-1.5"><FormLabel>Delivery Address*</FormLabel>
-                  <FormField control={control} name="sameAsBilling" render={({ field: cbField }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={cbField.value} onCheckedChange={cbField.onChange} id="editSaleSameAsBilling" /></FormControl><Label htmlFor="editSaleSameAsBilling" className="text-xs font-normal cursor-pointer">Same as billing</Label></FormItem>)}/>
-                </div>
-                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} disabled={watch("sameAsBilling")} /></FormControl><FormMessage />
+                <FormLabel>Delivery Address*</FormLabel>
+                <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage />
               </FormItem>)}
             />
           </div>
@@ -396,4 +372,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   );
 }
 
-    

@@ -779,7 +779,6 @@ export const QuoteSchema = z.object({
   customerId: z.string().min(1, "Customer is required."),
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
-  sameAsBilling: z.boolean().default(true),
   quoteDate: z.date({ required_error: "Quote Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
   lineItems: z.array(QuoteLineItemSchema).min(1, "At least one line item is required."),
@@ -883,7 +882,6 @@ export const SaleSchema = z.object({
   customerId: z.string().min(1, "Customer is required."),
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
-  sameAsBilling: z.boolean().default(true),
   saleDate: z.date({ required_error: "Sale Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
   lineItems: z.array(SaleLineItemSchema).min(1, "At least one line item is required."),
@@ -917,7 +915,6 @@ export const InvoiceSchema = z.object({
   customerId: z.string().min(1, "Customer is required."),
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
-  sameAsBilling: z.boolean().default(true),
   invoiceDate: z.date({ required_error: "Invoice Date is required." }), // Changed from quoteDate
   dueDate: z.date().optional(), // Added for invoices
   paymentTerms: z.string().optional(), // Added for invoices
@@ -993,7 +990,6 @@ export const OrderSchema = z.object({
   beneficiaryId: z.string().min(1, "Beneficiary is required."), // Changed from customerId
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
-  sameAsBilling: z.boolean().default(true),
   orderDate: z.date({ required_error: "Order Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
   lineItems: z.array(OrderLineItemSchema).min(1, "At least one line item is required."),
@@ -1041,3 +1037,4 @@ export interface OrderDocument {
   updatedAt: any;
 }
 // --- END Order Types ---
+

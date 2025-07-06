@@ -5,12 +5,11 @@
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteLineItemFormValues, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types';
+import type { QuoteDocument, QuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +60,6 @@ export function CreateQuoteForm() {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      sameAsBilling: true,
       quoteDate: new Date(),
       salesperson: '',
       lineItems: [{
@@ -88,9 +86,6 @@ export function CreateQuoteForm() {
     name: "lineItems",
   });
 
-  const watchedCustomerId = watch("customerId");
-  const watchedSameAsBilling = watch("sameAsBilling");
-  const watchedBillingAddress = watch("billingAddress");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
@@ -134,29 +129,6 @@ export function CreateQuoteForm() {
     };
     fetchOptions();
   }, []);
-
-  React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        const billingAddr = selectedCustomer.address || '';
-        setValue("billingAddress", billingAddr);
-        if (getValues("sameAsBilling")) {
-          setValue("shippingAddress", billingAddr);
-        }
-      }
-    } else {
-      setValue("billingAddress", "");
-      setValue("shippingAddress", "");
-    }
-  }, [watchedCustomerId, customerOptions, setValue, getValues]);
-
-  React.useEffect(() => {
-    if (watchedSameAsBilling) {
-      setValue("shippingAddress", getValues("billingAddress"));
-    }
-  }, [watchedSameAsBilling, watchedBillingAddress, setValue, getValues]);
-
 
   React.useEffect(() => {
     let currentSubtotal = 0;
@@ -420,23 +392,9 @@ export function CreateQuoteForm() {
               name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center mb-1.5">
-                      <FormLabel>Delivery Address*</FormLabel>
-                      <FormField
-                          control={control}
-                          name="sameAsBilling"
-                          render={({ field: checkboxField }) => (
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                              <FormControl>
-                              <Checkbox checked={checkboxField.value} onCheckedChange={checkboxField.onChange} id="sameAsBillingCheckboxQuote" />
-                              </FormControl>
-                              <Label htmlFor="sameAsBillingCheckboxQuote" className="text-xs font-normal cursor-pointer">Same as billing</Label>
-                          </FormItem>
-                          )}
-                      />
-                  </div>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} disabled={watchedSameAsBilling} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -588,9 +546,7 @@ export function CreateQuoteForm() {
          {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
             <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
         )}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-        </Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -656,3 +612,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
