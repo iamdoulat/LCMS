@@ -234,7 +234,7 @@ export function CreateQuoteForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedQuoteId = `QSS${currentYear}-${String(newCount).padStart(2, '0')}`;
+        const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0'));
@@ -528,18 +528,7 @@ export function CreateQuoteForm() {
         </h3>
         <div className="rounded-md border overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Qty*</TableHead>
-                <TableHead className="min-w-[200px]">Item*</TableHead>
-                <TableHead className="min-w-[250px]">Description</TableHead>
-                <TableHead className="w-[120px]">Unit Price*</TableHead>
-                <TableHead className="w-[100px]">Discount %</TableHead>
-                <TableHead className="w-[100px]">Tax %</TableHead>
-                <TableHead className="w-[130px] text-right">Line Total</TableHead>
-                <TableHead className="w-[50px] text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead><TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead><TableHead className="w-[100px]">Discount %</TableHead><TableHead className="w-[100px]">Tax %</TableHead><TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>

@@ -33,7 +33,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -364,7 +364,7 @@ export default function QuotesListPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((quote) => (
                     <TableRow key={quote.id}>
-                      <TableCell className="font-medium p-2 sm:p-4">{quote.id.substring(0,8)}...</TableCell>
+                      <TableCell className="font-medium p-2 sm:p-4">{quote.id}</TableCell>
                       <TableCell className="p-2 sm:p-4">{quote.customerName || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{quote.salesperson || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatDisplayDate(quote.quoteDate)}</TableCell>
@@ -392,7 +392,7 @@ export default function QuotesListPage() {
                               <span>Download PDF</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => quote.id && handleDeleteQuote(quote.id, quote.id.substring(0,8))}
+                              onClick={() => quote.id && handleDeleteQuote(quote.id, quote.id)}
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -440,3 +440,4 @@ export default function QuotesListPage() {
     
 
     
+
