@@ -364,7 +364,9 @@ export default function QuotesListPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((quote) => (
                     <TableRow key={quote.id}>
-                      <TableCell className="font-medium p-2 sm:p-4">{quote.id}</TableCell>
+                      <TableCell className="font-medium p-2 sm:p-4">
+                        {quote.id.startsWith('QT') ? quote.id : `${quote.id.substring(0, 8)}...`}
+                      </TableCell>
                       <TableCell className="p-2 sm:p-4">{quote.customerName || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{quote.salesperson || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatDisplayDate(quote.quoteDate)}</TableCell>
@@ -437,7 +439,3 @@ export default function QuotesListPage() {
     </div>
   );
 }
-    
-
-    
-
