@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Save, X, ShoppingCart, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Save, X, ShoppingCart, Hash, Columns, Printer, Edit, ShoppingBag } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -286,8 +285,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         <h3 className={cn(sectionHeadingClass)}><Building className="mr-2 h-5 w-5 text-primary" />Beneficiary & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="beneficiaryId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Beneficiary*</FormLabel>
+              <FormItem><FormLabel>Beneficiary*</FormLabel>
                 <Combobox options={beneficiaryOptions} value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_BENEFICIARY_VALUE ? '' : val)} placeholder="Search Beneficiary..." selectPlaceholder="Select Beneficiary" disabled={isLoadingDropdowns}/>
                 <FormMessage />
               </FormItem>)}
@@ -354,8 +352,8 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
+                 <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
