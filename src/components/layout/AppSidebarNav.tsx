@@ -151,8 +151,8 @@ const settingsNavItems: NavItem[] = [
 // Define Group Structure
 const allNavGroups: NavItemGroup[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, subLinks: lcManagementNavItems },
-  { groupLabel: 'Inventory Management', icon: Package, subLinks: inventoryNavItems },
   { groupLabel: 'Financial Management', icon: Receipt, subLinks: financialNavItems },
+  { groupLabel: 'Inventory Management', icon: Package, subLinks: inventoryNavItems },
   { groupLabel: "Commission Management", icon: Briefcase, subLinks: commissionManagementNavItems },
   { groupLabel: 'Customers / Applicants', icon: UsersIcon, subLinks: partiesNavItems },
   { groupLabel: 'Shipment Management', icon: Ship, subLinks: shipmentNavItems },
