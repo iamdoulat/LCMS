@@ -161,7 +161,7 @@ export default function PrintQuotePage() {
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
   const hideCompanyName = financialSettings?.hideCompanyName ?? false;
-
+  
   const showItemCodeColumn = quoteData.showItemCodeColumn ?? false;
   const showDiscountColumn = quoteData.showDiscountColumn ?? false;
   const showTaxColumn = quoteData.showTaxColumn ?? false;
@@ -270,7 +270,7 @@ export default function PrintQuotePage() {
           </table>
         </section>
 
-        <div className="flex justify-between items-start pt-4">
+        <div className="flex justify-between items-start pt-2">
             <div className="w-1/2 pr-4 text-xs">
                 {quoteData.comments && (
                 <div className="space-y-1">
@@ -305,7 +305,7 @@ export default function PrintQuotePage() {
         </div>
       </div>
 
-      <div className="mt-auto pt-8 px-8">
+      <div className="mt-auto pt-2 px-8 pb-2">
         <section className="flex justify-between mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
@@ -316,7 +316,7 @@ export default function PrintQuotePage() {
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
-
+        
         <footer className="flex justify-center items-center text-gray-500 pt-0">
            <div className="flex flex-col items-center gap-2 text-center">
             <div className="p-1 border">

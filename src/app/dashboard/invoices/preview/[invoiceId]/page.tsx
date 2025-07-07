@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -271,7 +270,7 @@ export default function PrintInvoicePage() {
           </table>
         </section>
 
-        <div className="flex justify-between items-start pt-4">
+        <div className="flex justify-between items-start pt-2">
             <div className="w-1/2 pr-4 text-xs">
                 {invoiceData.comments && (
                 <div className="space-y-1">
@@ -306,7 +305,7 @@ export default function PrintInvoicePage() {
         </div>
       </div>
 
-      <div className="mt-auto pt-8 px-8">
+      <div className="mt-auto pt-2 px-8 pb-2">
         <section className="flex justify-between mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
