@@ -306,13 +306,13 @@ export default function PrintQuotePage() {
       </div>
 
       <div className="mt-auto pt-2 px-8 pb-2">
-        <section className="flex justify-between items-center mb-2">
+        <section className="flex justify-between items-end mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
           
-          <div className="flex-shrink-0">
+          <div className="flex flex-col items-center gap-1 text-center">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
@@ -322,6 +322,7 @@ export default function PrintQuotePage() {
                     level={"L"}
                 />
             </div>
+            <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
 
           <div className="w-1/3 text-center">
@@ -329,14 +330,6 @@ export default function PrintQuotePage() {
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
-
-        <footer className="flex justify-center items-center text-gray-500 pt-0">
-           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex flex-col text-[8px]">
-                <span>Thank you for your business!</span>
-            </div>
-           </div>
-        </footer>
       </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
