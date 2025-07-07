@@ -307,7 +307,7 @@ export default function PrintInvoicePage() {
       </div>
 
       <div className="mt-auto pt-8 px-8">
-        <section className="flex justify-between mb-8">
+        <section className="flex justify-between mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
@@ -318,18 +318,18 @@ export default function PrintInvoicePage() {
           </div>
         </section>
 
-        <footer className="flex justify-center items-center text-gray-500 pt-4">
+        <footer className="flex justify-center items-center text-gray-500 pt-0">
            <div className="flex flex-col items-center gap-2 text-center">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
-                    size={40}
+                    size={35}
                     bgColor={"#ffffff"}
                     fgColor={"#000000"}
                     level={"L"}
                 />
             </div>
-            <div className="flex flex-col text-[10px]">
+            <div className="flex flex-col text-[8px]">
                 <span>Thank you for your business!</span>
                 {displayCompanyEmail && <span>{displayCompanyEmail}</span>}
             </div>
