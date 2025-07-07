@@ -306,7 +306,7 @@ export default function PrintQuotePage() {
         </div>
       </div>
 
-      <div className="mt-auto pt-16">
+      <div className="mt-auto pt-8">
         <section className="flex justify-between mb-8">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
@@ -318,9 +318,9 @@ export default function PrintQuotePage() {
           </div>
         </section>
 
-        <footer className="flex justify-between items-center text-xs text-gray-500 pt-4 border-t border-gray-200">
+        <footer className="flex justify-end items-center text-xs text-gray-500 pt-4 border-t border-gray-200">
            <div className="flex items-center gap-2">
-            <div className="p-1 border-2 border-red-600">
+            <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
                     size={48}
