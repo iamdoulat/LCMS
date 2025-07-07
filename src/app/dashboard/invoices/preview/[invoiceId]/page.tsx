@@ -236,7 +236,7 @@ export default function PrintInvoicePage() {
           </section>
         )}
         
-        <section className="mb-4">
+        <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -306,19 +306,13 @@ export default function PrintInvoicePage() {
       </div>
 
       <div className="mt-auto pt-2 px-8 pb-2">
-        <section className="flex justify-between mb-2">
+        <section className="flex justify-between items-center mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-          <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
-          </div>
-        </section>
-
-        <footer className="flex justify-center items-center text-gray-500 pt-0">
-           <div className="flex flex-col items-center gap-2 text-center">
+          
+          <div className="flex-shrink-0">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
@@ -328,6 +322,16 @@ export default function PrintInvoicePage() {
                     level={"L"}
                 />
             </div>
+          </div>
+
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+          </div>
+        </section>
+
+        <footer className="flex justify-center items-center text-gray-500 pt-0">
+           <div className="flex flex-col items-center gap-2 text-center">
             <div className="flex flex-col text-[8px]">
                 <span>Thank you for your business!</span>
             </div>
