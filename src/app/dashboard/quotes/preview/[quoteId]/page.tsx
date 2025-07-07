@@ -318,18 +318,18 @@ export default function PrintQuotePage() {
           </div>
         </section>
 
-        <footer className="flex justify-end items-center text-xs text-gray-500 pt-4 border-t border-gray-200">
-           <div className="flex items-center gap-2">
+        <footer className="flex justify-center items-center text-gray-500 pt-4">
+           <div className="flex flex-col items-center gap-2 text-center">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
-                    size={48}
+                    size={40}
                     bgColor={"#ffffff"}
                     fgColor={"#000000"}
                     level={"L"}
                 />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col text-[10px]">
                 <span>Thank you for your business!</span>
                 {displayCompanyEmail && <span>{displayCompanyEmail}</span>}
             </div>
