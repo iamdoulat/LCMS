@@ -260,6 +260,6 @@ body {
 
   @page {
     size: A4;
-    margin: 0.1in;
+    margin: 0.05in 0.1in;
   }
 }
