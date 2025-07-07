@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import QRCode from "react-qr-code";
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -49,11 +50,11 @@ export default function PrintQuotePage() {
   const router = useRouter();
   const quoteId = params.quoteId as string;
 
-  const [quoteData, setQuoteData] = useState<QuoteDocument | null>(null);
-  const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
-  const [financialSettings, setFinancialSettings] = useState<FinancialSettingsProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [quoteData, setQuoteData] = React.useState<QuoteDocument | null>(null);
+  const [customerData, setCustomerData] = React.useState<CustomerDocument | null>(null);
+  const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchFinancialSettings = useCallback(async () => {
     try {
@@ -166,6 +167,8 @@ export default function PrintQuotePage() {
   const showDiscountColumn = quoteData.showDiscountColumn ?? false;
   const showTaxColumn = quoteData.showTaxColumn ?? false;
 
+  const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount, '')}`;
+
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
       <div className="flex-grow">
@@ -229,8 +232,8 @@ export default function PrintQuotePage() {
         </div>
 
         {quoteData.subject && (
-          <section className="mb-4 p-2 border rounded-md text-center text-sm font-medium">
-            <p className="text-sm font-normal">{quoteData.subject}</p>
+          <section className="mb-4 p-2 border rounded-md text-center">
+            <p className="text-[12px] font-normal">{quoteData.subject}</p>
           </section>
         )}
 
@@ -315,10 +318,22 @@ export default function PrintQuotePage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500">
-            <p>Thank you for your business!</p>
-            {!hideCompanyName && <p>{displayCompanyName} - {displayCompanyEmail}</p>}
-            {hideCompanyName && <p>{displayCompanyEmail}</p>}
+        <footer className="flex justify-between items-center text-xs text-gray-500 pt-4 border-t border-gray-200">
+           <div className="flex items-center gap-2">
+            <div className="p-1 border-2 border-red-600">
+                <QRCode
+                    value={qrCodeValue}
+                    size={48}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+            <div className="flex flex-col">
+                <span>Thank you for your business!</span>
+                {displayCompanyEmail && <span>{displayCompanyEmail}</span>}
+            </div>
+           </div>
         </footer>
       </div>
 

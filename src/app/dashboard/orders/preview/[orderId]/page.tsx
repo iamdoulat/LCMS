@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import QRCode from "react-qr-code";
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -50,11 +51,11 @@ export default function PrintOrderPage() {
   const router = useRouter();
   const orderId = params.orderId as string;
 
-  const [orderData, setOrderData] = useState<OrderDocument | null>(null);
-  const [beneficiaryData, setBeneficiaryData] = useState<SupplierDocument | null>(null);
-  const [financialSettings, setFinancialSettings] = useState<FinancialSettingsProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [orderData, setOrderData] = React.useState<OrderDocument | null>(null);
+  const [beneficiaryData, setBeneficiaryData] = React.useState<SupplierDocument | null>(null);
+  const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchFinancialSettings = useCallback(async () => {
     try {
@@ -166,6 +167,9 @@ export default function PrintOrderPage() {
   const showItemCodeColumn = orderData.showItemCodeColumn ?? true; 
   const showDiscountColumn = orderData.showDiscountColumn ?? true;
   const showTaxColumn = orderData.showTaxColumn ?? true;
+
+  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount, '')}`;
+
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
@@ -302,10 +306,22 @@ export default function PrintOrderPage() {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-gray-500">
-            <p>Thank you for your business!</p>
-            {!hideCompanyName && <p>{displayCompanyName} - {displayCompanyEmail}</p>}
-            {hideCompanyName && <p>{displayCompanyEmail}</p>}
+        <footer className="flex justify-between items-center text-xs text-gray-500 pt-4 border-t border-gray-200">
+           <div className="flex items-center gap-2">
+            <div className="p-1 border-2 border-red-600">
+                <QRCode
+                    value={qrCodeValue}
+                    size={48}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+            <div className="flex flex-col">
+                <span>Thank you for your business!</span>
+                {displayCompanyEmail && <span>{displayCompanyEmail}</span>}
+            </div>
+           </div>
         </footer>
       </div>
 

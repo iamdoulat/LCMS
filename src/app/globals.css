@@ -186,7 +186,7 @@ body {
   }
   
   .print-invoice-container footer {
-      display: block !important; /* Make sure the invoice footer is visible */
+      display: flex !important; /* Make sure the invoice footer is visible */
   }
 
   /* Ensure the main content area (where the form is) is printable */
@@ -241,7 +241,7 @@ body {
 
   /* Ensure table cells have borders for print if desired */
   table, th, td {
-    border: 1px solid #ccc !important;
+    border: 1px solid #333 !important; /* Darker border for visibility */
   }
   th, td {
     padding: 4px 8px !important; /* Adjust padding for print */
