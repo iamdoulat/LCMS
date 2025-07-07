@@ -318,7 +318,6 @@ export default function PrintOrderPage() {
             </div>
             <div className="flex flex-col text-[8px]">
                 <span>Thank you for your business!</span>
-                {displayCompanyEmail && <span>{displayCompanyEmail}</span>}
             </div>
            </div>
         </footer>
