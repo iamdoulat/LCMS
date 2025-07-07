@@ -305,7 +305,7 @@ export default function PrintInvoicePage() {
         </div>
       </div>
 
-      <div className="mt-auto pt-2 px-8 pb-2">
+      <div className="mt-auto mb-6 pt-2 px-8 pb-2">
         <section className="flex justify-between items-end mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>

@@ -170,7 +170,7 @@ export default function PrintQuotePage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="flex-grow p-8">
+      <div className="flex-grow p-4">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
@@ -305,7 +305,7 @@ export default function PrintQuotePage() {
         </div>
       </div>
 
-      <div className="mt-auto pt-2 px-8 pb-2">
+      <div className="mt-auto mb-6 pt-2 px-8 pb-2">
         <section className="flex justify-between items-end mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
