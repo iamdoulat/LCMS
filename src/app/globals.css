@@ -241,7 +241,7 @@ body {
 
   /* Ensure table cells have borders for print if desired */
   table, th, td {
-    border: 1px solid #333 !important; /* Darker border for visibility */
+    border: 1px solid #000000 !important; /* Darker border for visibility */
   }
   th, td {
     padding: 4px 8px !important; /* Adjust padding for print */
@@ -256,6 +256,6 @@ body {
 
   @page {
     size: A4;
-    margin: 0.3in 0.3in 0.1in;
+    margin: 0.3in 0.3in 0.05in;
   }
 }
