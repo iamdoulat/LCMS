@@ -233,16 +233,20 @@ body {
     text-decoration: none !important; /* Remove underlines for cleaner print, unless specifically styled */
   }
   
-  table { page-break-inside: auto; }
+  table { 
+    page-break-inside: auto; 
+    border-collapse: collapse !important;
+  }
   tr    { page-break-inside: avoid; page-break-after: auto; }
   thead { display: table-header-group; } /* Ensure table headers repeat on each page */
   tbody { display: table-row-group; }
   tfoot { display: table-footer-group; }
 
   /* Ensure table cells have borders for print if desired */
-  table, th, td {
-    border: 1px solid #000000 !important; /* Darker border for visibility */
+  th, td {
+    border: 1pt solid #000 !important;
   }
+  
   th, td {
     padding: 4px 8px !important; /* Adjust padding for print */
   }
