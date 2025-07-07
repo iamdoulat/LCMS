@@ -170,8 +170,8 @@ export default function PrintQuotePage() {
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount, '')}`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col">
-      <div className="flex-grow">
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+      <div className="flex-grow p-8">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
@@ -245,10 +245,10 @@ export default function PrintQuotePage() {
                 <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price (USD)</th>
                 {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
                 {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total (USD)</th>
               </tr>
             </thead>
             <tbody>
@@ -282,7 +282,7 @@ export default function PrintQuotePage() {
             </div>
             <div className="w-auto text-sm space-y-1">
                 <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                    <span className="text-gray-600 font-medium text-right">Subtotal:</span>
+                    <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
                     <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
                 </div>
                 {showDiscountColumn && (
@@ -299,14 +299,14 @@ export default function PrintQuotePage() {
                 )}
                 <Separator className="my-2 border-gray-300" />
                 <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total:</span>
+                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
                     <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
                 </div>
             </div>
         </div>
       </div>
 
-      <div className="mt-auto pt-8">
+      <div className="mt-auto pt-8 px-8">
         <section className="flex justify-between mb-8">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
