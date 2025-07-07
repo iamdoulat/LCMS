@@ -97,7 +97,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
     { href: '/dashboard/quotes/create', label: 'Create Quote', icon: FilePlus2 },
     { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
-    { href: '/dashboard/invoices/create', label: 'Create Invoice', icon: FilePlus2 },
     { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
     { href: '/dashboard/orders/create', label: 'Create Order', icon: ShoppingCart },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
