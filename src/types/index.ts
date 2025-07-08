@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -122,6 +121,9 @@ export interface LCEntry {
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
+  firstShipmentNote?: string;
+  secondShipmentNote?: string;
+  thirdShipmentNote?: string;
 }
 
 export const lcEntrySchema = z.object({
@@ -209,6 +211,9 @@ export const lcEntrySchema = z.object({
   isFirstShipment: z.boolean().optional().default(true),
   isSecondShipment: z.boolean().optional().default(false),
   isThirdShipment: z.boolean().optional().default(false),
+  firstShipmentNote: z.string().optional(),
+  secondShipmentNote: z.string().optional(),
+  thirdShipmentNote: z.string().optional(),
 }).superRefine((data, ctx) => {
     // If status is Draft, all date fields are optional, so no further validation needed for them.
     if (data.status?.includes('Draft')) {
@@ -329,6 +334,9 @@ export interface LCEntryDocument {
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
+  firstShipmentNote?: string;
+  secondShipmentNote?: string;
+  thirdShipmentNote?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
@@ -1065,4 +1073,5 @@ export interface OrderDocument {
 
 
     
+
 

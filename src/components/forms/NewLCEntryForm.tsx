@@ -107,6 +107,9 @@ const defaultFormValues: NewLCFormValues = {
   isFirstShipment: true,
   isSecondShipment: false,
   isThirdShipment: false,
+  firstShipmentNote: '',
+  secondShipmentNote: '',
+  thirdShipmentNote: '',
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -407,6 +410,9 @@ export function NewLCEntryForm() {
       isFirstShipment: finalData.isFirstShipment ?? false,
       isSecondShipment: finalData.isSecondShipment ?? false,
       isThirdShipment: finalData.isThirdShipment ?? false,
+      firstShipmentNote: finalData.firstShipmentNote || undefined,
+      secondShipmentNote: finalData.secondShipmentNote || undefined,
+      thirdShipmentNote: finalData.thirdShipmentNote || undefined,
     };
 
     const cleanedDataToSave = Object.fromEntries(
@@ -1222,6 +1228,47 @@ export function NewLCEntryForm() {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={control}
+            name="firstShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>1st Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 1st shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="secondShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>2nd Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 2nd shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="thirdShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>3rd Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 3rd shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <FormField
