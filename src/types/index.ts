@@ -821,6 +821,7 @@ export const QuoteSchema = z.object({
   showItemCodeColumn: z.boolean().optional().default(true),
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
+  convertedToInvoiceId: z.string().optional(),
 });
 export type QuoteFormValues = z.infer<typeof QuoteSchema>;
 
@@ -859,6 +860,7 @@ export interface QuoteDocument {
   showItemCodeColumn?: boolean;
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
+  convertedToInvoiceId?: string;
 }
 // --- END Quote Types ---
 
@@ -956,6 +958,7 @@ export const InvoiceSchema = z.object({
   showItemCodeColumn: z.boolean().optional().default(true),
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
+  convertedFromQuoteId: z.string().optional(),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -999,6 +1002,7 @@ export interface InvoiceDocument {
   showItemCodeColumn?: boolean;
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
+  convertedFromQuoteId?: string;
 }
 // --- END Invoice Types ---
 
@@ -1078,6 +1082,7 @@ export interface OrderDocument {
 
 
     
+
 
 
 

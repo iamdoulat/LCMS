@@ -8,13 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
 import type {
   CustomerDocument,
   QuoteDocument,
   ItemDocument as ItemDoc,
   QuoteFormValues as PageQuoteFormValues,
-  QuoteLineItemFormValues as PageQuoteLineItemFormValues
+  QuoteLineItemFormValues as PageQuoteLineItemFormValues,
+  InvoiceDocument
 } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions } from '@/types';
 
@@ -94,6 +95,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
+  const watchedStatus = watch("status");
 
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
@@ -158,7 +160,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     fetchOptionsAndSetData();
   }, [initialData, reset]);
   
-  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
@@ -220,13 +221,123 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
   };
 
-  const handleConvertToInvoice = () => {
-    Swal.fire({
-      title: "Convert to Invoice",
-      text: `Functionality to convert Quote ID: ${quoteId} to an invoice is not yet implemented. This feature will be available soon.`,
-      icon: "info",
+  const handleConvertToInvoice = async () => {
+    if (!quoteId) {
+        Swal.fire("Error", "Quote ID is missing.", "error");
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: 'Convert to Invoice?',
+        text: `This will create a new invoice from this quote (${quoteId}) and mark the quote as 'Invoiced'. This action cannot be undone.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, convert it!',
+        cancelButtonText: 'Cancel',
     });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    setIsSubmitting(true);
+    const data = getValues();
+
+    try {
+        const newInvoiceId = await runTransaction(firestore, async (transaction) => {
+            const quoteDocRef = doc(firestore, "quotes", quoteId);
+            const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
+
+            const counterDoc = await transaction.get(counterRef);
+            const currentYear = new Date().getFullYear();
+            let currentCount = 0;
+            if (counterDoc.exists()) {
+                const counterData = counterDoc.data();
+                currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
+            }
+            const newCount = currentCount + 1;
+            const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(3, '0')}`;
+            
+            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+
+            const invoiceDataToSave: Omit<InvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+                customerId: data.customerId,
+                customerName: selectedCustomer?.label || 'N/A',
+                billingAddress: data.billingAddress,
+                shippingAddress: data.shippingAddress,
+                invoiceDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                dueDate: undefined,
+                paymentTerms: '',
+                salesperson: data.salesperson,
+                subject: data.subject || undefined,
+                lineItems: data.lineItems.map(item => {
+                    const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+                    return {
+                        itemId: item.itemId,
+                        itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+                        itemCode: itemDetails?.itemCode || undefined,
+                        description: item.description || '',
+                        qty: parseFloat(String(item.qty || '0')),
+                        unitPrice: parseFloat(String(item.unitPrice || '0')),
+                        discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+                        taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+                        total: parseFloat(String(item.total || '0')),
+                    };
+                }),
+                taxType: data.taxType,
+                comments: data.comments,
+                privateComments: data.privateComments,
+                subtotal: subtotal,
+                totalDiscountAmount: totalDiscountAmount,
+                totalTaxAmount: totalTaxAmount,
+                totalAmount: grandTotal,
+                status: "Draft",
+                amountPaid: 0,
+                showItemCodeColumn: data.showItemCodeColumn,
+                showDiscountColumn: data.showDiscountColumn,
+                showTaxColumn: data.showTaxColumn,
+                convertedFromQuoteId: quoteId,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
+            transaction.set(newInvoiceRef, invoiceDataToSave);
+
+            transaction.update(quoteDocRef, {
+                status: "Invoiced",
+                convertedToInvoiceId: formattedInvoiceId,
+                updatedAt: serverTimestamp()
+            });
+            
+            transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
+
+            return formattedInvoiceId;
+        });
+
+        setValue("status", "Invoiced");
+
+        Swal.fire({
+            title: 'Conversion Successful!',
+            html: `A new invoice has been created with ID: <strong>${newInvoiceId}</strong>.`,
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: 'Edit New Invoice',
+            cancelButtonText: 'Close',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.push(`/dashboard/invoices/edit/${newInvoiceId}`);
+            }
+        });
+
+    } catch (error: any) {
+        console.error("Error converting quote to invoice: ", error);
+        Swal.fire("Conversion Failed", `Failed to convert quote: ${error.message}`, "error");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
+
 
   async function onSubmit(data: QuoteFormValues) {
     if (!quoteId) {
@@ -503,7 +614,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
-            <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={saveButtonsDisabled}>
+            <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || watchedStatus === 'Invoiced'}>
               <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
