@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
