@@ -420,9 +420,7 @@ export function CreateQuoteForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill To*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Billing address" {...field} rows={3} />
-                  </FormControl>
+                  <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -590,8 +588,8 @@ export function CreateQuoteForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
+                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>

@@ -362,7 +362,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
-
+        
         <Separator className="my-6" />
         <FormField
           control={control}
@@ -428,8 +428,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel>Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" className="font-bold" {...field} rows={3} /></FormControl>
+                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
