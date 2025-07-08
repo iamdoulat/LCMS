@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -782,6 +783,9 @@ export type ItemFormValues = z.infer<typeof itemSchema>;
 export const quoteTaxTypes = ["Default", "Exempt", "GST @ 5%", "VAT @ 15%"] as const;
 export type QuoteTaxType = typeof quoteTaxTypes[number];
 
+export const quoteStatusOptions = ["Draft", "Sent", "Accepted", "Rejected", "Invoiced"] as const;
+export type QuoteStatus = typeof quoteStatusOptions[number];
+
 export const QuoteLineItemSchema = z.object({
   itemId: z.string().min(1, "Item selection is required."),
   itemCode: z.string().optional(),
@@ -803,6 +807,7 @@ export const QuoteSchema = z.object({
   subject: z.string().optional(),
   lineItems: z.array(QuoteLineItemSchema).min(1, "At least one line item is required."),
   taxType: z.enum(quoteTaxTypes).default("Default"),
+  status: z.enum(quoteStatusOptions).optional(),
   globalDiscount: z.string().optional(), // For future use
   globalTaxRate: z.string().optional(), // For future use
   comments: z.string().optional(),
@@ -848,7 +853,7 @@ export interface QuoteDocument {
   totalDiscountAmount: number;
   totalTaxAmount: number;
   totalAmount: number;
-  status: "Draft" | "Sent" | "Accepted" | "Rejected" | "Invoiced"; // Example statuses
+  status: QuoteStatus;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
   showItemCodeColumn?: boolean;
@@ -1073,5 +1078,6 @@ export interface OrderDocument {
 
 
     
+
 
 

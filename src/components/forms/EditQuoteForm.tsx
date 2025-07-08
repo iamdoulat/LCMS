@@ -16,7 +16,7 @@ import type {
   QuoteFormValues as PageQuoteFormValues,
   QuoteLineItemFormValues as PageQuoteLineItemFormValues
 } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
+import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions } from '@/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -130,6 +130,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             quoteDate: initialData.quoteDate && isValid(parseISO(initialData.quoteDate)) ? parseISO(initialData.quoteDate) : new Date(),
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
+            status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               itemCode: item.itemCode || '',
@@ -219,6 +220,14 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
   };
 
+  const handleConvertToInvoice = () => {
+    Swal.fire({
+      title: "Convert to Invoice",
+      text: `Functionality to convert Quote ID: ${quoteId} to an invoice is not yet implemented. This feature will be available soon.`,
+      icon: "info",
+    });
+  };
+
   async function onSubmit(data: QuoteFormValues) {
     if (!quoteId) {
       Swal.fire("Error", "Quote Number is missing. Cannot update.", "error");
@@ -277,7 +286,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: initialData.status,
+      status: data.status,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
@@ -312,6 +321,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
 
+  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -361,6 +372,28 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                      <FormControl>
+                      <SelectTrigger>
+                          <SelectValue placeholder="Select a status" />
+                      </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                      {quoteStatusOptions.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
+                      </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
         </div>
         
         <Separator className="my-6" />
@@ -463,11 +496,15 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                status: initialData.status,
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
+            </Button>
+            <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={saveButtonsDisabled}>
+              <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
               {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
