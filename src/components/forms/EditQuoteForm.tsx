@@ -75,6 +75,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(quoteId);
 
   const [subtotal, setSubtotal] = React.useState(0);
   const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
@@ -301,8 +302,12 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 updatedAt: serverTimestamp(),
             };
 
+            const cleanedDataToSave = Object.fromEntries(
+                Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined)
+            ) as typeof invoiceDataToSave;
+
             const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
-            transaction.set(newInvoiceRef, invoiceDataToSave);
+            transaction.set(newInvoiceRef, cleanedDataToSave);
 
             transaction.update(quoteDocRef, {
                 status: "Invoiced",
@@ -431,9 +436,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
-
-  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   
+  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -489,7 +494,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               render={({ field }) => (
                   <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                  <Select onValueChange={field.onChange} value={field.value ?? 'Draft'} disabled={watchedStatus === 'Invoiced'}>
                       <FormControl>
                       <SelectTrigger>
                           <SelectValue placeholder="Select a status" />
@@ -501,6 +506,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                       ))}
                       </SelectContent>
                   </Select>
+                  {watchedStatus === 'Invoiced' && <FormDescription className="text-xs">Status is locked after conversion.</FormDescription>}
                   <FormMessage />
                   </FormItem>
               )}
@@ -625,3 +631,4 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+
