@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 const SupplierPieChart = dynamic(() =>
@@ -72,6 +73,9 @@ interface UpcomingEtdShipment {
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
   isThirdShipment?: boolean;
+  firstShipmentNote?: string;
+  secondShipmentNote?: string;
+  thirdShipmentNote?: string;
 }
 
 interface RecentlyCompletedLC {
@@ -385,6 +389,9 @@ export default function DashboardPage() {
                 etdDate: etdDate, etaDate: etaDate,
                 currency: lc.currency, amount: lc.amount,
                 isFirstShipment: lc.isFirstShipment, isSecondShipment: lc.isSecondShipment, isThirdShipment: lc.isThirdShipment,
+                firstShipmentNote: lc.firstShipmentNote,
+                secondShipmentNote: lc.secondShipmentNote,
+                thirdShipmentNote: lc.thirdShipmentNote,
             };
         })
         .sort((a, b) => compareAsc(a.etdDate, b.etdDate))
@@ -647,20 +654,30 @@ export default function DashboardPage() {
                         <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none relative">
                             <div className="absolute top-2 right-2 flex gap-1.5 z-10">
                                 {[
-                                    { flag: shipment.isFirstShipment, label: "1st" },
-                                    { flag: shipment.isSecondShipment, label: "2nd" },
-                                    { flag: shipment.isThirdShipment, label: "3rd" }
+                                    { flag: shipment.isFirstShipment, label: "1st", note: shipment.firstShipmentNote },
+                                    { flag: shipment.isSecondShipment, label: "2nd", note: shipment.secondShipmentNote },
+                                    { flag: shipment.isThirdShipment, label: "3rd", note: shipment.thirdShipmentNote }
                                 ].map((s, idx) => (
-                                    <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref key={idx}>
-                                        <Button
-                                            variant={s.flag ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", s.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                            title={`${s.label} Shipment Status`}
-                                        >
-                                            {s.label}
-                                        </Button>
-                                    </Link>
+                                  <TooltipProvider key={idx} delayDuration={100}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Link href={`/dashboard/total-lc/${shipment.id}/edit`} passHref>
+                                            <Button
+                                                variant={s.flag ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", s.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            >
+                                                {s.label}
+                                            </Button>
+                                        </Link>
+                                      </TooltipTrigger>
+                                      {s.note && (
+                                        <TooltipContent side="top">
+                                          <p className="max-w-xs">{s.note}</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 ))}
                             </div>
                             <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block pr-24">
@@ -856,5 +873,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
