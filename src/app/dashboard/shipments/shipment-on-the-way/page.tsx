@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CompletedLC extends LCEntryDocument {
   updatedAtDate: Date;
@@ -348,45 +349,36 @@ export default function ShipmentDonePage() {
                         )}
                     </div>
                     <div className="flex gap-1.5">
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                          <Button
-                              variant={lc.isFirstShipment ? "default" : "outline"}
-                              size="icon"
-                              className={cn(
-                                  "h-7 w-7 rounded-full p-0 text-xs",
-                                  lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                              )}
-                              title="1st Shipment Status"
-                          >
-                              1st
-                          </Button>
-                      </Link>
-                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                          <Button
-                              variant={lc.isSecondShipment ? "default" : "outline"}
-                              size="icon"
-                              className={cn(
-                                  "h-7 w-7 rounded-full p-0 text-xs",
-                                  lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                              )}
-                              title="2nd Shipment Status"
-                          >
-                              2nd
-                          </Button>
-                      </Link>
-                       <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                          <Button
-                              variant={lc.isThirdShipment ? "default" : "outline"}
-                              size="icon"
-                              className={cn(
-                                  "h-7 w-7 rounded-full p-0 text-xs",
-                                  lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                              )}
-                              title="3rd Shipment Status"
-                          >
-                              3rd
-                          </Button>
-                      </Link>
+                      {[
+                        { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                        { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                        { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                      ].map((shipment, idx) => (
+                        <TooltipProvider key={idx} delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                  <Button
+                                      variant={shipment.flag ? "default" : "outline"}
+                                      size="icon"
+                                      className={cn(
+                                          "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                          shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                      )}
+                                      title={`${shipment.label} Shipment Status`}
+                                  >
+                                      {shipment.label}
+                                  </Button>
+                              </Link>
+                            </TooltipTrigger>
+                            {shipment.note && (
+                              <TooltipContent side="top">
+                                <p className="max-w-xs">{shipment.note}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
                     </div>
                   </div>
 

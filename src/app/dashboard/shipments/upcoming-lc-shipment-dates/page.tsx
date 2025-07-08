@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
@@ -17,8 +17,9 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment'> { 
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment' | 'firstShipmentNote' | 'secondShipmentNote' | 'thirdShipmentNote' | 'applicantId' | 'beneficiaryId'> { 
   latestShipmentDateObj: Date;
 }
 
@@ -37,12 +38,10 @@ const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "out
       return 'secondary';
     case 'Shipment Pending': 
       return 'default'; 
-    case 'Payment Pending':
-      return 'destructive';
-    case 'Payment Done':
+    case 'Shipping going on':
       return 'default';
-    case 'Shipment Done':
-      return 'default';
+    case 'Done':
+      return 'default'; 
     default:
       return 'outline';
   }
@@ -52,7 +51,7 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date Format';
   } catch (e) {
     return 'Invalid Date Format';
   }
@@ -134,6 +133,9 @@ export default function UpcomingLcShipmentDatesPage() {
               isFirstShipment: data.isFirstShipment,
               isSecondShipment: data.isSecondShipment,
               isThirdShipment: data.isThirdShipment,
+              firstShipmentNote: data.firstShipmentNote,
+              secondShipmentNote: data.secondShipmentNote,
+              thirdShipmentNote: data.thirdShipmentNote,
             });
           });
         };
@@ -359,45 +361,36 @@ export default function UpcomingLcShipmentDatesPage() {
                             ) : null}
                         </div>
                         <div className="flex gap-1.5">
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isFirstShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                           {[
+                                { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                                { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                                { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                            ].map((shipment, idx) => (
+                                <TooltipProvider key={idx} delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                        <Button
+                                            variant={shipment.flag ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn(
+                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                            )}
+                                            title={`${shipment.label} Shipment Status`}
+                                        >
+                                            {shipment.label}
+                                        </Button>
+                                    </Link>
+                                    </TooltipTrigger>
+                                    {shipment.note && (
+                                    <TooltipContent side="top">
+                                        <p className="max-w-xs">{shipment.note}</p>
+                                    </TooltipContent>
                                     )}
-                                    title="1st Shipment Status"
-                                >
-                                    1st
-                                </Button>
-                            </Link>
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isSecondShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="2nd Shipment Status"
-                                >
-                                    2nd
-                                </Button>
-                            </Link>
-                             <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                <Button
-                                    variant={lc.isThirdShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title="3rd Shipment Status"
-                                >
-                                    3rd
-                                </Button>
-                            </Link>
+                                </Tooltip>
+                                </TooltipProvider>
+                            ))}
                         </div>
                     </div>
 

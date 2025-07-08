@@ -693,23 +693,34 @@ export default function TotalLCPage() {
                               OCS / PO
                             </Button>
                             {[
-                                { flag: lc.isFirstShipment, label: "1st" },
-                                { flag: lc.isSecondShipment, label: "2nd" },
-                                { flag: lc.isThirdShipment, label: "3rd" }
+                                { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                                { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                                { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
                             ].map((shipment, idx) => (
-                                <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref key={idx}>
-                                    <Button
-                                        variant={shipment.flag ? "default" : "outline"}
-                                        size="icon"
-                                        className={cn(
-                                            "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                            shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                        )}
-                                        title={`${shipment.label} Shipment Status`}
-                                    >
-                                        {shipment.label}
-                                    </Button>
-                                </Link>
+                                <TooltipProvider key={idx} delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                        <Button
+                                            variant={shipment.flag ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn(
+                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                            )}
+                                            title={`${shipment.label} Shipment Status`}
+                                        >
+                                            {shipment.label}
+                                        </Button>
+                                    </Link>
+                                    </TooltipTrigger>
+                                    {shipment.note && (
+                                    <TooltipContent>
+                                        <p className="max-w-xs">{shipment.note}</p>
+                                    </TooltipContent>
+                                    )}
+                                </Tooltip>
+                                </TooltipProvider>
                             ))}
                           </div>
                         </TableCell>
@@ -774,5 +785,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
-    
