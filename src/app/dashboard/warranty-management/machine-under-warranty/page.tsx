@@ -154,8 +154,8 @@ export default function MachineUnderWarrantyPage() {
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
-
-  const getPageNumbers = () => {
+  
+   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
@@ -175,6 +175,7 @@ export default function MachineUnderWarrantyPage() {
     }
     return pageNumbers;
   };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -267,9 +268,10 @@ export default function MachineUnderWarrantyPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="w-9 p-0 md:w-auto md:px-3">
                           <Link href={`/dashboard/warranty-management/edit-installation-report/${machine.reportId}`}>
-                            <ExternalLink className="mr-2 h-4 w-4" /> View Report
+                            <ExternalLink className="h-4 w-4 md:mr-2" />
+                            <span className="sr-only md:not-sr-only">View Report</span>
                           </Link>
                         </Button>
                       </TableCell>
