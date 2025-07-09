@@ -171,7 +171,7 @@ export default function PrintOrderPage() {
 
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '296mm', margin: 'auto' }}>
       <div className="flex-grow p-8">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
@@ -232,7 +232,7 @@ export default function PrintOrderPage() {
                 <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Unit Price (USD)</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%] whitespace-nowrap">Unit Price (USD)</th>
                 {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
                 {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
                 <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total (USD)</th>
@@ -262,7 +262,7 @@ export default function PrintOrderPage() {
             <div className="w-1/2 pr-4 text-xs">
                 {orderData.comments && (
                 <div className="space-y-1">
-                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
                 </div>
                 )}
