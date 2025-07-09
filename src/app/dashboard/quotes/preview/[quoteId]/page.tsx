@@ -216,11 +216,9 @@ export default function PrintQuotePage() {
               <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
               <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
               <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
-              {(customerData?.tinNo || customerData?.binNo) && (
+              {customerData?.binNo && (
                 <p className="text-gray-600">
-                  {customerData?.tinNo && <span>TIN NO: {customerData.tinNo}</span>}
-                  {customerData?.tinNo && customerData?.binNo && <span className="mx-2">|</span>}
-                  {customerData?.binNo && <span>BIN: {customerData.binNo}</span>}
+                  <span>BIN: {customerData.binNo}</span>
                 </p>
               )}
           </div>
