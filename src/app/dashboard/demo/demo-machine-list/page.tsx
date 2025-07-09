@@ -173,9 +173,9 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-16rem)] overflow-y-auto space-y-4 p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                   <CardHeader className="relative pb-2 pt-4 px-4">
                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
@@ -203,40 +203,41 @@ export default function DemoMachineListPage() {
                         </CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3">
-                        <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
-                        <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
-                        {machine.challanNo && (
-                            <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan No: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
-                        )}
-                        {machine.motorOrControlBoxModel && (
-                            <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
-                        )}
-                        {machine.controlBoxSerialNo && (
+                  <CardContent className="px-4 pb-4 pt-2 flex-grow flex flex-col justify-between">
+                    <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
+                            <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
+                            <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
+                            {machine.challanNo && (
+                                <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan No: </span><span className="font-medium text-foreground truncate" title={machine.challanNo}>{machine.challanNo}</span></div>
+                            )}
+                            {machine.motorOrControlBoxModel && (
+                                <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
+                            )}
+                            {machine.controlBoxSerialNo && (
                            <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
-                        )}
-                    </div>
+                            )}
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                        {machine.machineFeatures && (
-                            <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
-                                <p className="text-xs font-bold text-foreground flex items-center">
-                                    <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:
-                                </p>
-                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
-                            </div>
-                        )}
-                        {machine.note && (
-                             <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
-                                <p className="text-xs font-bold text-foreground flex items-center">
-                                    <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:
-                                </p>
-                                <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
-                            </div>
-                        )}
+                        <div className="grid grid-cols-1 gap-4 mt-2">
+                            {machine.machineFeatures && (
+                                <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                    <p className="text-xs font-bold text-foreground flex items-center">
+                                        <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:
+                                    </p>
+                                    <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
+                                </div>
+                            )}
+                            {machine.note && (
+                                 <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                    <p className="text-xs font-bold text-foreground flex items-center">
+                                        <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:
+                                    </p>
+                                    <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-
                     <div className="mt-3 text-xs text-muted-foreground text-right">
                       Added: {formatDisplayDate(machine.createdAt)}
                     </div>
