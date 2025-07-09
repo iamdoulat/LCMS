@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -11,7 +12,7 @@ const navItems = [
   { href: '/dashboard/total-lc', label: 'LC', icon: FileText, pathPrefix: '/dashboard/total-lc' },
   { href: '/dashboard/quotes/list', label: 'Quotes', icon: ListChecks, pathPrefix: '/dashboard/quotes' },
   { href: '/dashboard/invoices/list', label: 'Invoices', icon: Receipt, pathPrefix: '/dashboard/invoices' },
-  { href: '/dashboard/demo/demo-machine-program', label: 'Demo', icon: Laptop, pathPrefix: '/dashboard/demo' },
+  { href: '/dashboard/demo/demo-machine-search', label: 'Demo', icon: Laptop, pathPrefix: '/dashboard/demo' },
   { href: '/dashboard/warranty-management/search', label: 'Warranty', icon: ShieldCheck, pathPrefix: '/dashboard/warranty-management' },
 ];
 
