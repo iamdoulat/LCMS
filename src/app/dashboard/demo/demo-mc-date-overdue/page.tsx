@@ -126,9 +126,9 @@ export default function DemoMcDateOverduePage() {
               </p>
             </div>
           ) : (
-             <ul className="space-y-4 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+             <ul className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[calc(100vh-20rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {overdueApplications.map((app) => (
-                <li key={app.id} className="p-4 rounded-lg border-2 border-destructive bg-destructive/10 hover:shadow-md transition-shadow relative">
+                <li key={app.id} className="p-4 rounded-lg border-2 border-destructive bg-destructive/10 hover:shadow-md transition-shadow relative flex flex-col">
                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
                         <Badge variant="destructive" className="text-xs px-2 py-0.5">Overdue</Badge>
                         <div className="flex gap-1">
@@ -150,7 +150,7 @@ export default function DemoMcDateOverduePage() {
                       {app.challanNo && ` | Challan: ${formatReportValue(app.challanNo)}`}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="px-0 pb-0 pt-0">
+                  <CardContent className="px-0 pb-0 pt-0 flex-grow">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
                       <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
                       <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-destructive">{formatDisplayDate(app.estReturnDate)}</span></div>
@@ -171,10 +171,10 @@ export default function DemoMcDateOverduePage() {
                             <p className="text-xs text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{app.notes}</p>
                         </div>
                     )}
-                     <div className="mt-2 text-xs text-muted-foreground text-right">
-                      Applied: {formatDisplayDate(app.createdAt)}
-                    </div>
                   </CardContent>
+                   <div className="mt-auto pt-2 text-xs text-muted-foreground text-right">
+                    Applied: {formatDisplayDate(app.createdAt)}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -188,4 +188,5 @@ export default function DemoMcDateOverduePage() {
     
 
     
+
 
