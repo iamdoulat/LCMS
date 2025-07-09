@@ -7,6 +7,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import AuthGuard from '@/components/auth/AuthGuard';
+import { BottomNavBar } from '@/components/layout/BottomNavBar';
 
 export default function DashboardLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
@@ -28,10 +29,11 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
           </Sidebar>
           <SidebarInset className="flex flex-col min-h-screen">
             <AppHeader />
-            <main className="flex-1 overflow-y-auto pt-4 px-6 pb-6 bg-gradient-to-br from-background to-muted noprint">
+            <main className="flex-1 overflow-y-auto pt-4 px-6 pb-20 bg-gradient-to-br from-background to-muted noprint">
               {children}
             </main>
-            <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card noprint">
+            <BottomNavBar />
+            <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card noprint hidden md:block">
               © 2025 - Designed and Developed by{' '}
               <a
                 href="https://vcard.mddoulat.com/iamdoulat"
