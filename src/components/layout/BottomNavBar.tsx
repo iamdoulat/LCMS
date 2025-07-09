@@ -24,7 +24,7 @@ export function BottomNavBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-card border-t md:hidden noprint">
+    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-card border-t md:hidden noprint pb-[5px]">
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto">
         <TooltipProvider>
             {navItems.map((item) => {
