@@ -91,7 +91,7 @@ export default function MachineOutOfWarrantyPage() {
       } catch (error: any) {
         console.error("Error fetching machines out of warranty:", error);
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
-        if (error.message?.toLowerCase().includes("index")) {
+         if (error.message?.toLowerCase().includes("index")) {
             errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for details.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
@@ -256,9 +256,10 @@ export default function MachineOutOfWarrantyPage() {
                         <Badge variant="destructive">Expired</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="w-9 p-0 md:w-auto md:px-3">
                           <Link href={`/dashboard/warranty-management/edit-installation-report/${machine.reportId}`}>
-                            <ExternalLink className="mr-2 h-4 w-4" /> View Report
+                            <ExternalLink className="h-4 w-4 md:mr-2" />
+                            <span className="sr-only md:not-sr-only">View Report</span>
                           </Link>
                         </Button>
                       </TableCell>
