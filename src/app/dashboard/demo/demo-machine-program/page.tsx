@@ -402,7 +402,7 @@ export default function DemoMachineProgramPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {currentItems.map((app) => {
                 const currentStatus = getDemoAppStatus(app);
                 const mainMachine = app.appliedMachines?.[0]; // Display first machine for brevity, or handle multiple
@@ -427,9 +427,9 @@ export default function DemoMachineProgramPage() {
                             </Button>
                         </div>
                     </div>
-                  <CardHeader className="pb-3 pt-0 px-0 pr-24">
+                  <CardHeader className="pb-3 pt-0 px-0 pr-20">
                     <Link href={`/dashboard/demo/edit-demo-machine-application/${app.id}`} passHref>
-                      <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 truncate cursor-pointer">
+                      <CardTitle className="text-lg font-semibold text-primary hover:underline mb-1 cursor-pointer">
                         {formatReportValue(app.factoryName)} - {app.appliedMachines.length > 1 ? `${app.appliedMachines.length} Machines` : formatReportValue(mainMachine?.machineModel)}
                       </CardTitle>
                     </Link>
@@ -439,7 +439,7 @@ export default function DemoMachineProgramPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-0 pb-0 pt-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
                       <div><span className="text-muted-foreground">Delivery: </span><span className="font-medium text-foreground">{formatDisplayDate(app.deliveryDate)}</span></div>
                       <div><span className="text-muted-foreground">Est. Return: </span><span className="font-medium text-foreground">{formatDisplayDate(app.estReturnDate)}</span></div>
                       <div><span className="text-muted-foreground">Period: </span><span className="font-medium text-foreground">{formatReportValue(app.demoPeriodDays, "0")} Day(s)</span></div>
