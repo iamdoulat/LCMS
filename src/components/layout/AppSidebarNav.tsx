@@ -62,6 +62,7 @@ import {
   Plus,
   PlusCircle,
   FolderOpen,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -142,6 +143,7 @@ const serviceNavItems: NavItem[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
+    { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
     { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon },
     { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },

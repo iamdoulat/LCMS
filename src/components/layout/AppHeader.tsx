@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { User, LogOut, Settings, Loader2, Search, Bell } from 'lucide-react';
+import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,6 @@ import { cn } from '@/lib/utils';
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
 
@@ -42,28 +41,6 @@ export function AppHeader() {
 
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
-
-  const checkNotificationStatus = () => {
-    if (typeof window !== 'undefined') {
-      const allRead = localStorage.getItem('appNotificationsAllRead');
-      setHasUnreadNotifications(allRead !== 'true');
-    }
-  };
-
-  useEffect(() => {
-    checkNotificationStatus();
-    const handleNotificationsUpdate = () => {
-      checkNotificationStatus();
-    };
-    if (typeof window !== 'undefined') {
-        window.addEventListener('notificationsUpdated', handleNotificationsUpdate);
-    }
-    return () => {
-        if (typeof window !== 'undefined') {
-            window.removeEventListener('notificationsUpdated', handleNotificationsUpdate);
-        }
-    };
-  }, []);
 
   const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -117,19 +94,6 @@ export function AppHeader() {
         </Popover>
 
         <ThemeToggleButton /> 
-
-        <Link href="/dashboard/notifications" passHref>
-          <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="sr-only">Notifications</span>
-            {hasUnreadNotifications && (
-              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-            )}
-          </Button>
-        </Link>
 
         {loading ? (
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
