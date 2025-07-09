@@ -274,7 +274,7 @@ export default function PrintQuotePage() {
             <div className="w-1/2 pr-4 text-xs">
                 {quoteData.comments && (
                 <div className="space-y-1">
-                    <h4 className="font-semibold text-gray-700 uppercase tracking-wide">Terms and Conditions:</h4>
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{quoteData.comments}</div>
                 </div>
                 )}
@@ -324,7 +324,7 @@ export default function PrintQuotePage() {
             </div>
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
-
+          
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>

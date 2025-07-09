@@ -274,7 +274,7 @@ export default function PrintInvoicePage() {
             <div className="w-1/2 pr-4 text-xs">
                 {invoiceData.comments && (
                 <div className="space-y-1">
-                    <h4 className="font-semibold text-gray-700 uppercase tracking-wide">Terms and Conditions:</h4>
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
                 </div>
                 )}
