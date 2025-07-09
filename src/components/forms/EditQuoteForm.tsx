@@ -217,7 +217,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
     }
   };
-
+  
   const handleViewPdf = () => {
     window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
   };
@@ -261,7 +261,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
 
-            const invoiceDataToSave: Omit<InvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+            const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: any, updatedAt: any } = {
                 customerId: data.customerId,
                 customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress,
@@ -441,7 +441,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8"> 
+        
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -484,10 +485,44 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+            <FormItem>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
+              <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+            </FormItem>
+            <FormField
+                control={control}
+                name="quoteDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Quote Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select quote date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="taxType"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Tax</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select tax type" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {quoteTaxTypes.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
             <FormField
               control={form.control}
               name="status"
@@ -631,4 +666,5 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+
 
