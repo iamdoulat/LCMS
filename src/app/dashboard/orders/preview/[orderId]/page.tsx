@@ -40,8 +40,8 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
+const formatCurrency = (amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
@@ -167,7 +167,7 @@ export default function PrintOrderPage() {
   const showDiscountColumn = orderData.showDiscountColumn ?? true;
   const showTaxColumn = orderData.showTaxColumn ?? true;
 
-  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount, '')}`;
+  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
 
 
   return (
@@ -252,10 +252,10 @@ export default function PrintOrderPage() {
                   </td>
                   {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
-                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
+                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice)}</td>
                   {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
                   {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
+                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -273,28 +273,28 @@ export default function PrintOrderPage() {
                     )}
                 </div>
                 <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                        <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
-                    </div>
-                    {showDiscountColumn && (
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                        <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
-                    </div>
-                    )}
-                    {showTaxColumn && (
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
-                    </div>
-                    )}
-                    <Separator className="my-2 border-gray-300" />
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
-                        <span className="text-gray-900 text-right">Grand Total:</span>
-                        <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
-                    </div>
-                </div>
+                  <div className="grid grid-cols-2 gap-x-4">
+                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
+                      <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal)} (USD)</span>
+                  </div>
+                  {showDiscountColumn && (
+                      <div className="grid grid-cols-2 gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                          <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount)} (USD)</span>
+                      </div>
+                  )}
+                  {showTaxColumn && (
+                      <div className="grid grid-cols-2 gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
+                          <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount)} (USD)</span>
+                      </div>
+                  )}
+                  <Separator className="my-2 border-gray-300" />
+                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                      <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
+                  </div>
+              </div>
             </div>
         </section>
       </div>
