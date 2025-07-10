@@ -232,7 +232,7 @@ export default function PrintInvoicePage() {
         </div>
 
         {invoiceData.subject && (
-          <div className="px-0 mt-2 mb-2">
+          <div className="mt-2 mb-2">
             <p className="text-[12px] font-normal p-2 border rounded-md text-center">{invoiceData.subject}</p>
           </div>
         )}
@@ -348,4 +348,3 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
-
