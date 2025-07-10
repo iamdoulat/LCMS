@@ -286,18 +286,18 @@ export default function PrintQuotePage() {
               <div className="w-auto text-sm space-y-1 min-w-[250px]">
                   <div className="grid grid-cols-2 gap-x-4">
                       <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                      <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)} (USD)</span>
+                      <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)}</span>
                   </div>
                   {showDiscountColumn && (
                       <div className="grid grid-cols-2 gap-x-4">
                           <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                          <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)} (USD)</span>
+                          <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span>
                       </div>
                   )}
                   {showTaxColumn && (
                       <div className="grid grid-cols-2 gap-x-4">
                           <span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span>
-                          <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)} (USD)</span>
+                          <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)}</span>
                       </div>
                   )}
                   <Separator className="my-2 border-gray-300" />
