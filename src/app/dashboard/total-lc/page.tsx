@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -700,7 +701,6 @@ export default function TotalLCPage() {
                                 <TooltipProvider key={idx} delayDuration={100}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
                                         <Button
                                             variant={shipment.flag ? "default" : "outline"}
                                             size="icon"
@@ -709,10 +709,11 @@ export default function TotalLCPage() {
                                                 shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                             )}
                                             title={`${shipment.label} Shipment Status`}
+                                            asChild={false} 
+                                            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/total-lc/${lc.id}/edit`); }}
                                         >
                                             {shipment.label}
                                         </Button>
-                                    </Link>
                                     </TooltipTrigger>
                                     {shipment.note && (
                                     <TooltipContent>
