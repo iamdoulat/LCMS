@@ -172,8 +172,8 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header p-8">
-        <div className="flex justify-between items-start mb-4">
+      <div className="print-header px-8 pt-8 pb-4">
+        <div className="flex justify-between items-start mb-2">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
               <Image
@@ -213,7 +213,7 @@ export default function PrintOrderPage() {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-4 mb-2">
           <div className="border p-2 rounded-md text-xs">
             <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
             <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
@@ -225,19 +225,19 @@ export default function PrintOrderPage() {
         </div>
       </div>
       
-      <div className="flex-grow p-8 pt-0">
+      <div className="flex-grow px-8">
         <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
                 <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
-                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%] whitespace-nowrap">Unit Price (USD)</th>
-                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
-                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total (USD)</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
+                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price (USD)</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount (%)</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax (%)</th>}
+                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '15%'}}>Total (USD)</th>
               </tr>
             </thead>
             <tbody>
@@ -295,7 +295,7 @@ export default function PrintOrderPage() {
         </div>
       </div>
 
-      <div className="print-footer mt-auto mb-6 pt-2 px-8 pb-2">
+      <div className="print-footer mt-auto pt-2 px-8 pb-4">
         <section className="flex justify-between items-end mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
