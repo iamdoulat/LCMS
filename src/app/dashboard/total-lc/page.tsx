@@ -709,8 +709,7 @@ export default function TotalLCPage() {
                                                 shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                             )}
                                             title={`${shipment.label} Shipment Status`}
-                                            asChild={false} 
-                                            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/total-lc/${lc.id}/edit`); }}
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                         >
                                             {shipment.label}
                                         </Button>
