@@ -172,8 +172,8 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header pt-8 pb-4">
-        <div className="px-8">
+      <div className="print-header pt-2 pb-2">
+        <div className="px-0">
             <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
@@ -227,19 +227,19 @@ export default function PrintOrderPage() {
         </div>
       </div>
       
-      <div className="flex-grow px-8 flex flex-col">
+      <div className="flex-grow px-0 flex flex-col">
         <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price (USD)</th>
-                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount (%)</th>}
-                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax (%)</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '15%'}}>Total (USD)</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
+                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -274,7 +274,7 @@ export default function PrintOrderPage() {
                 </div>
                 <div className="w-auto text-sm space-y-1 min-w-[250px]">
                     <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
+                        <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                         <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
                     </div>
                     {showDiscountColumn && (
@@ -291,7 +291,7 @@ export default function PrintOrderPage() {
                     )}
                     <Separator className="my-2 border-gray-300" />
                     <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
-                        <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                        <span className="text-gray-900 text-right">Grand Total:</span>
                         <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
                     </div>
                 </div>
@@ -299,7 +299,7 @@ export default function PrintOrderPage() {
         </section>
       </div>
 
-      <div className="print-footer px-8 pb-4">
+      <div className="print-footer px-0 pb-4">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
