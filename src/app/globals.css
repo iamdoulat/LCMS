@@ -138,20 +138,12 @@ body {
     background-color: #ffffff !important;
   }
 
-  .print-header, .print-footer {
+  .print-header {
     display: table-header-group !important;
   }
 
   .print-footer {
     display: table-footer-group !important;
-  }
-  
-  .print-header-spacer {
-    height: 160mm; /* Approximate height of the header area to reserve space */
-  }
-
-  .print-footer-spacer {
-    height: 60mm; /* Approximate height of the footer area */
   }
   
   h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {

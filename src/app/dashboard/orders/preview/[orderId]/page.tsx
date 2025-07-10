@@ -172,7 +172,7 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="flex-grow p-8 pb-20">
+      <div className="print-header p-8">
         <div className="flex justify-between items-start mb-4">
           <div className="w-2/3 pr-8">
             {displayCompanyLogo && (
@@ -223,7 +223,9 @@ export default function PrintOrderPage() {
             <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
           </div>
         </div>
-
+      </div>
+      
+      <div className="flex-grow p-8 pt-0">
         <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
@@ -240,7 +242,7 @@ export default function PrintOrderPage() {
             </thead>
             <tbody>
               {orderData.lineItems.map((item, index) => (
-                <tr key={item.itemId || index} className="border-b border-gray-200">
+                <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                   <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                   <td className="p-2 border border-gray-300 align-top break-words">
                     <p className="font-medium text-gray-900">{item.itemName}</p>
