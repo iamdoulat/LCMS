@@ -172,61 +172,63 @@ export default function PrintOrderPage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header px-8 pt-8 pb-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="w-2/3 pr-8">
-            {displayCompanyLogo && (
-              <Image
-                src={displayCompanyLogo}
-                alt={`${displayCompanyName} Logo`}
-                width={396}
-                height={58}
-                className="object-contain mb-2"
-                priority
-                data-ai-hint="company logo"
-              />
-            )}
-            {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-            )}
-            <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-            {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-            {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
-          </div>
+      <div className="print-header pt-8 pb-4">
+        <div className="px-8">
+            <div className="flex justify-between items-start mb-2">
+            <div className="w-2/3 pr-8">
+                {displayCompanyLogo && (
+                <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={396}
+                    height={58}
+                    className="object-contain mb-2"
+                    priority
+                    data-ai-hint="company logo"
+                />
+                )}
+                {!hideCompanyName && (
+                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                )}
+                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+            </div>
 
-          <div className="text-right">
-              <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
-              <div className="flex justify-end items-baseline gap-2 text-sm">
-                  <span className="font-semibold">Order Number :</span>
-                  <span>{orderData.id}</span>
-              </div>
-              <div className="flex justify-end items-baseline gap-2 text-sm">
-                  <span className="font-semibold">Date :</span>
-                  <span>{formatDisplayDate(orderData.orderDate)}</span>
-              </div>
-              {orderData.salesperson && (
-                  <div className="flex justify-end items-baseline gap-2 text-sm">
-                      <span className="font-semibold">Sales Person :</span>
-                      <span>{orderData.salesperson}</span>
-                  </div>
-              )}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 mb-2">
-          <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-            <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
-          </div>
-          <div className="border p-2 rounded-md text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-            <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
-          </div>
+            <div className="text-right">
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Order Number :</span>
+                    <span>{orderData.id}</span>
+                </div>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Date :</span>
+                    <span>{formatDisplayDate(orderData.orderDate)}</span>
+                </div>
+                {orderData.salesperson && (
+                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                        <span className="font-semibold">Sales Person :</span>
+                        <span>{orderData.salesperson}</span>
+                    </div>
+                )}
+            </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="border p-2 rounded-md text-xs">
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+            </div>
+            <div className="border p-2 rounded-md text-xs">
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+                <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+            </div>
+            </div>
         </div>
       </div>
       
-      <div className="flex-grow px-8">
-        <section>
+      <div className="flex-grow px-8 flex flex-col">
+        <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -259,44 +261,46 @@ export default function PrintOrderPage() {
             </tbody>
           </table>
         </section>
-
-        <div className="flex justify-between items-start pt-2">
-            <div className="w-1/2 pr-4 text-xs">
-                {orderData.comments && (
-                <div className="space-y-1">
-                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                    <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
+        
+        <section className="mt-auto">
+            <div className="flex justify-between items-start pt-2">
+                <div className="w-1/2 pr-4 text-xs">
+                    {orderData.comments && (
+                    <div className="space-y-1">
+                        <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                        <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
+                    </div>
+                    )}
                 </div>
-                )}
+                <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
+                        <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
+                    </div>
+                    {showDiscountColumn && (
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
+                    </div>
+                    )}
+                    {showTaxColumn && (
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
+                    </div>
+                    )}
+                    <Separator className="my-2 border-gray-300" />
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
+                        <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                        <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
+                    </div>
+                </div>
             </div>
-            <div className="w-auto text-sm space-y-1">
-                <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                    <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
-                    <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
-                </div>
-                {showDiscountColumn && (
-                <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                    <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                    <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
-                </div>
-                )}
-                {showTaxColumn && (
-                <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                    <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
-                    <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
-                </div>
-                )}
-                <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                    <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
-                </div>
-            </div>
-        </div>
+        </section>
       </div>
 
-      <div className="print-footer mt-auto pt-2 px-8 pb-4">
-        <section className="flex justify-between items-end mb-2">
+      <div className="print-footer px-8 pb-4">
+        <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>

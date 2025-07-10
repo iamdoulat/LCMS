@@ -232,14 +232,14 @@ export default function PrintQuotePage() {
         </div>
 
         {quoteData.subject && (
-          <section className="px-8 mt-2 mb-2">
+          <div className="px-8 mt-2 mb-2">
             <p className="text-[12px] font-normal p-2 border rounded-md text-center">{quoteData.subject}</p>
-          </section>
+          </div>
         )}
       </div>
 
-      <div className="flex-grow px-8">
-        <section>
+      <div className="flex-grow px-8 flex flex-col">
+        <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -272,47 +272,47 @@ export default function PrintQuotePage() {
             </tbody>
           </table>
         </section>
+
+        <section className="mt-auto">
+          <div className="flex justify-between items-start pt-2">
+              <div className="w-1/2 pr-4 text-xs">
+                  {quoteData.comments && (
+                  <div className="space-y-1">
+                      <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                      <div className="text-gray-600 whitespace-pre-line font-bold">{quoteData.comments}</div>
+                  </div>
+                  )}
+              </div>
+              <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                      <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
+                      <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
+                  </div>
+                  {showDiscountColumn && (
+                      <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                          <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
+                      </div>
+                  )}
+                  {showTaxColumn && (
+                      <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span>
+                          <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
+                      </div>
+                  )}
+                  <Separator className="my-2 border-gray-300" />
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
+                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                      <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
+                  </div>
+              </div>
+          </div>
+        </section>
       </div>
 
-      <div className="print-footer mt-auto pt-2 px-8 pb-4">
-        <section className="mb-2">
-            {quoteData.comments && (
-                <div className="space-y-1">
-                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                    <div className="text-gray-600 whitespace-pre-line font-bold text-xs">{quoteData.comments}</div>
-                </div>
-            )}
-        </section>
-        <section className="flex justify-between items-start mb-2">
-            <div className="w-1/2 pr-4">
-                {/* Potentially other content */}
-            </div>
-            <div className="w-auto text-sm space-y-1">
-                <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                    <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
-                    <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal, '')}</span>
-                </div>
-                {showDiscountColumn && (
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                        <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount, '')}</span>
-                    </div>
-                )}
-                {showTaxColumn && (
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount, '')}</span>
-                    </div>
-                )}
-                <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                    <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount, '')}</span>
-                </div>
-            </div>
-        </section>
 
-        <section className="flex justify-between items-end mb-2">
+      <div className="print-footer px-8 pb-4">
+        <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
