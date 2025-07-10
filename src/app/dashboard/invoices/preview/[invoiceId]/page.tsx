@@ -238,7 +238,7 @@ export default function PrintInvoicePage() {
         )}
       </div>
       
-      <div className="flex-grow px-0 flex flex-col">
+      <div className="flex-grow flex flex-col">
         <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
@@ -310,7 +310,7 @@ export default function PrintInvoicePage() {
         </section>
       </div>
 
-      <div className="print-footer px-0 pb-4">
+      <div className="print-footer pb-4">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
@@ -348,3 +348,4 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
+
