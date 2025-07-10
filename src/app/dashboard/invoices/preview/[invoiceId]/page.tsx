@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { InvoiceDocument, CustomerDocument } from '@/types';
-import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
