@@ -115,7 +115,7 @@ export default function InstallationReportsViewPage() {
         if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
            errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
         } else if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check your browser console for a link to create it automatically.`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -327,7 +327,7 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ul className="space-y-6">
               {currentItems.map((report) => {
                 let reportExpiredCount = 0;
                 let reportRemainingCount = 0;
@@ -431,3 +431,5 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
+    
