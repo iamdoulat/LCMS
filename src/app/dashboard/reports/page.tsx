@@ -360,6 +360,10 @@ export default function ReportsPage() {
                                 <p className="font-semibold">Value</p>
                                 <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
                             </td>
+                            <td className="py-2 pl-2 align-top">
+                                <p className="font-semibold">Invoice No:</p>
+                                <p className="text-muted-foreground">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                            </td>
                           </tr>
                           <tr className="border-b">
                             <td className="py-2 pr-2 align-top">
@@ -367,7 +371,11 @@ export default function ReportsPage() {
                               <p className="text-muted-foreground">ETD: {formatDisplayDate(lc.etd)}</p>
                               <p className="text-muted-foreground">ETA: {formatDisplayDate(lc.eta)}</p>
                             </td>
-                            <td className="py-2 px-2 align-top">
+                             <td className="py-2 px-2 align-top">
+                                <p className="font-semibold">Machine Qty:</p>
+                                <p className="text-muted-foreground">{lc.totalMachineQty || 'N/A'}</p>
+                            </td>
+                            <td className="py-2 pl-2 align-top">
                                 <p className="font-semibold">Shipment Note</p>
                                 <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>1st: {lc.firstShipmentNote || 'N/A'}</p>
                                 <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>2nd: {lc.secondShipmentNote || 'N/A'}</p>
