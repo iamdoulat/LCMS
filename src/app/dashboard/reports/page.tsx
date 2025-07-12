@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -212,7 +211,7 @@ export default function ReportsPage() {
     }
 
     const headers = [
-      "L/C or TT No.", "Terms of Pay", "Applicant", "Value", "ETD", "ETA", "1st Shipment Note", "2nd Shipment Note", "3rd Shipment Note"
+      "L/C or TT No.", "Terms of Pay", "Applicant", "Beneficiary", "Value", "ETD", "ETA", "1st Shipment Note", "2nd Shipment Note", "3rd Shipment Note"
     ];
 
     const csvRows = [
@@ -221,6 +220,7 @@ export default function ReportsPage() {
         escapeCsvCell(lc.documentaryCreditNumber || 'N/A'),
         escapeCsvCell(lc.termsOfPay || 'N/A'),
         escapeCsvCell(lc.applicantName || 'N/A'),
+        escapeCsvCell(lc.beneficiaryName || 'N/A'),
         escapeCsvCell(formatCurrencyValue(lc.currency, lc.amount)),
         escapeCsvCell(formatDisplayDate(lc.etd)),
         escapeCsvCell(formatDisplayDate(lc.eta)),
@@ -333,10 +333,14 @@ export default function ReportsPage() {
                 {currentItems.map(lc => (
                   <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
                      <CardHeader className="bg-blue-500/10 p-3">
-                        <div className="grid grid-cols-2 gap-x-4">
+                        <div className="grid grid-cols-3 gap-x-4">
                             <div>
                                 <p className="font-semibold text-primary">L/C or TT No.</p>
                                 <p className="text-foreground font-bold text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                            </div>
+                            <div className="text-left">
+                                <p className="font-semibold text-primary">Beneficiary</p>
+                                <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
                             </div>
                             <div className="text-left">
                                 <p className="font-semibold text-primary">Terms of Pay* :</p>
@@ -393,7 +397,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-
-
-
