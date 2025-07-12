@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -336,15 +335,15 @@ export default function ReportsPage() {
                      <CardHeader className="bg-blue-500/10 p-3">
                         <div className="grid grid-cols-3 gap-x-4">
                             <div className="text-left">
-                                <p className="font-semibold text-primary">L/C or TT No.</p>
+                                <p className="font-semibold text-foreground">L/C or TT No.</p>
                                 <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
                             </div>
                             <div className="text-left">
-                                <p className="font-semibold text-primary">Beneficiary</p>
+                                <p className="font-semibold text-foreground">Beneficiary</p>
                                 <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
                             </div>
                             <div className="text-left">
-                                <p className="font-semibold text-primary">Terms of Pay* :</p>
+                                <p className="font-semibold text-foreground">Terms of Pay* :</p>
                                 <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
                             </div>
                         </div>
@@ -412,4 +411,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
