@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal, CalendarClock } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,29 +67,6 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-interface DropdownOption {
-  value: string;
-  label: string;
-}
-
-const sortOptions = [
-  { value: "documentaryCreditNumber", label: "L/C Number" },
-  { value: "applicantName", label: "Applicant Name" },
-  { value: "beneficiaryName", label: "Beneficiary Name" },
-  { value: "lcIssueDate", label: "Issue Date" },
-  { value: "expireDate", label: "Expire Date" },
-  { value: "latestShipmentDate", label: "Latest Shipment Date" },
-  { value: "amount", label: "Amount" },
-  { value: "status", label: "Status" },
-  { value: "year", label: "Year" },
-];
-
-const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
-
-
-const ALL_YEARS_VALUE = "__ALL_YEARS__";
-const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
 const ITEMS_PER_PAGE = 10;
 
 export default function TotalLCPage() {
@@ -97,26 +74,8 @@ export default function TotalLCPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole === 'Viewer';
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
-  const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  const [filterLcNumber, setFilterLcNumber] = useState('');
-  const [filterApplicantId, setFilterApplicantId] = useState('');
-  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-  const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
-  const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
-  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-
-
-  const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
-  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
-  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
-
-  const [sortBy, setSortBy] = useState<string>('lcIssueDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -144,99 +103,8 @@ export default function TotalLCPage() {
       }
     };
 
-    const fetchFilterOptions = async () => {
-      setIsLoadingApplicants(true);
-      setIsLoadingBeneficiaries(true);
-      try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(
-          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-        );
-        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-        setBeneficiaryOptions(
-          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-        );
-      } catch (error: any) {
-        console.error("Error fetching filter options:", error);
-        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
-      } finally {
-        setIsLoadingApplicants(false);
-        setIsLoadingBeneficiaries(false);
-      }
-    };
-
     fetchInitialData();
-    fetchFilterOptions();
   }, []);
-
-  useEffect(() => {
-    let filtered = [...allLcEntries];
-
-    if (filterLcNumber) {
-      filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
-    }
-    if (filterApplicantId) {
-      filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
-    }
-    if (filterBeneficiaryId) {
-      filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
-    }
-    if (filterShipmentDate) {
-      const targetDate = startOfDay(filterShipmentDate);
-      filtered = filtered.filter(lc => {
-        if (!lc.latestShipmentDate) return false;
-        try {
-          const lcDate = startOfDay(parseISO(lc.latestShipmentDate));
-          return isValid(lcDate) && (isAfter(lcDate, targetDate) || isEqual(lcDate, targetDate));
-        } catch {
-          return false;
-        }
-      });
-    }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
-      filtered = filtered.filter(lc => {
-        if (Array.isArray(lc.status)) {
-            return lc.status.includes(filterStatus);
-        } else if (typeof lc.status === 'string') { // Handle old data
-            return lc.status === filterStatus;
-        }
-        return false;
-      });
-    }
-    if (filterYear && filterYear !== ALL_YEARS_VALUE) {
-      const yearNum = parseInt(filterYear);
-      filtered = filtered.filter(lc => lc.year === yearNum);
-    }
-
-
-    if (sortBy) {
-      filtered.sort((a, b) => {
-        let valA = (a as any)[sortBy];
-        let valB = (b as any)[sortBy];
-
-        if (sortBy.includes('Date') && typeof valA === 'string' && typeof valB === 'string') {
-          try {
-            valA = parseISO(valA);
-            valB = parseISO(valB);
-             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 : -1;
-             if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
-             if (!isValid(valA) && !isValid(valB)) return 0;
-          } catch { /* ignore parsing error, will compare as strings or fall through */ }
-        }
-
-        if (sortBy === 'amount' || sortBy === 'year') {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
-        }
-
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    setDisplayedLcEntries(filtered);
-    setCurrentPage(1);
-  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
     if (!lcId) {
@@ -291,22 +159,10 @@ export default function TotalLCPage() {
     }
   };
 
-  const clearFilters = () => {
-    setFilterLcNumber('');
-    setFilterApplicantId('');
-    setFilterBeneficiaryId('');
-    setFilterShipmentDate(null);
-    setFilterStatus('');
-    setFilterYear(new Date().getFullYear().toString());
-    setSortBy('lcIssueDate');
-    setSortOrder('desc');
-    setCurrentPage(1);
-  };
-
-  const totalPages = Math.ceil(displayedLcEntries.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(allLcEntries.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = allLcEntries.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -373,7 +229,7 @@ export default function TotalLCPage() {
                 Total T/T OR L/C Overview
               </CardTitle>
               <CardDescription>
-                View, search, filter, and manage all Letters of Credit.
+                View and manage all Letters of Credit. For filtering, please use the Reports page.
               </CardDescription>
             </div>
             <Link href="/dashboard/new-lc-entry" passHref>
@@ -385,99 +241,6 @@ export default function TotalLCPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Card className="mb-6 shadow-md p-4">
-            <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
-                <div className="space-y-1">
-                  <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
-                  <Input
-                    id="lcNumberFilter"
-                    placeholder="Search by L/C No..."
-                    value={filterLcNumber}
-                    onChange={(e) => setFilterLcNumber(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Combobox
-                    options={applicantOptions}
-                    value={filterApplicantId}
-                    onValueChange={setFilterApplicantId}
-                    placeholder="Search Applicant..."
-                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
-                    emptyStateMessage="No applicant found."
-                    disabled={isLoadingApplicants}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Combobox
-                    options={beneficiaryOptions}
-                    value={filterBeneficiaryId}
-                    onValueChange={setFilterBeneficiaryId}
-                    placeholder="Search Beneficiary..."
-                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
-                    emptyStateMessage="No beneficiary found."
-                    disabled={isLoadingBeneficiaries}
-                  />
-                </div>
-                 <div className="space-y-1">
-                  <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
-                  <Select
-                    value={filterYear === '' || filterYear === ALL_YEARS_VALUE ? ALL_YEARS_VALUE : filterYear}
-                    onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                  <DatePickerField
-                    field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }}
-                    placeholder="Select Date"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select
-                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
-                    onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                      {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                    <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="pt-6">
-                  <Button onClick={clearFilters} variant="outline" className="w-full">
-                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -596,7 +359,7 @@ export default function TotalLCPage() {
                                                 lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
                                             )}
                                         >
-                                            <CalendarClock className="h-4 w-4" />
+                                            <CalendarDays className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent className="p-2">
@@ -737,7 +500,7 @@ export default function TotalLCPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your Letters of Credit from Firestore.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allLcEntries.length)} of {allLcEntries.length} entries.
               </TableCaption>
             </Table>
           </div>
