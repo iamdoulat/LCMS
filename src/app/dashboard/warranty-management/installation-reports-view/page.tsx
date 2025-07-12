@@ -20,7 +20,7 @@ import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } fro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from '@/context/AuthContext';
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 9; // Display 9 cards per page for a 3x3 grid on large screens
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
@@ -75,7 +75,6 @@ export default function InstallationReportsViewPage() {
 
       try {
         const reportsCollectionRef = collection(firestore, "installation_reports");
-        // Simplified query to sort by document ID, which is always indexed.
         const reportsQuery = query(reportsCollectionRef, orderBy(documentId(), "desc"));
         const reportsSnapshot = await getDocs(reportsQuery);
         const fetchedReports = reportsSnapshot.docs.map(docSnap => {
@@ -328,7 +327,7 @@ export default function InstallationReportsViewPage() {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {currentItems.map((report) => {
                 let reportExpiredCount = 0;
                 let reportRemainingCount = 0;
@@ -348,7 +347,7 @@ export default function InstallationReportsViewPage() {
                 });
 
                 return (
-                  <li key={report.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card flex flex-col">
+                  <li key={report.id} className="p-4 rounded-lg border hover:shadow-lg transition-shadow relative bg-card flex flex-col">
                     <div className="absolute top-3 right-3 flex gap-1 z-10">
                       <TooltipProvider>
                         <Tooltip>
