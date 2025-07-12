@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { InstallationReportDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, deleteDoc, doc, Timestamp, documentId } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -75,7 +75,8 @@ export default function InstallationReportsViewPage() {
 
       try {
         const reportsCollectionRef = collection(firestore, "installation_reports");
-        const reportsQuery = query(reportsCollectionRef, orderBy("createdAt", "desc"));
+        // Simplified query to sort by document ID, which is always indexed.
+        const reportsQuery = query(reportsCollectionRef, orderBy(documentId(), "desc"));
         const reportsSnapshot = await getDocs(reportsQuery);
         const fetchedReports = reportsSnapshot.docs.map(docSnap => {
           const data = docSnap.data();
@@ -112,9 +113,7 @@ export default function InstallationReportsViewPage() {
 
       } catch (error: any) {
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
-        if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index is required. Please check the browser's developer console for a link to create it automatically.`;
-        } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
+        if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
            errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
@@ -325,7 +324,7 @@ export default function InstallationReportsViewPage() {
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Installation Reports Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no installation reports matching your criteria, or the required Firestore index is missing/still building.
+                There are no installation reports matching your criteria.
               </p>
             </div>
           ) : (
