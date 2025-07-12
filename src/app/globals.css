@@ -118,10 +118,18 @@ body {
 
 /* Print-specific styles */
 @media print {
-  body {
+  body, html {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     background-color: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  main, .group\/sidebar-wrapper, .sidebar-inset, .print-card, .print-content {
+      overflow: visible !important;
+      height: auto !important;
+      display: block !important;
   }
 
   .noprint {
