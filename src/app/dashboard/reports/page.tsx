@@ -371,90 +371,92 @@ export default function ReportsPage() {
                 </Button>
             </div>
           </div>
-
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-          ) : fetchError ? (
-            <div className="text-center text-destructive p-8">{fetchError}</div>
-          ) : currentItems.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 gap-6">
-                {currentItems.map(lc => (
-                  <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
-                     <CardHeader className="bg-blue-500/10 p-3">
-                        <div className="grid grid-cols-3 gap-x-4">
-                            <div className="text-left">
-                                <p className="font-semibold text-foreground">L/C or TT No.</p>
-                                <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
-                            </div>
-                            <div className="text-left">
-                                <p className="font-semibold text-foreground">Beneficiary</p>
-                                <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
-                            </div>
-                            <div className="text-left">
-                                <p className="font-semibold text-foreground">Terms of Pay* :</p>
-                                <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
-                            </div>
-                        </div>
-                     </CardHeader>
-                    <CardContent className="p-3">
-                      <table className="w-full text-sm">
-                        <tbody>
-                          <tr className="border-b">
-                            <td className="py-2 pr-2 align-top">
-                              <p className="font-semibold">Customer Name</p>
-                              <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
-                            </td>
-                            <td className="py-2 px-2 align-top">
-                                <p className="font-semibold">Value</p>
-                                <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
-                            </td>
-                            <td className="py-2 pl-2 align-top">
-                                <p className="font-semibold">Invoice No:</p>
-                                <p className="text-muted-foreground">{lc.proformaInvoiceNumber || 'N/A'}</p>
-                            </td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="py-2 pr-2 align-top">
-                              <p className="font-semibold">Shipment Date</p>
-                              <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETD:</span> {formatDisplayDate(lc.etd)}</p>
-                              <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETA:</span> {formatDisplayDate(lc.eta)}</p>
-                            </td>
-                            <td className="py-2 px-2 align-top">
-                                <p className="font-semibold">Machine Qty:</p>
-                                <p className="text-muted-foreground">{lc.totalMachineQty || 'N/A'}</p>
-                            </td>
-                            <td className="py-2 pl-2 align-top">
-                                <p className="font-semibold">Shipment Note</p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>
-                                    <span className="font-semibold text-foreground">1st:</span> {lc.firstShipmentNote || 'N/A'}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>
-                                    <span className="font-semibold text-foreground">2nd:</span> {lc.secondShipmentNote || 'N/A'}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>
-                                    <span className="font-semibold text-foreground">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
-                                </p>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center space-x-2 py-4 mt-4 noprint">
-                  <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
-                  <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+          
+          <div className="print-content">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+            ) : fetchError ? (
+              <div className="text-center text-destructive p-8">{fetchError}</div>
+            ) : currentItems.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-6">
+                  {currentItems.map(lc => (
+                    <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
+                      <CardHeader className="bg-blue-500/10 p-3">
+                          <div className="grid grid-cols-3 gap-x-4">
+                              <div className="text-left">
+                                  <p className="font-semibold text-foreground">L/C or TT No.</p>
+                                  <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                              </div>
+                              <div className="text-left">
+                                  <p className="font-semibold text-foreground">Beneficiary</p>
+                                  <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                              </div>
+                              <div className="text-left">
+                                  <p className="font-semibold text-foreground">Terms of Pay* :</p>
+                                  <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                              </div>
+                          </div>
+                      </CardHeader>
+                      <CardContent className="p-3">
+                        <table className="w-full text-sm">
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="py-2 pr-2 align-top">
+                                <p className="font-semibold">Customer Name</p>
+                                <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
+                              </td>
+                              <td className="py-2 px-2 align-top">
+                                  <p className="font-semibold">Value</p>
+                                  <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                              </td>
+                              <td className="py-2 pl-2 align-top">
+                                  <p className="font-semibold">Invoice No:</p>
+                                  <p className="text-muted-foreground">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                              </td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2 pr-2 align-top">
+                                <p className="font-semibold">Shipment Date</p>
+                                <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETD:</span> {formatDisplayDate(lc.etd)}</p>
+                                <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETA:</span> {formatDisplayDate(lc.eta)}</p>
+                              </td>
+                              <td className="py-2 px-2 align-top">
+                                  <p className="font-semibold">Machine Qty:</p>
+                                  <p className="text-muted-foreground">{lc.totalMachineQty || 'N/A'}</p>
+                              </td>
+                              <td className="py-2 pl-2 align-top">
+                                  <p className="font-semibold">Shipment Note</p>
+                                  <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>
+                                      <span className="font-semibold text-foreground">1st:</span> {lc.firstShipmentNote || 'N/A'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>
+                                      <span className="font-semibold text-foreground">2nd:</span> {lc.secondShipmentNote || 'N/A'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>
+                                      <span className="font-semibold text-foreground">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
+                                  </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center p-8 text-muted-foreground">No L/C entries found matching your criteria.</div>
-          )}
+                
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center space-x-2 py-4 mt-4 noprint">
+                    <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
+                    <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">No L/C entries found matching your criteria.</div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
