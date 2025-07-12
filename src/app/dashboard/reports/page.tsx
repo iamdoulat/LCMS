@@ -333,7 +333,7 @@ export default function ReportsPage() {
                 {currentItems.map(lc => (
                   <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
                      <CardHeader className="bg-blue-500/10 p-3">
-                        <div className="flex flex-wrap justify-start items-center gap-x-8 gap-y-2">
+                        <div className="grid grid-cols-2 gap-x-4">
                             <div>
                                 <p className="font-semibold text-primary">L/C or TT No.</p>
                                 <p className="text-foreground font-bold text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
@@ -393,6 +393,7 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 
 
 
