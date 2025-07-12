@@ -76,12 +76,11 @@ export default function DemoMachineFactoriesListPage() {
         });
         setFactories(fetchedFactories);
       } catch (error: any) {
-        console.error("Error fetching demo machine factories: ", error);
-        let errorMessage = `Could not fetch factory data. Please check Firestore rules.`;
-         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch factory data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        let errorMessage = `Could not fetch data. Please check Firestore rules.`;
+        if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-           errorMessage = `Could not fetch factory data: Missing or insufficient permissions. Please check Firestore security rules for 'demo_machine_factories'.`;
+           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for 'demo_machine_factories'.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -263,6 +262,3 @@ export default function DemoMachineFactoriesListPage() {
     </div>
   );
 }
-    
-
-    

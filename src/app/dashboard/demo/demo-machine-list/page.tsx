@@ -80,12 +80,11 @@ export default function DemoMachineListPage() {
         });
         setDemoMachines(fetchedMachines);
       } catch (error: any) {
-        console.error("Error fetching demo machines: ", error);
-        let errorMessage = `Could not fetch demo machines. Please check Firestore rules.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required for 'demo_machines' ordered by 'createdAt' descending. Please check the browser console for a link to create it.`;
+        let errorMessage = `Could not fetch data. Please check Firestore rules.`;
+        if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions for 'demo_machines'. Please check Firestore security rules.`;
+           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'demo_machines' collection.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }

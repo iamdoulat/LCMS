@@ -149,10 +149,9 @@ export default function DemoMachineProgramPage() {
         setIsLoadingMachines(false);
 
       } catch (error: any) {
-        console.error("Error fetching demo machine applications or options: ", error);
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
            errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules.`;
         } else if (error.message) {

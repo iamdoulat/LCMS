@@ -111,11 +111,11 @@ export default function InstallationReportsViewPage() {
         setIsLoadingBeneficiaries(false);
 
       } catch (error: any) {
-        let errorMessage = `Could not fetch data. Please ensure Firestore rules allow reads.`;
+        let errorMessage = `Could not fetch data. Please check Firestore rules.`;
         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+            errorMessage = `Could not fetch data: A Firestore index is required. Please check the browser's developer console for a link to create it automatically.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules.`;
+           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
