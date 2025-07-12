@@ -146,8 +146,9 @@ export default function MissingAndFoundPage() {
                             </p>
                         </div>
                          <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} passHref>
-                            <Button variant="outline" size="sm">
-                                <Edit className="mr-2 h-4 w-4" /> Edit Report
+                            <Button variant="outline" size="icon" className="md:w-auto md:px-3">
+                                <Edit className="h-4 w-4 md:mr-2" />
+                                <span className="sr-only md:not-sr-only">Edit Report</span>
                             </Button>
                         </Link>
                     </div>
