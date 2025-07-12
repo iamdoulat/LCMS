@@ -431,5 +431,3 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-
-    
