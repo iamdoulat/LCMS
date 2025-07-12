@@ -17,7 +17,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download, Upload } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -135,8 +135,7 @@ export default function NewInstallationReportPage() {
     name: "installationDetails",
   });
 
-  React.useEffect(() => {
-    const fetchOptions = async () => {
+  const fetchOptions = React.useCallback(async () => {
       setIsLoadingDropdowns(true);
       try {
         const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
@@ -178,9 +177,11 @@ export default function NewInstallationReportPage() {
       } finally {
         setIsLoadingDropdowns(false);
       }
-    };
+    }, []);
+
+  React.useEffect(() => {
     fetchOptions();
-  }, []);
+  }, [fetchOptions]);
 
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
@@ -210,7 +211,11 @@ export default function NewInstallationReportPage() {
             packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-
+        if(lc.partialShipmentAllowed === "Yes") {
+            setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        } else {
+            setActivePartialShipmentAccordion(undefined);
+        }
       }
     } else if (!watchedSelectedCommercialInvoiceLcId) { // If C.I. Number is deselected/cleared
         setValue("applicantId", '', { shouldValidate: true });
@@ -230,6 +235,7 @@ export default function NewInstallationReportPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
+
   React.useEffect(() => {
     const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
     const installedQtyValue = installationDetailsFieldArray.fields.length;
@@ -239,6 +245,7 @@ export default function NewInstallationReportPage() {
       setPendingQty('N/A');
     }
   }, [watchedTotalLcMachineQty, watchedInstallationDetails, installationDetailsFieldArray.fields.length]);
+
 
 
   async function onSubmit(data: InstallationReportFormValues) {
@@ -572,15 +579,28 @@ export default function NewInstallationReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number (to auto-fill)</FormLabel>
-                        <Combobox
-                          options={lcOptionsForCommercialInvoice}
-                          value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
-                          onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
-                          placeholder="Search by C.I. No..."
-                          selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
-                          emptyStateMessage="No L/C found with that C.I. No."
-                          disabled={isLoadingDropdowns}
-                        />
+                        <div className="flex items-center gap-2">
+                            <Combobox
+                            options={lcOptionsForCommercialInvoice}
+                            value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
+                            onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
+                            placeholder="Search by C.I. No..."
+                            selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                            emptyStateMessage="No available C.I. Number found."
+                            disabled={isLoadingDropdowns}
+                            className="flex-grow"
+                            />
+                            <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={fetchOptions}
+                            disabled={isLoadingDropdowns}
+                            title="Refresh C.I. List"
+                            >
+                            <RefreshCw className={cn("h-4 w-4", isLoadingDropdowns && "animate-spin")} />
+                            </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
