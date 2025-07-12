@@ -63,6 +63,7 @@ import {
   PlusCircle,
   FolderOpen,
   Bell,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -110,6 +111,7 @@ const commissionManagementNavItems: NavItem[] = [
 
 const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
+    { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
     { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
     { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen },
 ];
