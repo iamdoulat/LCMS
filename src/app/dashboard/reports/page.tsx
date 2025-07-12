@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -71,7 +71,17 @@ const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYe
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
-const ITEMS_PER_PAGE = 12; // Adjusted for card layout
+const ITEMS_PER_PAGE = 12;
+
+// Helper to escape CSV data
+const escapeCsvCell = (cellData: any): string => {
+  const stringData = String(cellData ?? "");
+  if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
+    return `"${stringData.replace(/"/g, '""')}"`;
+  }
+  return stringData;
+};
+
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -191,6 +201,44 @@ export default function ReportsPage() {
     setCurrentPage(1);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExport = () => {
+    if (displayedLcEntries.length === 0) {
+      Swal.fire("No Data", "There is no data to export.", "info");
+      return;
+    }
+
+    const headers = [
+      "L/C or TT No.", "Terms of Pay", "Applicant", "Value", "ETD", "ETA", "1st Shipment Note", "2nd Shipment Note", "3rd Shipment Note"
+    ];
+
+    const csvRows = [
+      headers.join(','),
+      ...displayedLcEntries.map(lc => [
+        escapeCsvCell(lc.documentaryCreditNumber || 'N/A'),
+        escapeCsvCell(lc.termsOfPay || 'N/A'),
+        escapeCsvCell(lc.applicantName || 'N/A'),
+        escapeCsvCell(formatCurrencyValue(lc.currency, lc.amount)),
+        escapeCsvCell(formatDisplayDate(lc.etd)),
+        escapeCsvCell(formatDisplayDate(lc.eta)),
+        escapeCsvCell(lc.firstShipmentNote || 'N/A'),
+        escapeCsvCell(lc.secondShipmentNote || 'N/A'),
+        escapeCsvCell(lc.thirdShipmentNote || 'N/A'),
+      ].join(','))
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(csvRows.join("\n"));
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", `lc_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const totalPages = Math.ceil(displayedLcEntries.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
@@ -208,10 +256,18 @@ export default function ReportsPage() {
               </CardTitle>
               <CardDescription>Generate custom reports by filtering and sorting L/C data.</CardDescription>
             </div>
+            <div className="flex items-center gap-2">
+                <Button onClick={handlePrint} variant="default" className="bg-primary hover:bg-primary/90">
+                    <Printer className="mr-2 h-4 w-4" /> PDF Report
+                </Button>
+                <Button onClick={handleExport} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
+                </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Card className="mb-6 shadow-md p-4">
+          <Card className="mb-6 shadow-md p-4 noprint">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
             </CardHeader>
@@ -312,7 +368,7 @@ export default function ReportsPage() {
               </div>
               
               {totalPages > 1 && (
-                <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                <div className="flex items-center justify-center space-x-2 py-4 mt-4 noprint">
                   <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
                   <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
                   <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
