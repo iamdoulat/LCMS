@@ -336,7 +336,7 @@ export default function ReportsPage() {
                         <div className="grid grid-cols-3 gap-x-4">
                             <div>
                                 <p className="font-semibold text-primary">L/C or TT No.</p>
-                                <p className="text-foreground font-bold text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                                <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
                             </div>
                             <div className="text-left">
                                 <p className="font-semibold text-primary">Beneficiary</p>
