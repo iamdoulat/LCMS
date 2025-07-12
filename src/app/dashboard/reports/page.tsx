@@ -1,17 +1,16 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal, BarChart3 } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
 import { lcStatusOptions, currencyOptions } from '@/types';
@@ -21,33 +20,17 @@ import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
-    case 'Draft':
-      return 'outline';
-    case 'Transmitted':
-      return 'secondary';
-    case 'Shipment Pending':
-      return 'default';
-    case 'Payment Pending':
-        return 'destructive'; // Needs attention
-    case 'Payment Done':
-      return 'default';
-    case 'Shipment Done':
-      return 'default';
-    default:
-      return 'outline';
+    case 'Draft': return 'outline';
+    case 'Transmitted': return 'secondary';
+    case 'Shipment Pending': return 'default';
+    case 'Payment Pending': return 'destructive';
+    case 'Payment Done': return 'default';
+    case 'Shipment Done': return 'default';
+    default: return 'outline';
   }
 };
 
@@ -55,7 +38,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'PPP');
+    return format(date, 'MMM do, yyyy');
   } catch (e) {
     return 'N/A';
   }
@@ -84,12 +67,11 @@ const sortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
-
+const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12; // Adjusted for card layout
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -106,7 +88,6 @@ export default function ReportsPage() {
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
@@ -127,15 +108,11 @@ export default function ReportsPage() {
         const querySnapshot = await getDocs(lcQuery);
         const fetchedLCs = querySnapshot.docs.map(doc => {
           const data = doc.data();
-          return {
-             id: doc.id,
-             ...data,
-          } as LCEntryDocument;
+          return { id: doc.id, ...data } as LCEntryDocument;
         });
         setAllLcEntries(fetchedLCs);
       } catch (error: any) {
-        console.error("Error fetching L/C entries: ", error);
-        const errorMsg = `Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`;
+        const errorMsg = `Could not fetch L/C data. Error: ${error.message}`;
         setFetchError(errorMsg);
         Swal.fire("Error", errorMsg, "error");
       } finally {
@@ -148,15 +125,10 @@ export default function ReportsPage() {
       setIsLoadingBeneficiaries(true);
       try {
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(
-          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-        );
+        setApplicantOptions(customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' })));
         const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-        setBeneficiaryOptions(
-          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-        );
+        setBeneficiaryOptions(suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' })));
       } catch (error: any) {
-        console.error("Error fetching filter options:", error);
         Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoadingApplicants(false);
@@ -171,15 +143,10 @@ export default function ReportsPage() {
   useEffect(() => {
     let filtered = [...allLcEntries];
 
-    if (filterLcNumber) {
-      filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
-    }
-    if (filterApplicantId) {
-      filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
-    }
-    if (filterBeneficiaryId) {
-      filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
-    }
+    if (filterLcNumber) filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
+    if (filterApplicantId) filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
+    if (filterBeneficiaryId) filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
+    
     if (filterShipmentDate) {
       const targetDate = startOfDay(filterShipmentDate);
       filtered = filtered.filter(lc => {
@@ -187,47 +154,26 @@ export default function ReportsPage() {
         try {
           const lcDate = startOfDay(parseISO(lc.latestShipmentDate));
           return isValid(lcDate) && (isAfter(lcDate, targetDate) || isEqual(lcDate, targetDate));
-        } catch {
-          return false;
-        }
+        } catch { return false; }
       });
     }
+    
     if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
-      filtered = filtered.filter(lc => {
-        if (Array.isArray(lc.status)) {
-            return lc.status.includes(filterStatus);
-        } else if (typeof lc.status === 'string') { // Handle old data
-            return lc.status === filterStatus;
-        }
-        return false;
-      });
+      filtered = filtered.filter(lc => Array.isArray(lc.status) ? lc.status.includes(filterStatus) : lc.status === filterStatus);
     }
+    
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(lc => lc.year === yearNum);
     }
 
-
     if (sortBy) {
       filtered.sort((a, b) => {
-        let valA = (a as any)[sortBy];
-        let valB = (b as any)[sortBy];
-
+        let valA = (a as any)[sortBy]; let valB = (b as any)[sortBy];
         if (sortBy.includes('Date') && typeof valA === 'string' && typeof valB === 'string') {
-          try {
-            valA = parseISO(valA);
-            valB = parseISO(valB);
-             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 : -1;
-             if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
-             if (!isValid(valA) && !isValid(valB)) return 0;
-          } catch { /* ignore parsing error, will compare as strings or fall through */ }
+          try { valA = parseISO(valA); valB = parseISO(valB); } catch {}
         }
-
-        if (sortBy === 'amount' || sortBy === 'year') {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
-        }
-
+        if (sortBy === 'amount' || sortBy === 'year') { valA = Number(valA) || 0; valB = Number(valB) || 0; }
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
@@ -237,68 +183,11 @@ export default function ReportsPage() {
     setCurrentPage(1);
   }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
 
-  const handleEditLC = (lcId: string) => {
-    if (!lcId) {
-        Swal.fire("Error", "L/C ID is missing, cannot edit.", "error");
-        return;
-    }
-    router.push(`/dashboard/total-lc/${lcId}/edit`);
-  };
-
-  const handleDeleteLC = (lcId: string, lcNumber?: string) => {
-     if (!lcId) {
-        Swal.fire("Error", "L/C ID is missing, cannot delete.", "error");
-        return;
-    }
-    Swal.fire({
-      title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete L/C "${lcNumber || lcId}" from Firestore.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: 'hsl(var(--destructive))',
-      cancelButtonColor: 'hsl(var(--secondary))',
-      confirmButtonText: 'Yes, delete it!',
-      reverseButtons: true,
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await deleteDoc(doc(firestore, "lc_entries", lcId));
-          setAllLcEntries(prevLcEntries => prevLcEntries.filter(lc => lc.id !== lcId));
-          Swal.fire(
-            'Deleted!',
-            `L/C "${lcNumber || lcId}" has been removed.`,
-            'success'
-          );
-        } catch (error: any) {
-          console.error("Error deleting L/C: ", error);
-          Swal.fire("Error", `Could not delete L/C: ${error.message}`, "error");
-        }
-      }
-    });
-  };
-
-  const handleOpenLink = (url?: string) => {
-    if (url && url.trim() !== "") {
-        try {
-            new URL(url); // Validate URL
-            window.open(url, '_blank', 'noopener,noreferrer');
-        } catch (e) {
-            Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
-        }
-    } else {
-      Swal.fire("No URL", "No URL provided to view.", "info");
-    }
-  };
-
   const clearFilters = () => {
-    setFilterLcNumber('');
-    setFilterApplicantId('');
-    setFilterBeneficiaryId('');
-    setFilterShipmentDate(null);
-    setFilterStatus('');
+    setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
+    setFilterShipmentDate(null); setFilterStatus('');
     setFilterYear(new Date().getFullYear().toString());
-    setSortBy('lcIssueDate');
-    setSortOrder('desc');
+    setSortBy('lcIssueDate'); setSortOrder('desc');
     setCurrentPage(1);
   };
 
@@ -306,57 +195,7 @@ export default function ReportsPage() {
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
-
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const handlePrevPage = () => {
-    setCurrentPage(prev => Math.max(prev - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(prev + 1, totalPages));
-  };
-
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
-    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
-
-    if (totalPages <= maxPagesToShow + 2) {
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      pageNumbers.push(1);
-
-      let startPage = Math.max(2, currentPage - halfPagesToShow);
-      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
-
-      if (currentPage <= halfPagesToShow + 1) {
-        endPage = Math.min(totalPages - 1, maxPagesToShow);
-      }
-      if (currentPage >= totalPages - halfPagesToShow) {
-        startPage = Math.max(2, totalPages - maxPagesToShow + 1);
-      }
-
-      if (startPage > 2) {
-        pageNumbers.push("...");
-      }
-
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(i);
-      }
-
-      if (endPage < totalPages - 1) {
-        pageNumbers.push("...");
-      }
-
-      pageNumbers.push(totalPages);
-    }
-    return pageNumbers;
-  };
+  const handlePageChange = (page: number) => setCurrentPage(page);
 
   return (
     <div className="container mx-auto py-8">
@@ -364,22 +203,13 @@ export default function ReportsPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className={cn(
-                "font-bold text-2xl lg:text-3xl flex items-center gap-2",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-              )}>
-                <BarChart3 className="h-7 w-7 text-primary" />
-                Reports
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <BarChart3 className="h-7 w-7 text-primary" /> Reports
               </CardTitle>
-              <CardDescription>
-                Generate custom reports by filtering and sorting L/C data.
-              </CardDescription>
+              <CardDescription>Generate custom reports by filtering and sorting L/C data.</CardDescription>
             </div>
             <Link href="/dashboard/new-lc-entry" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
-                <PlusCircle className="mr-2 h-5 w-5" />
-                New T/T OR L/C Entry
-              </Button>
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}><PlusCircle className="mr-2 h-5 w-5" />New T/T OR L/C Entry</Button>
             </Link>
           </div>
         </CardHeader>
@@ -392,250 +222,112 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1">
                   <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
-                  <Input
-                    id="lcNumberFilter"
-                    placeholder="Search by L/C No..."
-                    value={filterLcNumber}
-                    onChange={(e) => setFilterLcNumber(e.target.value)}
-                  />
+                  <Input id="lcNumberFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Combobox
-                    options={applicantOptions}
-                    value={filterApplicantId}
-                    onValueChange={setFilterApplicantId}
-                    placeholder="Search Applicant..."
-                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
-                    emptyStateMessage="No applicant found."
-                    disabled={isLoadingApplicants}
-                  />
+                  <Combobox options={applicantOptions} value={filterApplicantId} onValueChange={setFilterApplicantId} placeholder="Search Applicant..." selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"} emptyStateMessage="No applicant found." disabled={isLoadingApplicants} />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Combobox
-                    options={beneficiaryOptions}
-                    value={filterBeneficiaryId}
-                    onValueChange={setFilterBeneficiaryId}
-                    placeholder="Search Beneficiary..."
-                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
-                    emptyStateMessage="No beneficiary found."
-                    disabled={isLoadingBeneficiaries}
-                  />
+                  <Combobox options={beneficiaryOptions} value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} placeholder="Search Beneficiary..." selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} emptyStateMessage="No beneficiary found." disabled={isLoadingBeneficiaries} />
                 </div>
-                 <div className="space-y-1">
+                <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
-                  <Select
-                    value={filterYear === '' || filterYear === ALL_YEARS_VALUE ? ALL_YEARS_VALUE : filterYear}
-                    onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                    </SelectContent>
+                  <Select value={filterYear === '' ? ALL_YEARS_VALUE : filterYear} onValueChange={(v) => setFilterYear(v === ALL_YEARS_VALUE ? '' : v)}>
+                    <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
+                    <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                  <DatePickerField
-                    field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }}
-                    placeholder="Select Date"
-                  />
+                  <DatePickerField field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }} placeholder="Select Date" />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select
-                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
-                    onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                      {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                    </SelectContent>
+                  <Select value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus} onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as LCStatus | '')}>
+                    <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                    <SelectContent><SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>{lcStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
-                    <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                  <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
-                 <div className="pt-6">
-                  <Button onClick={clearFilters} variant="outline" className="w-full">
-                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
-                  </Button>
+                <div className="pt-6">
+                  <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort</Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-2 sm:px-4">T/T OR L/C Number</TableHead>
-                  <TableHead className="px-2 sm:px-4">Applicant</TableHead>
-                  <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
-                  <TableHead className="px-2 sm:px-4">Amount</TableHead>
-                  <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
-                  <TableHead className="px-2 sm:px-4">Latest Shipment Date</TableHead>
-                  <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
-                  <TableHead className="px-2 sm:px-4">Status</TableHead>
-                  <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                 {isLoading ? (
-                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
-                       <div className="flex justify-center items-center">
-                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
-                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : fetchError ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4">
-                      {fetchError}
-                    </TableCell>
-                  </TableRow>
-                ) : currentItems.length > 0 ? (
-                  currentItems.map((lc) => (
-                      <TableRow key={lc.id}>
-                        <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{lc.applicantName || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">
-                            <div className="flex flex-wrap gap-1">
-                                {Array.isArray(lc.status) ? (
-                                    lc.status.map(s => (
-                                        <Badge
-                                            key={s}
-                                            variant={getStatusBadgeVariant(s)}
-                                            className={
-                                                s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                                s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                                s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                                s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                                s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                                            }
-                                        >
-                                            {s}
-                                        </Badge>
-                                    ))
-                                ) : lc.status ? (
-                                    <Badge
-                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                        className={
-                                            lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                            lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                            lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                            lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                                        }
-                                    >
-                                        {lc.status}
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline">N/A</Badge>
-                                )}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right px-2 sm:px-4">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={!lc.id}>
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
-                                    <FileEdit className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                     disabled={isReadOnly}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
-                       No L/C entries found matching your criteria. Ensure Firestore rules allow reads and data exists.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-              <TableCaption className="py-4">
-                A list of your Letters of Credit from Firestore.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
-              </TableCaption>
-            </Table>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              {getPageNumbers().map((page, index) =>
-                typeof page === 'number' ? (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handlePageChange(page)}
-                    className="w-9 h-9 p-0"
-                  >
-                    {page}
-                  </Button>
-                ) : (
-                  <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
-                    {page}
-                  </span>
-                )
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+          ) : fetchError ? (
+            <div className="text-center text-destructive p-8">{fetchError}</div>
+          ) : currentItems.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {currentItems.map(lc => (
+                  <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
+                    <CardContent className="p-0">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          <tr className="border-b">
+                            <td className="p-2 border-r w-1/3 align-top">
+                              <p className="font-semibold">L/C or TT No.</p>
+                              <p className="text-muted-foreground">{lc.documentaryCreditNumber || 'N/A'}</p>
+                              <hr className="my-1"/>
+                              <p className="font-semibold">Terms of Pay* :</p>
+                              <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                            </td>
+                            <td className="p-2 border-r w-1/3 align-top">
+                                <p className="font-semibold">Customer Name</p>
+                                <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
+                            </td>
+                            <td className="p-2 border-r w-1/3 align-top">
+                                <p className="font-semibold">Value</p>
+                                <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                            </td>
+                            <td className="p-2 border-r align-top">
+                                <p className="font-semibold">Shipment Date</p>
+                                <p className="text-muted-foreground">ETD: {formatDisplayDate(lc.etd)}</p>
+                                <hr className="my-1"/>
+                                <p className="text-muted-foreground">ETA: {formatDisplayDate(lc.eta)}</p>
+                            </td>
+                            <td className="p-2 align-top">
+                                <p className="font-semibold">Shipment Note</p>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>1st: {lc.firstShipmentNote || 'N/A'}</p>
+                                <hr className="my-1"/>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>2nd: {lc.secondShipmentNote || 'N/A'}</p>
+                                <hr className="my-1"/>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>3rd: {lc.thirdShipmentNote || 'N/A'}</p>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
+                  <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+                </div>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            </>
+          ) : (
+            <div className="text-center p-8 text-muted-foreground">No L/C entries found matching your criteria.</div>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
