@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
   }, []);
 
   // Conditional rendering based on the printing state or dedicated print pages
-  if (isPrinting || isPrintPage) {
+  if (isPrintPage) {
     // For print pages or when the print dialog is active, render only the children
     // in a basic layout to ensure it's printable.
     return <div className="print-layout">{children}</div>;

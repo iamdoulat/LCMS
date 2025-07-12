@@ -119,41 +119,43 @@ body {
 /* Print-specific styles */
 @media print {
   body, html {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
     background-color: #ffffff !important;
     height: auto !important;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
-  main, .group\/sidebar-wrapper, .sidebar-inset, .print-card, .print-content {
-      overflow: visible !important;
-      height: auto !important;
-      display: block !important;
-  }
-
+  /* Hide all non-printable elements */
   .noprint {
     display: none !important;
   }
 
+  /* Show print-only elements */
   .print-only {
+    display: block !important;
+  }
+
+  /* Reset layout for printable content */
+  .print-layout, .print-content {
+      display: block !important;
+      overflow: visible !important;
+      height: auto !important;
+      box-shadow: none !important;
+      border: none !important;
+  }
+
+  /* Reset layout wrappers to be simple blocks */
+  .group\/sidebar-wrapper, .sidebar-inset {
       display: block !important;
   }
   
   .print-card {
-      border: none !important;
+      border: 1px solid #ccc !important;
       box-shadow: none !important;
-  }
-  
-  .print-card .bg-blue-500\/10 {
-      background-color: #f0f8ff !important; /* A light, printable blue */
+      page-break-inside: avoid;
   }
 
-  /* Ensure card content is visible */
-  .bg-card, .bg-background {
-      background-color: #ffffff !important;
-  }
-  
   /* Ensure text is black for readability */
   .text-foreground, .text-muted-foreground, .text-primary, h1, h2, h3, h4, p, span, div, td, th {
     color: #000000 !important;
@@ -165,6 +167,11 @@ body {
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
     color: inherit !important;
+  }
+  
+  a {
+    color: #000000 !important;
+    text-decoration: none !important;
   }
 
   @page {
