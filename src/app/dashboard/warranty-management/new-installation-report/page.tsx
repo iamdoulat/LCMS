@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationReportSchema as PageInstallationReportSchema } from '@/types';
+import type { CustomerDocument, SupplierDocument, LCEntryDocument, InstallationDetailItem as PageInstallationDetailItemType, InstallationReportFormValues as PageInstallationReportFormValues, LcForInvoiceDropdownOption, InstallationReportSchema as PageInstallationReportSchema, InstallationReportDocument } from '@/types';
 import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types'; // Import schemas
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -122,7 +122,7 @@ export default function NewInstallationReportPage() {
     },
   });
 
-  const { control, setValue, watch, formState, getValues, reset } = form;
+  const { control, setValue, watch, getValues, reset } = form;
   const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
   const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
   const watchedInstallationDetails = watch("installationDetails");
@@ -139,10 +139,11 @@ export default function NewInstallationReportPage() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
+        const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
-          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", "")))
+          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))),
+          getDocs(collection(firestore, "installation_reports"))
         ]);
 
         setApplicantOptions(
@@ -151,16 +152,22 @@ export default function NewInstallationReportPage() {
         setBeneficiaryOptions(
           suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
         );
+        
+        const usedLcIdsForReports = new Set(
+          existingReportsSnap.docs.map(doc => (doc.data() as InstallationReportDocument).selectedCommercialInvoiceLcId).filter(Boolean)
+        );
 
         const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
-        lcsSnap.forEach(doc => {
-          const data = doc.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) { // Ensure C.I. Number exists
-            fetchedLcOptions.push({
-              value: doc.id, // L/C document ID
-              label: data.commercialInvoiceNumber, // Commercial Invoice Number for display
-              lcData: { ...data, id: doc.id } , // Store the full L/C data
-            });
+        lcsSnap.forEach(docSnap => {
+          if (!usedLcIdsForReports.has(docSnap.id)) { // Filter out used L/Cs
+            const data = docSnap.data() as LCEntryDocument;
+            if (data.commercialInvoiceNumber) { 
+              fetchedLcOptions.push({
+                value: docSnap.id, // L/C document ID
+                label: data.commercialInvoiceNumber, // Commercial Invoice Number for display
+                lcData: { ...data, id: docSnap.id } , // Store the full L/C data
+              });
+            }
           }
         });
         setLcOptionsForCommercialInvoice(fetchedLcOptions);
@@ -654,7 +661,6 @@ export default function NewInstallationReportPage() {
                     )}
                  />
               </div>
-
               <Separator className="my-2" />
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="p-3 border rounded-md bg-muted/30">
@@ -868,10 +874,10 @@ export default function NewInstallationReportPage() {
                       </TableBody>
                   </Table>
             </div>
-            {formState.errors.installationDetails && (
+            {form.formState.errors.installationDetails && (
                 <FormMessage>
-                {formState.errors.installationDetails.message ||
-                 (typeof formState.errors.installationDetails === 'object' && (formState.errors.installationDetails as any).root?.message) ||
+                {form.formState.errors.installationDetails.message ||
+                 (typeof form.formState.errors.installationDetails === 'object' && (form.formState.errors.installationDetails as any).root?.message) ||
                  "Please ensure all installation details are valid."}
                 </FormMessage>
             )}
@@ -1025,7 +1031,7 @@ export default function NewInstallationReportPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns }>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1044,5 +1050,3 @@ export default function NewInstallationReportPage() {
       </Card>
   );
 }
-
-    
