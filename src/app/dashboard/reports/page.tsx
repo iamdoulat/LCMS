@@ -11,7 +11,7 @@ import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDo
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile } from '@/types';
 import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
@@ -20,6 +20,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -72,7 +73,6 @@ const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
 const ITEMS_PER_PAGE = 12;
 
-// Helper to escape CSV data
 const escapeCsvCell = (cellData: any): string => {
   const stringData = String(cellData ?? "");
   if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
@@ -81,6 +81,10 @@ const escapeCsvCell = (cellData: any): string => {
   return stringData;
 };
 
+const COMPANY_PROFILE_COLLECTION = 'financial_settings';
+const COMPANY_PROFILE_DOC_ID = 'main_settings';
+const DEFAULT_COMPANY_NAME = 'Your Company';
+const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/150x50.png';
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -90,6 +94,8 @@ export default function ReportsPage() {
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
 
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
@@ -145,8 +151,21 @@ export default function ReportsPage() {
       }
     };
 
+    const fetchCompanyProfile = async () => {
+        try {
+            const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+            const profileDocSnap = await getDoc(profileDocRef);
+            if (profileDocSnap.exists()) {
+                setCompanyProfile(profileDocSnap.data() as CompanyProfile);
+            }
+        } catch (e) {
+            console.error("Error fetching company profile for print report:", e);
+        }
+    }
+
     fetchInitialData();
     fetchFilterOptions();
+    fetchCompanyProfile();
   }, []);
 
   useEffect(() => {
@@ -245,10 +264,40 @@ export default function ReportsPage() {
   const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
   const handlePageChange = (page: number) => setCurrentPage(page);
 
+  const displayCompanyName = companyProfile?.companyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+  const displayCompanyAddress = companyProfile?.address || 'Default Address';
+
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl">
-        <CardHeader>
+      {/* Print-only Header */}
+      <div className="print-only mb-6">
+        <header className="flex justify-between items-center">
+            <div>
+            {displayCompanyLogo && (
+                <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    data-ai-hint="company logo"
+                    width={150}
+                    height={50}
+                    className="object-contain"
+                />
+            )}
+            </div>
+            <div className="text-right">
+                <h1 className="text-2xl font-bold">{displayCompanyName}</h1>
+                <p className="text-xs">{displayCompanyAddress}</p>
+            </div>
+        </header>
+        <hr className="my-4"/>
+        <h2 className="text-center text-xl font-bold mb-4">
+            Report of : {filterStatus || 'All'}
+        </h2>
+      </div>
+
+      <Card className="shadow-xl print-card">
+        <CardHeader className="noprint">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -331,7 +380,7 @@ export default function ReportsPage() {
             <>
               <div className="grid grid-cols-1 gap-6">
                 {currentItems.map(lc => (
-                  <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
+                  <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
                      <CardHeader className="bg-blue-500/10 p-3">
                         <div className="grid grid-cols-3 gap-x-4">
                             <div className="text-left">

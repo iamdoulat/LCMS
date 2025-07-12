@@ -119,6 +119,60 @@ body {
 /* Print-specific styles */
 @media print {
   body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background-color: #ffffff !important;
+  }
+
+  .noprint {
+    display: none !important;
+  }
+
+  .print-only {
+      display: block !important;
+  }
+  
+  .print-card {
+      border: none !important;
+      box-shadow: none !important;
+  }
+  
+  .print-card .bg-blue-500\/10 {
+      background-color: #f0f8ff !important; /* A light, printable blue */
+  }
+
+  /* Ensure card content is visible */
+  .bg-card, .bg-background {
+      background-color: #ffffff !important;
+  }
+  
+  /* Ensure text is black for readability */
+  .text-foreground, .text-muted-foreground, .text-primary, h1, h2, h3, h4, p, span, div, td, th {
+    color: #000000 !important;
+  }
+
+  /* Remove gradient from text */
+  .bg-gradient-to-r {
+    background-image: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: inherit !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+}
+
+/* Base styles for elements that are print-only */
+.print-only {
+  display: none;
+}
+
+
+@media print {
+  body {
     -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
     print-color-adjust: exact !important;         /* Standard */
     font-family: 'Times New Roman', Times, serif !important; /* Classic print font */
