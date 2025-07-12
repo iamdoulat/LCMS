@@ -208,9 +208,6 @@ export default function ReportsPage() {
               </CardTitle>
               <CardDescription>Generate custom reports by filtering and sorting L/C data.</CardDescription>
             </div>
-            <Link href="/dashboard/new-lc-entry" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}><PlusCircle className="mr-2 h-5 w-5" />New T/T OR L/C Entry</Button>
-            </Link>
           </div>
         </CardHeader>
         <CardContent>
@@ -330,5 +327,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-
