@@ -20,7 +20,7 @@ import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } fro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from '@/context/AuthContext';
 
-const ITEMS_PER_PAGE = 9; // Display 9 cards per page for a 3x3 grid on large screens
+const ITEMS_PER_PAGE = 10;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
 const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
@@ -111,11 +111,11 @@ export default function InstallationReportsViewPage() {
         setIsLoadingBeneficiaries(false);
 
       } catch (error: any) {
-        let errorMessage = `Could not fetch data. Please check Firestore rules.`;
+        let errorMessage = `Could not fetch data. Please check Firestore rules. Error: ${error.message}`;
         if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
            errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
-        } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+        } else if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
