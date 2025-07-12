@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -256,14 +257,6 @@ export default function ReportsPage() {
               </CardTitle>
               <CardDescription>Generate custom reports by filtering and sorting L/C data.</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-                <Button onClick={handlePrint} variant="default" className="bg-primary hover:bg-primary/90">
-                    <Printer className="mr-2 h-4 w-4" /> PDF Report
-                </Button>
-                <Button onClick={handleExport} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
-                </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -317,10 +310,18 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
           
-          <div className="my-4 text-center noprint">
+          <div className="my-4 text-center noprint flex flex-wrap justify-center items-center gap-4">
             <Button variant="outline" className="text-lg font-semibold border-2 border-primary text-primary cursor-default">
                 Report of : {filterStatus || 'All'}
             </Button>
+            <div className="flex items-center gap-2">
+                <Button onClick={handlePrint} variant="default" className="bg-primary hover:bg-primary/90">
+                    <Printer className="mr-2 h-4 w-4" /> PDF Report
+                </Button>
+                <Button onClick={handleExport} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
+                </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -334,7 +335,7 @@ export default function ReportsPage() {
                   <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
                      <CardHeader className="bg-blue-500/10 p-3">
                         <div className="grid grid-cols-3 gap-x-4">
-                            <div>
+                            <div className="text-left">
                                 <p className="font-semibold text-primary">L/C or TT No.</p>
                                 <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
                             </div>
@@ -371,15 +372,21 @@ export default function ReportsPage() {
                               <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETD:</span> {formatDisplayDate(lc.etd)}</p>
                               <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETA:</span> {formatDisplayDate(lc.eta)}</p>
                             </td>
-                             <td className="py-2 px-2 align-top">
+                            <td className="py-2 px-2 align-top">
                                 <p className="font-semibold">Machine Qty:</p>
                                 <p className="text-muted-foreground">{lc.totalMachineQty || 'N/A'}</p>
                             </td>
                             <td className="py-2 pl-2 align-top">
                                 <p className="font-semibold">Shipment Note</p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>1st: {lc.firstShipmentNote || 'N/A'}</p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>2nd: {lc.secondShipmentNote || 'N/A'}</p>
-                                <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>3rd: {lc.thirdShipmentNote || 'N/A'}</p>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>
+                                    <span className="font-semibold text-foreground">1st:</span> {lc.firstShipmentNote || 'N/A'}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>
+                                    <span className="font-semibold text-foreground">2nd:</span> {lc.secondShipmentNote || 'N/A'}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>
+                                    <span className="font-semibold text-foreground">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
+                                </p>
                             </td>
                           </tr>
                         </tbody>
@@ -405,3 +412,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
