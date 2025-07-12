@@ -326,37 +326,41 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 gap-6">
                 {currentItems.map(lc => (
                   <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <CardContent className="p-0">
+                     <CardHeader className="bg-blue-500/10 p-3">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                            <div>
+                                <p className="font-semibold text-primary">L/C or TT No.</p>
+                                <p className="text-foreground font-bold text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="font-semibold text-primary">Terms of Pay* :</p>
+                                <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                            </div>
+                        </div>
+                     </CardHeader>
+                    <CardContent className="p-3">
                       <table className="w-full text-sm">
                         <tbody>
                           <tr className="border-b">
-                            <td className="p-2 border-r w-1/3 align-top">
-                              <p className="font-semibold">L/C or TT No.</p>
-                              <p className="text-muted-foreground">{lc.documentaryCreditNumber || 'N/A'}</p>
-                              <hr className="my-1"/>
-                              <p className="font-semibold">Terms of Pay* :</p>
-                              <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                            <td className="py-2 pr-2 align-top">
+                              <p className="font-semibold">Customer Name</p>
+                              <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
                             </td>
-                            <td className="p-2 border-r w-1/3 align-top">
-                                <p className="font-semibold">Customer Name</p>
-                                <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
-                            </td>
-                            <td className="p-2 border-r w-1/3 align-top">
+                            <td className="py-2 px-2 align-top">
                                 <p className="font-semibold">Value</p>
                                 <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
                             </td>
-                            <td className="p-2 border-r align-top">
-                                <p className="font-semibold">Shipment Date</p>
-                                <p className="text-muted-foreground">ETD: {formatDisplayDate(lc.etd)}</p>
-                                <hr className="my-1"/>
-                                <p className="text-muted-foreground">ETA: {formatDisplayDate(lc.eta)}</p>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-2 pr-2 align-top">
+                              <p className="font-semibold">Shipment Date</p>
+                              <p className="text-muted-foreground">ETD: {formatDisplayDate(lc.etd)}</p>
+                              <p className="text-muted-foreground">ETA: {formatDisplayDate(lc.eta)}</p>
                             </td>
-                            <td className="p-2 align-top">
+                            <td className="py-2 px-2 align-top">
                                 <p className="font-semibold">Shipment Note</p>
                                 <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>1st: {lc.firstShipmentNote || 'N/A'}</p>
-                                <hr className="my-1"/>
                                 <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>2nd: {lc.secondShipmentNote || 'N/A'}</p>
-                                <hr className="my-1"/>
                                 <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>3rd: {lc.thirdShipmentNote || 'N/A'}</p>
                             </td>
                           </tr>
@@ -383,3 +387,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
