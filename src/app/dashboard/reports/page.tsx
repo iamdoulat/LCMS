@@ -368,8 +368,8 @@ export default function ReportsPage() {
                           <tr className="border-b">
                             <td className="py-2 pr-2 align-top">
                               <p className="font-semibold">Shipment Date</p>
-                              <p className="text-muted-foreground">ETD: {formatDisplayDate(lc.etd)}</p>
-                              <p className="text-muted-foreground">ETA: {formatDisplayDate(lc.eta)}</p>
+                              <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETD:</span> {formatDisplayDate(lc.etd)}</p>
+                              <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETA:</span> {formatDisplayDate(lc.eta)}</p>
                             </td>
                              <td className="py-2 px-2 align-top">
                                 <p className="font-semibold">Machine Qty:</p>
