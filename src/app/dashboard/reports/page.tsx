@@ -270,7 +270,7 @@ export default function ReportsPage() {
             <div className="text-center text-destructive p-8">{fetchError}</div>
           ) : currentItems.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 {currentItems.map(lc => (
                   <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300">
                     <CardContent className="p-0">
@@ -330,4 +330,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 
