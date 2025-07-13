@@ -123,17 +123,15 @@ function PrintPageContent() {
     <div className="bg-white p-8 font-sans">
       <header className="flex justify-between items-start mb-6 print-header">
         <div>
-          {displayCompanyLogo && (
-            <Image
+          <Image
               src={displayCompanyLogo}
-              alt={`${displayCompanyName} Logo`}
+              alt="Company Logo"
               width={150}
               height={50}
               className="object-contain"
               data-ai-hint="company logo"
               priority
             />
-          )}
         </div>
         <div className="text-right">
           <h1 className="text-xl font-bold">{displayCompanyName}</h1>
@@ -145,62 +143,62 @@ function PrintPageContent() {
         Report of: {filterStatus} L/Cs
       </h2>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="space-y-6">
         {reports.length > 0 ? (
           reports.map(lc => (
             <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
               <CardHeader className="bg-gray-100 p-3">
-                <div className="grid grid-cols-3 gap-x-4">
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">L/C or TT No.</p>
-                    <p className="text-gray-800 text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                  <div className="grid grid-cols-3 gap-x-4">
+                      <div className="text-left">
+                          <p className="font-semibold text-gray-800">L/C or TT No.</p>
+                          <p className="text-gray-800">{lc.documentaryCreditNumber || 'N/A'}</p>
+                      </div>
+                      <div className="text-left">
+                          <p className="font-semibold text-gray-800">Beneficiary</p>
+                          <p className="text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                      </div>
+                      <div className="text-left">
+                          <p className="font-semibold text-gray-800">Terms of Pay* :</p>
+                          <p className="text-gray-600">{lc.termsOfPay || 'N/A'}</p>
+                      </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Beneficiary</p>
-                    <p className="text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Terms of Pay* :</p>
-                    <p className="text-gray-600">{lc.termsOfPay || 'N/A'}</p>
-                  </div>
-                </div>
               </CardHeader>
               <CardContent className="p-3">
                 <table className="w-full text-sm">
                   <tbody>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-2 pr-2 align-top">
+                    <tr className="align-top">
+                      <td className="py-2 pr-2 w-1/3">
                         <p className="font-semibold">Customer Name</p>
                         <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
                       </td>
-                      <td className="py-2 px-2 align-top">
-                        <p className="font-semibold">Value</p>
-                        <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                      <td className="py-2 px-2 w-1/3">
+                          <p className="font-semibold">Value</p>
+                          <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
                       </td>
-                      <td className="py-2 pl-2 align-top">
-                        <p className="font-semibold">Invoice No:</p>
-                        <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                      <td className="py-2 pl-2 w-1/3">
+                          <p className="font-semibold">Invoice No:</p>
+                          <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
                       </td>
                     </tr>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-2 pr-2 align-top">
+                     <tr className="align-top">
+                      <td className="py-2 pr-2">
                         <p className="font-semibold">Shipment Date</p>
                         <p className="text-gray-600"><span className="font-semibold text-gray-800">ETD:</span> {formatDisplayDate(lc.etd)}</p>
                         <p className="text-gray-600"><span className="font-semibold text-gray-800">ETA:</span> {formatDisplayDate(lc.eta)}</p>
                       </td>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-2 px-2">
                         <p className="font-semibold">Machine Qty:</p>
                         <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
                       </td>
-                      <td className="py-2 pl-2 align-top">
+                      <td className="py-2 pl-2">
                         <p className="font-semibold">Shipment Note</p>
-                        <p className="text-xs text-gray-600 truncate" title={lc.firstShipmentNote}>
+                        <p className="text-xs text-gray-600">
                           <span className="font-semibold text-gray-800">1st:</span> {lc.firstShipmentNote || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 truncate" title={lc.secondShipmentNote}>
+                        <p className="text-xs text-gray-600">
                           <span className="font-semibold text-gray-800">2nd:</span> {lc.secondShipmentNote || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 truncate" title={lc.thirdShipmentNote}>
+                        <p className="text-xs text-gray-600">
                           <span className="font-semibold text-gray-800">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
                         </p>
                       </td>
