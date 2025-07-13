@@ -12,35 +12,16 @@ import { BottomNavBar } from '@/components/layout/BottomNavBar';
 
 export default function DashboardLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
-  const [isPrinting, setIsPrinting] = useState(false);
-
+  
   // Check if the current path is a dedicated print or preview page
   const isPrintPage = pathname.includes('/preview/') || pathname.includes('/print/');
 
-  useEffect(() => {
-    const handleBeforePrint = () => {
-      setIsPrinting(true);
-    };
-    const handleAfterPrint = () => {
-      setIsPrinting(false);
-    };
-
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-
-    return () => {
-      window.removeEventListener('beforeprint', handleBeforePrint);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  }, []);
-
-  // Conditional rendering based on the printing state or dedicated print pages
+  // For print pages, render only the children in a basic layout.
   if (isPrintPage) {
-    // For print pages or when the print dialog is active, render only the children
-    // in a basic layout to ensure it's printable.
     return <div className="print-layout">{children}</div>;
   }
 
+  // Otherwise, render the full dashboard layout.
   return (
     <AuthGuard>
       <SidebarProvider defaultOpen>

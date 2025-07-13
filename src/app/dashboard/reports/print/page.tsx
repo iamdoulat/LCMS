@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ function PrintPageContent() {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const router = useRouter();
 
   const fetchCompanyProfile = useCallback(async () => {
     try {
@@ -211,7 +212,7 @@ function PrintPageContent() {
       </div>
 
        <div className="text-center mt-8 noprint">
-         <Button onClick={() => window.close()}>Close Preview</Button>
+         <Button onClick={() => router.back()}>Close Preview</Button>
        </div>
     </div>
   );
