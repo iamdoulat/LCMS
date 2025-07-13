@@ -46,11 +46,11 @@ function PrintPageContent() {
       if (profileDocSnap.exists()) {
         setCompanyProfile(profileDocSnap.data() as CompanyProfile);
       } else {
-        setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL });
+        setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: 'Default Address' });
       }
     } catch (e) {
       console.error("Error fetching company profile for print:", e);
-      setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL });
+      setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: 'Default Address' });
     }
   }, []);
 
