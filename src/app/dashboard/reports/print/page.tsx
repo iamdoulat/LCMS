@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, LCStatus, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
-import { collection, getDocs, query, where, doc, documentId, writeBatch, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, documentId, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
 
@@ -16,6 +16,7 @@ const COMPANY_PROFILE_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
 const DEFAULT_COMPANY_NAME = 'Your Company';
 const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/150x50.png';
+const DEFAULT_ADDRESS = 'Your Default Address Here';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
@@ -34,6 +35,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 function PrintPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [reports, setReports] = useState<LCEntryDocument[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,18 +48,19 @@ function PrintPageContent() {
       if (profileDocSnap.exists()) {
         setCompanyProfile(profileDocSnap.data() as CompanyProfile);
       } else {
-        setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: 'Default Address' });
+        setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: DEFAULT_ADDRESS });
       }
     } catch (e) {
       console.error("Error fetching company profile for print:", e);
-      setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: 'Default Address' });
+      setCompanyProfile({ companyName: DEFAULT_COMPANY_NAME, invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, address: DEFAULT_ADDRESS });
     }
   }, []);
 
   useEffect(() => {
     const fetchReportsForPrint = async () => {
       setIsLoading(true);
-      
+      await fetchCompanyProfile();
+
       const idsParam = searchParams.get('ids');
       if (!idsParam) {
         setIsLoading(false);
@@ -69,11 +72,9 @@ function PrintPageContent() {
       setFilterStatus(statusLabel);
       
       const fetchedReports: LCEntryDocument[] = [];
-      const BATCH_SIZE = 30; // Firestore `in` query limit is 30
+      const BATCH_SIZE = 30;
 
       try {
-        await fetchCompanyProfile();
-        // Fetch documents in batches
         for (let i = 0; i < reportIds.length; i += BATCH_SIZE) {
           const batchIds = reportIds.slice(i, i + BATCH_SIZE);
           if (batchIds.length > 0) {
@@ -85,7 +86,6 @@ function PrintPageContent() {
           }
         }
         
-        // Re-order based on the original ID order if needed
         const orderedReports = reportIds.map(id => fetchedReports.find(report => report.id === id)).filter(Boolean) as LCEntryDocument[];
         setReports(orderedReports);
 
@@ -101,7 +101,8 @@ function PrintPageContent() {
 
   useEffect(() => {
     if (!isLoading && reports.length > 0) {
-      setTimeout(() => window.print(), 500); // Delay to allow rendering
+      const timer = setTimeout(() => window.print(), 500);
+      return () => clearTimeout(timer);
     }
   }, [isLoading, reports]);
 
@@ -116,11 +117,11 @@ function PrintPageContent() {
 
   const displayCompanyName = companyProfile?.companyName || DEFAULT_COMPANY_NAME;
   const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-  const displayCompanyAddress = companyProfile?.address || 'Default Address';
+  const displayCompanyAddress = companyProfile?.address || DEFAULT_ADDRESS;
 
   return (
-    <div className="bg-white p-8">
-      <header className="flex justify-between items-center mb-6">
+    <div className="bg-white p-8 font-sans">
+      <header className="flex justify-between items-start mb-6 print-header">
         <div>
           {displayCompanyLogo && (
             <Image
@@ -130,12 +131,13 @@ function PrintPageContent() {
               height={50}
               className="object-contain"
               data-ai-hint="company logo"
+              priority
             />
           )}
         </div>
         <div className="text-right">
-          <h1 className="text-2xl font-bold">{displayCompanyName}</h1>
-          <p className="text-xs">{displayCompanyAddress}</p>
+          <h1 className="text-xl font-bold">{displayCompanyName}</h1>
+          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
         </div>
       </header>
       <hr className="my-4" />
@@ -144,69 +146,75 @@ function PrintPageContent() {
       </h2>
 
       <div className="grid grid-cols-1 gap-6">
-        {reports.map(lc => (
-          <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
-            <CardHeader className="bg-gray-100 p-3">
-              <div className="grid grid-cols-3 gap-x-4">
-                <div className="text-left">
-                  <p className="font-semibold text-gray-800">L/C or TT No.</p>
-                  <p className="text-gray-800 text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+        {reports.length > 0 ? (
+          reports.map(lc => (
+            <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
+              <CardHeader className="bg-gray-100 p-3">
+                <div className="grid grid-cols-3 gap-x-4">
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">L/C or TT No.</p>
+                    <p className="text-gray-800 text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">Beneficiary</p>
+                    <p className="text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">Terms of Pay* :</p>
+                    <p className="text-gray-600">{lc.termsOfPay || 'N/A'}</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="font-semibold text-gray-800">Beneficiary</p>
-                  <p className="text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-gray-800">Terms of Pay* :</p>
-                  <p className="text-gray-600">{lc.termsOfPay || 'N/A'}</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-3">
-              <table className="w-full text-sm">
-                <tbody>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-2 pr-2 align-top">
-                      <p className="font-semibold">Customer Name</p>
-                      <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
-                    </td>
-                    <td className="py-2 px-2 align-top">
-                      <p className="font-semibold">Value</p>
-                      <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
-                    </td>
-                    <td className="py-2 pl-2 align-top">
-                      <p className="font-semibold">Invoice No:</p>
-                      <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-2 pr-2 align-top">
-                      <p className="font-semibold">Shipment Date</p>
-                      <p className="text-gray-600"><span className="font-semibold text-gray-800">ETD:</span> {formatDisplayDate(lc.etd)}</p>
-                      <p className="text-gray-600"><span className="font-semibold text-gray-800">ETA:</span> {formatDisplayDate(lc.eta)}</p>
-                    </td>
-                    <td className="py-2 px-2 align-top">
-                      <p className="font-semibold">Machine Qty:</p>
-                      <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
-                    </td>
-                    <td className="py-2 pl-2 align-top">
-                      <p className="font-semibold">Shipment Note</p>
-                      <p className="text-xs text-gray-600 truncate" title={lc.firstShipmentNote}>
-                        <span className="font-semibold text-gray-800">1st:</span> {lc.firstShipmentNote || 'N/A'}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate" title={lc.secondShipmentNote}>
-                        <span className="font-semibold text-gray-800">2nd:</span> {lc.secondShipmentNote || 'N/A'}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate" title={lc.thirdShipmentNote}>
-                        <span className="font-semibold text-gray-800">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
-                      </p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        ))}
+              </CardHeader>
+              <CardContent className="p-3">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr className="border-b border-gray-200">
+                      <td className="py-2 pr-2 align-top">
+                        <p className="font-semibold">Customer Name</p>
+                        <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
+                      </td>
+                      <td className="py-2 px-2 align-top">
+                        <p className="font-semibold">Value</p>
+                        <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                      </td>
+                      <td className="py-2 pl-2 align-top">
+                        <p className="font-semibold">Invoice No:</p>
+                        <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-200">
+                      <td className="py-2 pr-2 align-top">
+                        <p className="font-semibold">Shipment Date</p>
+                        <p className="text-gray-600"><span className="font-semibold text-gray-800">ETD:</span> {formatDisplayDate(lc.etd)}</p>
+                        <p className="text-gray-600"><span className="font-semibold text-gray-800">ETA:</span> {formatDisplayDate(lc.eta)}</p>
+                      </td>
+                      <td className="py-2 px-2 align-top">
+                        <p className="font-semibold">Machine Qty:</p>
+                        <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
+                      </td>
+                      <td className="py-2 pl-2 align-top">
+                        <p className="font-semibold">Shipment Note</p>
+                        <p className="text-xs text-gray-600 truncate" title={lc.firstShipmentNote}>
+                          <span className="font-semibold text-gray-800">1st:</span> {lc.firstShipmentNote || 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-600 truncate" title={lc.secondShipmentNote}>
+                          <span className="font-semibold text-gray-800">2nd:</span> {lc.secondShipmentNote || 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-600 truncate" title={lc.thirdShipmentNote}>
+                          <span className="font-semibold text-gray-800">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
+                        </p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No reports to display.</p>
+          </div>
+        )}
       </div>
        <div className="text-center mt-8 noprint">
          <Button onClick={() => window.close()}>Close Preview</Button>
@@ -223,5 +231,3 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
-
-    
