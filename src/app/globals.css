@@ -121,91 +121,21 @@ body {
   body, html {
     background-color: #ffffff !important;
     color: #000000 !important;
-    height: auto !important;
-    overflow: visible !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
   
-  /* Hide all non-printable elements */
   .noprint {
     display: none !important;
   }
 
-  /* Show print-only elements */
   .print-only {
     display: block !important;
   }
 
-  /* Reset layout for printable content */
-  .print-layout, .print-content {
-      display: block !important;
-      overflow: visible !important;
-      height: auto !important;
-      box-shadow: none !important;
-      border: none !important;
-  }
-
-  /* Reset layout wrappers to be simple blocks */
-  .group\/sidebar-wrapper, .sidebar-inset {
-      display: block !important;
-  }
-  
-  .print-card {
-      border: 1px solid #ccc !important;
-      box-shadow: none !important;
-      page-break-inside: avoid;
-  }
-
-  /* Ensure text is black for readability */
-  .text-foreground, .text-muted-foreground, .text-primary, h1, h2, h3, h4, p, span, div, td, th {
-    color: #000000 !important;
-  }
-
-  /* Remove gradient from text */
-  .bg-gradient-to-r {
-    background-image: none !important;
-    -webkit-background-clip: initial !important;
-    background-clip: initial !important;
-    color: inherit !important;
-  }
-  
-  a {
-    color: #000000 !important;
-    text-decoration: none !important;
-  }
-
-  @page {
-    size: A4;
-    margin: 0.5in;
-  }
-}
-
-/* Base styles for elements that are print-only */
-.print-only {
-  display: none;
-}
-
-
-@media print {
-  body {
-    -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
-    print-color-adjust: exact !important;         /* Standard */
-    font-family: 'Times New Roman', Times, serif !important; /* Classic print font */
-    font-size: 10pt !important; /* Standard print font size */
-    color: #000000 !important;
-    background-color: #ffffff !important;
-  }
-
   .print-invoice-container {
-    width: 100% !important;
-    min-height: auto !important;
-    margin: 0 !important;
     padding: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    display: table !important; /* Use table layout for print */
-    background-color: #ffffff !important;
   }
 
   .print-header {
@@ -216,65 +146,31 @@ body {
     display: table-footer-group !important;
   }
   
-  h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {
-    color: #000000 !important;
-    background: transparent !important;
-  }
-  
-  input[disabled], textarea[disabled] {
-    color: #000000 !important;
-    background-color: #f0f0f0 !important;
-    opacity: 1 !important;
-    -webkit-text-fill-color: #000000 !important;
-  }
-
-  .noprint,
-  .print-only-utility-buttons
-  {
-    display: none !important;
-  }
-  
-  /* Remove gradient text for print */
-  .bg-gradient-to-r {
-    background-image: none !important;
-    color: #000000 !important;
-    -webkit-background-clip: initial !important;
-    background-clip: initial !important;
-  }
-  .text-primary, .text-blue-600 { 
-     color: #000000 !important;
+  .bg-blue-500\/10 {
+    background-color: #f0f9ff !important; /* A light blue that prints well */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   a {
     color: #000000 !important;
     text-decoration: none !important;
   }
-  
-  table { 
-    page-break-inside: auto; 
-    border-collapse: collapse !important;
-  }
-  tr    { page-break-inside: avoid; page-break-after: auto; }
-  thead { display: table-header-group; }
-  tbody { display: table-row-group; }
-  tfoot { display: table-footer-group; }
-
-  th, td {
-    border: 1px solid #ddd !important;
-  }
-  
-  th, td {
-    padding: 4px 8px !important;
-  }
-  
-  .bg-gray-100 { 
-    background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
 
   @page {
     size: A4;
-    margin: 0.20in;
+    margin: 0.5in;
+  }
+
+  /* Ensure text colors are black for readability */
+  .text-foreground, .text-muted-foreground, .text-primary, h1, h2, h3, p, span, div, td, th {
+    color: #000000 !important;
+  }
+
+  /* Remove gradient from text for print */
+  .bg-gradient-to-r {
+    background-image: none !important;
+    color: inherit !important;
   }
 }
+

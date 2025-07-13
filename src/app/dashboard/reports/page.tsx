@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -81,11 +82,6 @@ const escapeCsvCell = (cellData: any): string => {
   return stringData;
 };
 
-const COMPANY_PROFILE_COLLECTION = 'financial_settings';
-const COMPANY_PROFILE_DOC_ID = 'main_settings';
-const DEFAULT_COMPANY_NAME = 'Your Company';
-const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/150x50.png';
-
 export default function ReportsPage() {
   const router = useRouter();
   const { userRole } = useAuth();
@@ -93,8 +89,6 @@ export default function ReportsPage() {
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
 
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
@@ -266,7 +260,7 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card className="shadow-xl print-card">
+      <Card className="shadow-xl">
         <CardHeader className="noprint">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -342,7 +336,7 @@ export default function ReportsPage() {
             </div>
           </div>
           
-          <div className="print-content">
+          <div className="space-y-4">
             {isLoading ? (
               <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
             ) : fetchError ? (
@@ -371,41 +365,35 @@ export default function ReportsPage() {
                       <CardContent className="p-3">
                         <table className="w-full text-sm">
                           <tbody>
-                            <tr className="border-b">
-                              <td className="py-2 pr-2 align-top">
+                            <tr className="align-top">
+                              <td className="py-2 pr-2 w-1/3">
                                 <p className="font-semibold">Customer Name</p>
-                                <p className="text-muted-foreground">{lc.applicantName || 'N/A'}</p>
+                                <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
                               </td>
-                              <td className="py-2 px-2 align-top">
+                              <td className="py-2 px-2 w-1/3">
                                   <p className="font-semibold">Value</p>
-                                  <p className="text-muted-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                                  <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
                               </td>
-                              <td className="py-2 pl-2 align-top">
+                              <td className="py-2 pl-2 w-1/3">
                                   <p className="font-semibold">Invoice No:</p>
-                                  <p className="text-muted-foreground">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                                  <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
                               </td>
                             </tr>
-                            <tr className="border-b">
-                              <td className="py-2 pr-2 align-top">
+                            <tr className="align-top">
+                              <td className="py-2 pr-2">
                                 <p className="font-semibold">Shipment Date</p>
-                                <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETD:</span> {formatDisplayDate(lc.etd)}</p>
-                                <p className="text-muted-foreground"><span className="font-semibold text-foreground">ETA:</span> {formatDisplayDate(lc.eta)}</p>
+                                <p className="text-gray-600">ETD: {formatDisplayDate(lc.etd)}</p>
+                                <p className="text-gray-600">ETA: {formatDisplayDate(lc.eta)}</p>
                               </td>
-                              <td className="py-2 px-2 align-top">
+                              <td className="py-2 px-2">
                                   <p className="font-semibold">Machine Qty:</p>
-                                  <p className="text-muted-foreground">{lc.totalMachineQty || 'N/A'}</p>
+                                  <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
                               </td>
-                              <td className="py-2 pl-2 align-top">
+                              <td className="py-2 pl-2">
                                   <p className="font-semibold">Shipment Note</p>
-                                  <p className="text-xs text-muted-foreground truncate" title={lc.firstShipmentNote}>
-                                      <span className="font-semibold text-foreground">1st:</span> {lc.firstShipmentNote || 'N/A'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground truncate" title={lc.secondShipmentNote}>
-                                      <span className="font-semibold text-foreground">2nd:</span> {lc.secondShipmentNote || 'N/A'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground truncate" title={lc.thirdShipmentNote}>
-                                      <span className="font-semibold text-foreground">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
-                                  </p>
+                                  <p className="text-xs text-gray-600"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
+                                  <p className="text-xs text-gray-600"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
+                                  <p className="text-xs text-gray-600"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
                               </td>
                             </tr>
                           </tbody>

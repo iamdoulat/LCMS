@@ -14,9 +14,9 @@ import Image from 'next/image';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
-const DEFAULT_COMPANY_NAME = 'Your Company';
-const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/150x50.png';
-const DEFAULT_ADDRESS = 'Your Default Address Here';
+const DEFAULT_COMPANY_NAME = 'SMART SOLUTION PTE LTD';
+const DEFAULT_COMPANY_LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/Pte%20logo.png?alt=media&token=0f5d579c-c398-41b8-b8a1-048b63aa38bd';
+const DEFAULT_ADDRESS = '236A Serangoon Road, #02-236A, Singapore 218084,Tel: +6593218129, Reg. No. 201610840K ';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
@@ -108,7 +108,7 @@ function PrintPageContent() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-gray-600">Generating report...</p>
       </div>
@@ -120,105 +120,98 @@ function PrintPageContent() {
   const displayCompanyAddress = companyProfile?.address || DEFAULT_ADDRESS;
 
   return (
-    <div className="bg-gray-100 p-8 print:bg-white print:p-0">
-        <div className="mx-auto w-[210mm] min-h-[297mm] bg-white p-12 shadow-lg print:shadow-none print:w-full print:min-h-full print:p-0">
-            <header className="flex justify-between items-start mb-6 print-header">
-                <div>
-                <Image
-                    src={displayCompanyLogo}
-                    alt="Company Logo"
-                    width={150}
-                    height={50}
-                    className="object-contain"
-                    data-ai-hint="company logo"
-                    priority
-                    />
-                </div>
-                <div className="text-right">
-                <h1 className="text-xl font-bold">{displayCompanyName}</h1>
-                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                </div>
-            </header>
-            <hr className="my-4" />
-            <h2 className="text-center text-xl font-bold mb-4">
-                Report of: {filterStatus} L/Cs
-            </h2>
+    <div className="print-invoice-container bg-white p-8 font-sans">
+      <header className="flex justify-between items-start mb-4 print-header">
+        <div className="w-1/3">
+          <Image
+            src={displayCompanyLogo}
+            alt="Company Logo"
+            width={150}
+            height={50}
+            className="object-contain"
+            data-ai-hint="company logo"
+            priority
+          />
+        </div>
+        <div className="w-2/3 text-right">
+          <h1 className="text-xl font-bold">{displayCompanyName}</h1>
+          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+        </div>
+      </header>
+      <hr className="my-4" />
+      <h2 className="text-center text-xl font-bold mb-6">
+        Report of: {filterStatus} L/Cs
+      </h2>
 
-            <div className="space-y-6">
-                {reports.length > 0 ? (
-                reports.map(lc => (
-                    <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
-                    <CardHeader className="bg-blue-500/10 p-3">
-                        <div className="grid grid-cols-3 gap-x-4">
-                            <div className="text-left">
-                                <p className="font-semibold text-gray-800">L/C or TT No.</p>
-                                <p className="text-gray-800">{lc.documentaryCreditNumber || 'N/A'}</p>
-                            </div>
-                            <div className="text-left">
-                                <p className="font-semibold text-gray-800">Beneficiary</p>
-                                <p className="text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
-                            </div>
-                            <div className="text-left">
-                                <p className="font-semibold text-gray-800">Terms of Pay* :</p>
-                                <p className="text-gray-600">{lc.termsOfPay || 'N/A'}</p>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-3">
-                        <table className="w-full text-sm">
-                        <tbody>
-                            <tr className="align-top">
-                            <td className="py-2 pr-2 w-1/3">
-                                <p className="font-semibold">Customer Name</p>
-                                <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
-                            </td>
-                            <td className="py-2 px-2 w-1/3">
-                                <p className="font-semibold">Value</p>
-                                <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
-                            </td>
-                            <td className="py-2 pl-2 w-1/3">
-                                <p className="font-semibold">Invoice No:</p>
-                                <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
-                            </td>
-                            </tr>
-                            <tr className="align-top">
-                            <td className="py-2 pr-2">
-                                <p className="font-semibold">Shipment Date</p>
-                                <p className="text-gray-600"><span className="font-semibold text-gray-800">ETD:</span> {formatDisplayDate(lc.etd)}</p>
-                                <p className="text-gray-600"><span className="font-semibold text-gray-800">ETA:</span> {formatDisplayDate(lc.eta)}</p>
-                            </td>
-                            <td className="py-2 px-2">
-                                <p className="font-semibold">Machine Qty:</p>
-                                <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
-                            </td>
-                            <td className="py-2 pl-2">
-                                <p className="font-semibold">Shipment Note</p>
-                                <p className="text-xs text-gray-600">
-                                <span className="font-semibold text-gray-800">1st:</span> {lc.firstShipmentNote || 'N/A'}
-                                </p>
-                                <p className="text-xs text-gray-600">
-                                <span className="font-semibold text-gray-800">2nd:</span> {lc.secondShipmentNote || 'N/A'}
-                                </p>
-                                <p className="text-xs text-gray-600">
-                                <span className="font-semibold text-gray-800">3rd:</span> {lc.thirdShipmentNote || 'N/A'}
-                                </p>
-                            </td>
-                            </tr>
-                        </tbody>
-                        </table>
-                    </CardContent>
-                    </Card>
-                ))
-                ) : (
-                <div className="text-center py-10">
-                    <p className="text-gray-500">No reports to display.</p>
-                </div>
-                )}
-            </div>
-        </div>
-        <div className="text-center mt-8 noprint">
-            <Button onClick={() => window.close()}>Close Preview</Button>
-        </div>
+      <div className="space-y-4">
+        {reports.length > 0 ? (
+          reports.map(lc => (
+            <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
+              <CardHeader className="bg-blue-500/10 p-3">
+                  <div className="grid grid-cols-3 gap-x-4">
+                      <div>
+                          <p className="text-sm font-semibold text-gray-800">L/C or TT No.</p>
+                          <p className="text-sm text-gray-800">{lc.documentaryCreditNumber || 'N/A'}</p>
+                      </div>
+                      <div>
+                          <p className="text-sm font-semibold text-gray-800">Beneficiary</p>
+                          <p className="text-sm text-gray-600 truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                      </div>
+                      <div>
+                          <p className="text-sm font-semibold text-gray-800">Terms of Pay* :</p>
+                          <p className="text-sm text-gray-600">{lc.termsOfPay || 'N/A'}</p>
+                      </div>
+                  </div>
+              </CardHeader>
+              <CardContent className="p-3">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr className="align-top">
+                      <td className="py-1 pr-2 w-1/3">
+                        <p className="font-semibold">Customer Name</p>
+                        <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
+                      </td>
+                      <td className="py-1 px-2 w-1/3">
+                          <p className="font-semibold">Value</p>
+                          <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                      </td>
+                      <td className="py-1 pl-2 w-1/3">
+                          <p className="font-semibold">Invoice No:</p>
+                          <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                      </td>
+                    </tr>
+                    <tr className="align-top">
+                      <td className="py-1 pr-2">
+                        <p className="font-semibold">Shipment Date</p>
+                        <p className="text-gray-600">ETD: {formatDisplayDate(lc.etd)}</p>
+                        <p className="text-gray-600">ETA: {formatDisplayDate(lc.eta)}</p>
+                      </td>
+                      <td className="py-1 px-2">
+                          <p className="font-semibold">Machine Qty:</p>
+                          <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
+                      </td>
+                      <td className="py-1 pl-2">
+                          <p className="font-semibold">Shipment Note</p>
+                          <p className="text-xs text-gray-600"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
+                          <p className="text-xs text-gray-600"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
+                          <p className="text-xs text-gray-600"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-gray-500">No reports to display.</p>
+          </div>
+        )}
+      </div>
+
+       <div className="text-center mt-8 noprint">
+         <Button onClick={() => window.close()}>Close Preview</Button>
+       </div>
     </div>
   );
 }
@@ -231,3 +224,4 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
+
