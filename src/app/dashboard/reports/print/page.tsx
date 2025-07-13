@@ -125,7 +125,7 @@ function PrintPageContent() {
   const displayCompanyAddress = companyProfile?.address || DEFAULT_ADDRESS;
 
   return (
-    <div className="print-invoice-container bg-white p-8 font-sans">
+    <div className="print-container bg-white p-8 font-sans">
       <header className="flex justify-between items-start mb-4 print-header">
         <div className="w-1/3">
           <Image

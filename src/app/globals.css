@@ -131,6 +131,14 @@ body {
     display: block !important;
   }
   
+  .print-container {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
   .print-layout, .print-invoice-container {
     display: block !important;
     padding: 0 !important;
