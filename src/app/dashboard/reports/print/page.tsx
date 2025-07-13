@@ -5,6 +5,7 @@ import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, LCStatus, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
 import { collection, getDocs, query, orderBy, where, doc } from 'firebase/firestore';
