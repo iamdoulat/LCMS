@@ -151,21 +151,8 @@ export default function ReportsPage() {
       }
     };
 
-    const fetchCompanyProfile = async () => {
-        try {
-            const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
-            const profileDocSnap = await getDoc(profileDocRef);
-            if (profileDocSnap.exists()) {
-                setCompanyProfile(profileDocSnap.data() as CompanyProfile);
-            }
-        } catch (e) {
-            console.error("Error fetching company profile for print report:", e);
-        }
-    }
-
     fetchInitialData();
     fetchFilterOptions();
-    fetchCompanyProfile();
   }, []);
 
   useEffect(() => {
@@ -220,7 +207,18 @@ export default function ReportsPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    const params = new URLSearchParams();
+    if (filterLcNumber) params.append('lcNo', filterLcNumber);
+    if (filterApplicantId) params.append('applicantId', filterApplicantId);
+    if (filterBeneficiaryId) params.append('beneficiaryId', filterBeneficiaryId);
+    if (filterShipmentDate) params.append('shipmentDate', filterShipmentDate.toISOString());
+    if (filterStatus) params.append('status', filterStatus);
+    if (filterYear) params.append('year', filterYear);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
+
+    const queryString = params.toString();
+    window.open(`/dashboard/reports/print?${queryString}`, '_blank');
   };
 
   const handleExport = () => {
@@ -264,38 +262,8 @@ export default function ReportsPage() {
   const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
   const handlePageChange = (page: number) => setCurrentPage(page);
 
-  const displayCompanyName = companyProfile?.companyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-  const displayCompanyAddress = companyProfile?.address || 'Default Address';
-
   return (
     <div className="container mx-auto py-8">
-      {/* Print-only Header */}
-      <div className="print-only mb-6">
-        <header className="flex justify-between items-center">
-            <div>
-            {displayCompanyLogo && (
-                <Image
-                    src={displayCompanyLogo}
-                    alt={`${displayCompanyName} Logo`}
-                    data-ai-hint="company logo"
-                    width={150}
-                    height={50}
-                    className="object-contain"
-                />
-            )}
-            </div>
-            <div className="text-right">
-                <h1 className="text-2xl font-bold">{displayCompanyName}</h1>
-                <p className="text-xs">{displayCompanyAddress}</p>
-            </div>
-        </header>
-        <hr className="my-4"/>
-        <h2 className="text-center text-xl font-bold mb-4">
-            Report of : {filterStatus || 'All'}
-        </h2>
-      </div>
-
       <Card className="shadow-xl print-card">
         <CardHeader className="noprint">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
