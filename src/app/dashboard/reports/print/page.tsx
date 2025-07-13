@@ -12,8 +12,8 @@ import { collection, getDocs, query, where, doc, documentId, orderBy as firestor
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
 
-const COMPANY_PROFILE_COLLECTION = 'financial_settings';
-const COMPANY_PROFILE_DOC_ID = 'main_settings';
+const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
+const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const DEFAULT_COMPANY_NAME = 'Your Company';
 const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/150x50.png';
 const DEFAULT_ADDRESS = 'Your Default Address Here';
@@ -43,7 +43,7 @@ function PrintPageContent() {
 
   const fetchCompanyProfile = useCallback(async () => {
     try {
-      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
       if (profileDocSnap.exists()) {
         setCompanyProfile(profileDocSnap.data() as CompanyProfile);
@@ -147,7 +147,7 @@ function PrintPageContent() {
         {reports.length > 0 ? (
           reports.map(lc => (
             <Card key={lc.id} className="shadow-none border border-gray-300 break-inside-avoid">
-              <CardHeader className="bg-gray-100 p-3">
+              <CardHeader className="bg-blue-500/10 p-3">
                   <div className="grid grid-cols-3 gap-x-4">
                       <div className="text-left">
                           <p className="font-semibold text-gray-800">L/C or TT No.</p>
