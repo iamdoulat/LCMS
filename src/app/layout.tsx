@@ -10,7 +10,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
   description: 'Modern Letter of Credit Management Software',
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
