@@ -1,43 +1,24 @@
-
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const isDevelopment = process.env.NODE_ENV === 'development';
-
-const withPWA = withPWAInit({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  disable: isDevelopment,
-  // Exclude PWA generation for development to avoid caching issues
-  // You can enable it for testing PWA features in dev if needed by removing 'disable' or setting it to false
-});
-
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
+    webpack: (config, { isServer }) => {
+        // Exclude 'chromium-bidi' from server-side bundle
+        if (isServer) {
+            config.externals.push('chromium-bidi/lib/cjs/bidiMapper/BidiMapper');
+        }
+        return config;
+    },
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'firebasestorage.googleapis.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'placehold.co',
+            },
+        ],
+    },
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;
