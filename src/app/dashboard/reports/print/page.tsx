@@ -4,7 +4,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
@@ -100,10 +100,13 @@ function PrintPageContent() {
     fetchReportsForPrint();
   }, [searchParams, fetchCompanyProfile]);
 
+  const handlePrint = () => {
+    window.print();
+  };
 
   useEffect(() => {
     if (!isLoading && reports.length > 0) {
-      const timer = setTimeout(() => window.print(), 500);
+      const timer = setTimeout(() => handlePrint(), 500);
       return () => clearTimeout(timer);
     }
   }, [isLoading, reports]);
@@ -212,7 +215,10 @@ function PrintPageContent() {
       </div>
 
        <div className="text-center mt-8 noprint flex justify-center gap-4">
-         <Button variant="outline" onClick={() => window.print()}>PDF View</Button>
+         <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" />
+            PDF View
+         </Button>
          <Button onClick={() => router.back()}>Close Preview</Button>
        </div>
     </div>

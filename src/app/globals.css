@@ -130,8 +130,9 @@ body {
   .print-only {
     display: block !important;
   }
-
-  .print-invoice-container {
+  
+  .print-layout, .print-invoice-container {
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
@@ -173,4 +174,3 @@ body {
     color: inherit !important;
   }
 }
-
