@@ -2,15 +2,16 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { LCEntryDocument, LCStatus, Currency, CompanyProfile } from '@/types';
+import type { LCEntryDocument, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
-import { collection, getDocs, query, where, doc, documentId, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, documentId } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -36,7 +37,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 function PrintPageContent() {
   const searchParams = useSearchParams();
   const [reports, setReports] = useState<LCEntryDocument[]>([]);
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [companyProfile, setCompanyProfile = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('All');
 
@@ -215,7 +216,6 @@ function PrintPageContent() {
   );
 }
 
-
 export default function PrintReportsPage() {
     return (
         <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
@@ -223,3 +223,5 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
+
+    
