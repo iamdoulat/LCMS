@@ -37,7 +37,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 function PrintPageContent() {
   const searchParams = useSearchParams();
   const [reports, setReports] = useState<LCEntryDocument[]>([]);
-  const [companyProfile, setCompanyProfile = useState<CompanyProfile | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('All');
 
@@ -223,5 +223,3 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
-
-    
