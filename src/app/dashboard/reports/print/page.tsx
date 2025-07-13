@@ -211,7 +211,8 @@ function PrintPageContent() {
         )}
       </div>
 
-       <div className="text-center mt-8 noprint">
+       <div className="text-center mt-8 noprint flex justify-center gap-4">
+         <Button variant="outline" onClick={() => window.print()}>PDF View</Button>
          <Button onClick={() => router.back()}>Close Preview</Button>
        </div>
     </div>
