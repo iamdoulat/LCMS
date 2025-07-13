@@ -3,14 +3,13 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, LCStatus, Currency, CompanyProfile } from '@/types';
-import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { collection, getDocs, query, orderBy, where, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 const COMPANY_PROFILE_COLLECTION = 'financial_settings';
@@ -217,4 +216,3 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
-
