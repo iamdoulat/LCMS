@@ -207,16 +207,16 @@ export default function ReportsPage() {
   };
 
   const handlePrint = () => {
+    const reportIds = displayedLcEntries.map(lc => lc.id);
+    if(reportIds.length === 0) {
+        Swal.fire("No Data", "There are no reports matching the current filters to print.", "info");
+        return;
+    }
+    
     const params = new URLSearchParams();
-    if (filterLcNumber) params.append('lcNo', filterLcNumber);
-    if (filterApplicantId) params.append('applicantId', filterApplicantId);
-    if (filterBeneficiaryId) params.append('beneficiaryId', filterBeneficiaryId);
-    if (filterShipmentDate) params.append('shipmentDate', filterShipmentDate.toISOString());
-    if (filterStatus) params.append('status', filterStatus);
-    if (filterYear) params.append('year', filterYear);
-    if (sortBy) params.append('sortBy', sortBy);
-    if (sortOrder) params.append('sortOrder', sortOrder);
-
+    params.append('ids', reportIds.join(','));
+    params.append('statusLabel', filterStatus || 'All');
+    
     const queryString = params.toString();
     window.open(`/dashboard/reports/print?${queryString}`, '_blank');
   };
@@ -430,3 +430,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    

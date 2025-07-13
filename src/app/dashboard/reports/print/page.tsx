@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, LCStatus, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
-import { collection, getDocs, query, orderBy, where, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, documentId, writeBatch, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
 
@@ -58,31 +58,37 @@ function PrintPageContent() {
     const fetchReportsForPrint = async () => {
       setIsLoading(true);
       
-      const lcNo = searchParams.get('lcNo');
-      const applicantId = searchParams.get('applicantId');
-      const beneficiaryId = searchParams.get('beneficiaryId');
-      const shipmentDate = searchParams.get('shipmentDate');
-      const status = searchParams.get('status') as LCStatus | null;
-      const year = searchParams.get('year');
-      const sortBy = searchParams.get('sortBy') || 'lcIssueDate';
-      const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
-
-      setFilterStatus(status || 'All');
-
-      let q = query(collection(firestore, "lc_entries"), orderBy(sortBy, sortOrder));
-
-      if (lcNo) q = query(q, where('documentaryCreditNumber', '>=', lcNo), where('documentaryCreditNumber', '<=', lcNo + '\uf8ff'));
-      if (applicantId) q = query(q, where('applicantId', '==', applicantId));
-      if (beneficiaryId) q = query(q, where('beneficiaryId', '==', beneficiaryId));
-      if (status) q = query(q, where('status', 'array-contains', status));
-      if (year && year !== 'All Years') q = query(q, where('year', '==', parseInt(year)));
-      if (shipmentDate) q = query(q, where('latestShipmentDate', '>=', shipmentDate));
+      const idsParam = searchParams.get('ids');
+      if (!idsParam) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const reportIds = idsParam.split(',');
+      const statusLabel = searchParams.get('statusLabel') || 'All';
+      setFilterStatus(statusLabel);
+      
+      const fetchedReports: LCEntryDocument[] = [];
+      const BATCH_SIZE = 30; // Firestore `in` query limit is 30
 
       try {
         await fetchCompanyProfile();
-        const querySnapshot = await getDocs(q);
-        const fetchedReports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument));
-        setReports(fetchedReports);
+        // Fetch documents in batches
+        for (let i = 0; i < reportIds.length; i += BATCH_SIZE) {
+          const batchIds = reportIds.slice(i, i + BATCH_SIZE);
+          if (batchIds.length > 0) {
+            const q = query(collection(firestore, "lc_entries"), where(documentId(), "in", batchIds));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(doc => {
+              fetchedReports.push({ id: doc.id, ...doc.data() } as LCEntryDocument);
+            });
+          }
+        }
+        
+        // Re-order based on the original ID order if needed
+        const orderedReports = reportIds.map(id => fetchedReports.find(report => report.id === id)).filter(Boolean) as LCEntryDocument[];
+        setReports(orderedReports);
+
       } catch (error) {
         console.error("Error fetching reports for printing:", error);
       } finally {
@@ -91,6 +97,7 @@ function PrintPageContent() {
     };
     fetchReportsForPrint();
   }, [searchParams, fetchCompanyProfile]);
+
 
   useEffect(() => {
     if (!isLoading && reports.length > 0) {
@@ -216,3 +223,5 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
+
+    
