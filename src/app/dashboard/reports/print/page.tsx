@@ -35,7 +35,6 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 function PrintPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [reports, setReports] = useState<LCEntryDocument[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -224,4 +223,3 @@ export default function PrintReportsPage() {
         </Suspense>
     )
 }
-
