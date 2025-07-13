@@ -91,7 +91,6 @@ export default function ReportsPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole === 'Viewer';
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
-  const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -155,7 +154,7 @@ export default function ReportsPage() {
     fetchFilterOptions();
   }, []);
 
-  useEffect(() => {
+  const displayedLcEntries = useMemo(() => {
     let filtered = [...allLcEntries];
 
     if (filterLcNumber) filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
@@ -194,9 +193,12 @@ export default function ReportsPage() {
         return 0;
       });
     }
-    setDisplayedLcEntries(filtered);
-    setCurrentPage(1);
+    return filtered;
   }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [displayedLcEntries]);
 
   const clearFilters = () => {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
@@ -430,5 +432,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
