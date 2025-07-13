@@ -72,7 +72,7 @@ function PrintPageContent() {
       setFilterStatus(statusLabel);
       
       const fetchedReports: LCEntryDocument[] = [];
-      const BATCH_SIZE = 30;
+      const BATCH_SIZE = 30; // Firestore 'in' query has a limit of 30
 
       try {
         for (let i = 0; i < reportIds.length; i += BATCH_SIZE) {
@@ -86,6 +86,7 @@ function PrintPageContent() {
           }
         }
         
+        // Ensure the order matches the original list
         const orderedReports = reportIds.map(id => fetchedReports.find(report => report.id === id)).filter(Boolean) as LCEntryDocument[];
         setReports(orderedReports);
 
