@@ -19,19 +19,19 @@ export function StatCard({ title, value, icon, description, footer, className }:
         className // This is where the gradient classes will be passed
       )}
     >
-      <CardContent className="p-6">
+       {icon && (
+        <div className="absolute -right-2 -top-2 z-0 p-4 opacity-20">
+            <div className="h-16 w-16 text-foreground">
+                {icon}
+            </div>
+        </div>
+      )}
+      <CardContent className="relative z-10 p-6">
         <div className="flex justify-between items-start">
             <div className="flex flex-col space-y-1">
                  <div className="text-4xl font-bold text-foreground">{value}</div>
                  <p className="text-sm text-muted-foreground pt-1">{description || title}</p>
             </div>
-            {icon && (
-                <div className="absolute -right-2 -top-2 p-4 opacity-20">
-                    <div className="h-16 w-16 text-foreground">
-                        {icon}
-                    </div>
-                </div>
-            )}
         </div>
         {footer && <div className="pt-4">{footer}</div>}
       </CardContent>
