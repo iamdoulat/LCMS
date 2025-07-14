@@ -65,7 +65,6 @@ export default function EditDemoMachineApplicationPage() {
             const appData = {
                 id: docSnap.id,
                 ...data,
-                // Ensure dates are ISO strings for the form if they come from Firestore Timestamps
                 deliveryDate: isTimestamp(data.deliveryDate) ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
                 estReturnDate: isTimestamp(data.estReturnDate) ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
                 createdAt: isTimestamp(data.createdAt) ? data.createdAt.toDate().toISOString() : (data.createdAt as any),
@@ -116,7 +115,7 @@ export default function EditDemoMachineApplicationPage() {
     }
   }, [applicationId, router]);
 
-  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatus) => {
+  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatusPage) => {
     setCurrentDemoStatusPage(status);
   }, []);
 
