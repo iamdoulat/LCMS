@@ -26,7 +26,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
   } catch (e) {
     return 'N/A';
   }
@@ -81,7 +81,7 @@ export default function InvoiceRefundsPage() {
     setFetchError(null);
     try {
       // Filter for invoices that are 'Paid' or 'Partial' to be eligible for refund initially, or already 'Refunded'
-      const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded", "Completed"];
+      const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded"];
       const invoicesQuery = query(
         collection(firestore, "invoices"),
         where("status", "in", eligibleStatuses),
@@ -139,8 +139,8 @@ export default function InvoiceRefundsPage() {
   }, [allInvoices, filterInvoiceId, filterCustomerId, filterYear, filterStatus]);
 
   const handleProcessRefund = async (invoice: InvoiceDocument) => {
-    if (invoice.status !== "Paid" && invoice.status !== "Partial" && invoice.status !== "Completed") {
-        Swal.fire("Action Not Allowed", `Cannot process refund for an invoice with status "${invoice.status}". Only 'Paid', 'Partial', or 'Completed' invoices are eligible.`, "warning");
+    if (invoice.status !== "Paid" && invoice.status !== "Partial") {
+        Swal.fire("Action Not Allowed", `Cannot process refund for an invoice with status "${invoice.status}". Only 'Paid' or 'Partial' invoices are eligible.`, "warning");
         return;
     }
 
@@ -231,7 +231,7 @@ export default function InvoiceRefundsPage() {
 
   const getInvoiceStatusBadgeVariant = (status?: InvoiceStatus): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
-      case "Paid": case "Completed": return "default";
+      case "Paid": return "default";
       case "Draft": return "outline";
       case "Sent": case "Partial": return "secondary";
       case "Overdue": case "Void": return "destructive";
@@ -311,7 +311,7 @@ export default function InvoiceRefundsPage() {
                                   variant="destructive"
                                   size="sm"
                                   onClick={() => handleProcessRefund(invoice)}
-                                  disabled={invoice.status !== "Paid" && invoice.status !== "Partial" && invoice.status !== "Completed"}
+                                  disabled={invoice.status === "Refunded" || invoice.status === "Void" || invoice.status === "Draft"}
                                 >
                                   <Undo2 className="mr-1.5 h-4 w-4" /> Process Refund
                                 </Button>
@@ -346,3 +346,4 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
+
