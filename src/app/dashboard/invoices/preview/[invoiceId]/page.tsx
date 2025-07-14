@@ -170,9 +170,8 @@ export default function PrintInvoicePage() {
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header pt-2 pb-2">
-        <div className="px-0">
-            <div className="flex justify-between items-start mb-2">
+      <div className="print-header pt-2 pb-2 px-8">
+        <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
                 <Image
@@ -194,26 +193,26 @@ export default function PrintInvoicePage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Invoice Number :</span>
+                <h2 className="text-2xl font-bold text-blue-600 underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
+                <div className="grid grid-cols-[auto,1fr] gap-x-2 text-sm text-right">
+                    <span className="font-semibold">Invoice No :</span>
                     <span>{invoiceData.id}</span>
-                </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(invoiceData.invoiceDate)}</span>
-                </div>
-                {invoiceData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                    {invoiceData.salesperson && (
+                        <>
                         <span className="font-semibold">Sales Person :</span>
                         <span>{invoiceData.salesperson}</span>
-                    </div>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="border p-2 rounded-md text-xs">
+        </div>
+        
+        <Separator className="my-4 border-gray-400"/>
+
+        <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
                 <p className="font-medium text-gray-900">{invoiceData.customerName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
@@ -223,10 +222,9 @@ export default function PrintInvoicePage() {
                     </p>
                 )}
             </div>
-            <div className="border p-2 rounded-md text-xs">
+            <div className="text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress || invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
-            </div>
             </div>
         </div>
 
@@ -237,7 +235,7 @@ export default function PrintInvoicePage() {
         )}
       </div>
       
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col px-8">
         <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
