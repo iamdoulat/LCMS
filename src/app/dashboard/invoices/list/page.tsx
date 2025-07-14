@@ -258,7 +258,6 @@ export default function InvoicesListPage() {
   const getInvoiceStatusBadgeVariant = (status?: InvoiceStatus): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
       case "Paid":
-      case "Completed":
         return "default";
       case "Draft":
         return "outline";
@@ -460,4 +459,5 @@ export default function InvoicesListPage() {
     
 
     
+
 
