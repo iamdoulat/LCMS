@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
 import { SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +64,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     resolver: zodResolver(SaleSchema),
   });
 
-  const { control, setValue, watch, getValues, reset } = form;
+  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
 
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
@@ -248,18 +249,22 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 salesperson: data.salesperson,
                 lineItems: processedLineItems,
                 taxType: data.taxType,
-                comments: data.comments || undefined,
-                privateComments: data.privateComments || undefined,
+                comments: data.comments,
+                privateComments: data.privateComments,
                 subtotal: finalSubtotal,
                 totalDiscountAmount: finalTotalDiscount,
                 totalTaxAmount: finalTotalTax,
                 totalAmount: finalGrandTotal,
-                status: originalSaleData.status, // Keep original status unless changed
+                status: originalSaleData.status,
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
                 showTaxColumn: data.showTaxColumn,
                 updatedAt: serverTimestamp(),
             };
+
+            const cleanedDataToUpdate = Object.fromEntries(
+                Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== '')
+            ) as Partial<Omit<SaleDocument, 'id' | 'createdAt'>>;
 
             const oldItemsMap = new Map(originalSaleData.lineItems.map(item => [item.itemId, item.qty]));
             const newItemsMap = new Map(processedLineItems.map(item => [item.itemId, item.qty]));
@@ -284,7 +289,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                     }
                 }
             }
-            transaction.update(saleDocRef, dataToUpdate);
+            transaction.update(saleDocRef, cleanedDataToUpdate);
         });
 
         Swal.fire("Sale Updated!", `Sale ID: ${saleId} and item stock levels have been successfully updated.`, "success");
@@ -305,18 +310,39 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="customerId" render={({ field }) => (
-              <FormItem><FormLabel>Customer*</FormLabel>
-                <Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={(val) => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} placeholder="Search Customer..." selectPlaceholder="Select Customer" disabled={isLoadingDropdowns}/>
-                <FormMessage />
-              </FormItem>)}
+          <div>
+            <FormField
+              control={control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer*</FormLabel>
+                  <Combobox
+                    options={customerOptions}
+                    value={field.value || PLACEHOLDER_CUSTOMER_VALUE}
+                    onValueChange={(val) => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)}
+                    placeholder="Search Customer..."
+                    selectPlaceholder="Select Customer"
+                    disabled={isLoadingDropdowns}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Delivery Address*</FormLabel>
-                <FormControl><Textarea placeholder="Here will show customer address automatically also editable." {...field} rows={3} /></FormControl><FormMessage />
-              </FormItem>)}
+          <div>
+            <FormField
+              control={control}
+              name="shippingAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
         </div>
@@ -415,4 +441,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
-
