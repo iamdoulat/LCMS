@@ -58,15 +58,18 @@ export default function EditDemoMachineApplicationPage() {
                 machineBrand: machine.machineBrand || '',
             })) : [];
 
+            const isTimestamp = (value: any): value is Timestamp => {
+                return value && typeof value.toDate === 'function';
+            };
 
             const appData = {
                 id: docSnap.id,
                 ...data,
                 // Ensure dates are ISO strings for the form if they come from Firestore Timestamps
-                deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
-                estReturnDate: data.estReturnDate instanceof Timestamp ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt as any),
-                updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : (data.updatedAt as any),
+                deliveryDate: isTimestamp(data.deliveryDate) ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
+                estReturnDate: isTimestamp(data.estReturnDate) ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
+                createdAt: isTimestamp(data.createdAt) ? data.createdAt.toDate().toISOString() : (data.createdAt as any),
+                updatedAt: isTimestamp(data.updatedAt) ? data.updatedAt.toDate().toISOString() : (data.updatedAt as any),
                 appliedMachines: processedAppliedMachines,
             } as DemoMachineApplicationDocument;
             setApplicationData(appData);
@@ -113,7 +116,7 @@ export default function EditDemoMachineApplicationPage() {
     }
   }, [applicationId, router]);
 
-  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatusPage) => {
+  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatus) => {
     setCurrentDemoStatusPage(status);
   }, []);
 
