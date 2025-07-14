@@ -143,7 +143,7 @@ export default function OrdersListPage() {
     if (filterOrderNumber) {
       filtered = filtered.filter(order => order.id?.toLowerCase().includes(filterOrderNumber.toLowerCase()));
     }
-    if (filterBeneficiaryId && filterBeneficiaryId !== ALL_BENEFICIARIES_VALUE) {
+    if (filterBeneficiaryId) {
       filtered = filtered.filter(order => order.beneficiaryId === filterBeneficiaryId);
     }
     if (filterSalesperson) {
@@ -161,7 +161,7 @@ export default function OrdersListPage() {
         return false;
       });
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
+    if (filterStatus) {
       filtered = filtered.filter(order => order.status === filterStatus);
     }
 

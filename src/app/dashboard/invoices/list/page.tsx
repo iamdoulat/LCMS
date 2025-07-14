@@ -152,7 +152,7 @@ export default function InvoicesListPage() {
     if (filterInvoiceNumber) {
       filtered = filtered.filter(inv => inv.id?.toLowerCase().includes(filterInvoiceNumber.toLowerCase()));
     }
-    if (filterCustomerId && filterCustomerId !== ALL_CUSTOMERS_VALUE) {
+    if (filterCustomerId) {
       filtered = filtered.filter(inv => inv.customerId === filterCustomerId);
     }
     if (filterSalesperson) {
@@ -451,5 +451,3 @@ export default function InvoicesListPage() {
     
 
     
-
-

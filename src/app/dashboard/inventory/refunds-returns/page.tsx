@@ -117,7 +117,7 @@ export default function InventoryRefundsReturnsPage() {
   useEffect(() => {
     let filtered = [...allSales];
     if (filterSaleId) filtered = filtered.filter(sale => sale.id?.toLowerCase().includes(filterSaleId.toLowerCase()));
-    if (filterCustomerId && filterCustomerId !== ALL_CUSTOMERS_VALUE) filtered = filtered.filter(sale => sale.customerId === filterCustomerId);
+    if (filterCustomerId) filtered = filtered.filter(sale => sale.customerId === filterCustomerId);
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(sale => sale.saleDate && getYear(parseISO(sale.saleDate)) === yearNum);

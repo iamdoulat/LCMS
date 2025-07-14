@@ -147,7 +147,7 @@ export default function SalesListPage() {
     if (filterSaleId) {
       filtered = filtered.filter(sale => sale.id?.toLowerCase().includes(filterSaleId.toLowerCase()));
     }
-    if (filterCustomerId && filterCustomerId !== ALL_CUSTOMERS_VALUE) {
+    if (filterCustomerId) {
       filtered = filtered.filter(sale => sale.customerId === filterCustomerId);
     }
     if (filterSalesperson) {
@@ -437,4 +437,3 @@ export default function SalesListPage() {
   );
 }
     
-
