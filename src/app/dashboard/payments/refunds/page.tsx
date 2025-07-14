@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { InvoiceDocument, CustomerDocument, InvoiceStatus, ItemDocument } from '@/types'; // Changed from SaleDocument
+import type { InvoiceDocument, CustomerDocument, InvoiceStatus, ItemDocument as ItemDoc } from '@/types'; // Changed from SaleDocument
 import { invoiceStatusOptions } from '@/types'; // Import invoiceStatusOptions
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { collection, getDocs, doc, query, where, orderBy as firestoreOrderBy, writeBatch, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
@@ -26,7 +26,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
@@ -81,7 +81,7 @@ export default function InvoiceRefundsPage() {
     setFetchError(null);
     try {
       // Filter for invoices that are 'Paid' or 'Partial' to be eligible for refund initially, or already 'Refunded'
-      const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded"];
+      const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded", "Completed"];
       const invoicesQuery = query(
         collection(firestore, "invoices"),
         where("status", "in", eligibleStatuses),
@@ -126,24 +126,21 @@ export default function InvoiceRefundsPage() {
   useEffect(() => {
     let filtered = [...allInvoices];
     if (filterInvoiceId) filtered = filtered.filter(inv => inv.id?.toLowerCase().includes(filterInvoiceId.toLowerCase()));
-    if (filterCustomerId && filterCustomerId !== ALL_CUSTOMERS_VALUE) filtered = filtered.filter(inv => inv.customerId === filterCustomerId);
+    if (filterCustomerId) filtered = filtered.filter(inv => inv.customerId === filterCustomerId);
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(inv => inv.invoiceDate && getYear(parseISO(inv.invoiceDate)) === yearNum);
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
-        filtered = filtered.filter(inv => inv.status === filterStatus);
-    } else if (!filterStatus || filterStatus === ALL_STATUSES_VALUE) {
-        // If "All Statuses" is selected, show Paid, Partial, and Refunded
-        filtered = filtered.filter(inv => inv.status === "Paid" || inv.status === "Partial" || inv.status === "Refunded");
+    if (filterStatus) {
+      filtered = filtered.filter(inv => inv.status === filterStatus);
     }
     setDisplayedInvoices(filtered);
     setCurrentPage(1);
   }, [allInvoices, filterInvoiceId, filterCustomerId, filterYear, filterStatus]);
 
   const handleProcessRefund = async (invoice: InvoiceDocument) => {
-    if (invoice.status !== "Paid" && invoice.status !== "Partial") {
-        Swal.fire("Action Not Allowed", `Cannot process refund for an invoice with status "${invoice.status}". Only 'Paid' or 'Partial' invoices are eligible.`, "warning");
+    if (invoice.status !== "Paid" && invoice.status !== "Partial" && invoice.status !== "Completed") {
+        Swal.fire("Action Not Allowed", `Cannot process refund for an invoice with status "${invoice.status}". Only 'Paid', 'Partial', or 'Completed' invoices are eligible.`, "warning");
         return;
     }
 
@@ -314,7 +311,7 @@ export default function InvoiceRefundsPage() {
                                   variant="destructive"
                                   size="sm"
                                   onClick={() => handleProcessRefund(invoice)}
-                                  disabled={invoice.status !== "Paid" && invoice.status !== "Partial"}
+                                  disabled={invoice.status !== "Paid" && invoice.status !== "Partial" && invoice.status !== "Completed"}
                                 >
                                   <Undo2 className="mr-1.5 h-4 w-4" /> Process Refund
                                 </Button>
@@ -349,5 +346,3 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
-
-
