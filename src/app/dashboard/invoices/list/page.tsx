@@ -170,7 +170,7 @@ export default function InvoicesListPage() {
         return false;
       });
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
+    if (filterStatus) {
       filtered = filtered.filter(inv => inv.status === filterStatus);
     }
 
@@ -451,4 +451,5 @@ export default function InvoicesListPage() {
     
 
     
+
 
