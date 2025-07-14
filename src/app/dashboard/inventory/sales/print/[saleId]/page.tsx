@@ -306,7 +306,7 @@ export default function PrintSaleInvoicePage() {
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
+          <div className="flex-shrink-0 flex flex-col items-center gap-1 text-center mx-4">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}

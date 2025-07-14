@@ -304,8 +304,7 @@ export default function PrintOrderPage() {
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-          
-          <div className="flex flex-col items-center gap-1 text-center">
+          <div className="flex-shrink-0 flex flex-col items-center gap-1 text-center mx-4">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
@@ -317,7 +316,6 @@ export default function PrintOrderPage() {
             </div>
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
-          
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
