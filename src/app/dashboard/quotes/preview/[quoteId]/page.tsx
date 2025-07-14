@@ -310,13 +310,12 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="print-footer pb-4">
+      <div className="print-footer pb-4 px-8">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-          
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="p-1 border">
                 <QRCode
@@ -329,7 +328,6 @@ export default function PrintQuotePage() {
             </div>
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
-          
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
