@@ -49,13 +49,13 @@ body {
     --radius: 0.5rem;
 
     /* Sidebar specific variables - Light Theme */
-    --sidebar-background: 0 0% 98%; /* Very light, slightly off-white */
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 207 68% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 93%; /* Slightly darker accent for hover */
-    --sidebar-accent-foreground: 240 10% 3.9%;
-    --sidebar-border: 240 5.9% 90%;
+    --sidebar-background: 216 33% 97%; /* Lighter, cooler grey */
+    --sidebar-foreground: 222 47% 11%;  /* Dark blue text */
+    --sidebar-primary: 207 68% 53%;      /* Active item background - same as main primary */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 210 40% 92%;     /* Hover background - slightly darker blueish-grey */
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;     /* Cooler border color */
     --sidebar-ring: 207 68% 53%;
   }
 
@@ -96,14 +96,14 @@ body {
     --chart-5: 60 90% 50%;
 
     /* Sidebar specific variables for dark mode */
-    --sidebar-background: 220 40% 9%; 
-    --sidebar-foreground: 0 0% 95%; 
-    --sidebar-primary: 210 100% 60%; 
-    --sidebar-primary-foreground: 0 0% 100%; 
-    --sidebar-accent: 220 30% 20%; 
-    --sidebar-accent-foreground: 0 0% 95%; 
-    --sidebar-border: 220 30% 25%; 
-    --sidebar-ring: 210 100% 65%; 
+    --sidebar-background: 220 40% 9%; /* Darker than main dark bg */
+    --sidebar-foreground: 210 40% 98%; /* Light text */
+    --sidebar-primary: 210 100% 50%; /* Vibrant blue for active items */
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 17%; /* Hover background - slightly lighter */
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 20%;
+    --sidebar-ring: 217 90% 60%;
   }
 }
 
