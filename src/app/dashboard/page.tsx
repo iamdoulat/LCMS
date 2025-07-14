@@ -556,42 +556,46 @@ export default function DashboardPage() {
         <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
+          description={`For year ${selectedYear}`}
           title="Total L/Cs Opened"
           value={dashboardStats.totalLCs.toLocaleString()}
-          icon={<Package className="h-7 w-7 text-primary" />}
-          description={`For year ${selectedYear}`}
+          icon={<Package />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/50 to-transparent"
         />
         <StatCard
+          description={`For year ${selectedYear}`}
           title="Total L/Cs Values"
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          icon={<DollarSign className="h-7 w-7 text-primary" />}
-          description={`For year ${selectedYear}`}
-          className="lg:col-span-2 xl:col-span-3"
+          icon={<DollarSign />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-200/50 to-transparent lg:col-span-2 xl:col-span-1"
         />
         <StatCard
+          description={`Unique in L/Cs for ${selectedYear}`}
           title="Active Beneficiaries"
           value={dashboardStats.activeSuppliers.toLocaleString()}
-          icon={<Truck className="h-7 w-7 text-primary" />}
-          description={`Unique in L/Cs for ${selectedYear}`}
+          icon={<Truck />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-green-200/50 to-transparent"
         />
         <StatCard
+          description={`Unique in L/Cs for ${selectedYear}`}
           title="Active Applicants"
           value={dashboardStats.activeApplicants.toLocaleString()}
-          icon={<Factory className="h-7 w-7 text-primary" />}
-          description={`Unique in L/Cs for ${selectedYear}`}
+          icon={<Factory />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-200/50 to-transparent"
         />
         <StatCard
+          description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : `(${selectedYear} data)`}`}
           title="This Month L/Cs Quantities"
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
-          icon={<TrendingUp className="h-7 w-7 text-primary" />}
-          description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : `(${selectedYear} data)`}`}
-          className="lg:col-start-1"
+          icon={<TrendingUp />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-200/50 to-transparent"
         />
          <StatCard
+          description={`Proforma Invoices connected to LCs in ${selectedYear}`}
           title={`PI's Linked with to L/Cs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
-          icon={<Layers className="h-7 w-7 text-primary" />}
-          description={`Proforma Invoices connected to LCs issued in ${selectedYear}`}
+          icon={<Layers />}
+          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-rose-200/50 to-transparent"
         />
       </div>
 

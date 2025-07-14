@@ -1,27 +1,39 @@
 import type { ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   title: string;
   value: string | number;
   icon?: ReactNode;
-  description?: string;
+  description?: string; // Kept for backward compatibility, but title is now primary
   footer?: ReactNode;
+  className?: string; // Allow custom className for gradients
 }
 
-export function StatCard({ title, value, icon, description, footer }: StatCardProps) {
+export function StatCard({ title, value, icon, description, footer, className }: StatCardProps) {
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold text-foreground">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground pt-1">{description}</p>
-        )}
-        {footer && <div className="pt-2">{footer}</div>}
+    <Card
+      className={cn(
+        "relative overflow-hidden rounded-xl border-none shadow-lg transition-shadow duration-300 hover:shadow-xl",
+        className // This is where the gradient classes will be passed
+      )}
+    >
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start">
+            <div className="flex flex-col space-y-1">
+                 <div className="text-4xl font-bold text-foreground">{value}</div>
+                 <p className="text-sm text-muted-foreground pt-1">{description || title}</p>
+            </div>
+            {icon && (
+                <div className="absolute -right-2 -top-2 p-4 opacity-20">
+                    <div className="h-16 w-16 text-foreground">
+                        {icon}
+                    </div>
+                </div>
+            )}
+        </div>
+        {footer && <div className="pt-4">{footer}</div>}
       </CardContent>
     </Card>
   );
