@@ -117,6 +117,7 @@ export default function NewDemoMachineApplicationPage() {
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
         const fetchedMachines = machinesSnapshot.docs.map(docSnap => {
             const data = docSnap.data();
+            // Ensure `id` from the document is included without conflict
             return { ...data, id: docSnap.id } as DemoMachineDocument;
           });
         setAllFetchedMachines(fetchedMachines); // Store all for lookups
@@ -240,8 +241,8 @@ export default function NewDemoMachineApplicationPage() {
       // Refetch machine options to reflect updated statuses
        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
         const fetchedMachines = machinesSnapshot.docs.map(docSnap => {
-            const data = docSnap.data() as DemoMachineDocument;
-            return { id: docSnap.id, ...data };
+            const data = docSnap.data();
+            return { ...data, id: docSnap.id } as DemoMachineDocument;
           });
         setAllFetchedMachines(fetchedMachines);
         const currentlySelectedMachineIds = getValues("appliedMachines").map(m => m.demoMachineId).filter(Boolean);
