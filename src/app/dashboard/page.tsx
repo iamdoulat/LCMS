@@ -556,32 +556,31 @@ export default function DashboardPage() {
         <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          title={`Total L/Cs Opened in ${selectedYear}`}
+          title={`Total L/Cs Opened (${selectedYear})`}
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/50 to-transparent"
         />
         <StatCard
-          title={`Total L/Cs Values in ${selectedYear}`}
+          title={`Total L/Cs Values (${selectedYear})`}
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-200/50 to-transparent lg:col-span-2 xl:col-span-1"
         />
         <StatCard
-          title={`Active Beneficiaries in ${selectedYear}`}
+          title={`Active Beneficiaries (${selectedYear})`}
           value={dashboardStats.activeSuppliers.toLocaleString()}
           icon={<Truck />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-green-200/50 to-transparent"
         />
         <StatCard
-          title={`Active Applicants in ${selectedYear}`}
+          title={`Active Applicants (${selectedYear})`}
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Factory />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-200/50 to-transparent"
         />
         <StatCard
-          title={`This Month L/Cs Quantities`}
-          description={`In ${format(new Date(), 'MMMM')}, ${selectedYear}`}
+          title={`This ${format(new Date(), 'MMMM')} L/Cs Quantities (${selectedYear})`}
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-200/50 to-transparent"
