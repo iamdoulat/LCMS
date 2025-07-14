@@ -136,7 +136,10 @@ export default function DemoMachineProgramPage() {
 
         // Fetch machines and derive brands
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as DemoMachineDocument) }));
+        const fetchedMachines = machinesSnapshot.docs.map(docSnap => {
+            const data = docSnap.data() as DemoMachineDocument;
+            return { ...data, id: docSnap.id };
+        });
         
         // For machine model filter, we use the machine ID as value, but label is model name + serial for uniqueness
         setMachineModelOptions(fetchedMachines.map(machine => ({ 
@@ -401,12 +404,12 @@ export default function DemoMachineProgramPage() {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {currentItems.map((app) => {
                 const currentStatus = getDemoAppStatus(app);
                 const mainMachine = app.appliedMachines?.[0]; // Display first machine for brevity, or handle multiple
                 return (
-                <li key={app.id} className={cn(
+                <Card key={app.id} className={cn(
                     "p-4 rounded-lg border hover:shadow-md transition-shadow relative",
                     currentStatus === "Overdue" ? "bg-destructive/10 border-destructive/30" :
                     currentStatus === "Active" ? "bg-green-500/10 border-green-500/30" : "bg-card"
@@ -456,10 +459,10 @@ export default function DemoMachineProgramPage() {
                       Applied: {formatDisplayDate(app.createdAt)}
                     </div>
                   </CardContent>
-                </li>
+                </Card>
               );
             })}
-            </ul>
+            </div>
           )}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-4">
@@ -505,3 +508,4 @@ export default function DemoMachineProgramPage() {
     </div>
   );
 }
+
