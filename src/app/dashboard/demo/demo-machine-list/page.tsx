@@ -172,7 +172,7 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="grid grid-cols-1 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                   <CardHeader className="relative pb-2 pt-4 px-4">
