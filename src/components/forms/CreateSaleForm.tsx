@@ -230,7 +230,35 @@ export function CreateSaleForm() {
         const counterRef = doc(firestore, "counters", "saleNumberGenerator");
 
         const newSaleId = await runTransaction(firestore, async (transaction) => {
+            // ----- READ PHASE -----
             const counterDoc = await transaction.get(counterRef);
+
+            const itemsToUpdate: { itemRef: any, newQty: number, label: string }[] = [];
+            for (const lineItem of data.lineItems) {
+                if (!lineItem.itemId) continue;
+                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
+                if (itemOption?.manageStock) {
+                    const itemRef = doc(firestore, "items", lineItem.itemId);
+                    const itemSnap = await transaction.get(itemRef);
+
+                    if (!itemSnap.exists()) {
+                        throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
+                    }
+                    const itemData = itemSnap.data() as ItemDoc;
+                    const currentItemQty = itemData.currentQuantity || 0;
+                    const requestedQty = parseFloat(String(lineItem.qty || '0'));
+                    if (currentItemQty < requestedQty) {
+                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
+                    }
+                    itemsToUpdate.push({
+                        itemRef: itemRef,
+                        newQty: currentItemQty - requestedQty,
+                        label: itemData.itemName || "Unknown Item",
+                    });
+                }
+            }
+
+            // ----- WRITE PHASE -----
             const currentYear = new Date().getFullYear();
             let currentCount = 0;
             if (counterDoc.exists()) {
@@ -262,7 +290,7 @@ export function CreateSaleForm() {
                 return {
                     itemId: item.itemId,
                     itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-                    itemCode: itemDetailsFromOptions?.itemCode || undefined,
+                    itemCode: itemDetailsFromOptions?.itemCode,
                     description: item.description || '',
                     qty: qty,
                     unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
@@ -312,29 +340,13 @@ export function CreateSaleForm() {
             };
             transaction.set(counterRef, newCounters, { merge: true });
 
-            for (const lineItem of processedLineItems) {
-                if (!lineItem.itemId) continue;
-                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
-                if (itemOption?.manageStock) {
-                    const itemRef = doc(firestore, "items", lineItem.itemId);
-                    const itemSnap = await transaction.get(itemRef);
+            itemsToUpdate.forEach(itemUpdate => {
+                transaction.update(itemUpdate.itemRef, {
+                    currentQuantity: itemUpdate.newQty,
+                    updatedAt: serverTimestamp(),
+                });
+            });
 
-                    if (!itemSnap.exists()) {
-                        throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
-                    }
-
-                    const itemData = itemSnap.data() as ItemDoc;
-                    const currentItemQty = itemData.currentQuantity || 0;
-                    if (currentItemQty < lineItem.qty) {
-                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
-                    }
-                    const newItemQty = currentItemQty - lineItem.qty;
-                    transaction.update(itemRef, { 
-                        currentQuantity: newItemQty,
-                        updatedAt: serverTimestamp() 
-                    });
-                }
-            }
             return formattedSaleId;
         });
 
@@ -586,4 +598,3 @@ export function CreateSaleForm() {
     </Form>
   );
 }
-
