@@ -237,7 +237,7 @@ export default function PrintSaleInvoicePage() {
         </div>
       </div>
       
-      <div className="flex-grow flex flex-col px-8">
+      <div className="flex-grow flex flex-col">
         <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">

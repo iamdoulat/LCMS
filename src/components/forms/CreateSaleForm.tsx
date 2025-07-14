@@ -8,14 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, writeBatch } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
 import { SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ export function CreateSaleForm() {
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+  const [generatedSaleId, setGeneratedSaleId] = React.useState<string | null>(null);
 
   const [subtotal, setSubtotal] = React.useState(0);
   const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
@@ -225,99 +227,121 @@ export function CreateSaleForm() {
     setIsSubmitting(true);
     
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+        const counterRef = doc(firestore, "counters", "saleNumberGenerator");
 
-        const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
-
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-          const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-          const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
-          
-          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-    
-          return {
-            itemId: item.itemId,
-            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-            itemCode: itemDetailsFromOptions?.itemCode || undefined,
-            description: item.description || '',
-            qty: qty,
-            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
-            total: calculatedLineTotal,
-          };
-        });
-        
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
-        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
-        const dataToSave: Omit<SaleDocument, 'id'> & { createdAt: any, updatedAt: any } = {
-          customerId: data.customerId,
-          customerName: selectedCustomer?.label || 'N/A',
-          billingAddress: data.billingAddress,
-          shippingAddress: data.shippingAddress,
-          saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          salesperson: data.salesperson,
-          lineItems: processedLineItems,
-          taxType: data.taxType,
-          comments: data.comments || undefined,
-          privateComments: data.privateComments || undefined,
-          subtotal: finalSubtotal,
-          totalDiscountAmount: finalTotalDiscount,
-          totalTaxAmount: finalTotalTax,
-          totalAmount: finalGrandTotal,
-          status: "Completed" as const,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-
-        const cleanedDataToSave = Object.fromEntries(
-          Object.entries(dataToSave).filter(([, value]) => value !== undefined)
-        ) as typeof dataToSave;
-        
-        const newSaleRef = doc(collection(firestore, "sales"));
-        transaction.set(newSaleRef, cleanedDataToSave);
-
-        for (const lineItem of processedLineItems) {
-            if (!lineItem.itemId) continue;
-            const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
-            if (itemOption?.manageStock) {
-                const itemRef = doc(firestore, "items", lineItem.itemId);
-                const itemSnap = await transaction.get(itemRef);
-
-                if (!itemSnap.exists()) {
-                    throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
-                }
-
-                const itemData = itemSnap.data() as ItemDoc;
-                const currentItemQty = itemData.currentQuantity || 0;
-                if (currentItemQty < lineItem.qty) {
-                    throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
-                }
-                const newItemQty = currentItemQty - lineItem.qty;
-                transaction.update(itemRef, { 
-                    currentQuantity: newItemQty,
-                    updatedAt: serverTimestamp() 
-                });
+        const newSaleId = await runTransaction(firestore, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            const currentYear = new Date().getFullYear();
+            let currentCount = 0;
+            if (counterDoc.exists()) {
+                const counterData = counterDoc.data();
+                currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
             }
-        }
-      });
+            const newCount = currentCount + 1;
+            const formattedSaleId = `IMI${currentYear}-${String(newCount).padStart(2, '0')}`;
+            
+            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+            
+            const processedLineItems = data.lineItems.map(item => {
+                const qty = parseFloat(String(item.qty || '0'));
+                const unitPriceStr = String(item.unitPrice || '0');
+                const finalUnitPrice = parseFloat(unitPriceStr);
+                const discountPercentageStr = String(item.discountPercentage || '0');
+                const finalDiscountPercentage = parseFloat(discountPercentageStr);
+                const taxPercentageStr = String(item.taxPercentage || '0');
+                const finalTaxPercentage = parseFloat(taxPercentageStr);
 
+                const itemTotalBeforeDiscount = qty * finalUnitPrice;
+                const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
+                const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
+                const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
+                const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
+                
+                const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+        
+                return {
+                    itemId: item.itemId,
+                    itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+                    itemCode: itemDetailsFromOptions?.itemCode || undefined,
+                    description: item.description || '',
+                    qty: qty,
+                    unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
+                    discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
+                    taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+                    total: calculatedLineTotal,
+                };
+            });
+            
+            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
+            const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
+            const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+            const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
+            const dataToSave: Omit<SaleDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+                customerId: data.customerId,
+                customerName: selectedCustomer?.label || 'N/A',
+                billingAddress: data.billingAddress,
+                shippingAddress: data.shippingAddress,
+                saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                salesperson: data.salesperson,
+                lineItems: processedLineItems,
+                taxType: data.taxType,
+                comments: data.comments || undefined,
+                privateComments: data.privateComments || undefined,
+                subtotal: finalSubtotal,
+                totalDiscountAmount: finalTotalDiscount,
+                totalTaxAmount: finalTotalTax,
+                totalAmount: finalGrandTotal,
+                status: "Completed" as const,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            const cleanedDataToSave = Object.fromEntries(
+                Object.entries(dataToSave).filter(([, value]) => value !== undefined)
+            ) as typeof dataToSave;
+            
+            const newSaleRef = doc(firestore, "sales", formattedSaleId);
+            transaction.set(newSaleRef, cleanedDataToSave);
+
+            const newCounters = {
+                yearlyCounts: {
+                    ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
+                    [currentYear]: newCount,
+                }
+            };
+            transaction.set(counterRef, newCounters, { merge: true });
+
+            for (const lineItem of processedLineItems) {
+                if (!lineItem.itemId) continue;
+                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
+                if (itemOption?.manageStock) {
+                    const itemRef = doc(firestore, "items", lineItem.itemId);
+                    const itemSnap = await transaction.get(itemRef);
+
+                    if (!itemSnap.exists()) {
+                        throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
+                    }
+
+                    const itemData = itemSnap.data() as ItemDoc;
+                    const currentItemQty = itemData.currentQuantity || 0;
+                    if (currentItemQty < lineItem.qty) {
+                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
+                    }
+                    const newItemQty = currentItemQty - lineItem.qty;
+                    transaction.update(itemRef, { 
+                        currentQuantity: newItemQty,
+                        updatedAt: serverTimestamp() 
+                    });
+                }
+            }
+            return formattedSaleId;
+        });
+
+      setGeneratedSaleId(newSaleId);
       Swal.fire({
         title: "Sale Recorded!",
-        text: "Sale successfully recorded and item stock levels updated.",
+        text: `Sale successfully recorded with ID: ${newSaleId}. Item stock levels updated.`,
         icon: "success",
       });
       form.reset(); 
@@ -428,7 +452,7 @@ export function CreateSaleForm() {
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Sale ID</FormLabel>
-              <Input value="(Auto-generated on save)" readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+              <Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField
                 control={control}
@@ -502,8 +526,7 @@ export function CreateSaleForm() {
             </DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
+          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
             <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
@@ -547,6 +570,7 @@ export function CreateSaleForm() {
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
                 setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
+                setGeneratedSaleId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
@@ -562,3 +586,4 @@ export function CreateSaleForm() {
     </Form>
   );
 }
+
