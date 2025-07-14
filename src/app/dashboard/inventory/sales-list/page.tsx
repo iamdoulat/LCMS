@@ -165,7 +165,7 @@ export default function SalesListPage() {
         return false;
       });
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
+    if (filterStatus) {
       filtered = filtered.filter(sale => sale.status === filterStatus);
     }
 
@@ -437,3 +437,4 @@ export default function SalesListPage() {
   );
 }
     
+
