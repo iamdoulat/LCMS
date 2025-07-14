@@ -122,7 +122,7 @@ export default function InventoryRefundsReturnsPage() {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(sale => sale.saleDate && getYear(parseISO(sale.saleDate)) === yearNum);
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) filtered = filtered.filter(sale => sale.status === filterStatus);
+    if (filterStatus) filtered = filtered.filter(sale => sale.status === filterStatus);
     setDisplayedSales(filtered);
     setCurrentPage(1);
   }, [allSales, filterSaleId, filterCustomerId, filterYear, filterStatus]);
@@ -334,4 +334,5 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
+
 
