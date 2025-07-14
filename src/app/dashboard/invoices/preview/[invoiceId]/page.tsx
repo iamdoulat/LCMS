@@ -312,7 +312,7 @@ export default function PrintInvoicePage() {
       <div className="print-footer pb-4 px-8">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400"></div>
+            <div className="border-t border-dotted border-gray-400 w-full"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
           <div className="flex-shrink-0 flex flex-col items-center gap-1 text-center mx-4">
@@ -328,7 +328,7 @@ export default function PrintInvoicePage() {
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
           <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400"></div>
+            <div className="border-t border-dotted border-gray-400 w-full"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
