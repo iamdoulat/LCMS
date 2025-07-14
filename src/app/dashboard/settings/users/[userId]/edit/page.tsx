@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const userRolesForSelect: UserRole[] = ["Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"];
+const userRolesForSelect: [UserRole, ...UserRole[]] = ["Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"];
 
 const editUserSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
