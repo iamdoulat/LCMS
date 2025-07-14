@@ -155,7 +155,7 @@ export default function PrintSaleInvoicePage() {
   }
 
   const displayCompanyName = companyProfile?.companyName || contextCompanyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.companyLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
+  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
   const displayCompanyAddress = companyProfile?.address || 'Default Company Address, City, Country';
   const displayCompanyEmail = companyProfile?.emailId || 'company@example.com';
   const displayCompanyPhone = companyProfile?.cellNumber || 'N/A';
@@ -284,4 +284,3 @@ export default function PrintSaleInvoicePage() {
     </div>
   );
 }
-

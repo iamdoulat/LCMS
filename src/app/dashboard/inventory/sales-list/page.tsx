@@ -436,5 +436,4 @@ export default function SalesListPage() {
     </div>
   );
 }
-
     
