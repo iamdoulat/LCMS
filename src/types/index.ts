@@ -940,7 +940,7 @@ export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
 
 // --- Invoice Types ---
-export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Refunded"] as const; // Added Refunded
+export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Refunded", "Completed"] as const; // Added Completed
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
 export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
@@ -1089,6 +1089,7 @@ export interface OrderDocument {
 
 
     
+
 
 
 

@@ -33,7 +33,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
   } catch (e) {
     return 'N/A';
   }
@@ -257,12 +257,21 @@ export default function InvoicesListPage() {
   
   const getInvoiceStatusBadgeVariant = (status?: InvoiceStatus): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
-      case "Paid": case "Completed": return "default"; 
-      case "Draft": return "outline";
-      case "Sent": case "Partial": return "secondary";
-      case "Overdue": case "Void": return "destructive";
-      case "Refunded": return "secondary";
-      default: return "outline";
+      case "Paid":
+      case "Completed":
+        return "default";
+      case "Draft":
+        return "outline";
+      case "Sent":
+      case "Partial":
+        return "secondary";
+      case "Overdue":
+      case "Void":
+        return "destructive";
+      case "Refunded":
+        return "secondary";
+      default:
+        return "outline";
     }
   };
 
@@ -451,3 +460,4 @@ export default function InvoicesListPage() {
     
 
     
+
