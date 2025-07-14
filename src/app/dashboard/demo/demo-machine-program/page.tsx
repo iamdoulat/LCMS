@@ -401,7 +401,7 @@ export default function DemoMachineProgramPage() {
               </p>
             </div>
           ) : (
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ul className="grid grid-cols-1 gap-6">
               {currentItems.map((app) => {
                 const currentStatus = getDemoAppStatus(app);
                 const mainMachine = app.appliedMachines?.[0]; // Display first machine for brevity, or handle multiple
