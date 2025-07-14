@@ -166,7 +166,7 @@ export default function ReportsPage() {
       });
     }
     
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
+    if (filterStatus) {
       filtered = filtered.filter(lc => Array.isArray(lc.status) ? lc.status.includes(filterStatus) : lc.status === filterStatus);
     }
     
