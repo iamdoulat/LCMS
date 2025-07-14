@@ -867,6 +867,19 @@ export interface QuoteDocument {
 // --- Sale Types ---
 export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
 
+export interface InvoiceLineItemDocument { // Reusing for consistency
+  itemId: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
+
 export interface SaleDocument {
   id: string;
   customerId: string;
@@ -888,6 +901,9 @@ export interface SaleDocument {
   refundDate?: string; // ISO string
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
+  showItemCodeColumn?: boolean;
+  showDiscountColumn?: boolean;
+  showTaxColumn?: boolean;
 }
 
 export const SaleLineItemSchema = z.object({
@@ -916,6 +932,9 @@ export const SaleSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  showItemCodeColumn: z.boolean().optional().default(true),
+  showDiscountColumn: z.boolean().optional().default(true),
+  showTaxColumn: z.boolean().optional().default(true),
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 // --- END Sale Types ---
@@ -961,18 +980,6 @@ export const InvoiceSchema = z.object({
   convertedFromQuoteId: z.string().optional(),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
-
-export interface InvoiceLineItemDocument { // Same as QuoteLineItemDocument for now
-  itemId: string;
-  itemName: string;
-  itemCode?: string;
-  description?: string;
-  qty: number;
-  unitPrice: number;
-  discountPercentage?: number;
-  taxPercentage?: number;
-  total: number;
-}
 
 export interface InvoiceDocument {
   id: string; // This will store the formatted INV{Year}-{Serial}
@@ -1082,6 +1089,7 @@ export interface OrderDocument {
 
 
     
+
 
 
 

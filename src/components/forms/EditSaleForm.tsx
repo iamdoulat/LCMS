@@ -22,8 +22,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,15 +59,15 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const [showItemCodeColumn, setShowItemCodeColumn] = React.useState(true);
-  const [showDiscountColumn, setShowDiscountColumn] = React.useState(true);
-  const [showTaxColumn, setShowTaxColumn] = React.useState(true);
-
   const form = useForm<PageSaleFormValues>({
     resolver: zodResolver(SaleSchema),
   });
 
   const { control, setValue, watch, getValues, reset } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -124,6 +122,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
             privateComments: initialData.privateComments || '',
+            showItemCodeColumn: initialData.showItemCodeColumn ?? true,
+            showDiscountColumn: initialData.showDiscountColumn ?? true,
+            showTaxColumn: initialData.showTaxColumn ?? true,
           });
         }
       } catch (error) {
@@ -253,6 +254,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 totalDiscountAmount: finalTotalDiscount,
                 totalTaxAmount: finalTotalTax,
                 totalAmount: finalGrandTotal,
+                status: originalSaleData.status, // Keep original status unless changed
+                showItemCodeColumn: data.showItemCodeColumn,
+                showDiscountColumn: data.showDiscountColumn,
+                showTaxColumn: data.showTaxColumn,
                 updatedAt: serverTimestamp(),
             };
 
@@ -329,39 +334,14 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
 
         <Separator />
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
-                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
-            </h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Columns className="mr-2 h-4 w-4" />
-                    Columns
-                </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                    checked={showItemCodeColumn}
-                    onCheckedChange={setShowItemCodeColumn}
-                >
-                    Item Code
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={showDiscountColumn}
-                    onCheckedChange={setShowDiscountColumn}
-                >
-                    Discount %
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={showTaxColumn}
-                    onCheckedChange={setShowTaxColumn}
-                >
-                    Tax %
-                </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -421,6 +401,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                showItemCodeColumn: initialData.showItemCodeColumn,
+                showDiscountColumn: initialData.showDiscountColumn,
+                showTaxColumn: initialData.showTaxColumn,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -432,3 +415,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+
