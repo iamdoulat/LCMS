@@ -202,17 +202,17 @@ export default function PrintSaleInvoicePage() {
                 {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
             </div>
 
-            <div className="text-right">
+            <div className="flex flex-col items-end">
                 <h2 className="text-2xl font-bold text-blue-600 underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
-                <div className="grid grid-cols-[auto,1fr] gap-x-2 text-sm text-right">
-                    <span className="font-semibold">Invoice No :</span>
-                    <span>{saleData.id.substring(0, 10).toUpperCase()}</span>
-                    <span className="font-semibold">Date :</span>
-                    <span>{formatDisplayDate(saleData.saleDate)}</span>
+                <div className="grid grid-cols-[auto,1fr] gap-x-2 text-sm">
+                    <span className="font-semibold text-right">Invoice No :</span>
+                    <span className="text-left">{saleData.id}</span>
+                    <span className="font-semibold text-right">Date :</span>
+                    <span className="text-left">{formatDisplayDate(saleData.saleDate)}</span>
                     {saleData.salesperson && (
                         <>
-                        <span className="font-semibold">Sales Person :</span>
-                        <span>{saleData.salesperson}</span>
+                        <span className="font-semibold text-right">Sales Person :</span>
+                        <span className="text-left">{saleData.salesperson}</span>
                         </>
                     )}
                 </div>
