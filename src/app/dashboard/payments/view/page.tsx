@@ -26,15 +26,16 @@ interface PaymentRecord {
   createdAt: any; // Firestore Timestamp
 }
 
-const formatDisplayDate = (dateString?: string | null): string => {
+const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   if (!dateString) return 'N/A';
   try {
-    const date = dateString instanceof Timestamp ? dateString.toDate() : parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP p') : 'N/A'; // Added time
+    const date = dateString instanceof Timestamp ? dateString.toDate() : parseISO(dateString as string);
+    return isValid(date) ? format(date, 'PPP p') : 'N/A';
   } catch (e) {
     return 'N/A';
   }
 };
+
 
 const formatCurrencyValue = (amount?: number) => {
   if (typeof amount !== 'number' || isNaN(amount)) return `USD N/A`;
