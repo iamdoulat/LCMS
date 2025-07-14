@@ -309,7 +309,7 @@ export default function PrintQuotePage() {
       </div>
 
       <div className="print-footer pb-4 px-8">
-        <section className="flex justify-between items-end mb-2 pt-16">
+        <section className="flex justify-between items-end mb-2 pt-16 print:flex print:justify-between print:items-end">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
