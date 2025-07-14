@@ -25,16 +25,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const SupplierPieChart = dynamic(() =>
   import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
   {
+    ssr: false,
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-    ssr: false
   }
 );
 
 const YearlyLcValueBarChart = dynamic(() =>
   import('@/components/dashboard/YearlyLcValueBarChart').then(mod => mod.YearlyLcValueBarChart),
   {
+    ssr: false,
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-    ssr: false
   }
 );
 
@@ -556,43 +556,38 @@ export default function DashboardPage() {
         <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          description={`For year ${selectedYear}`}
-          title="Total L/Cs Opened"
+          title={`Total L/Cs Opened in ${selectedYear}`}
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/50 to-transparent"
         />
         <StatCard
-          description={`For year ${selectedYear}`}
-          title="Total L/Cs Values"
+          title={`Total L/Cs Values in ${selectedYear}`}
           value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={<DollarSign />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-200/50 to-transparent lg:col-span-2 xl:col-span-1"
         />
         <StatCard
-          description={`Unique in L/Cs for ${selectedYear}`}
-          title="Active Beneficiaries"
+          title={`Active Beneficiaries in ${selectedYear}`}
           value={dashboardStats.activeSuppliers.toLocaleString()}
           icon={<Truck />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-green-200/50 to-transparent"
         />
         <StatCard
-          description={`Unique in L/Cs for ${selectedYear}`}
-          title="Active Applicants"
+          title={`Active Applicants in ${selectedYear}`}
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Factory />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-200/50 to-transparent"
         />
         <StatCard
-          description={`In ${format(new Date(), 'MMMM')}, ${parseInt(selectedYear) === new Date().getFullYear() ? selectedYear : `(${selectedYear} data)`}`}
-          title="This Month L/Cs Quantities"
+          title={`This Month L/Cs Quantities`}
+          description={`In ${format(new Date(), 'MMMM')}, ${selectedYear}`}
           value={dashboardStats.thisMonthLCQty.toLocaleString()}
           icon={<TrendingUp />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-200/50 to-transparent"
         />
          <StatCard
-          description={`Proforma Invoices connected to LCs in ${selectedYear}`}
-          title={`PI's Linked with to L/Cs (${selectedYear})`}
+          title={`PI's Linked with L/Cs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
           icon={<Layers />}
           className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-rose-200/50 to-transparent"
