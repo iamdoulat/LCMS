@@ -15,7 +15,7 @@ import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -160,7 +160,7 @@ export default function EditUserPage() {
                                         ))
                                     )}
                                 </SelectContent>
-                            </Select>
+                             </Select>
                              {userData?.role === 'Super Admin' && <FormDescription>The Super Admin role cannot be changed.</FormDescription>}
                             <FormMessage />
                         </FormItem>
