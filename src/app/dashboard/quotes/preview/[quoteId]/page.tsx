@@ -171,8 +171,9 @@ export default function PrintQuotePage() {
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
       
-      <div className="print-header pt-2 pb-2 px-8">
-        <div className="flex justify-between items-start mb-2">
+      <div className="print-header pt-2 pb-2">
+        <div className="px-0">
+            <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
                 <Image
@@ -194,26 +195,26 @@ export default function PrintQuotePage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold text-blue-600 underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
-                <div className="grid grid-cols-[auto,1fr] gap-x-2 text-sm text-right">
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Quote Number :</span>
                     <span>{quoteData.id}</span>
+                </div>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(quoteData.quoteDate)}</span>
-                    {quoteData.salesperson && (
-                        <>
+                </div>
+                {quoteData.salesperson && (
+                    <div className="flex justify-end items-baseline gap-2 text-sm">
                         <span className="font-semibold">Sales Person :</span>
                         <span>{quoteData.salesperson}</span>
-                        </>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
-        </div>
-
-        <Separator className="my-4 border-gray-400"/>
-        
-        <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="text-xs">
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="border p-2 rounded-md text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
                 <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
@@ -222,29 +223,28 @@ export default function PrintQuotePage() {
                     <span>BIN: {customerData.binNo}</span>
                     </p>
                 )}
-                 {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
-                 {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
             </div>
-            <div className="text-xs">
+            <div className="border p-2 rounded-md text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
+            </div>
             </div>
         </div>
 
         {quoteData.subject && (
           <div className="mt-2 mb-2">
-            <p className="text-xs font-normal p-2 border rounded-md text-center">{quoteData.subject}</p>
+            <p className="text-[12px] font-normal p-2 border rounded-md text-center">{quoteData.subject}</p>
           </div>
         )}
       </div>
 
-      <div className="flex-grow flex flex-col px-8">
+      <div className="flex-grow flex flex-col">
         <section className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: showItemCodeColumn ? '35%' : '47%'}}>Item Description</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
                 <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
@@ -310,13 +310,14 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="print-footer pb-4 px-8">
+      <div className="print-footer pb-4">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400 w-full"></div>
+            <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-          <div className="flex-shrink-0 flex flex-col items-center gap-1 text-center mx-4">
+          
+          <div className="flex flex-col items-center gap-1 text-center">
             <div className="p-1 border">
                 <QRCode
                     value={qrCodeValue}
@@ -328,8 +329,9 @@ export default function PrintQuotePage() {
             </div>
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
+          
           <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400 w-full"></div>
+            <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
