@@ -171,6 +171,11 @@ export default function PrintSaleInvoicePage() {
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
   const hideCompanyName = financialSettings?.hideCompanyName ?? false;
 
+  const showItemCodeColumn = saleData.showItemCodeColumn ?? false; 
+  const showDiscountColumn = saleData.showDiscountColumn ?? false;
+  const showTaxColumn = saleData.showTaxColumn ?? false;
+
+
   const qrCodeValue = `INVOICE\nInvoice Number: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
 
   return (
@@ -239,11 +244,11 @@ export default function PrintSaleInvoicePage() {
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '47%'}}>Item Description</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
                 <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
                 <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
                 <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
               </tr>
             </thead>
@@ -255,11 +260,11 @@ export default function PrintSaleInvoicePage() {
                     <p className="font-medium text-gray-900">{item.itemName}</p>
                     {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
                   </td>
-                  <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>
+                  {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
                   <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice)}</td>
-                  <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>
-                  <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>
+                  {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                  {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
                   <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total)}</td>
                 </tr>
               ))}
@@ -282,14 +287,18 @@ export default function PrintSaleInvoicePage() {
                       <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                       <span className="text-gray-800 text-right">{formatCurrency(saleData.subtotal)}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                      <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
-                      <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
-                  </div>
+                  {showDiscountColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
+                    </div>
+                  )}
+                  {showTaxColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
+                    </div>
+                  )}
                   <Separator className="my-2 border-gray-300" />
                   <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
                       <span className="text-gray-900 text-right">Grand Total (USD):</span>
