@@ -8,7 +8,7 @@ import { Loader2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LCEntryDocument, Currency, CompanyProfile } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
-import { collection, getDocs, query, where, doc, documentId } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, documentId, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
