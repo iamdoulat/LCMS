@@ -404,6 +404,7 @@ export interface CompanyProfile {
   tinNumber?: string;
   companyLogoUrl?: string;
   invoiceLogoUrl?: string;
+  hideCompanyName?: boolean;
   updatedAt?: any;
 }
 
@@ -417,6 +418,13 @@ export interface UserDocumentForAdmin {
   photoURL?: string;
   createdAt?: any;
   updatedAt?: any;
+}
+
+export interface LcOption {
+  value: string; // L/C document ID
+  label: string; // L/C Number for display
+  issueDate?: string; // ISO string
+  purchaseOrderUrl?: string;
 }
 
 // --- Proforma Invoice Types ---
@@ -467,13 +475,6 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'connecte
   createdAt: any;
   updatedAt: any;
 };
-
-export interface LcOption {
-  value: string; // L/C document ID
-  label: string; // L/C Number for display
-  issueDate?: string; // ISO string
-  purchaseOrderUrl?: string;
-}
 
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
