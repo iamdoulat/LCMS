@@ -24,7 +24,7 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on"]; 
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending"]; 
 
 const PLACEHOLDER_APPLICANT_VALUE = "__UPCOMING_LC_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__UPCOMING_LC_BENEFICIARY__";
@@ -43,10 +43,6 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Payment Done':
       return 'default';
     case 'Shipment Done':
-      return 'default';
-    case 'Shipping going on':
-      return 'default';
-    case 'Done':
       return 'default';
     default:
       return 'outline';
@@ -68,7 +64,7 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export default function UpcomingLcShipmentDatesPage() {
+export default function UpcomingShipmentsPage() {
   const [allUpcomingLCs, setAllUpcomingLCs] = useState<UpcomingLC[]>([]);
   const [displayedUpcomingLCs, setDisplayedUpcomingLCs] = useState<UpcomingLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -481,3 +477,7 @@ export default function UpcomingLcShipmentDatesPage() {
 }
 
 
+
+
+
+    
