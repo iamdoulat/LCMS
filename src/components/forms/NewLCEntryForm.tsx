@@ -32,8 +32,8 @@ const defaultFormValues: NewLCFormValues = {
   applicantId: '',
   beneficiaryId: '',
   currency: currencyOptions[0],
-  amount: undefined,
-  termsOfPay: undefined,
+  amount: 0,
+  termsOfPay: termsOfPayOptions[0],
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
   invoiceDate: undefined,
@@ -831,7 +831,7 @@ export function NewLCEntryForm() {
                 name="lcIssueDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>T/T or L/C Issue Date{watchedStatus !== 'Draft' && '*'}</FormLabel>
+                    <FormLabel>T/T or L/C Issue Date{watchedStatus?.includes('Draft') ? '' : '*'}</FormLabel>
                     <DatePickerField field={field} placeholder="Select date" />
                     <FormMessage />
                 </FormItem>
@@ -842,7 +842,7 @@ export function NewLCEntryForm() {
                 name="expireDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Expire Date{watchedStatus !== 'Draft' && watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
+                    <FormLabel>Expire Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
                     <DatePickerField 
                         field={field} 
                         placeholder="Select date" 
@@ -857,7 +857,7 @@ export function NewLCEntryForm() {
                 name="latestShipmentDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Latest Shipment Date{watchedStatus !== 'Draft' && watchedTermsOfPay !== "T/T In Advance" && "*"}</FormLabel>
+                    <FormLabel>Latest Shipment Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
                      <DatePickerField 
                         field={field} 
                         placeholder="Select date" 
