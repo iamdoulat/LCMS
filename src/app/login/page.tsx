@@ -99,11 +99,12 @@ export default function LoginPage() {
       cancelButtonText: 'Cancel',
       inputValidator: (value) => {
         if (!value) {
-          return 'You need to write something!'
+          return 'You need to write something!';
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          return 'Please enter a valid email address.'
+          return 'Please enter a valid email address.';
         }
+        return null; // Return null on successful validation
       }
     });
 
