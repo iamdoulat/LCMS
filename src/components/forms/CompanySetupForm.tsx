@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -18,13 +19,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
-const COMPANY_PROFILE_DOC_ID = 'main_profile';
+const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
 const companySetupSchema = z.object({
-  companyName: z.string().min(1, "Company name is required"),
-  address: z.string().min(1, "Company address is required"),
+  companyName: z.string().optional(),
+  address: z.string().optional(),
   contactPerson: z.string().optional(),
   cellNumber: z.string().regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
@@ -38,6 +40,7 @@ const companySetupSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
     z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
   ),
+  hideCompanyName: z.boolean().optional().default(false),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -69,6 +72,7 @@ export function CompanySetupForm() {
       tinNumber: '',
       companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
       invoiceLogoUrl: '',
+      hideCompanyName: false,
     },
   });
 
@@ -76,7 +80,7 @@ export function CompanySetupForm() {
     const fetchCompanyData = async () => {
       setIsLoadingData(true);
       try {
-        const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+        const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
         
         let initialProfileData: CompanySetupFormValues = {
@@ -86,6 +90,7 @@ export function CompanySetupForm() {
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+          hideCompanyName: false,
         };
 
         if (profileDocSnap.exists()) {
@@ -100,6 +105,7 @@ export function CompanySetupForm() {
             tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
             invoiceLogoUrl: data.invoiceLogoUrl || '',
+            hideCompanyName: data.hideCompanyName ?? false,
           };
         }
         form.reset(initialProfileData);
@@ -114,6 +120,7 @@ export function CompanySetupForm() {
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+          hideCompanyName: false,
         });
         setCurrentLogoUrlForPreview(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
         setCurrentInvoiceLogoUrlForPreview(undefined);
@@ -132,6 +139,7 @@ export function CompanySetupForm() {
           companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
           invoiceLogoUrl: '',
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+          hideCompanyName: false,
         });
         setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
         setCurrentInvoiceLogoUrlForPreview(undefined);
@@ -143,7 +151,7 @@ export function CompanySetupForm() {
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
     
-    const dataToSave: CompanyProfile = {
+    const dataToSave: FinancialSettingsProfile = {
       companyName: data.companyName,
       address: data.address,
       contactPerson: data.contactPerson || undefined,
@@ -153,22 +161,23 @@ export function CompanySetupForm() {
       tinNumber: data.tinNumber || undefined,
       companyLogoUrl: data.companyLogoUrl || undefined,
       invoiceLogoUrl: data.invoiceLogoUrl || undefined,
+      hideCompanyName: data.hideCompanyName,
       updatedAt: serverTimestamp(),
     };
-
+    
     Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof CompanyProfile] === undefined) {
-        delete dataToSave[key as keyof CompanyProfile];
+      if (dataToSave[key as keyof FinancialSettingsProfile] === undefined) {
+        delete dataToSave[key as keyof FinancialSettingsProfile];
       }
     });
 
     try {
-      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
       updateCompanyProfile({ 
-        name: data.companyName, 
-        logoUrl: data.companyLogoUrl || undefined,
+        companyName: data.companyName, 
+        companyLogoUrl: data.companyLogoUrl || undefined,
         invoiceLogoUrl: data.invoiceLogoUrl || undefined 
       });
       setCurrentLogoUrlForPreview(data.companyLogoUrl || undefined);
@@ -222,117 +231,131 @@ export function CompanySetupForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="companyName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Name*</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter your company's official name" 
-                  {...field}
-                  disabled={isReadOnly}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name*</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter your company's official name" 
+                      {...field}
+                      disabled={isReadOnly}
+                    />
+                  </FormControl>
+                  <FormDescription>This name will appear on all financial documents.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+                control={form.control}
+                name="hideCompanyName"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        id="hideCompanyName"
+                        disabled={isReadOnly}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel htmlFor="hideCompanyName" className="text-sm font-medium hover:cursor-pointer">
+                        Hide Company Name on Documents
+                        </FormLabel>
+                        <FormDescription className="text-xs">
+                        If checked, the company name will not be printed on quotes, invoices, or orders.
+                        </FormDescription>
+                    </div>
+                    </FormItem>
+                )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Address*</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter company address for documents" {...field} rows={3} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="emailId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email ID</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cellNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cell Number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="invoiceLogoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invoice Logo URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="url" 
+                      placeholder="https://example.com/invoice-logo.png" 
+                      {...field} 
+                      value={field.value || ""} 
+                      disabled={isReadOnly}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    A specific logo for invoices. If blank, the main company logo will be used.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {currentInvoiceLogoUrlForPreview && (currentInvoiceLogoUrlForPreview.startsWith('http://') || currentInvoiceLogoUrlForPreview.startsWith('https://')) && (
+              <div className="space-y-2">
+                <Label>Invoice Logo Preview</Label>
+                <Image 
+                  src={currentInvoiceLogoUrlForPreview} 
+                  alt="Invoice Logo Preview" 
+                  width={200} 
+                  height={40} 
+                  className="rounded-sm border object-contain bg-slate-200 p-2"
+                  onError={() => console.warn("Error loading logo preview from URL")}
+                  data-ai-hint="invoice logo"
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Address*</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter company's full registered address" {...field} rows={3} disabled={isReadOnly} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </div>
+            )}
+          </div>
+        </div>
         
-        <FormField
-          control={form.control}
-          name="companyLogoUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Logo URL</FormLabel>
-              <FormControl>
-                <Input 
-                  type="url" 
-                  placeholder="https://example.com/logo.png" 
-                  {...field} 
-                  value={field.value || ""} 
-                  disabled={isReadOnly}
-                />
-              </FormControl>
-              <FormDescription>
-                Enter the direct URL to your company logo. Recommended size for display: 512x512px.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         {currentLogoUrlForPreview && currentLogoUrlForPreview.trim() !== "" && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
-          <div className="space-y-2">
-            <Label>Logo Preview (32x32)</Label>
-            <Image 
-              src={currentLogoUrlForPreview} 
-              alt="Company Logo Preview" 
-              width={32} 
-              height={32} 
-              className="rounded-sm border object-contain"
-              onError={() => {
-                console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
-              }}
-              data-ai-hint="company logo"
-            />
-          </div>
-        )}
-
-        <FormField
-          control={form.control}
-          name="invoiceLogoUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Invoice Logo URL</FormLabel>
-              <FormControl>
-                <Input 
-                  type="url" 
-                  placeholder="https://example.com/invoice-logo.png" 
-                  {...field} 
-                  value={field.value || ""} 
-                  disabled={isReadOnly}
-                />
-              </FormControl>
-              <FormDescription>
-                A specific logo for invoices. If blank, the main company logo will be used.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         {currentInvoiceLogoUrlForPreview && currentInvoiceLogoUrlForPreview.trim() !== "" && (currentInvoiceLogoUrlForPreview.startsWith('http://') || currentInvoiceLogoUrlForPreview.startsWith('https://')) && (
-          <div className="space-y-2">
-            <Label>Invoice Logo Preview (495x72)</Label>
-            <Image 
-              src={currentInvoiceLogoUrlForPreview} 
-              alt="Invoice Logo Preview" 
-              width={495} 
-              height={72} 
-              className="rounded-sm border object-contain"
-              onError={() => {
-                console.warn("Error loading invoice logo preview from URL:", currentInvoiceLogoUrlForPreview);
-              }}
-              data-ai-hint="invoice logo"
-            />
-          </div>
-        )}
-
-        <Separator />
+         <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -348,37 +371,7 @@ export function CompanySetupForm() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="cellNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cell Number</FormLabel>
-                <FormControl>
-                  <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="emailId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email ID</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+           <FormField
             control={form.control}
             name="binNumber"
             render={({ field }) => (
@@ -404,7 +397,47 @@ export function CompanySetupForm() {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="companyLogoUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Logo URL</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="url" 
+                    placeholder="https://example.com/logo.png" 
+                    {...field} 
+                    value={field.value || ""} 
+                    disabled={isReadOnly}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Enter the direct URL to your company logo. This will be used in the sidebar header.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
+        {currentLogoUrlForPreview && currentLogoUrlForPreview.trim() !== "" && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
+          <div className="space-y-2">
+            <Label>Company Logo Preview (for Sidebar)</Label>
+            <Image 
+              src={currentLogoUrlForPreview} 
+              alt="Company Logo Preview" 
+              width={32} 
+              height={32} 
+              className="rounded-sm border object-contain"
+              onError={() => {
+                console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
+              }}
+              data-ai-hint="company logo"
+            />
+          </div>
+        )}
+
+        <Separator />
         
         <FormDescription>
           This information will be used to pre-fill relevant fields in other parts of the application and for display purposes.
@@ -419,7 +452,7 @@ export function CompanySetupForm() {
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Company Information
+              Save Layout Settings
             </>
           )}
         </Button>
