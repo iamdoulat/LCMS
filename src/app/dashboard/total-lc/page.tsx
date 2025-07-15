@@ -40,6 +40,8 @@ const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "out
     case 'Transmitted':
       return 'secondary';
     case 'Shipment Pending':
+    case 'Shipping going on':
+    case 'Done':
       return 'default';
     case 'Payment Pending':
         return 'destructive'; // Needs attention
@@ -785,4 +787,5 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 

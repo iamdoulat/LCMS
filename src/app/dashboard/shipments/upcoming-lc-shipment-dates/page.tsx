@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building } from 'lucide-react';
+import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building, Hash } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
@@ -24,23 +24,26 @@ interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumb
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Transmitted", "Shipment Pending", "Payment Pending"]; 
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending", "Shipping going on"]; 
 
 const PLACEHOLDER_APPLICANT_VALUE = "__UPCOMING_LC_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__UPCOMING_LC_BENEFICIARY__";
 
 
-const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Draft':
       return 'outline';
     case 'Transmitted':
       return 'secondary';
     case 'Shipment Pending': 
-      return 'default'; 
     case 'Shipping going on':
-      return 'default';
     case 'Done':
+      return 'default';
+    case 'Payment Pending':
+        return 'destructive';
+    case 'Payment Done':
+    case 'Shipment Done':
       return 'default'; 
     default:
       return 'outline';
@@ -155,7 +158,7 @@ export default function UpcomingLcShipmentDatesPage() {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection.`;
+            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -473,3 +476,4 @@ export default function UpcomingLcShipmentDatesPage() {
     </div>
   );
 }
+
