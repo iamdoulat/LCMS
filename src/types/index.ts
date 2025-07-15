@@ -492,6 +492,13 @@ export interface LcForInvoiceDropdownOption {
     isThirdShipment?: boolean;
   };
 }
+// Interface for the simple L/C dropdown in PI forms
+export interface LcOption {
+  value: string;
+  label: string;
+  issueDate?: string;
+  purchaseOrderUrl?: string;
+}
 // --- END Proforma Invoice Types ---
 
 
