@@ -271,32 +271,28 @@ export function CreateSaleForm() {
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
             
             const processedLineItems = data.lineItems.map(item => {
-                const qty = parseFloat(String(item.qty || '0'));
-                const unitPriceStr = String(item.unitPrice || '0');
-                const finalUnitPrice = parseFloat(unitPriceStr);
-                const discountPercentageStr = String(item.discountPercentage || '0');
-                const finalDiscountPercentage = parseFloat(discountPercentageStr);
-                const taxPercentageStr = String(item.taxPercentage || '0');
-                const finalTaxPercentage = parseFloat(taxPercentageStr);
+                const qty = parseFloat(String(item.qty || '0')) || 0;
+                const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+                const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
+                const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
 
-                const itemTotalBeforeDiscount = qty * finalUnitPrice;
-                const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-                const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-                const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-                const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
+                const itemTotalBeforeDiscount = qty * unitPrice;
+                const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
+                const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
+                const taxAmount = totalAfterDiscount * (taxPercentage / 100);
+                const total = totalAfterDiscount + taxAmount;
                 
-                const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-        
+                const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
                 return {
                     itemId: item.itemId,
-                    itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-                    itemCode: itemDetailsFromOptions?.itemCode,
+                    itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+                    itemCode: itemDetails?.itemCode,
                     description: item.description || '',
-                    qty: qty,
-                    unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-                    discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-                    taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
-                    total: calculatedLineTotal,
+                    qty,
+                    unitPrice,
+                    discountPercentage,
+                    taxPercentage,
+                    total,
                 };
             });
             
