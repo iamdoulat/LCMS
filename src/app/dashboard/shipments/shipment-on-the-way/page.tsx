@@ -96,7 +96,7 @@ export default function ShipmentDonePage() {
         const querySnapshot = await getDocs(q);
 
         const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data() as LCEntryDocument;
+          const data = doc.data() as Omit<LCEntryDocument, 'id'>;
           let updatedAtDate = new Date(0);
 
           if (data.updatedAt) {
@@ -111,12 +111,12 @@ export default function ShipmentDonePage() {
           }
 
           return {
-            id: doc.id,
             ...data,
+            id: doc.id,
             updatedAtDate: updatedAtDate,
           };
         });
-        setAllCompletedLCs(fetchedLCs);
+        setAllCompletedLCs(fetchedLCs as CompletedLC[]);
       } catch (error: any) {
         console.error("Error fetching completed L/Cs: ", error);
         let errorMessage = `Could not fetch completed L/C data. Please ensure Firestore rules allow reads.`;
@@ -411,9 +411,9 @@ export default function ShipmentDonePage() {
                     </p>
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
-                     View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
-                   </Link>
+                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
+                        View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
+                    </Link>
                   </div>
                 </li>
               ))}
