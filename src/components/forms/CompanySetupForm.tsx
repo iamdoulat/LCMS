@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const COMPANY_PROFILE_COLLECTION = 'company_profile';
+const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
 const companySetupSchema = z.object({
@@ -154,13 +154,9 @@ export function CompanySetupForm() {
     const dataToSave: FinancialSettingsProfile = {
       companyName: data.companyName,
       address: data.address,
-      contactPerson: data.contactPerson || undefined,
-      cellNumber: data.cellNumber || undefined,
-      emailId: data.emailId || undefined,
-      binNumber: data.binNumber || undefined,
-      tinNumber: data.tinNumber || undefined,
-      companyLogoUrl: data.companyLogoUrl || undefined,
       invoiceLogoUrl: data.invoiceLogoUrl || undefined,
+      emailId: data.emailId || undefined,
+      cellNumber: data.cellNumber || undefined,
       hideCompanyName: data.hideCompanyName,
       updatedAt: serverTimestamp(),
     };
@@ -172,7 +168,7 @@ export function CompanySetupForm() {
     });
 
     try {
-      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
       updateCompanyProfile({ 
@@ -184,18 +180,18 @@ export function CompanySetupForm() {
       setCurrentInvoiceLogoUrlForPreview(data.invoiceLogoUrl || undefined);
 
       Swal.fire({
-        title: "Company Information Saved!",
-        text: "Company profile has been successfully updated in Firestore.",
+        title: "Layout Settings Saved!",
+        text: "The settings for financial documents have been successfully updated.",
         icon: "success",
         timer: 2500,
         showConfirmButton: true,
       });
     } catch (error) {
-      console.error("Error saving company profile: ", error);
+      console.error("Error saving layout settings: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save company profile: ${errorMessage}`,
+        text: `Failed to save settings: ${errorMessage}`,
         icon: "error",
       });
     } finally {
