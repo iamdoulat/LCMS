@@ -46,24 +46,20 @@ export const getValidOption = <T extends string>(
   optionsArray: readonly T[],
   fallbackDefault: T | T[]
 ): T | T[] => {
-    // Handle null or undefined input first
-    if (valueFromInitialData === null || valueFromInitialData === undefined) {
-        return fallbackDefault;
-    }
-
-    // Check for array type
-    if(Array.isArray(valueFromInitialData)){
-        const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
-        return validValues.length > 0 ? validValues : fallbackDefault;
-    }
-
-    // Check for single string type
-    const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : undefined;
-    if (trimmedValue !== undefined && optionsArray.includes(trimmedValue)) {
-        return trimmedValue;
-    }
-    
+  if (valueFromInitialData === null || valueFromInitialData === undefined) {
     return fallbackDefault;
+  }
+  if (Array.isArray(valueFromInitialData)) {
+    const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
+    return validValues.length > 0 ? validValues : fallbackDefault;
+  }
+  if (typeof valueFromInitialData === 'string') {
+    const trimmedValue = valueFromInitialData.trim() as T;
+    if (optionsArray.includes(trimmedValue)) {
+      return trimmedValue;
+    }
+  }
+  return fallbackDefault;
 };
 
 
