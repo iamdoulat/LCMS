@@ -46,9 +46,13 @@ export const getValidOption = <T extends string>(
   optionsArray: readonly T[],
   fallbackDefault: T | T[]
 ): T | T[] => {
-    // Check for array type first
+    // Handle null or undefined input first
+    if (valueFromInitialData === null || valueFromInitialData === undefined) {
+        return fallbackDefault;
+    }
+
+    // Check for array type
     if(Array.isArray(valueFromInitialData)){
-        // Filter out invalid options from the array
         const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
         return validValues.length > 0 ? validValues : fallbackDefault;
     }
@@ -58,6 +62,7 @@ export const getValidOption = <T extends string>(
     if (trimmedValue !== undefined && optionsArray.includes(trimmedValue)) {
         return trimmedValue;
     }
+    
     return fallbackDefault;
 };
 
