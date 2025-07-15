@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { OrderDocument, OrderLineItemFormValues, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType } from '@/types'; // Changed CustomerDocument to SupplierDocument
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types'; // Changed CustomerDocument to SupplierDocument
 import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -238,13 +238,13 @@ export function CreateOrderForm() {
         const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
+          const qty = parseFloat(String(item.qty || '0')) || 0;
           const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
+          const finalUnitPrice = parseFloat(unitPriceStr) || 0;
           const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
+          const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
           const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
+          const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
     
           const itemTotalBeforeDiscount = qty * finalUnitPrice;
           const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
@@ -260,9 +260,9 @@ export function CreateOrderForm() {
             itemCode: itemDetailsFromOptions?.itemCode || undefined,
             description: item.description || '',
             qty: qty,
-            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+            unitPrice: finalUnitPrice,
+            discountPercentage: finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage,
             total: calculatedLineTotal,
           };
         });
@@ -603,3 +603,4 @@ export function CreateOrderForm() {
     </Form>
   );
 }
+
