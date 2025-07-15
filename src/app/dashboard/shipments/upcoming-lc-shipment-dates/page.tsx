@@ -36,15 +36,18 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
       return 'outline';
     case 'Transmitted':
       return 'secondary';
-    case 'Shipment Pending': 
-    case 'Shipping going on':
-    case 'Done':
+    case 'Shipment Pending':
       return 'default';
     case 'Payment Pending':
         return 'destructive';
     case 'Payment Done':
+      return 'default';
     case 'Shipment Done':
-      return 'default'; 
+      return 'default';
+    case 'Shipping going on':
+      return 'default';
+    case 'Done':
+      return 'default';
     default:
       return 'outline';
   }
@@ -158,7 +161,7 @@ export default function UpcomingLcShipmentDatesPage() {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (IN) and 'latestShipmentDate' (ascending).`;
+            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any or in) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }

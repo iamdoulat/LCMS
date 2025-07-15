@@ -216,14 +216,10 @@ export const lcEntrySchema = z.object({
   secondShipmentNote: z.string().optional(),
   thirdShipmentNote: z.string().optional(),
 }).superRefine((data, ctx) => {
-    // If status is Draft, all date fields are optional, so no further validation needed for them.
-    if (data.status?.includes('Draft')) {
+    if (!data.status || data.status.length === 0 || data.status.includes('Draft')) {
         return;
     }
 
-    // --- Conditional Validation for Non-Draft Statuses ---
-
-    // 1. L/C Issue Date is required if not a Draft.
     if (!data.lcIssueDate) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -232,7 +228,6 @@ export const lcEntrySchema = z.object({
         });
     }
 
-    // 2. Expire Date and Latest Shipment Date validation based on Terms of Pay
     if (data.termsOfPay !== 'T/T In Advance') {
         if (!data.expireDate) {
             ctx.addIssue({
@@ -584,22 +579,6 @@ export interface InstallationReportDocument {
 }
 
 
-export interface LcForInvoiceDropdownOption {
-  value: string; // L/C document ID
-  label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & {
-    id: string;
-    commercialInvoiceDate?: string; // ISO Date String
-    partialShipmentAllowed?: PartialShipmentAllowed;
-    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
-    packingListUrl?: string;
-    isFirstShipment?: boolean;
-    isSecondShipment?: boolean;
-    isThirdShipment?: boolean;
-  };
-}
 // --- END Installation Report Types ---
 
 // --- Demo Machine Factory Types ---
