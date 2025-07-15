@@ -128,7 +128,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
         );
 
         const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as DemoMachineDocument) }));
+        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...(docSnap.data() as Omit<DemoMachineDocument, 'id'>), id: docSnap.id }));
         setAllFetchedMachines(fetchedMachines);
 
       } catch (error) {
