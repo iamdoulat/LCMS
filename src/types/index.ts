@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -46,10 +45,10 @@ export const getValidOption = <T extends string>(
   optionsArray: readonly T[],
   fallbackDefault: T | T[]
 ): T | T[] => {
-  if (value === undefined || value === null) {
+  if (value === null || value === undefined) {
     return fallbackDefault;
   }
-
+  
   if (Array.isArray(value)) {
     const validValues = value.filter(v => optionsArray.includes(v));
     return validValues.length > 0 ? validValues : fallbackDefault;
@@ -457,6 +456,14 @@ export interface LcForInvoiceDropdownOption {
     isThirdShipment?: boolean;
   };
 }
+
+export interface LcOption {
+  value: string;
+  label: string;
+  issueDate?: string;
+  purchaseOrderUrl?: string;
+}
+
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
@@ -506,22 +513,6 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'connecte
   updatedAt: any;
 };
 
-export interface LcForInvoiceDropdownOption {
-  value: string; // L/C document ID
-  label: string; // Commercial Invoice Number
-  lcData: LCEntryDocument & {
-    id: string;
-    commercialInvoiceDate?: string; // ISO Date String
-    partialShipmentAllowed?: PartialShipmentAllowed;
-    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
-    packingListUrl?: string;
-    isFirstShipment?: boolean;
-    isSecondShipment?: boolean;
-    isThirdShipment?: boolean;
-  };
-}
 // --- END Proforma Invoice Types ---
 
 
@@ -1094,7 +1085,3 @@ export interface OrderDocument {
   showTaxColumn?: boolean;
 }
 // --- END Order Types ---
-
-
-
-    
