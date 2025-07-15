@@ -236,18 +236,15 @@ export function CreateQuoteForm() {
         const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
+          const qty = parseFloat(String(item.qty || '0')) || 0;
+          const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+          const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
+          const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
     
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
+          const itemTotalBeforeDiscount = qty * unitPrice;
+          const discountAmountVal = itemTotalBeforeDiscount * (discountPercentage / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-          const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
+          const taxAmountVal = itemTotalAfterDiscount * (taxPercentage / 100);
           const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
           
           const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
@@ -258,9 +255,9 @@ export function CreateQuoteForm() {
             itemCode: itemDetailsFromOptions?.itemCode || undefined,
             description: item.description || '',
             qty: qty,
-            unitPrice: finalUnitPrice === 0 && unitPriceStr !== '0' ? undefined : finalUnitPrice,
-            discountPercentage: finalDiscountPercentage === 0 && discountPercentageStr !== '0' ? undefined : finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage === 0 && taxPercentageStr !== '0' ? undefined : finalTaxPercentage,
+            unitPrice: unitPrice,
+            discountPercentage: discountPercentage,
+            taxPercentage: taxPercentage,
             total: calculatedLineTotal,
           };
         });
@@ -432,32 +429,8 @@ export function CreateQuoteForm() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <FormField
-              control={control}
-              name="salesperson"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Salesperson*</FormLabel>
-                  <FormControl><Input placeholder="Salesperson name" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div>
-            <FormField
-              control={control}
-              name="shippingAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}>
