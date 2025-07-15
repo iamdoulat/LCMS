@@ -1,27 +1,15 @@
 
-"use client";
-
 import type { PropsWithChildren } from 'react';
-import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 
+// This is now a server component by default, which is more performant.
+// The client-side logic for checking print pages has been removed and
+// is now handled by Next.js routing with dedicated layout files.
 export default function DashboardLayout({ children }: PropsWithChildren) {
-  const pathname = usePathname();
-  
-  // Check if the current path is a dedicated print or preview page
-  const isPrintPage = pathname.includes('/preview/') || pathname.includes('/print/');
-
-  // For print pages, render only the children in a basic layout.
-  if (isPrintPage) {
-    return <div className="print-layout">{children}</div>;
-  }
-
-  // Otherwise, render the full dashboard layout.
   return (
     <AuthGuard>
       <SidebarProvider defaultOpen>
