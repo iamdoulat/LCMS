@@ -205,7 +205,7 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
+            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
             packingListUrl: lc.packingListUrl,
@@ -287,18 +287,10 @@ export default function NewInstallationReportPage() {
       updatedAt: serverTimestamp(),
     };
 
-    const cleanedDataToSave = Object.entries(dataToSave).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
-        if (typeof value === 'string' && value.trim() === '' &&
-            ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
-           ) {
-            // Do not add these empty strings for these specific fields
-        } else {
-            acc[key as keyof typeof acc] = value;
-        }
-      }
-      return acc;
-    }, {} as typeof dataToSave);
+    const cleanedDataToSave = Object.fromEntries(
+        Object.entries(dataToSave).filter(([, value]) => value !== undefined)
+    ) as Partial<Omit<InstallationReportDocument, 'id'>>;
+
 
     console.log("Installation Report Data to be saved to Firestore:", cleanedDataToSave);
 
@@ -349,7 +341,7 @@ export default function NewInstallationReportPage() {
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
-        installDate: lastRow.installDate ? new Date(lastRow.installDate) : undefined, // Ensure Date object is copied
+        installDate: lastRow.installDate, // Keep the date as is (it's a Date object in the form state)
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
@@ -483,7 +475,7 @@ export default function NewInstallationReportPage() {
             serialNo,
             ctlBoxModel: ctlBoxModel || undefined, 
             ctlBoxSerial: ctlBoxSerial || undefined,
-            installDate,
+            installDate: installDate || new Date(),
           };
         });
 
