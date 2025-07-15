@@ -195,7 +195,7 @@ export default function TotalLCPage() {
         }
       });
     }
-    if (filterStatus && filterStatus !== ALL_STATUSES_VALUE) {
+    if (filterStatus) {
       filtered = filtered.filter(lc => {
         if (Array.isArray(lc.status)) {
             return lc.status.includes(filterStatus);
@@ -429,7 +429,7 @@ export default function TotalLCPage() {
                  <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
                   <Select
-                    value={filterYear === '' || filterYear === ALL_YEARS_VALUE ? ALL_YEARS_VALUE : filterYear}
+                    value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
                     onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
                   >
                     <SelectTrigger>
@@ -787,5 +787,6 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
