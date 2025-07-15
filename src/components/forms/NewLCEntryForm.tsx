@@ -39,7 +39,7 @@ const defaultFormValues: NewLCFormValues = {
   invoiceDate: undefined,
   commercialInvoiceNumber: '',
   commercialInvoiceDate: undefined,
-  totalMachineQty: undefined,
+  totalMachineQty: 0,
   numberOfAmendments: 0,
   status: [lcStatusOptions[0]],
   itemDescriptions: '',

@@ -51,11 +51,11 @@ const defaultFormValues: LCEditFormValues = {
   invoiceDate: undefined,
   commercialInvoiceNumber: '',
   commercialInvoiceDate: undefined,
-  totalMachineQty: undefined,
+  totalMachineQty: 0,
   numberOfAmendments: 0,
   status: [lcStatusOptions[0]], // Default to "Draft"
   itemDescriptions: '',
-  partialShipments: 'ALLOWED',
+  partialShipments: "ALLOWED",
   portOfLoading: 'CHINA',
   portOfDischarge: 'CHATTOGRAM',
   consigneeBankNameAddress: '',
@@ -93,7 +93,7 @@ const defaultFormValues: LCEditFormValues = {
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
-  trackingCourier: "", // Default to "None"
+  trackingCourier: "DHL",
   trackingNumber: '',
   etd: undefined,
   eta: undefined,
@@ -1696,12 +1696,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Saving Entry...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-             Save Changes
+              <FileText className="mr-2 h-4 w-4" />
+              Submit T/T OR L/C Entry
             </>
           )}
         </Button>
