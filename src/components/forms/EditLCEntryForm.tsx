@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -129,19 +128,21 @@ const getValidOption = <T extends string>(
   optionsArray: readonly T[],
   fallbackDefault: T | T[]
 ): T | T[] => {
-    // Check for array type first
-    if(Array.isArray(valueFromInitialData)){
-        // Filter out invalid options from the array
-        const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
-        return validValues.length > 0 ? validValues : fallbackDefault;
-    }
-
-    // Check for single string type
-    const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : undefined;
-    if (trimmedValue && optionsArray.includes(trimmedValue)) {
-        return trimmedValue;
-    }
+  if (valueFromInitialData === null || valueFromInitialData === undefined) {
     return fallbackDefault;
+  }
+  if (Array.isArray(valueFromInitialData)) {
+    // Filter out invalid options from the array
+    const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
+    return validValues.length > 0 ? validValues : fallbackDefault;
+  }
+
+  // Check for single string type
+  const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : undefined;
+  if (trimmedValue && optionsArray.includes(trimmedValue)) {
+    return trimmedValue;
+  }
+  return fallbackDefault;
 };
 
 
@@ -163,7 +164,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     defaultValues: defaultFormValues,
   });
 
-  const { control, setValue, watch, getValues, reset, formState: { errors } } = form;
+  const { control, setValue, watch, getValues, reset } = form;
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -236,7 +237,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
             expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
             latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
-            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed) as PartialShipmentAllowed,
+            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed ?? defaultFormValues.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed) as PartialShipmentAllowed,
             firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
             secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
             thirdPartialQty: initialData.thirdPartialQty ?? defaultFormValues.thirdPartialQty,
@@ -1709,3 +1710,5 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+```
