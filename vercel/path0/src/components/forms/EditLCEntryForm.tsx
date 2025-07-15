@@ -55,8 +55,8 @@ const defaultFormValues: LCEditFormValues = {
   status: [lcStatusOptions[0]], // Default to "Draft"
   itemDescriptions: '',
   partialShipments: "ALLOWED",
-  portOfLoading: 'CHINA',
-  portOfDischarge: 'CHATTOGRAM',
+  portOfLoading: "CHINA",
+  portOfDischarge: "CHATTOGRAM",
   consigneeBankNameAddress: '',
   notifyPartyNameAndAddress: '',
   notifyPartyName: '',
@@ -191,9 +191,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         const valuesToSet: LCEditFormValues = {
             applicantId: initialData.applicantId || defaultFormValues.applicantId,
             beneficiaryId: initialData.beneficiaryId || defaultFormValues.beneficiaryId,
-            currency: getValidOption(initialData.currency, currencyOptions, defaultFormValues.currency) as Currency,
+            currency: getValidOption(initialData.currency, currencyOptions, defaultFormValues.currency),
             amount: initialData.amount ?? defaultFormValues.amount,
-            termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, defaultFormValues.termsOfPay) as TermsOfPay,
+            termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, defaultFormValues.termsOfPay),
             documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber,
             proformaInvoiceNumber: initialData.proformaInvoiceNumber ?? defaultFormValues.proformaInvoiceNumber,
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : defaultFormValues.invoiceDate,
@@ -214,7 +214,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
             expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
             latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
-            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed) as PartialShipmentAllowed,
+            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed ?? "No", partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed),
             firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
             secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
             thirdPartialQty: initialData.thirdPartialQty ?? defaultFormValues.thirdPartialQty,
@@ -237,11 +237,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
             totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
             totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
-            shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, defaultFormValues.shipmentMode) as ShipmentMode,
+            shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, defaultFormValues.shipmentMode),
             vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
             vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
             flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
-            trackingCourier: trackingCourierOptions.includes(initialData.trackingCourier as TrackingCourier) ? initialData.trackingCourier : defaultFormValues.trackingCourier,
+            trackingCourier: getValidOption(initialData.trackingCourier, trackingCourierOptions, defaultFormValues.trackingCourier),
             trackingNumber: initialData.trackingNumber ?? defaultFormValues.trackingNumber,
             etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
             eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
@@ -322,6 +322,31 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
   ] as const;
   const watchedPartialValues = watch(partialFieldsToWatch);
+
+ React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
+      const fieldsToInitializeZero = [
+        "firstPartialQty", "secondPartialQty", "thirdPartialQty",
+        "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
+        "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
+        "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
+        "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
+        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
+      ] as const;
+
+      fieldsToInitializeZero.forEach(fieldName => {
+        const currentValue = getValues(fieldName);
+        if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
+          setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
+        }
+      });
+    }
+    prevPartialShipmentAllowedRef.current = watchedPartialShipmentAllowed;
+  }, [watchedPartialShipmentAllowed, setValue, getValues]);
+
 
   React.useEffect(() => {
     const firstPartialQty = Number(getValues("firstPartialQty") || 0);
@@ -1674,12 +1699,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Entry...
+              Saving Changes...
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
-              Submit T/T OR L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
