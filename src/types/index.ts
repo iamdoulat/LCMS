@@ -42,23 +42,23 @@ export const toNumberOrUndefined = (val: unknown): number | undefined => {
 };
 
 export const getValidOption = <T extends string>(
-  valueFromInitialData: T | T[] | undefined | null,
+  value: T | T[] | undefined | null,
   optionsArray: readonly T[],
   fallbackDefault: T | T[]
 ): T | T[] => {
-  if (valueFromInitialData === null || valueFromInitialData === undefined) {
+  if (value === undefined || value === null) {
     return fallbackDefault;
   }
-  if (Array.isArray(valueFromInitialData)) {
-    const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
+
+  if (Array.isArray(value)) {
+    const validValues = value.filter(v => optionsArray.includes(v));
     return validValues.length > 0 ? validValues : fallbackDefault;
   }
-  if (typeof valueFromInitialData === 'string') {
-    const trimmedValue = valueFromInitialData.trim() as T;
-    if (optionsArray.includes(trimmedValue)) {
-      return trimmedValue;
-    }
+
+  if (optionsArray.includes(value)) {
+    return value;
   }
+
   return fallbackDefault;
 };
 
@@ -441,13 +441,22 @@ export interface UserDocumentForAdmin {
   updatedAt?: any;
 }
 
-export interface LcOption {
+export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
-  label: string; // L/C Number for display
-  issueDate?: string; // ISO string
-  purchaseOrderUrl?: string;
+  label: string; // Commercial Invoice Number
+  lcData: LCEntryDocument & {
+    id: string;
+    commercialInvoiceDate?: string; // ISO Date String
+    partialShipmentAllowed?: PartialShipmentAllowed;
+    firstPartialQty?: number; firstPartialAmount?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialAmount?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialAmount?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    packingListUrl?: string;
+    isFirstShipment?: boolean;
+    isSecondShipment?: boolean;
+    isThirdShipment?: boolean;
+  };
 }
-
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];

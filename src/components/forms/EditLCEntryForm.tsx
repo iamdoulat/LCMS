@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DatePickerField } from './DatePickerField';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Save, Plus, Minus, Edit as EditIcon } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
@@ -323,6 +323,31 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   ] as const;
   const watchedPartialValues = watch(partialFieldsToWatch);
 
+ React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
+      const fieldsToInitializeZero = [
+        "firstPartialQty", "secondPartialQty", "thirdPartialQty",
+        "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
+        "firstPartialPkgs", "secondPartialPkgs", "thirdPartialPkgs",
+        "firstPartialNetWeight", "secondPartialNetWeight", "thirdPartialNetWeight",
+        "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
+        "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm",
+        "originalBlQty", "copyBlQty", "originalCooQty", "copyCooQty", "invoiceQty", "packingListQty",
+        "beneficiaryCertificateQty", "brandNewCertificateQty", "beneficiaryWarrantyCertificateQty",
+        "beneficiaryComplianceCertificateQty", "shipmentAdviceQty", "billOfExchangeQty"
+      ] as const;
+
+      fieldsToInitializeZero.forEach(fieldName => {
+        const currentValue = getValues(fieldName);
+        if (currentValue === undefined || String(currentValue ?? '').trim() === '') {
+          setValue(fieldName, 0 as any, { shouldValidate: true, shouldDirty: true });
+        }
+      });
+    }
+    prevPartialShipmentAllowedRef.current = watchedPartialShipmentAllowed;
+  }, [watchedPartialShipmentAllowed, setValue, getValues]);
+
+
   React.useEffect(() => {
     const firstPartialQty = Number(getValues("firstPartialQty") || 0);
     const secondPartialQty = Number(getValues("secondPartialQty") || 0);
@@ -334,41 +359,49 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
-    setTotalCalculatedPartialQty(newTotalQty);
-    setTotalCalculatedPartialAmount(newTotalAmount);
-    
+    if (totalCalculatedPartialQty !== newTotalQty) {
+      setTotalCalculatedPartialQty(newTotalQty);
+    }
+    if (totalCalculatedPartialAmount !== newTotalAmount) {
+      setTotalCalculatedPartialAmount(newTotalAmount);
+    }
+
     if (watchedPartialShipmentAllowed === "Yes") {
-        const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
-        const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
-        const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
-        const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-        if(Number(getValues("totalPackageQty") || 0) !== newTotalPkgs){
-             setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
+      const currentTotalPkgs = Number(getValues("totalPackageQty") || 0);
+      if (currentTotalPkgs !== newTotalPkgs) {
+          setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+      }
 
-        const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
-        const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
-        const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
-        const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
-        if(Number(getValues("totalNetWeight") || 0) !== newTotalNetW){
-             setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
+      const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
+      const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
+      const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
+      const currentTotalNetW = Number(getValues("totalNetWeight") || 0);
+       if (currentTotalNetW !== newTotalNetW) {
+        setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
+      }
 
-        const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
-        const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
-        const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
-        const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
-        if(Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW){
-             setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
-        }
-        
-        const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
-        const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
-        const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
-        const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
-        if(Number(getValues("totalCbm") || 0) !== newTotalCbm){
-            setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
+      const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
+      const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
+      const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
+      const currentTotalGrossW = Number(getValues("totalGrossWeight") || 0);
+       if (currentTotalGrossW !== newTotalGrossW) {
+        setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
+      }
+
+      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
+      const currentTotalCbm = Number(getValues("totalCbm") || 0);
+       if (currentTotalCbm !== newTotalCbm) {
+        setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
+      }
     }
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
@@ -1674,12 +1707,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Entry...
+              Saving Changes...
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
-              Submit T/T OR L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
