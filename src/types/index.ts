@@ -48,7 +48,7 @@ export const getValidOption = <T extends string>(
   if (value === null || value === undefined) {
     return fallbackDefault;
   }
-  
+
   if (Array.isArray(value)) {
     const validValues = value.filter(v => optionsArray.includes(v));
     return validValues.length > 0 ? validValues : fallbackDefault;
