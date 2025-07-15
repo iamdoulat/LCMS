@@ -41,6 +41,26 @@ export const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+export const getValidOption = <T extends string>(
+  valueFromInitialData: T | T[] | undefined | null,
+  optionsArray: readonly T[],
+  fallbackDefault: T | T[]
+): T | T[] => {
+    // Check for array type first
+    if(Array.isArray(valueFromInitialData)){
+        // Filter out invalid options from the array
+        const validValues = valueFromInitialData.filter(val => optionsArray.includes(val));
+        return validValues.length > 0 ? validValues : fallbackDefault;
+    }
+
+    // Check for single string type
+    const trimmedValue = typeof valueFromInitialData === 'string' ? valueFromInitialData.trim() as T : undefined;
+    if (trimmedValue !== undefined && optionsArray.includes(trimmedValue)) {
+        return trimmedValue;
+    }
+    return fallbackDefault;
+};
+
 
 export interface LCEntry {
   id?: string;
