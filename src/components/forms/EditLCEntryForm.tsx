@@ -44,7 +44,7 @@ const defaultFormValues: LCEditFormValues = {
   applicantId: '',
   beneficiaryId: '',
   currency: currencyOptions[0],
-  amount: undefined,
+  amount: 0,
   termsOfPay: undefined,
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
