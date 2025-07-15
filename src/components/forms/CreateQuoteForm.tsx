@@ -9,8 +9,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes } from '@/types';
+import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument } from '@/types';
+import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -48,6 +48,10 @@ interface ItemOption extends ComboboxOption {
 interface CustomerOption extends ComboboxOption {
   address?: string;
 }
+
+type QuoteFormValues = PageQuoteFormValues;
+type QuoteLineItemFormValues = PageQuoteLineItemFormValues;
+
 
 export function CreateQuoteForm() {
   const router = useRouter(); // Added for navigation
@@ -214,7 +218,7 @@ export function CreateQuoteForm() {
     }
   };
 
-  const saveQuoteLogic = async (data: QuoteFormValues): Promise<string | null> => {
+  const saveQuoteLogic = async (data: PageQuoteFormValues): Promise<string | null> => {
     setIsSubmitting(true);
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
@@ -321,7 +325,7 @@ export function CreateQuoteForm() {
     }
   };
 
-  const handleRegularSave = async (data: QuoteFormValues) => {
+  const handleRegularSave = async (data: PageQuoteFormValues) => {
     const newId = await saveQuoteLogic(data);
     if (newId) {
       setGeneratedQuoteId(newId);
@@ -333,7 +337,7 @@ export function CreateQuoteForm() {
     }
   };
 
-  const handleSaveAndPreview = async (data: QuoteFormValues) => {
+  const handleSaveAndPreview = async (data: PageQuoteFormValues) => {
     const newId = await saveQuoteLogic(data);
     if (newId) {
       setGeneratedQuoteId(newId);
@@ -385,7 +389,7 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8"> 
+      <form onSubmit={handleSubmit(() => {})} className="space-y-8"> 
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
