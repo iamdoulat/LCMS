@@ -205,7 +205,7 @@ export default function NewInstallationReportPage() {
             isThirdShipment: lc.isThirdShipment,
             lcIdForLink: lc.id,
             partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialCbm: lc.firstPartialCbm,
+            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
             secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
             thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
             packingListUrl: lc.packingListUrl,
@@ -254,7 +254,7 @@ export default function NewInstallationReportPage() {
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === data.selectedCommercialInvoiceLcId);
 
-    const dataToSave = {
+    const dataToSave: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt' | 'updatedAt'>> & { createdAt: any, updatedAt: any } = {
       applicantId: data.applicantId,
       applicantName: selectedApplicant?.label || 'N/A',
       beneficiaryId: data.beneficiaryId,
@@ -274,7 +274,7 @@ export default function NewInstallationReportPage() {
       installationDetails: data.installationDetails.map(item => ({
         ...item,
         slNo: item.slNo || undefined,
-        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
@@ -290,7 +290,6 @@ export default function NewInstallationReportPage() {
     const cleanedDataToSave = Object.fromEntries(
         Object.entries(dataToSave).filter(([, value]) => value !== undefined)
     ) as Partial<Omit<InstallationReportDocument, 'id'>>;
-
 
     console.log("Installation Report Data to be saved to Firestore:", cleanedDataToSave);
 

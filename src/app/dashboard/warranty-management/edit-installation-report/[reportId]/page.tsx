@@ -452,9 +452,9 @@ export default function EditInstallationReportPage() {
                 ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
                ) {
                  // Keep empty strings for these specific fields if that's the intent, or make them undefined
-                 acc[key as keyof typeof acc] = value; 
+                 (acc as any)[key] = value; 
             } else {
-                acc[key as keyof typeof acc] = value;
+                (acc as any)[key] = value;
             }
         }
         return acc;
@@ -784,7 +784,7 @@ export default function EditInstallationReportPage() {
                           onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
                           placeholder="Search by C.I. No..."
                           selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
-                          emptyStateMessage="No L/C found with that C.I. No."
+                          emptyStateMessage="No available C.I. Number found."
                           disabled={isLoadingDropdowns}
                         />
                         <FormMessage />
