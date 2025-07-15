@@ -133,7 +133,7 @@ export default function EditInstallationReportPage() {
       packingListUrl: '',
       technicianName: '',
       reportingEngineerName: '',
-      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
+      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
       missingItemInfo: '',
       extraFoundInfo: '',
       missingItemsIssueResolved: false,
@@ -189,8 +189,8 @@ export default function EditInstallationReportPage() {
               serialNo: item.serialNo || '',
               ctlBoxModel: item.ctlBoxModel || '',
               ctlBoxSerial: item.ctlBoxSerial || '',
-              installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : undefined as any,
-            })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any }],
+              installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : new Date(),
+            })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
             missingItemInfo: initialData.missingItemInfo || '',
             extraFoundInfo: initialData.extraFoundInfo || '',
             missingItemsIssueResolved: initialData.missingItemsIssueResolved ?? false,
@@ -505,7 +505,7 @@ export default function EditInstallationReportPage() {
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
-        installDate: lastRow.installDate ? new Date(lastRow.installDate) : undefined,
+        installDate: lastRow.installDate ? new Date(lastRow.installDate) : new Date(),
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
@@ -638,7 +638,7 @@ export default function EditInstallationReportPage() {
             serialNo,
             ctlBoxModel: ctlBoxModel || undefined,
             ctlBoxSerial: ctlBoxSerial || undefined,
-            installDate,
+            installDate: installDate || new Date(),
           };
         });
 
@@ -1088,7 +1088,7 @@ export default function EditInstallationReportPage() {
                 </FormMessage>
             )}
              <div className="flex flex-wrap gap-2 mt-2">
-                 <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: undefined as any })}>
+                 <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() })}>
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
                 </Button>
                 <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
@@ -1265,6 +1265,3 @@ export default function EditInstallationReportPage() {
     </div>
   );
 }
-
-
-    
