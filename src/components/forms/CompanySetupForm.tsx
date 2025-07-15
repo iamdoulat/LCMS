@@ -24,6 +24,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
+interface FinancialSettingsProfile {
+  companyName?: string;
+  address?: string;
+  invoiceLogoUrl?: string;
+  emailId?: string;
+  cellNumber?: string;
+  hideCompanyName?: boolean;
+  updatedAt?: any;
+}
+
+
 const companySetupSchema = z.object({
   companyName: z.string().optional(),
   address: z.string().optional(),
