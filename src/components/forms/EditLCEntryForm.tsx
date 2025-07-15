@@ -56,8 +56,8 @@ const defaultFormValues: LCEditFormValues = {
   status: [lcStatusOptions[0]], // Default to "Draft"
   itemDescriptions: '',
   partialShipments: "ALLOWED",
-  portOfLoading: 'CHINA',
-  portOfDischarge: 'CHATTOGRAM',
+  portOfLoading: "CHINA",
+  portOfDischarge: "CHATTOGRAM",
   consigneeBankNameAddress: '',
   notifyPartyNameAndAddress: '',
   notifyPartyName: '',
@@ -215,7 +215,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
             expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
             latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
-            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed, partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed) as PartialShipmentAllowed,
+            partialShipmentAllowed: getValidOption(initialData.partialShipmentAllowed ?? "No", partialShipmentAllowedOptions, defaultFormValues.partialShipmentAllowed) as PartialShipmentAllowed,
             firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
             secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
             thirdPartialQty: initialData.thirdPartialQty ?? defaultFormValues.thirdPartialQty,
@@ -360,49 +360,41 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
-    if (totalCalculatedPartialQty !== newTotalQty) {
-      setTotalCalculatedPartialQty(newTotalQty);
-    }
-    if (totalCalculatedPartialAmount !== newTotalAmount) {
-      setTotalCalculatedPartialAmount(newTotalAmount);
-    }
-
+    setTotalCalculatedPartialQty(newTotalQty);
+    setTotalCalculatedPartialAmount(newTotalAmount);
+    
     if (watchedPartialShipmentAllowed === "Yes") {
-      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
-      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
-      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
-      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-      const currentTotalPkgs = Number(getValues("totalPackageQty") || 0);
-      if (currentTotalPkgs !== newTotalPkgs) {
-          setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+        const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+        const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+        const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
+        if(Number(getValues("totalPackageQty") || 0) !== newTotalPkgs){
+             setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+        }
 
-      const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
-      const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
-      const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
-      const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
-      const currentTotalNetW = Number(getValues("totalNetWeight") || 0);
-       if (currentTotalNetW !== newTotalNetW) {
-        setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
+        const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
+        const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
+        const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
+        if(Number(getValues("totalNetWeight") || 0) !== newTotalNetW){
+             setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
+        }
 
-      const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
-      const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
-      const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
-      const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
-      const currentTotalGrossW = Number(getValues("totalGrossWeight") || 0);
-       if (currentTotalGrossW !== newTotalGrossW) {
-        setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
-      }
-
-      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
-      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
-      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
-      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
-      const currentTotalCbm = Number(getValues("totalCbm") || 0);
-       if (currentTotalCbm !== newTotalCbm) {
-        setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
+        const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
+        const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
+        const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
+        if(Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW){
+             setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
+        }
+        
+        const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+        const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+        const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+        const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
+        if(Number(getValues("totalCbm") || 0) !== newTotalCbm){
+            setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
+        }
     }
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
@@ -1721,4 +1713,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+
 

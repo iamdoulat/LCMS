@@ -70,7 +70,7 @@ export default function NotificationsPage() {
     if (typeof window !== 'undefined') {
       const storedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       let currentNotifications: AppNotification[];
-      if (storedNotifications) {
+      if (storedNotifications && storedNotifications.trim() !== "") { // Check for non-empty string
         try {
           currentNotifications = JSON.parse(storedNotifications);
         } catch (e) {
