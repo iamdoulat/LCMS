@@ -426,10 +426,10 @@ export type FreightChargeOption = typeof freightChargeOptions[number];
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
-  qty: number | ''; // Can be empty string during input
-  purchasePrice: number | ''; // Can be empty string during input
-  salesPrice: number | ''; // Can be empty string during input
-  netCommissionPercentage?: number | ''; // Can be empty string during input
+  qty: number;
+  purchasePrice: number;
+  salesPrice: number;
+  netCommissionPercentage?: number;
 }
 
 export interface ProformaInvoice {
@@ -447,8 +447,8 @@ export interface ProformaInvoice {
   purchaseOrderUrl?: string;
   lineItems: ProformaInvoiceLineItem[];
   freightChargeOption: FreightChargeOption;
-  freightChargeAmount?: number | ''; // Can be empty string during input
-  miscellaneousExpenses?: number | ''; // Can be empty string during input
+  freightChargeAmount?: number;
+  miscellaneousExpenses?: number;
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number; // Sum of (qty * salesPrice) from line items
@@ -460,21 +460,20 @@ export interface ProformaInvoice {
   updatedAt?: any;
 }
 
-export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'lineItems' | 'freightChargeAmount' | 'miscellaneousExpenses' | 'connectedLcIssueDate'> & {
+export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'connectedLcIssueDate'> & {
   id: string;
   piDate: string; // ISO string
   connectedLcIssueDate?: string; // ISO string
-  lineItems: Array<Omit<ProformaInvoiceLineItem, 'qty' | 'purchasePrice' | 'salesPrice' | 'netCommissionPercentage'> & {
-    qty: number;
-    purchasePrice: number;
-    salesPrice: number;
-    netCommissionPercentage?: number;
-  }>;
-  freightChargeAmount?: number;
-  miscellaneousExpenses?: number;
   createdAt: any;
   updatedAt: any;
 };
+
+export interface LcOption {
+  value: string; // L/C document ID
+  label: string; // L/C Number for display
+  issueDate?: string; // ISO string
+  purchaseOrderUrl?: string;
+}
 
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
@@ -491,13 +490,6 @@ export interface LcForInvoiceDropdownOption {
     isSecondShipment?: boolean;
     isThirdShipment?: boolean;
   };
-}
-// Interface for the simple L/C dropdown in PI forms
-export interface LcOption {
-  value: string;
-  label: string;
-  issueDate?: string;
-  purchaseOrderUrl?: string;
 }
 // --- END Proforma Invoice Types ---
 
