@@ -137,11 +137,6 @@ export default function PrintSaleInvoicePage() {
         `Grand Total (USD): ${formatCurrency(saleData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
-      
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
     }
   }, [isLoading, saleData]);
 
@@ -194,8 +189,8 @@ export default function PrintSaleInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={298}
-                    height={150}
+                    width={358}
+                    height={180}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -233,7 +228,7 @@ export default function PrintSaleInvoicePage() {
                 </div>
             </header>
             
-            <main className="flex-grow px-8 pt-0">
+            <main className="flex-grow px-8 pt-0 my-2">
                 <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>

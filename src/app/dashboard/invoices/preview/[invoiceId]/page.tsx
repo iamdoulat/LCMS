@@ -128,11 +128,6 @@ export default function PrintInvoicePage() {
         `Grand Total (USD): ${formatCurrency(invoiceData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
-
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
     }
   }, [isLoading, invoiceData]);
 
@@ -185,8 +180,8 @@ export default function PrintInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={298}
-                    height={150}
+                    width={358}
+                    height={180}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -215,7 +210,7 @@ export default function PrintInvoicePage() {
                     )}
                 </div>
                 <div className="col-span-5 text-right">
-                <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wider">PROFORMA INVOICE</h2>
+                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">PROFORMA INVOICE</h2>
                 <div className="mt-2 text-sm">
                     <p><strong className="text-gray-600">Invoice Number:</strong> {invoiceData.id}</p>
                     <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(invoiceData.invoiceDate)}</p>
@@ -224,7 +219,7 @@ export default function PrintInvoicePage() {
                 </div>
             </header>
 
-            <main className="flex-grow px-8 pt-0">
+            <main className="flex-grow px-8 pt-0 my-2">
                 <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
