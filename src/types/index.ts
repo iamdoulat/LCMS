@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -41,27 +40,17 @@ export const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
-// Updated getValidOption function to correctly handle types
-export const getValidOption = <T extends string>(
-  value: T | T[] | undefined | null,
-  optionsArray: readonly T[],
-  fallbackDefault: T | T[]
-): T | T[] => {
-  if (value === null || value === undefined) {
-    return fallbackDefault;
-  }
-  
-  if (Array.isArray(value)) {
-    const validValues = value.filter(v => optionsArray.includes(v));
-    return validValues.length > 0 ? validValues : fallbackDefault;
-  }
-
-  if (optionsArray.includes(value)) {
+// Updated getValidOption function to correctly handle types and undefined values
+export function getValidOption<T extends string>(
+  value: T | undefined,
+  options: readonly T[],
+  fallback: T
+): T {
+  if (typeof value === "string" && options.includes(value)) {
     return value;
   }
-
-  return fallbackDefault;
-};
+  return fallback;
+}
 
 
 export interface LCEntry {
