@@ -1,3 +1,4 @@
+
 @import 'sweetalert2/dist/sweetalert2.min.css';
 
 @tailwind base;
@@ -140,18 +141,15 @@ body {
   .noprint {
     display: none !important;
   }
-
-  /* Show the print layout and hide everything else */
-  body > :not(.print-layout) {
-    display: none;
-  }
-  .print-layout {
-    display: block !important;
-    position: static;
-    margin: 0;
-    padding: 0;
-  }
   
+  body > .print-layout {
+      display: block !important;
+  }
+
+  body > :not(.print-layout) {
+    display: none !important;
+  }
+
   .print-invoice-container {
     box-shadow: none !important;
     border: none !important;
@@ -159,12 +157,6 @@ body {
     padding: 0 !important;
     width: 100% !important;
     min-height: auto !important;
-  }
-
-  .bg-blue-500\/10 {
-    background-color: #f0f9ff !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   a {
@@ -188,3 +180,4 @@ body {
     color: inherit !important;
   }
 }
+
