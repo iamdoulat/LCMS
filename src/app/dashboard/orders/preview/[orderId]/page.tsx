@@ -237,39 +237,39 @@ export default function PrintOrderPage() {
                 </div>
             
                 <section className="mt-4">
-                <table className="w-full text-sm border-collapse">
-                    <thead className="bg-gray-100 text-gray-700">
-                    <tr>
-                        <th className="p-2 border font-semibold text-left">#</th>
-                        <th className="p-2 border font-semibold text-left">Item Description</th>
-                        {showItemCodeColumn && <th className="p-2 border font-semibold text-left">Item Code</th>}
-                        <th className="p-2 border font-semibold text-center">Qty</th>
-                        <th className="p-2 border font-semibold text-right">Unit Price</th>
-                        {showDiscountColumn && <th className="p-2 border font-semibold text-right">Discount</th>}
-                        {showTaxColumn && <th className="p-2 border font-semibold text-right">Tax</th>}
-                        <th className="p-2 border font-semibold text-right">Total</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {orderData.lineItems.map((item, index) => (
-                        <tr key={`${item.itemId}-${index}`} className="border-b">
-                        <td className="p-2 border text-center align-top">{index + 1}</td>
-                        <td className="p-2 border align-top">
-                            <p className="font-medium text-gray-900">{item.itemName}</p>
-                            {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{item.description}</p>}
-                        </td>
-                        {showItemCodeColumn && <td className="p-2 border align-top">{item.itemCode || 'N/A'}</td>}
-                        <td className="p-2 border text-center align-top">{item.qty}</td>
-                        <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
-                        {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
-                        {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                        <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                    <table className="w-full text-sm border-collapse table-fixed">
+                        <thead className="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th className="p-2 border font-semibold text-left w-[40px]">#</th>
+                            <th className="p-2 border font-semibold text-left">Item Description</th>
+                            {showItemCodeColumn && <th className="p-2 border font-semibold text-left w-[100px]">Item Code</th>}
+                            <th className="p-2 border font-semibold text-center w-[60px]">Qty</th>
+                            <th className="p-2 border font-semibold text-right w-[100px]">Unit Price</th>
+                            {showDiscountColumn && <th className="p-2 border font-semibold text-right w-[80px]">Discount</th>}
+                            {showTaxColumn && <th className="p-2 border font-semibold text-right w-[80px]">Tax</th>}
+                            <th className="p-2 border font-semibold text-right w-[110px]">Total</th>
                         </tr>
-                    ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        {orderData.lineItems.map((item, index) => (
+                            <tr key={`${item.itemId}-${index}`} className="border-b">
+                            <td className="p-2 border text-center align-top">{index + 1}</td>
+                            <td className="p-2 border align-top break-words">
+                                <p className="font-medium text-gray-900">{item.itemName}</p>
+                                {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{item.description}</p>}
+                            </td>
+                            {showItemCodeColumn && <td className="p-2 border align-top break-words">{item.itemCode || 'N/A'}</td>}
+                            <td className="p-2 border text-center align-top">{item.qty}</td>
+                            <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
+                            {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                            {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
+                            <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
                 </section>
-                <section className="mt-4 flex justify-between items-start">
+                <section className="mt-6 flex justify-between items-start">
                     <div className="w-2/3 pr-4 text-xs">
                         {orderData.comments && (
                         <div className="space-y-1">
