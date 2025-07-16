@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import QRCode from "react-qr-code";
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -54,6 +55,13 @@ export default function PrintInvoicePage() {
   const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [qrCodeValue, setQrCodeValue] = React.useState('');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setQrCodeValue(window.location.href);
+    }
+  }, []);
 
   const fetchFinancialSettings = useCallback(async () => {
     try {
@@ -169,14 +177,14 @@ export default function PrintInvoicePage() {
   return (
     <div className="print-layout">
         <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-            <header className="flex justify-between items-start p-8">
-                <div className="w-1/2 pr-4">
+            <header className="grid grid-cols-12 items-start p-8">
+                <div className="col-span-5 pr-4">
                 {displayCompanyLogo && (
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={248}
-                    height={125}
+                    width={298}
+                    height={150}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -191,7 +199,20 @@ export default function PrintInvoicePage() {
                     {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
                 </div>
                 </div>
-                <div className="w-1/2 text-right">
+                <div className="col-span-2 flex justify-center pt-2">
+                    {qrCodeValue && (
+                        <div style={{ height: "auto", margin: "0 auto", maxWidth: 80, width: "100%" }}>
+                            <QRCode
+                                size={256}
+                                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                value={qrCodeValue}
+                                viewBox={`0 0 256 256`}
+                                data-ai-hint="qr code"
+                            />
+                        </div>
+                    )}
+                </div>
+                <div className="col-span-5 text-right">
                 <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">PROFORMA INVOICE</h2>
                 <div className="mt-2 text-sm">
                     <p><strong className="text-gray-600">Invoice Number:</strong> {invoiceData.id}</p>
