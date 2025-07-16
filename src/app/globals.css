@@ -141,36 +141,28 @@ body {
     display: none !important;
   }
 
-  .print-only {
-    display: block !important;
+  /* Show the print layout and hide everything else */
+  body > :not(.print-layout) {
+    display: none;
   }
-
-  .print-container {
+  .print-layout {
     display: block !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    position: static;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .print-invoice-container {
     box-shadow: none !important;
     border: none !important;
-  }
-
-  .print-layout, .print-invoice-container {
-    display: block !important;
-    padding: 0 !important;
     margin: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  .print-header {
-    display: table-header-group !important;
-  }
-
-  .print-footer {
-    display: table-footer-group !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
   }
 
   .bg-blue-500\/10 {
-    background-color: #f0f9ff !important; /* A light blue that prints well */
+    background-color: #f0f9ff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
