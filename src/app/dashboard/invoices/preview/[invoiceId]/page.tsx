@@ -123,9 +123,9 @@ export default function PrintInvoicePage() {
     if (!isLoading && invoiceData) {
        const qrData = [
         "PROFORMA INVOICE",
-        `Invoice Number: ${invoiceData.id}`,
-        `Date: ${formatDisplayDate(invoiceData.invoiceDate)}`,
-        `Sales Person: ${invoiceData.salesperson || 'N/A'}`,
+        `Invoice Number: ${invoiceData.id},`,
+        `Date: ${formatDisplayDate(invoiceData.invoiceDate)},`,
+        `Sales Person: ${invoiceData.salesperson || 'N/A'},`,
         `Grand Total (USD): ${formatCurrency(invoiceData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
@@ -186,8 +186,8 @@ export default function PrintInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={248}
-                    height={125}
+                    width={298}
+                    height={150}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"

@@ -6,13 +6,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { OrderDocument, SupplierDocument } from '@/types';
+import type { SaleDocument, CustomerDocument, CompanyProfile } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
-import QRCode from "react-qr-code";
+import QRCode from 'react-qr-code';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -30,7 +31,6 @@ interface FinancialSettingsProfile {
   hideCompanyName?: boolean;
 }
 
-
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
@@ -46,16 +46,16 @@ const formatCurrency = (amount?: number, currency: string = 'USD') => {
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export default function PrintOrderPage() {
+export default function PrintSaleInvoicePage() {
   const params = useParams();
   const router = useRouter();
-  const orderId = params.orderId as string;
+  const saleId = params.saleId as string;
 
-  const [orderData, setOrderData] = React.useState<OrderDocument | null>(null);
-  const [beneficiaryData, setBeneficiaryData] = React.useState<SupplierDocument | null>(null);
+  const [saleData, setSaleData] = useState<SaleDocument | null>(null);
+  const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
   const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [qrCodeValue, setQrCodeValue] = React.useState('');
 
   const fetchFinancialSettings = useCallback(async () => {
@@ -83,85 +83,92 @@ export default function PrintOrderPage() {
     }
   }, []);
 
-  const fetchOrderAndBeneficiaryData = useCallback(async () => {
-    if (!orderId) {
-      setError("No Order ID provided.");
+  const fetchSaleAndCustomerData = useCallback(async () => {
+    if (!saleId) {
+      setError("No Sale ID provided.");
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    setError(null);
     try {
-      const orderDocRef = doc(firestore, "orders", orderId);
-      const orderDocSnap = await getDoc(orderDocRef);
+      const saleDocRef = doc(firestore, "sales", saleId);
+      const saleDocSnap = await getDoc(saleDocRef);
 
-      if (orderDocSnap.exists()) {
-        const order = { id: orderDocSnap.id, ...orderDocSnap.data() } as OrderDocument;
-        setOrderData(order);
+      if (saleDocSnap.exists()) {
+        const sale = { id: saleDocSnap.id, ...saleDocSnap.data() } as SaleDocument;
+        setSaleData(sale);
 
-        if (order.beneficiaryId) {
-          const beneficiaryDocRef = doc(firestore, "suppliers", order.beneficiaryId);
-          const beneficiaryDocSnap = await getDoc(beneficiaryDocRef);
-          if (beneficiaryDocSnap.exists()) {
-            setBeneficiaryData({ id: beneficiaryDocSnap.id, ...beneficiaryDocSnap.data() } as SupplierDocument);
+        if (sale.customerId) {
+          const customerDocRef = doc(firestore, "customers", sale.customerId);
+          const customerDocSnap = await getDoc(customerDocRef);
+          if (customerDocSnap.exists()) {
+            setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
+          } else {
+            console.warn(`Customer with ID ${sale.customerId} not found.`);
           }
         }
       } else {
-        setError("Order record not found.");
+        setError("Sale record not found.");
       }
     } catch (err: any) {
-      setError(`Failed to fetch order data: ${err.message}`);
+      setError(`Failed to fetch sale data: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
-  }, [orderId]);
+  }, [saleId]);
 
   useEffect(() => {
-     const loadAllData = async () => {
+    const loadAllData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchFinancialSettings(), fetchOrderAndBeneficiaryData()]);
+        await Promise.all([fetchFinancialSettings(), fetchSaleAndCustomerData()]);
         setIsLoading(false);
     }
     loadAllData();
-  }, [fetchFinancialSettings, fetchOrderAndBeneficiaryData]);
+  }, [fetchFinancialSettings, fetchSaleAndCustomerData]);
 
-   useEffect(() => {
-    if (!isLoading && orderData) {
+  useEffect(() => {
+    if (!isLoading && saleData) {
       const qrData = [
-        "ORDER",
-        `Order Number: ${orderData.id},`,
-        `Date: ${formatDisplayDate(orderData.orderDate)},`,
-        `Sales Person: ${orderData.salesperson || 'N/A'},`,
-        `Grand Total (USD): ${formatCurrency(orderData.totalAmount)}`
+        "INVOICE",
+        `Invoice No: ${saleData.id},`,
+        `Date: ${formatDisplayDate(saleData.saleDate)},`,
+        `Sales Person: ${saleData.salesperson || 'N/A'},`,
+        `Grand Total (USD): ${formatCurrency(saleData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
-
+      
       const timer = setTimeout(() => {
         window.print();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, orderData]);
+  }, [isLoading, saleData]);
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-gray-600">Loading order...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+        <p className="mt-4 text-gray-600">Loading invoice...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <p className="text-red-600 font-semibold">Error loading order</p>
+        <p className="text-red-600 font-semibold">Error loading invoice</p>
         <p className="text-gray-700 text-sm mb-4">{error}</p>
         <Button onClick={() => router.back()}>Go Back</Button>
       </div>
     );
   }
 
-  if (!orderData) {
+  if (!saleData) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
-        <p className="text-gray-700">Order data could not be loaded.</p>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <p className="text-gray-700">Sale data could not be loaded.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
     );
@@ -173,10 +180,10 @@ export default function PrintOrderPage() {
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
   const hideCompanyName = financialSettings?.hideCompanyName ?? false;
-  
-  const showItemCodeColumn = orderData.showItemCodeColumn ?? true; 
-  const showDiscountColumn = orderData.showDiscountColumn ?? true;
-  const showTaxColumn = orderData.showTaxColumn ?? true;
+
+  const showItemCodeColumn = saleData.showItemCodeColumn ?? false; 
+  const showDiscountColumn = saleData.showDiscountColumn ?? false;
+  const showTaxColumn = saleData.showTaxColumn ?? false;
 
   return (
     <div className="print-layout">
@@ -217,28 +224,29 @@ export default function PrintOrderPage() {
                     )}
                 </div>
                 <div className="col-span-5 text-right">
-                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">Order</h2>
+                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">INVOICE</h2>
                 <div className="mt-2 text-sm">
-                    <p><strong className="text-gray-600">Order Number:</strong> {orderData.id}</p>
-                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
-                    {orderData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {orderData.salesperson}</p>}
+                    <p><strong className="text-gray-600">Invoice No:</strong> {saleData.id}</p>
+                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(saleData.saleDate)}</p>
+                    {saleData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {saleData.salesperson}</p>}
                 </div>
                 </div>
             </header>
-
+            
             <main className="flex-grow px-8 pt-0">
                 <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-                        <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-                        <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+                        <p className="font-medium text-gray-900">{saleData.customerName || 'N/A'}</p>
+                        <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
+                        {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
                     </div>
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-                        <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+                        <p className="text-gray-600 whitespace-pre-line">{saleData.shippingAddress || saleData.billingAddress || customerData?.address || 'N/A'}</p>
                     </div>
                 </div>
-            
+
                 <section className="mt-4">
                     <table className="w-full text-sm border-collapse table-auto">
                         <thead className="bg-gray-100 text-gray-700">
@@ -254,8 +262,8 @@ export default function PrintOrderPage() {
                         </tr>
                         </thead>
                         <tbody>
-                        {orderData.lineItems.map((item, index) => (
-                            <tr key={`${item.itemId}-${index}`} className="border-b">
+                        {saleData.lineItems.map((item, index) => (
+                            <tr key={item.itemId || index} className="border-b">
                             <td className="p-2 border text-center align-top">{index + 1}</td>
                             <td className="p-2 border align-top break-words">
                                 <p className="font-medium text-gray-900">{item.itemName}</p>
@@ -274,23 +282,23 @@ export default function PrintOrderPage() {
                 </section>
                 <section className="mt-6 flex justify-between items-start">
                     <div className="w-2/3 pr-4 text-xs">
-                        {orderData.comments && (
+                        {saleData.comments && (
                         <div className="space-y-1">
-                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                            <div className="text-gray-600 whitespace-pre-line">{orderData.comments}</div>
+                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
+                            <div className="text-gray-600 whitespace-pre-line">{saleData.comments}</div>
                         </div>
                         )}
                     </div>
                     <div className="w-1/3 text-sm space-y-1">
-                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(orderData.subtotal)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(saleData.subtotal)}</span></div>
                         {showDiscountColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(saleData.totalDiscountAmount)}</span></div>
                         )}
                         {showTaxColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({orderData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({saleData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(saleData.totalTaxAmount)}</span></div>
                         )}
                         <Separator className="my-2 border-gray-400" />
-                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(orderData.totalAmount)}</span></div>
+                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(saleData.totalAmount)}</span></div>
                     </div>
                 </section>
             </main>
@@ -298,7 +306,7 @@ export default function PrintOrderPage() {
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
-          <Printer className="mr-2 h-4 w-4" /> Print Order
+          <Printer className="mr-2 h-4 w-4" /> Print Invoice
         </Button>
       </div>
     </div>

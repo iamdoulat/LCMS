@@ -123,9 +123,9 @@ export default function PrintQuotePage() {
     if (!isLoading && quoteData) {
       const qrData = [
         "QUOTATION",
-        `Quote Number: ${quoteData.id}`,
-        `Date: ${formatDisplayDate(quoteData.quoteDate)}`,
-        `Sales Person: ${quoteData.salesperson || 'N/A'}`,
+        `Quote Number: ${quoteData.id},`,
+        `Date: ${formatDisplayDate(quoteData.quoteDate)},`,
+        `Sales Person: ${quoteData.salesperson || 'N/A'},`,
         `Grand Total (USD): ${formatCurrency(quoteData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
@@ -186,8 +186,8 @@ export default function PrintQuotePage() {
                   <Image
                   src={displayCompanyLogo}
                   alt={`${displayCompanyName} Logo`}
-                  width={248}
-                  height={125}
+                  width={298}
+                  height={150}
                   className="object-contain mb-2"
                   priority
                   data-ai-hint="company logo"
