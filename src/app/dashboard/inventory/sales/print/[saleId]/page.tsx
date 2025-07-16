@@ -41,7 +41,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number) => {
+const formatCurrency = (amount?: number, currency: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -175,139 +175,114 @@ export default function PrintSaleInvoicePage() {
   const showDiscountColumn = saleData.showDiscountColumn ?? false;
   const showTaxColumn = saleData.showTaxColumn ?? false;
 
-
-  const qrCodeValue = `INVOICE\nInvoice Number: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)}`;
-
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header pt-2 pb-2 px-8">
-        <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-8">
-                {displayCompanyLogo && (
-                <Image
-                    src={displayCompanyLogo}
-                    alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
-                    className="object-contain mb-2"
-                    priority
-                    data-ai-hint="company logo"
-                />
-                )}
-                {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-                )}
-                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
-            </div>
-
-            <div className="flex flex-col items-end">
-                <h2 className="text-2xl font-bold text-blue-600 underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
-                <div className="grid grid-cols-[auto,1fr] gap-x-2 text-sm">
-                    <span className="font-semibold text-right">Invoice No :</span>
-                    <span className="text-left">{saleData.id}</span>
-                    <span className="font-semibold text-right">Date :</span>
-                    <span className="text-left">{formatDisplayDate(saleData.saleDate)}</span>
-                    {saleData.salesperson && (
-                        <>
-                        <span className="font-semibold text-right">Sales Person :</span>
-                        <span className="text-left">{saleData.salesperson}</span>
-                        </>
+    <div className="print-layout">
+        <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+            <div className="flex-grow p-4 pb-20">
+                <header className="flex justify-between items-start mb-4">
+                <div className="w-1/2 pr-4">
+                    {displayCompanyLogo && (
+                    <Image
+                        src={displayCompanyLogo}
+                        alt={`${displayCompanyName} Logo`}
+                        width={200}
+                        height={100}
+                        className="object-contain mb-2"
+                        priority
+                        data-ai-hint="company logo"
+                    />
                     )}
+                    {!hideCompanyName && (
+                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                    )}
+                    <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                    <div className="text-xs text-gray-600">
+                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
+                    {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
+                    </div>
                 </div>
+                <div className="w-1/2 text-right">
+                    <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">INVOICE</h2>
+                    <div className="mt-2 text-sm">
+                    <p><strong className="text-gray-600">Invoice No:</strong> {saleData.id}</p>
+                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(saleData.saleDate)}</p>
+                    {saleData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {saleData.salesperson}</p>}
+                    </div>
+                </div>
+                </header>
+
+                <div className="grid grid-cols-2 gap-4 my-6">
+                    <div className="border p-3 rounded-md text-sm">
+                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                        <p className="font-medium text-gray-900">{saleData.customerName || 'N/A'}</p>
+                        <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
+                        {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
+                    </div>
+                    <div className="border p-3 rounded-md text-sm">
+                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+                        <p className="text-gray-600 whitespace-pre-line">{saleData.shippingAddress || saleData.billingAddress || customerData?.address || 'N/A'}</p>
+                    </div>
+                </div>
+
+                <section className="mt-6">
+                <table className="w-full text-sm border-collapse">
+                    <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th className="p-2 border font-semibold text-left">#</th>
+                        <th className="p-2 border font-semibold text-left">Item Description</th>
+                        {showItemCodeColumn && <th className="p-2 border font-semibold text-left">Item Code</th>}
+                        <th className="p-2 border font-semibold text-center">Qty</th>
+                        <th className="p-2 border font-semibold text-right">Unit Price</th>
+                        {showDiscountColumn && <th className="p-2 border font-semibold text-right">Discount</th>}
+                        {showTaxColumn && <th className="p-2 border font-semibold text-right">Tax</th>}
+                        <th className="p-2 border font-semibold text-right">Total</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {saleData.lineItems.map((item, index) => (
+                        <tr key={item.itemId || index} className="border-b">
+                        <td className="p-2 border text-center align-top">{index + 1}</td>
+                        <td className="p-2 border align-top">
+                            <p className="font-medium text-gray-900">{item.itemName}</p>
+                            {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{item.description}</p>}
+                        </td>
+                        {showItemCodeColumn && <td className="p-2 border align-top">{item.itemCode || 'N/A'}</td>}
+                        <td className="p-2 border text-center align-top">{item.qty}</td>
+                        <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
+                        {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                        {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
+                        <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </section>
             </div>
-        </div>
         
-        <Separator className="my-4 border-gray-400"/>
-
-        <div className="grid grid-cols-2 gap-4 mb-2">
-          <div className="text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-            <p className="font-medium text-gray-900">{saleData.customerName || 'N/A'}</p>
-            <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
-            {customerData?.binNo && (<p className="text-gray-600"><span>BIN: {customerData.binNo}</span></p>)}
-            {customerData?.email && <p className="text-xs text-gray-600">Email: {customerData.email}</p>}
-            {customerData?.phone && <p className="text-xs text-gray-600">Phone: {customerData.phone}</p>}
-          </div>
-          <div className="text-xs">
-            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-            <p className="text-gray-600 whitespace-pre-line">{saleData.shippingAddress || saleData.billingAddress || customerData?.address || 'N/A'}</p>
-          </div>
+            <footer className="p-4 mt-auto">
+                <div className="flex justify-between items-end">
+                    <div className="w-2/3 pr-4 text-xs">
+                        {saleData.comments && (
+                        <div className="space-y-1">
+                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
+                            <div className="text-gray-600 whitespace-pre-line">{saleData.comments}</div>
+                        </div>
+                        )}
+                    </div>
+                    <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(saleData.subtotal)}</span></div>
+                        {showDiscountColumn && (
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(saleData.totalDiscountAmount)}</span></div>
+                        )}
+                        {showTaxColumn && (
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({saleData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(saleData.totalTaxAmount)}</span></div>
+                        )}
+                        <Separator className="my-2 border-gray-400" />
+                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(saleData.totalAmount)}</span></div>
+                    </div>
+                </div>
+            </footer>
         </div>
-      </div>
-      
-      <div className="flex-grow flex flex-col">
-        <section className="flex-grow">
-          <table className="w-full text-sm border-collapse table-fixed">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '47%'}}>Item Description</th>
-                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
-                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
-                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {saleData.lineItems.map((item, index) => (
-                <tr key={item.itemId || index} className="border-b border-gray-200">
-                  <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
-                  <td className="p-2 border border-gray-300 align-top break-words">
-                    <p className="font-medium text-gray-900">{item.itemName}</p>
-                    {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
-                  </td>
-                  {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
-                  <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
-                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice)}</td>
-                  {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
-                  {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="mt-auto">
-          <div className="flex justify-between items-start pt-2">
-              <div className="w-1/2 pr-4 text-xs">
-                  {saleData.comments && (
-                  <div className="space-y-1">
-                      <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                      <div className="text-gray-600 whitespace-pre-line font-bold">{saleData.comments}</div>
-                  </div>
-                  )}
-              </div>
-              <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                      <span className="text-gray-800 text-right">{formatCurrency(saleData.subtotal)}</span>
-                  </div>
-                  {showDiscountColumn && (
-                    <div className="grid grid-cols-2 gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                        <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
-                    </div>
-                  )}
-                  {showTaxColumn && (
-                    <div className="grid grid-cols-2 gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
-                    </div>
-                  )}
-                  <Separator className="my-2 border-gray-300" />
-                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                      <span className="text-blue-600 text-right">{formatCurrency(saleData.totalAmount)}</span>
-                  </div>
-              </div>
-          </div>
-        </section>
-      </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
