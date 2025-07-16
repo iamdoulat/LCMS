@@ -176,7 +176,7 @@ export default function PrintSaleInvoicePage() {
   const showTaxColumn = saleData.showTaxColumn ?? false;
 
 
-  const qrCodeValue = `INVOICE\nInvoice Number: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
+  const qrCodeValue = `INVOICE\nInvoice Number: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)}`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
