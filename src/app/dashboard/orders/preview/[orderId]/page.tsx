@@ -58,12 +58,6 @@ export default function PrintOrderPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [qrCodeValue, setQrCodeValue] = React.useState('');
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setQrCodeValue(window.location.href);
-    }
-  }, []);
-
   const fetchFinancialSettings = useCallback(async () => {
     try {
       const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
@@ -127,13 +121,22 @@ export default function PrintOrderPage() {
   }, [fetchFinancialSettings, fetchOrderAndBeneficiaryData]);
 
    useEffect(() => {
-    if (!isLoading && orderData && financialSettings) {
+    if (!isLoading && orderData) {
+      const qrData = [
+        "ORDER",
+        `Order Number: ${orderData.id}`,
+        `Date: ${formatDisplayDate(orderData.orderDate)}`,
+        `Sales Person: ${orderData.salesperson || 'N/A'}`,
+        `Grand Total (USD): ${formatCurrency(orderData.totalAmount)}`
+      ].join('\n');
+      setQrCodeValue(qrData);
+
       const timer = setTimeout(() => {
         window.print();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, orderData, financialSettings]);
+  }, [isLoading, orderData]);
 
   if (isLoading) {
     return (
@@ -184,8 +187,8 @@ export default function PrintOrderPage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={430}
-                    height={216}
+                    width={248}
+                    height={125}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -223,7 +226,7 @@ export default function PrintOrderPage() {
                 </div>
             </header>
 
-            <main className="flex-grow px-8">
+            <main className="flex-grow px-8 pt-0">
                 <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
@@ -237,7 +240,7 @@ export default function PrintOrderPage() {
                 </div>
             
                 <section className="mt-4">
-                    <table className="w-full text-sm border-collapse table-fixed">
+                    <table className="w-full text-sm border-collapse table-auto">
                         <thead className="bg-gray-100 text-gray-700">
                         <tr>
                             <th className="p-2 border font-semibold text-left w-[40px]">#</th>

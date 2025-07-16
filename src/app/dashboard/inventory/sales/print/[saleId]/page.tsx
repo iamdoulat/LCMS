@@ -58,12 +58,6 @@ export default function PrintSaleInvoicePage() {
   const [error, setError] = useState<string | null>(null);
   const [qrCodeValue, setQrCodeValue] = React.useState('');
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setQrCodeValue(window.location.href);
-    }
-  }, []);
-
   const fetchFinancialSettings = useCallback(async () => {
     try {
       const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
@@ -135,6 +129,15 @@ export default function PrintSaleInvoicePage() {
 
   useEffect(() => {
     if (!isLoading && saleData) {
+      const qrData = [
+        "INVOICE",
+        `Invoice No: ${saleData.id}`,
+        `Date: ${formatDisplayDate(saleData.saleDate)}`,
+        `Sales Person: ${saleData.salesperson || 'N/A'}`,
+        `Grand Total (USD): ${formatCurrency(saleData.totalAmount)}`
+      ].join('\n');
+      setQrCodeValue(qrData);
+      
       const timer = setTimeout(() => {
         window.print();
       }, 500);
@@ -191,8 +194,8 @@ export default function PrintSaleInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={430}
-                    height={216}
+                    width={248}
+                    height={125}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -230,7 +233,7 @@ export default function PrintSaleInvoicePage() {
                 </div>
             </header>
             
-            <main className="flex-grow px-8">
+            <main className="flex-grow px-8 pt-0">
                 <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
@@ -245,7 +248,7 @@ export default function PrintSaleInvoicePage() {
                 </div>
 
                 <section className="mt-4">
-                    <table className="w-full text-sm border-collapse table-fixed">
+                    <table className="w-full text-sm border-collapse table-auto">
                         <thead className="bg-gray-100 text-gray-700">
                         <tr>
                             <th className="p-2 border font-semibold text-left w-[40px]">#</th>
