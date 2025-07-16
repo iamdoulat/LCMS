@@ -192,9 +192,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         const valuesToSet: LCEditFormValues = {
             applicantId: initialData.applicantId || defaultFormValues.applicantId,
             beneficiaryId: initialData.beneficiaryId || defaultFormValues.beneficiaryId,
-            currency: initialData.currency ?? defaultFormValues.currency,
+            currency: getValidOption(initialData.currency, currencyOptions, defaultFormValues.currency) as Currency,
             amount: initialData.amount ?? defaultFormValues.amount,
-            termsOfPay: initialData.termsOfPay ?? defaultFormValues.termsOfPay,
+            termsOfPay: getValidOption(initialData.termsOfPay, termsOfPayOptions, defaultFormValues.termsOfPay) as TermsOfPay,
             documentaryCreditNumber: initialData.documentaryCreditNumber || defaultFormValues.documentaryCreditNumber,
             proformaInvoiceNumber: initialData.proformaInvoiceNumber ?? defaultFormValues.proformaInvoiceNumber,
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : defaultFormValues.invoiceDate,
@@ -238,11 +238,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
             totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
             totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
-            shipmentMode: initialData.shipmentMode ?? defaultFormValues.shipmentMode,
+            shipmentMode: getValidOption(initialData.shipmentMode, shipmentModeOptions, defaultFormValues.shipmentMode) as ShipmentMode,
             vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
             vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
             flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
-            trackingCourier: initialData.trackingCourier ?? defaultFormValues.trackingCourier,
+            trackingCourier: getValidOption(initialData.trackingCourier, trackingCourierOptions, defaultFormValues.trackingCourier) as TrackingCourier,
             trackingNumber: initialData.trackingNumber ?? defaultFormValues.trackingNumber,
             etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
             eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
@@ -1115,7 +1115,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                    <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value ?? defaultFormValues.shipmentMode}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {shipmentModeOptions.map((option) => (
@@ -1225,7 +1225,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                        <RadioGroup
                           onValueChange={field.onChange}
-                          value={field.value}
+                          value={field.value ?? "DHL"}
                           className="flex flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {trackingCourierOptions.map((courier) => (
