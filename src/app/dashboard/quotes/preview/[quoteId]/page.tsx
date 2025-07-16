@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -167,54 +168,54 @@ export default function PrintQuotePage() {
 
   return (
     <div className="print-layout">
-      <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-        <header className="flex justify-between items-start p-8">
-            <div className="w-1/2 pr-4">
-            {displayCompanyLogo && (
-                <Image
-                src={displayCompanyLogo}
-                alt={`${displayCompanyName} Logo`}
-                width={288}
-                height={144}
-                className="object-contain mb-2"
-                priority
-                data-ai-hint="company logo"
-                />
-            )}
-            {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-            )}
-            <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-            <div className="text-xs text-gray-600">
-                {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
-                {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
-            </div>
-            </div>
-            <div className="w-1/2 text-right">
-            <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">Quotation</h2>
-            <div className="mt-2 text-sm">
-                <p><strong className="text-gray-600">Quote Number:</strong> {quoteData.id}</p>
-                <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
-                {quoteData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {quoteData.salesperson}</p>}
-            </div>
-            </div>
-        </header>
-
-        <main className="flex-grow px-8">
-            <div className="grid grid-cols-2 gap-4 my-6">
-                <div className="border p-3 rounded-md text-sm">
-                    <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-                    <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
-                    <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
-                    {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
+        <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+            <header className="flex justify-between items-start p-8">
+                <div className="w-1/2 pr-4">
+                {displayCompanyLogo && (
+                    <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={248}
+                    height={125}
+                    className="object-contain mb-2"
+                    priority
+                    data-ai-hint="company logo"
+                    />
+                )}
+                {!hideCompanyName && (
+                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                )}
+                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                <div className="text-xs text-gray-600">
+                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
+                    {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
                 </div>
-                <div className="border p-3 rounded-md text-sm">
-                    <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-                    <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
                 </div>
-            </div>
+                <div className="w-1/2 text-right">
+                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">Quotation</h2>
+                <div className="mt-2 text-sm">
+                    <p><strong className="text-gray-600">Quote Number:</strong> {quoteData.id}</p>
+                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(quoteData.quoteDate)}</p>
+                    {quoteData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {quoteData.salesperson}</p>}
+                </div>
+                </div>
+            </header>
 
-            {quoteData.subject && (
+            <main className="flex-grow px-8">
+                <div className="grid grid-cols-2 gap-4 my-6">
+                    <div className="border p-3 rounded-md text-sm">
+                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                        <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
+                        <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
+                        {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
+                    </div>
+                    <div className="border p-3 rounded-md text-sm">
+                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+                        <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
+                    </div>
+                </div>
+
+                {quoteData.subject && (
                 <div className="my-4">
                 <p className="text-sm font-normal p-2 border rounded-md text-center">{quoteData.subject}</p>
                 </div>
@@ -253,9 +254,11 @@ export default function PrintQuotePage() {
                 </tbody>
                 </table>
             </section>
-             <section className="mt-6">
-                <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-7 pr-4 text-xs">
+            
+            </main>
+             <footer className="px-8 py-4 mt-auto">
+                <div className="flex justify-between items-end">
+                    <div className="w-2/3 pr-4 text-xs">
                         {quoteData.comments && (
                         <div className="space-y-1">
                             <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
@@ -263,7 +266,7 @@ export default function PrintQuotePage() {
                         </div>
                         )}
                     </div>
-                    <div className="col-span-5 text-sm space-y-1">
+                    <div className="w-1/3 text-sm space-y-1">
                         <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(quoteData.subtotal)}</span></div>
                         {showDiscountColumn && (
                             <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span></div>
@@ -275,9 +278,8 @@ export default function PrintQuotePage() {
                         <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(quoteData.totalAmount)}</span></div>
                     </div>
                 </div>
-            </section>
-        </main>
-      </div>
+            </footer>
+        </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
@@ -131,8 +132,8 @@ function PrintPageContent() {
           <Image
             src={displayCompanyLogo}
             alt="Company Logo"
-            width={150}
-            height={50}
+            width={248}
+            height={125}
             className="object-contain"
             data-ai-hint="company logo"
             priority

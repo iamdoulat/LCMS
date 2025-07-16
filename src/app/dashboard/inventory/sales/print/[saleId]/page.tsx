@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -182,8 +183,8 @@ export default function PrintSaleInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={288}
-                    height={144}
+                    width={248}
+                    height={125}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -255,30 +256,30 @@ export default function PrintSaleInvoicePage() {
                     </tbody>
                 </table>
                 </section>
-                <section className="mt-6">
-                    <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-7 pr-4 text-xs">
-                            {saleData.comments && (
-                            <div className="space-y-1">
-                                <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
-                                <div className="text-gray-600 whitespace-pre-line">{saleData.comments}</div>
-                            </div>
-                            )}
-                        </div>
-                        <div className="col-span-5 text-sm space-y-1">
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(saleData.subtotal)}</span></div>
-                            {showDiscountColumn && (
-                                <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(saleData.totalDiscountAmount)}</span></div>
-                            )}
-                            {showTaxColumn && (
-                                <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({saleData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(saleData.totalTaxAmount)}</span></div>
-                            )}
-                            <Separator className="my-2 border-gray-400" />
-                            <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(saleData.totalAmount)}</span></div>
-                        </div>
-                    </div>
-                </section>
             </main>
+            <footer className="px-8 py-4 mt-auto">
+                <div className="flex justify-between items-end">
+                    <div className="w-2/3 pr-4 text-xs">
+                        {saleData.comments && (
+                        <div className="space-y-1">
+                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
+                            <div className="text-gray-600 whitespace-pre-line">{saleData.comments}</div>
+                        </div>
+                        )}
+                    </div>
+                    <div className="w-1/3 text-sm space-y-1">
+                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(saleData.subtotal)}</span></div>
+                        {showDiscountColumn && (
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(saleData.totalDiscountAmount)}</span></div>
+                        )}
+                        {showTaxColumn && (
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({saleData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(saleData.totalTaxAmount)}</span></div>
+                        )}
+                        <Separator className="my-2 border-gray-400" />
+                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(saleData.totalAmount)}</span></div>
+                    </div>
+                </div>
+            </footer>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
