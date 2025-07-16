@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -40,8 +39,8 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
+const formatCurrency = (amount?: number, currencySymbol: string = 'USD') => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
@@ -162,90 +161,87 @@ export default function PrintOrderPage() {
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
   const hideCompanyName = financialSettings?.hideCompanyName ?? false;
-  
+
   const showItemCodeColumn = orderData.showItemCodeColumn ?? true; 
   const showDiscountColumn = orderData.showDiscountColumn ?? true;
   const showTaxColumn = orderData.showTaxColumn ?? true;
 
-  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
+  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount, '')}`;
 
 
   return (
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '296mm', margin: 'auto' }}>
+      <div className="flex-grow p-8">
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      <div className="print-header pt-2 pb-2">
-        <div className="px-0">
-            <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-8">
-                {displayCompanyLogo && (
-                <Image
-                    src={displayCompanyLogo}
-                    alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
-                    className="object-contain mb-2"
-                    priority
-                    data-ai-hint="company logo"
-                />
-                )}
-                {!hideCompanyName && (
-                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-                )}
-                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
-            </div>
+      <div className="flex-grow p-8 pb-20">
+        <div className="flex justify-between items-start mb-4">
+          <div className="w-2/3 pr-8">
+            {displayCompanyLogo && (
+              <Image
+                src={displayCompanyLogo}
+                alt={`${displayCompanyName} Logo`}
+                width={396}
+                height={58}
+                className="object-contain mb-2"
+                priority
+                data-ai-hint="company logo"
+              />
+            )}
+            {!hideCompanyName && (
+                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+            )}
+            <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+            {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+            {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+          </div>
 
-            <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Order Number :</span>
-                    <span>{orderData.id}</span>
-                </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Date :</span>
-                    <span>{formatDisplayDate(orderData.orderDate)}</span>
-                </div>
-                {orderData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
-                        <span className="font-semibold">Sales Person :</span>
-                        <span>{orderData.salesperson}</span>
-                    </div>
-                )}
-            </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-                <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
-                <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
-            </div>
-            <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-                <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
-            </div>
-            </div>
+          <div className="text-right">
+              <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">ORDER</h2>
+              <div className="flex justify-end items-baseline gap-2 text-sm">
+                  <span className="font-semibold">Order Number :</span>
+                  <span>{orderData.id}</span>
+              </div>
+              <div className="flex justify-end items-baseline gap-2 text-sm">
+                  <span className="font-semibold">Date :</span>
+                  <span>{formatDisplayDate(orderData.orderDate)}</span>
+              </div>
+              {orderData.salesperson && (
+                  <div className="flex justify-end items-baseline gap-2 text-sm">
+                      <span className="font-semibold">Sales Person :</span>
+                      <span>{orderData.salesperson}</span>
+                  </div>
+              )}
+          </div>
         </div>
-      </div>
-      
-      <div className="flex-grow flex flex-col">
-        <section className="flex-grow">
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+            <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+          </div>
+          <div className="border p-2 rounded-md text-xs">
+            <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
+            <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
+          </div>
+        </div>
+
+        <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
-                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
-                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
-                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold w-[5%]">#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold">Item Description</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold">Item Code</th>}
+                <th className="p-2 border border-gray-300 text-center font-semibold w-[10%]">Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%] whitespace-nowrap">Unit Price (USD)</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Discount (%)</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold w-[10%]">Tax (%)</th>}
+                <th className="p-2 border border-gray-300 text-right font-semibold w-[15%]">Total (USD)</th>
               </tr>
             </thead>
             <tbody>
               {orderData.lineItems.map((item, index) => (
-                <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
+                <tr key={item.itemId || index} className="border-b border-gray-200">
                   <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                   <td className="p-2 border border-gray-300 align-top break-words">
                     <p className="font-medium text-gray-900">{item.itemName}</p>
@@ -253,50 +249,76 @@ export default function PrintOrderPage() {
                   </td>
                   {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
-                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice)}</td>
+                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice, '')}</td>
                   {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
                   {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total, '')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
-        
-        <section className="mt-auto">
-            <div className="flex justify-between items-start pt-2">
-                <div className="w-1/2 pr-4 text-xs">
-                    {orderData.comments && (
-                    <div className="space-y-1">
-                        <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                        <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
-                    </div>
-                    )}
+
+        <div className="flex justify-between items-start pt-2">
+            <div className="w-1/2 pr-4 text-xs">
+                {orderData.comments && (
+                <div className="space-y-1">
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
                 </div>
-                <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                      <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal)}</span>
-                  </div>
-                  {showDiscountColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                          <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount)}</span>
-                      </div>
-                  )}
-                  {showTaxColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
-                          <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount)}</span>
-                      </div>
-                  )}
-                  <Separator className="my-2 border-gray-300" />
-                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                      <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
-                  </div>
-              </div>
+                )}
             </div>
+            <div className="w-auto text-sm space-y-1">
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Subtotal (USD):</span>
+                    <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal, '')}</span>
+                </div>
+                {showDiscountColumn && (
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                    <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount, '')}</span>
+                </div>
+                )}
+                {showTaxColumn && (
+                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
+                    <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount, '')}</span>
+                </div>
+                )}
+                <Separator className="my-2 border-gray-300" />
+                <div className="grid grid-cols-[auto_1fr] gap-x-4 text-base font-bold">
+                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                    <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount, '')}</span>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div className="mt-auto mb-6 pt-2 px-8 pb-2">
+      <div className="print-footer mt-auto mb-6 pt-2 px-8 pb-2">
+        <section className="flex justify-between items-end mb-2">
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="p-1 border">
+                <QRCode
+                    value={qrCodeValue}
+                    size={35}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+            <p className="text-[8px] text-gray-600">Thank you for your business!</p>
+          </div>
+
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+          </div>
         </section>
       </div>
 
