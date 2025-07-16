@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -170,8 +171,6 @@ export default function PrintOrderPage() {
 
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '296mm', margin: 'auto' }}>
-      <div className="flex-grow p-8">
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
       <div className="flex-grow p-8 pb-20">
         <div className="flex justify-between items-start mb-4">
@@ -293,15 +292,12 @@ export default function PrintOrderPage() {
             </div>
         </div>
       </div>
-
-      <div className="mt-auto mb-6 pt-2 px-8 pb-2">
       <div className="print-footer mt-auto mb-6 pt-2 px-8 pb-2">
         <section className="flex justify-between items-end mb-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
-
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="p-1 border">
                 <QRCode
@@ -314,14 +310,12 @@ export default function PrintOrderPage() {
             </div>
             <p className="text-[8px] text-gray-600">Thank you for your business!</p>
           </div>
-
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
       </div>
-
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Order
