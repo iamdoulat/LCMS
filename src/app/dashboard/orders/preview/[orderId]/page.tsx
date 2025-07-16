@@ -184,8 +184,8 @@ export default function PrintOrderPage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={298}
-                    height={150}
+                    width={358}
+                    height={180}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -224,7 +224,7 @@ export default function PrintOrderPage() {
             </header>
 
             <main className="flex-grow px-8">
-                <div className="grid grid-cols-2 gap-4 my-6">
+                <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
                         <p className="font-medium text-gray-900">{orderData.beneficiaryName || 'N/A'}</p>
@@ -236,7 +236,7 @@ export default function PrintOrderPage() {
                     </div>
                 </div>
             
-                <section className="mt-6">
+                <section className="mt-4">
                 <table className="w-full text-sm border-collapse">
                     <thead className="bg-gray-100 text-gray-700">
                     <tr>
@@ -269,9 +269,7 @@ export default function PrintOrderPage() {
                     </tbody>
                 </table>
                 </section>
-            </main>
-            <footer className="px-8 py-4 mt-auto">
-                <div className="flex justify-between items-end">
+                <section className="mt-4 flex justify-between items-end">
                     <div className="w-2/3 pr-4 text-xs">
                         {orderData.comments && (
                         <div className="space-y-1">
@@ -291,8 +289,8 @@ export default function PrintOrderPage() {
                         <Separator className="my-2 border-gray-400" />
                         <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(orderData.totalAmount)}</span></div>
                     </div>
-                </div>
-            </footer>
+                </section>
+            </main>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">

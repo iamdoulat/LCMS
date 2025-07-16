@@ -183,8 +183,8 @@ export default function PrintQuotePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={298}
-                    height={150}
+                    width={358}
+                    height={180}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -221,9 +221,8 @@ export default function PrintQuotePage() {
                 </div>
                 </div>
             </header>
-
             <main className="flex-grow px-8">
-                <div className="grid grid-cols-2 gap-4 my-6">
+                <div className="grid grid-cols-2 gap-4 my-2">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
                         <p className="font-medium text-gray-900">{quoteData.customerName || 'N/A'}</p>
@@ -235,17 +234,15 @@ export default function PrintQuotePage() {
                         <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
                     </div>
                 </div>
-
                 {quoteData.subject && (
                 <div className="my-4">
                 <p className="text-sm font-normal p-2 border rounded-md text-center">{quoteData.subject}</p>
                 </div>
             )}
-        
-            <section className="mt-6">
-                <table className="w-full text-sm border-collapse">
+            <section className="mt-4">
+              <table className="w-full text-sm border-collapse">
                 <thead className="bg-gray-100 text-gray-700">
-                    <tr>
+                  <tr>
                     <th className="p-2 border font-semibold text-left">#</th>
                     <th className="p-2 border font-semibold text-left">Item Description</th>
                     {showItemCodeColumn && <th className="p-2 border font-semibold text-left">Item Code</th>}
@@ -254,52 +251,50 @@ export default function PrintQuotePage() {
                     {showDiscountColumn && <th className="p-2 border font-semibold text-right">Discount</th>}
                     {showTaxColumn && <th className="p-2 border font-semibold text-right">Tax</th>}
                     <th className="p-2 border font-semibold text-right">Total</th>
-                    </tr>
+                  </tr>
                 </thead>
                 <tbody>
-                    {quoteData.lineItems.map((item, index) => (
+                  {quoteData.lineItems.map((item, index) => (
                     <tr key={`${item.itemId}-${index}`} className="border-b">
-                        <td className="p-2 border text-center align-top">{index + 1}</td>
-                        <td className="p-2 border align-top">
+                      <td className="p-2 border text-center align-top">{index + 1}</td>
+                      <td className="p-2 border align-top">
                         <p className="font-medium text-gray-900">{item.itemName}</p>
                         {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{item.description}</p>}
-                        </td>
-                        {showItemCodeColumn && <td className="p-2 border align-top">{item.itemCode || 'N/A'}</td>}
-                        <td className="p-2 border text-center align-top">{item.qty}</td>
-                        <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
-                        {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
-                        {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                        <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                      </td>
+                      {showItemCodeColumn && <td className="p-2 border align-top">{item.itemCode || 'N/A'}</td>}
+                      <td className="p-2 border text-center align-top">{item.qty}</td>
+                      <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
+                      {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                      {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
+                      <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
                     </tr>
-                    ))}
+                  ))}
                 </tbody>
-                </table>
+              </table>
             </section>
             
-            </main>
-             <footer className="px-8 py-4 mt-auto">
-                <div className="flex justify-between items-end">
-                    <div className="w-2/3 pr-4 text-xs">
-                        {quoteData.comments && (
-                        <div className="space-y-1">
-                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                            <div className="text-gray-600 whitespace-pre-line">{quoteData.comments}</div>
-                        </div>
-                        )}
+            <section className="mt-4 flex justify-between items-end">
+                <div className="w-2/3 pr-4 text-xs">
+                    {quoteData.comments && (
+                    <div className="space-y-1">
+                        <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                        <div className="text-gray-600 whitespace-pre-line">{quoteData.comments}</div>
                     </div>
-                    <div className="w-1/3 text-sm space-y-1">
-                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(quoteData.subtotal)}</span></div>
-                        {showDiscountColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span></div>
-                        )}
-                        {showTaxColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({quoteData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount)}</span></div>
-                        )}
-                        <Separator className="my-2 border-gray-400" />
-                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(quoteData.totalAmount)}</span></div>
-                    </div>
+                    )}
                 </div>
-            </footer>
+                <div className="w-1/3 text-sm space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(quoteData.subtotal)}</span></div>
+                    {showDiscountColumn && (
+                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span></div>
+                    )}
+                    {showTaxColumn && (
+                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({quoteData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(quoteData.totalTaxAmount)}</span></div>
+                    )}
+                    <Separator className="my-2 border-gray-400" />
+                    <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(quoteData.totalAmount)}</span></div>
+                </div>
+            </section>
+            </main>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
