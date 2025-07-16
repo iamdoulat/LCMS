@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, getValidOption } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -214,7 +213,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             lcIssueDate: initialData.lcIssueDate && isValid(parseISO(initialData.lcIssueDate)) ? parseISO(initialData.lcIssueDate) : defaultFormValues.lcIssueDate,
             expireDate: initialData.expireDate && isValid(parseISO(initialData.expireDate)) ? parseISO(initialData.expireDate) : defaultFormValues.expireDate,
             latestShipmentDate: initialData.latestShipmentDate && isValid(parseISO(initialData.latestShipmentDate)) ? parseISO(initialData.latestShipmentDate) : defaultFormValues.latestShipmentDate,
-            partialShipmentAllowed: initialData.partialShipmentAllowed ?? "No",
+            partialShipmentAllowed: initialData.partialShipmentAllowed ?? defaultFormValues.partialShipmentAllowed,
             firstPartialQty: initialData.firstPartialQty ?? defaultFormValues.firstPartialQty,
             secondPartialQty: initialData.secondPartialQty ?? defaultFormValues.secondPartialQty,
             thirdPartialQty: initialData.thirdPartialQty ?? defaultFormValues.thirdPartialQty,
@@ -410,50 +409,44 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryId: finalData.beneficiaryId,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : initialData.beneficiaryName,
       currency: finalData.currency,
-      amount: finalData.amount,
       termsOfPay: finalData.termsOfPay,
+      status: finalData.status,
+      shipmentMode: finalData.shipmentMode,
+      trackingCourier: finalData.trackingCourier,
+      amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
+      proformaInvoiceNumber: finalData.proformaInvoiceNumber,
       invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      commercialInvoiceNumber: finalData.commercialInvoiceNumber || undefined,
+      commercialInvoiceNumber: finalData.commercialInvoiceNumber,
       commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: finalData.totalMachineQty,
       numberOfAmendments: toNumberOrUndefined(finalData.numberOfAmendments),
-      status: finalData.status,
-      itemDescriptions: finalData.itemDescriptions || undefined,
-      partialShipments: finalData.partialShipments || undefined,
-      portOfLoading: finalData.portOfLoading || undefined,
-      portOfDischarge: finalData.portOfDischarge || undefined,
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: finalData.notifyPartyName || undefined,
-      notifyPartyCell: finalData.notifyPartyCell || undefined,
-      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
+      itemDescriptions: finalData.itemDescriptions,
+      partialShipments: finalData.partialShipments,
+      portOfLoading: finalData.portOfLoading,
+      portOfDischarge: finalData.portOfDischarge,
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress,
+      vesselOrFlightName: finalData.vesselOrFlightName,
+      vesselImoNumber: finalData.vesselImoNumber,
+      flightNumber: finalData.flightNumber,
+      trackingNumber: finalData.trackingNumber,
+      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      certificateOfOrigin: finalData.certificateOfOrigin,
+      shippingMarks: finalData.shippingMarks,
+      purchaseOrderUrl: finalData.purchaseOrderUrl,
+      finalPIUrl: finalData.finalPIUrl,
+      finalLcUrl: finalData.finalLcUrl,
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl,
+      packingListUrl: finalData.packingListUrl,
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress,
+      notifyPartyName: finalData.notifyPartyName,
+      notifyPartyCell: finalData.notifyPartyCell,
+      notifyPartyEmail: finalData.notifyPartyEmail,
       lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? undefined : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? undefined : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       partialShipmentAllowed: finalData.partialShipmentAllowed,
-      shipmentMode: finalData.shipmentMode,
-      vesselOrFlightName: finalData.vesselOrFlightName || undefined,
-      vesselImoNumber: finalData.vesselImoNumber || undefined,
-      flightNumber: finalData.flightNumber || undefined,
-      trackingCourier: finalData.trackingCourier || undefined,
-      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
-      shippingMarks: finalData.shippingMarks || undefined,
-      purchaseOrderUrl: finalData.purchaseOrderUrl || undefined,
-      finalPIUrl: finalData.finalPIUrl || undefined,
-      finalLcUrl: finalData.finalLcUrl || undefined,
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
-      packingListUrl: finalData.packingListUrl || undefined,
-      isFirstShipment: finalData.isFirstShipment ?? false,
-      isSecondShipment: finalData.isSecondShipment ?? false,
-      isThirdShipment: finalData.isThirdShipment ?? false,
-      firstShipmentNote: finalData.firstShipmentNote || undefined,
-      secondShipmentNote: finalData.secondShipmentNote || undefined,
-      thirdShipmentNote: finalData.thirdShipmentNote || undefined,
       firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialQty) : undefined,
       secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialQty) : undefined,
       thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialQty) : undefined,
@@ -496,23 +489,17 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       beneficiaryComplianceCertificateQty: toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty),
       shipmentAdviceQty: toNumberOrUndefined(finalData.shipmentAdviceQty),
       billOfExchangeQty: toNumberOrUndefined(finalData.billOfExchangeQty),
+      isFirstShipment: finalData.isFirstShipment ?? false,
+      isSecondShipment: finalData.isSecondShipment ?? false,
+      isThirdShipment: finalData.isThirdShipment ?? false,
+      firstShipmentNote: finalData.firstShipmentNote,
+      secondShipmentNote: finalData.secondShipmentNote,
+      thirdShipmentNote: finalData.thirdShipmentNote,
       updatedAt: serverTimestamp(),
     };
 
-    const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    );
-
-    // Now, explicitly handle fields that should be deleted if empty
-    if (!cleanedDataToUpdate.proformaInvoiceNumber) cleanedDataToUpdate.proformaInvoiceNumber = deleteField();
-    if (!cleanedDataToUpdate.commercialInvoiceNumber) cleanedDataToUpdate.commercialInvoiceNumber = deleteField();
-    // ... add similar lines for all optional string fields that can be deleted
-    // This is cumbersome, the previous approach was better if the types were right.
-    // Let's refine the first cleaning pass instead.
-    
-    // Reset and try the cleaner object manipulation again
-     const finalObjectForFirestore: Record<string, any> = {};
-     for (const key in dataToUpdate) {
+    const finalObjectForFirestore: Record<string, any> = {};
+    for (const key in dataToUpdate) {
         const typedKey = key as keyof typeof dataToUpdate;
         const value = dataToUpdate[typedKey];
         if (value === '' || value === null || (Array.isArray(value) && value.length === 0)) {
@@ -680,7 +667,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormControl>
                    <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value as Currency}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {currencyOptions.map((option) => (
@@ -807,7 +794,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value as TermsOfPay}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {termsOfPayOptions.map((option) => (
@@ -980,7 +967,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
-                  value={field.value as PartialShipmentAllowed}
+                  value={field.value}
                   className="flex flex-wrap items-center gap-x-6 gap-y-2"
                 >
                   {partialShipmentAllowedOptions.map((option) => (
@@ -1134,7 +1121,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                    <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value as ShipmentMode}
+                      value={field.value}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {shipmentModeOptions.map((option) => (
@@ -1732,3 +1719,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
