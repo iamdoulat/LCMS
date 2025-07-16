@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -414,95 +413,98 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
-      trackingCourier: finalData.trackingCourier || deleteField(),
+      trackingCourier: finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
-      proformaInvoiceNumber: finalData.proformaInvoiceNumber || deleteField(),
-      invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
-      commercialInvoiceNumber: finalData.commercialInvoiceNumber || deleteField(),
-      commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
+      proformaInvoiceNumber: finalData.proformaInvoiceNumber,
+      invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      commercialInvoiceNumber: finalData.commercialInvoiceNumber,
+      commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: finalData.totalMachineQty,
       numberOfAmendments: toNumberOrUndefined(finalData.numberOfAmendments),
-      itemDescriptions: finalData.itemDescriptions || deleteField(),
-      partialShipments: finalData.partialShipments || deleteField(),
-      portOfLoading: finalData.portOfLoading || deleteField(),
-      portOfDischarge: finalData.portOfDischarge || deleteField(),
-      consigneeBankNameAddress: finalData.consigneeBankNameAddress || deleteField(),
-      vesselOrFlightName: finalData.vesselOrFlightName || deleteField(),
-      vesselImoNumber: finalData.vesselImoNumber || deleteField(),
-      flightNumber: finalData.flightNumber || deleteField(),
-      trackingNumber: finalData.trackingNumber || deleteField(),
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
-      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : deleteField(),
-      shippingMarks: finalData.shippingMarks || deleteField(),
-      purchaseOrderUrl: finalData.purchaseOrderUrl || deleteField(),
-      finalPIUrl: finalData.finalPIUrl || deleteField(),
-      finalLcUrl: finalData.finalLcUrl || deleteField(),
-      shippingDocumentsUrl: finalData.shippingDocumentsUrl || deleteField(),
-      packingListUrl: finalData.packingListUrl || deleteField(),
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || deleteField(),
-      notifyPartyName: finalData.notifyPartyName || deleteField(),
-      notifyPartyCell: finalData.notifyPartyCell || deleteField(),
-      notifyPartyEmail: finalData.notifyPartyEmail || deleteField(),
-      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : deleteField(),
-      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? deleteField() : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? deleteField() : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      itemDescriptions: finalData.itemDescriptions,
+      partialShipments: finalData.partialShipments,
+      portOfLoading: finalData.portOfLoading,
+      portOfDischarge: finalData.portOfDischarge,
+      consigneeBankNameAddress: finalData.consigneeBankNameAddress,
+      vesselOrFlightName: finalData.vesselOrFlightName,
+      vesselImoNumber: finalData.vesselImoNumber,
+      flightNumber: finalData.flightNumber,
+      trackingNumber: finalData.trackingNumber,
+      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
+      shippingMarks: finalData.shippingMarks,
+      purchaseOrderUrl: finalData.purchaseOrderUrl,
+      finalPIUrl: finalData.finalPIUrl,
+      finalLcUrl: finalData.finalLcUrl,
+      shippingDocumentsUrl: finalData.shippingDocumentsUrl,
+      packingListUrl: finalData.packingListUrl,
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress,
+      notifyPartyName: finalData.notifyPartyName,
+      notifyPartyCell: finalData.notifyPartyCell,
+      notifyPartyEmail: finalData.notifyPartyEmail,
+      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? undefined : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? undefined : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       partialShipmentAllowed: finalData.partialShipmentAllowed,
-      firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialQty) : deleteField(),
-      secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialQty) : deleteField(),
-      thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialQty) : deleteField(),
-      firstPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialAmount) : deleteField(),
-      secondPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialAmount) : deleteField(),
-      thirdPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialAmount) : deleteField(),
-      firstPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialPkgs) : deleteField(),
-      secondPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialPkgs) : deleteField(),
-      thirdPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialPkgs) : deleteField(),
-      firstPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialNetWeight) : deleteField(),
-      secondPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialNetWeight) : deleteField(),
-      thirdPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialNetWeight) : deleteField(),
-      firstPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialGrossWeight) : deleteField(),
-      secondPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialGrossWeight) : deleteField(),
-      thirdPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialGrossWeight) : deleteField(),
-      firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialCbm) : deleteField(),
-      secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialCbm) : deleteField(),
-      thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialCbm) : deleteField(),
+      firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialQty) : undefined,
+      secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialQty) : undefined,
+      thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialQty) : undefined,
+      firstPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialAmount) : undefined,
+      secondPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialAmount) : undefined,
+      thirdPartialAmount: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialAmount) : undefined,
+      firstPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialPkgs) : undefined,
+      secondPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialPkgs) : undefined,
+      thirdPartialPkgs: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialPkgs) : undefined,
+      firstPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialNetWeight) : undefined,
+      secondPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialNetWeight) : undefined,
+      thirdPartialNetWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialNetWeight) : undefined,
+      firstPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialGrossWeight) : undefined,
+      secondPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialGrossWeight) : undefined,
+      thirdPartialGrossWeight: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialGrossWeight) : undefined,
+      firstPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialCbm) : undefined,
+      secondPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialCbm) : undefined,
+      thirdPartialCbm: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialCbm) : undefined,
       totalPackageQty: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialPkgs, finalData.secondPartialPkgs, finalData.thirdPartialPkgs].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalPackageQty) || deleteField()),
+        : toNumberOrUndefined(finalData.totalPackageQty),
       totalNetWeight: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialNetWeight, finalData.secondPartialNetWeight, finalData.thirdPartialNetWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalNetWeight) || deleteField()),
+        : toNumberOrUndefined(finalData.totalNetWeight),
       totalGrossWeight: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialGrossWeight, finalData.secondPartialGrossWeight, finalData.thirdPartialGrossWeight].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalGrossWeight) || deleteField()),
+        : toNumberOrUndefined(finalData.totalGrossWeight),
       totalCbm: finalData.partialShipmentAllowed === "Yes"
         ? [finalData.firstPartialCbm, finalData.secondPartialCbm, finalData.thirdPartialCbm].map(p => Number(p || 0)).reduce((s, v) => s + v, 0)
-        : (toNumberOrUndefined(finalData.totalCbm) || deleteField()),
-      originalBlQty: toNumberOrUndefined(finalData.originalBlQty) || deleteField(),
-      copyBlQty: toNumberOrUndefined(finalData.copyBlQty) || deleteField(),
-      originalCooQty: toNumberOrUndefined(finalData.originalCooQty) || deleteField(),
-      copyCooQty: toNumberOrUndefined(finalData.copyCooQty) || deleteField(),
-      invoiceQty: toNumberOrUndefined(finalData.invoiceQty) || deleteField(),
-      packingListQty: toNumberOrUndefined(finalData.packingListQty) || deleteField(),
-      beneficiaryCertificateQty: toNumberOrUndefined(finalData.beneficiaryCertificateQty) || deleteField(),
-      brandNewCertificateQty: toNumberOrUndefined(finalData.brandNewCertificateQty) || deleteField(),
-      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(finalData.beneficiaryWarrantyCertificateQty) || deleteField(),
-      beneficiaryComplianceCertificateQty: toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty) || deleteField(),
-      shipmentAdviceQty: toNumberOrUndefined(finalData.shipmentAdviceQty) || deleteField(),
-      billOfExchangeQty: toNumberOrUndefined(finalData.billOfExchangeQty) || deleteField(),
+        : toNumberOrUndefined(finalData.totalCbm),
+      originalBlQty: toNumberOrUndefined(finalData.originalBlQty),
+      copyBlQty: toNumberOrUndefined(finalData.copyBlQty),
+      originalCooQty: toNumberOrUndefined(finalData.originalCooQty),
+      copyCooQty: toNumberOrUndefined(finalData.copyCooQty),
+      invoiceQty: toNumberOrUndefined(finalData.invoiceQty),
+      packingListQty: toNumberOrUndefined(finalData.packingListQty),
+      beneficiaryCertificateQty: toNumberOrUndefined(finalData.beneficiaryCertificateQty),
+      brandNewCertificateQty: toNumberOrUndefined(finalData.brandNewCertificateQty),
+      beneficiaryWarrantyCertificateQty: toNumberOrUndefined(finalData.beneficiaryWarrantyCertificateQty),
+      beneficiaryComplianceCertificateQty: toNumberOrUndefined(finalData.beneficiaryComplianceCertificateQty),
+      shipmentAdviceQty: toNumberOrUndefined(finalData.shipmentAdviceQty),
+      billOfExchangeQty: toNumberOrUndefined(finalData.billOfExchangeQty),
       isFirstShipment: finalData.isFirstShipment ?? false,
       isSecondShipment: finalData.isSecondShipment ?? false,
       isThirdShipment: finalData.isThirdShipment ?? false,
-      firstShipmentNote: finalData.firstShipmentNote || deleteField(),
-      secondShipmentNote: finalData.secondShipmentNote || deleteField(),
-      thirdShipmentNote: finalData.thirdShipmentNote || deleteField(),
+      firstShipmentNote: finalData.firstShipmentNote,
+      secondShipmentNote: finalData.secondShipmentNote,
+      thirdShipmentNote: finalData.thirdShipmentNote,
       updatedAt: serverTimestamp() as any,
     };
 
-    const cleanedDataToUpdate = Object.fromEntries(
-        Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    );
+    const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+          (acc as any)[key] = value === '' ? deleteField() : value;
+      }
+      return acc;
+    }, {});
 
 
     try {
@@ -661,7 +663,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormControl>
                    <RadioGroup
                     onValueChange={field.onChange}
-                    value={field.value as Currency}
+                    value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     {currencyOptions.map((option) => (
@@ -985,21 +987,21 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <div className="space-y-6">
               {/* 1st Partial Shipment */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
-                <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialQty" render={({ field }) => (<FormItem><FormLabel>1st P. Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialAmount" render={({ field }) => (<FormItem><FormLabel>1st P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialPkgs" render={({ field }) => (<FormItem><FormLabel>1st P. Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>1st P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="firstPartialCbm" render={({ field }) => (<FormItem><FormLabel>1st P. CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <Separator />
               {/* 2nd Partial Shipment */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-4 items-start">
                 <FormField control={control} name="secondPartialQty" render={({ field }) => (<FormItem><FormLabel>2nd Partial Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd Partial Amount ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="secondPartialAmount" render={({ field }) => (<FormItem><FormLabel>2nd P. Amt ({watch("currency")})</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialPkgs" render={({ field }) => (<FormItem><FormLabel>2nd Partial Pkgs</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross Weight (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="secondPartialNetWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Net W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="secondPartialGrossWeight" render={({ field }) => (<FormItem><FormLabel>2nd P. Gross W. (KGS)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="secondPartialCbm" render={({ field }) => (<FormItem><FormLabel>2nd Partial CBM</FormLabel><FormControl><Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <Separator />
@@ -1115,7 +1117,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                    <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value ?? defaultFormValues.shipmentMode}
+                      value={field.value}
                       className="flex flex-wrap items-center gap-x-6 gap-y-2"
                     >
                       {shipmentModeOptions.map((option) => (
@@ -1700,12 +1702,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Entry...
+              Saving Changes...
             </>
           ) : (
             <>
-              <FileText className="mr-2 h-4 w-4" />
-              Submit T/T OR L/C Entry
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
             </>
           )}
         </Button>
@@ -1714,4 +1716,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   );
 }
 
-```
