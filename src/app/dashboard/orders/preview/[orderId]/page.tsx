@@ -169,39 +169,39 @@ export default function PrintOrderPage() {
   return (
     <div className="print-layout">
         <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-            <div className="flex-grow p-4 pb-20">
-                <header className="flex justify-between items-start mb-4">
-                  <div className="w-1/2 pr-4">
-                    {displayCompanyLogo && (
-                      <Image
-                        src={displayCompanyLogo}
-                        alt={`${displayCompanyName} Logo`}
-                        width={200}
-                        height={100}
-                        className="object-contain mb-2"
-                        priority
-                        data-ai-hint="company logo"
-                      />
-                    )}
-                    {!hideCompanyName && (
-                      <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-                    )}
-                    <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                    <div className="text-xs text-gray-600">
-                      {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
-                      {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
-                    </div>
-                  </div>
-                  <div className="w-1/2 text-right">
-                    <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">Order</h2>
-                    <div className="mt-2 text-sm">
-                      <p><strong className="text-gray-600">Order Number:</strong> {orderData.id}</p>
-                      <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
-                      {orderData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {orderData.salesperson}</p>}
-                    </div>
-                  </div>
-                </header>
+            <header className="flex justify-between items-start p-8">
+                <div className="w-1/2 pr-4">
+                {displayCompanyLogo && (
+                    <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={240}
+                    height={120}
+                    className="object-contain mb-2"
+                    priority
+                    data-ai-hint="company logo"
+                    />
+                )}
+                {!hideCompanyName && (
+                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                )}
+                <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                <div className="text-xs text-gray-600">
+                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
+                    {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
+                </div>
+                </div>
+                <div className="w-1/2 text-right">
+                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">Order</h2>
+                <div className="mt-2 text-sm">
+                    <p><strong className="text-gray-600">Order Number:</strong> {orderData.id}</p>
+                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(orderData.orderDate)}</p>
+                    {orderData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {orderData.salesperson}</p>}
+                </div>
+                </div>
+            </header>
 
+            <main className="flex-grow px-8">
                 <div className="grid grid-cols-2 gap-4 my-6">
                     <div className="border p-3 rounded-md text-sm">
                         <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
@@ -247,10 +247,12 @@ export default function PrintOrderPage() {
                     </tbody>
                 </table>
                 </section>
+            </main>
         
+            <footer className="px-8 pb-8 pt-4 mt-auto">
                 <section className="mt-6">
-                    <div className="flex justify-between items-start">
-                        <div className="w-2/3 pr-4 text-xs">
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-7 pr-4 text-xs">
                             {orderData.comments && (
                             <div className="space-y-1">
                                 <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
@@ -258,7 +260,7 @@ export default function PrintOrderPage() {
                             </div>
                             )}
                         </div>
-                        <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                        <div className="col-span-5 text-sm space-y-1">
                             <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(orderData.subtotal)}</span></div>
                             {showDiscountColumn && (
                                 <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount)}</span></div>
@@ -271,7 +273,7 @@ export default function PrintOrderPage() {
                         </div>
                     </div>
                 </section>
-            </div>
+            </footer>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
