@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -131,9 +130,9 @@ export default function PrintSaleInvoicePage() {
     if (!isLoading && saleData) {
       const qrData = [
         "INVOICE",
-        `Invoice No: ${saleData.id}`,
-        `Date: ${formatDisplayDate(saleData.saleDate)}`,
-        `Sales Person: ${saleData.salesperson || 'N/A'}`,
+        `Invoice No: ${saleData.id},`,
+        `Date: ${formatDisplayDate(saleData.saleDate)},`,
+        `Sales Person: ${saleData.salesperson || 'N/A'},`,
         `Grand Total (USD): ${formatCurrency(saleData.totalAmount)}`
       ].join('\n');
       setQrCodeValue(qrData);
@@ -194,8 +193,8 @@ export default function PrintSaleInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={248}
-                    height={125}
+                    width={298}
+                    height={150}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -224,7 +223,7 @@ export default function PrintSaleInvoicePage() {
                     )}
                 </div>
                 <div className="col-span-5 text-right">
-                <h2 className="text-3xl font-bold text-gray-800 uppercase tracking-wider">INVOICE</h2>
+                <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wider">INVOICE</h2>
                 <div className="mt-2 text-sm">
                     <p><strong className="text-gray-600">Invoice No:</strong> {saleData.id}</p>
                     <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(saleData.saleDate)}</p>
