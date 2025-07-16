@@ -121,36 +121,23 @@ body {
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    background: #fff !important;
   }
   
-  /* Hide all elements by default */
-  body * {
-    visibility: hidden;
-  }
-  
-  /* Make the print layout and its children visible */
-  .print-layout, .print-layout * {
-    visibility: visible;
-  }
-  
-  /* Position the print layout at the top of the page */
-  .print-layout {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  .noprint, [data-sidebar="sidebar"], .sidebar-trigger, .app-header-class, .app-sidebar-nav-class, .print-only-utility-buttons {
+  .noprint {
     display: none !important;
   }
 
+  .print-layout {
+    display: block !important;
+  }
+  
   .print-invoice-container {
+    box-shadow: none !important;
+    border: none !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
   }
 
   .bg-gradient-to-r {
