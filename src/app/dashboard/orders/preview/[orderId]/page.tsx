@@ -184,8 +184,8 @@ export default function PrintOrderPage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={358}
-                    height={180}
+                    width={430}
+                    height={216}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -269,7 +269,7 @@ export default function PrintOrderPage() {
                     </tbody>
                 </table>
                 </section>
-                <section className="mt-4 flex justify-between items-end">
+                <section className="mt-4 flex justify-between items-start">
                     <div className="w-2/3 pr-4 text-xs">
                         {orderData.comments && (
                         <div className="space-y-1">
@@ -296,9 +296,6 @@ export default function PrintOrderPage() {
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Order
-        </Button>
-        <Button onClick={() => router.back()} variant="outline" className="ml-2">
-          Close
         </Button>
       </div>
     </div>
