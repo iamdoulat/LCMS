@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
-import QRCode from "react-qr-code";
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -248,31 +247,31 @@ export default function PrintOrderPage() {
                     </tbody>
                 </table>
                 </section>
-            </div>
         
-            <footer className="p-4 mt-auto">
-                <div className="flex justify-between items-end">
-                    <div className="w-2/3 pr-4 text-xs">
-                        {orderData.comments && (
-                        <div className="space-y-1">
-                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
-                            <div className="text-gray-600 whitespace-pre-line">{orderData.comments}</div>
+                <section className="mt-6">
+                    <div className="flex justify-between items-start">
+                        <div className="w-2/3 pr-4 text-xs">
+                            {orderData.comments && (
+                            <div className="space-y-1">
+                                <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                                <div className="text-gray-600 whitespace-pre-line">{orderData.comments}</div>
+                            </div>
+                            )}
                         </div>
-                        )}
+                        <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(orderData.subtotal)}</span></div>
+                            {showDiscountColumn && (
+                                <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount)}</span></div>
+                            )}
+                            {showTaxColumn && (
+                                <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({orderData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount)}</span></div>
+                            )}
+                            <Separator className="my-2 border-gray-400" />
+                            <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(orderData.totalAmount)}</span></div>
+                        </div>
                     </div>
-                    <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(orderData.subtotal)}</span></div>
-                        {showDiscountColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(orderData.totalDiscountAmount)}</span></div>
-                        )}
-                        {showTaxColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({orderData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(orderData.totalTaxAmount)}</span></div>
-                        )}
-                        <Separator className="my-2 border-gray-400" />
-                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(orderData.totalAmount)}</span></div>
-                    </div>
-                </div>
-            </footer>
+                </section>
+            </div>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
