@@ -174,8 +174,8 @@ export default function PrintInvoicePage() {
                     <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={240}
-                    height={120}
+                    width={288}
+                    height={144}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -253,10 +253,7 @@ export default function PrintInvoicePage() {
                     </tbody>
                 </table>
                 </section>
-            </main>
-        
-            <footer className="px-8 pb-8 pt-4 mt-auto">
-                <section className="mt-6">
+                 <section className="mt-6">
                     <div className="grid grid-cols-12 gap-4">
                         <div className="col-span-7 pr-4 text-xs">
                             {invoiceData.comments && (
@@ -279,7 +276,7 @@ export default function PrintInvoicePage() {
                         </div>
                     </div>
                 </section>
-            </footer>
+            </main>
         </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
