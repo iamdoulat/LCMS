@@ -218,8 +218,26 @@ export default function QuotesListPage() {
     });
   };
 
-  const handleDownloadPdf = (quoteId: string) => {
-    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
+  const handleDownloadPdf = async (quoteId: string) => {
+    const downloadUrl = `/api/generate-pdf?url=/dashboard/quotes/preview/${quoteId}`;
+    try {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`PDF generation failed: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Quote_${quoteId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      Swal.fire("Download Error", "Could not download the PDF.", "error");
+    }
   };
 
   const clearFilters = () => {
