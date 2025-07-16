@@ -119,155 +119,50 @@ body {
 /* Print-specific styles */
 @media print {
   body {
-    -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
-    print-color-adjust: exact !important;         /* Standard */
-    font-family: 'Times New Roman', Times, serif !important; /* Classic print font */
-    font-size: 10pt !important; /* Standard print font size */
-    color: #000000 !important;
-    background-color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Hide all elements by default */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Make the print layout and its children visible */
+  .print-layout, .print-layout * {
+    visibility: visible;
+  }
+  
+  /* Position the print layout at the top of the page */
+  .print-layout {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .noprint, [data-sidebar="sidebar"], .sidebar-trigger, .app-header-class, .app-sidebar-nav-class, .print-only-utility-buttons {
+    display: none !important;
   }
 
   .print-invoice-container {
-    width: 100% !important; /* Ensure it takes full printable width */
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    min-height: 98vh; /* Use viewport height to force flexbox to fill the page */
-    background-color: #ffffff !important;
   }
 
-  .print-footer {
-    position: fixed;
-    bottom: 0.2in;
-    left: 0.2in;
-    right: 0.2in;
-    width: auto;
-  }
-  
-  h1, h2, h3, h4, h5, h6, p, span, div, th, td, li {
-    color: #000000 !important;
-    background: transparent !important;
-  }
-
-  /* Ensure inputs show their values */
-  input[type="text"],
-  input[type="number"],
-  input[type="email"],
-  input[type="tel"],
-  input[type="url"],
-  textarea {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    border: 1px solid #cccccc !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    /* Attempt to show value if it's part of a form field */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-  }
-  input[disabled], textarea[disabled] {
-    color: #000000 !important;
-    background-color: #f0f0f0 !important; /* Light gray for disabled fields to show value */
-    opacity: 1 !important;
-    -webkit-text-fill-color: #000000 !important;
-  }
-
-  label, .form-label {
-    color: #000000 !important;
-  }
-
-  /* Hide elements not typically wanted in a printout */
-  header, 
-  nav,    
-  aside,  
-  .noprint, 
-  [data-sidebar="sidebar"],
-  .sidebar-trigger,
-  .app-header-class,
-  .app-sidebar-nav-class,
-  .print-only-utility-buttons
-  {
-    display: none !important;
-  }
-
-  .print-invoice-container footer {
-      display: flex !important; /* Make sure the invoice footer is visible */
-  }
-
-  /* Ensure the main content area (where the form is) is printable */
-  main,
-  .main-content-area 
-  {
-    margin: 0 !important;
-    padding: 0 !important; /* Minimal padding for content, container will handle margins */
-    width: 100% !important;
-    border: none !important;
-    box-shadow: none !important;
-    background-color: #ffffff !important;
-  }
-
-  .card, .card-header, .card-content, .card-title, .card-description {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border: none !important; /* Remove borders from cards for cleaner print */
-    box-shadow: none !important;
-  }
-
-  /* Remove gradient text for print */
   .bg-gradient-to-r {
     background-image: none !important;
-    color: #000000 !important;
+    color: #000 !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
     -webkit-text-fill-color: initial !important;
-    text-fill-color: initial !important;
-  }
-  .text-primary { /* For elements that specifically use text-primary for gradient */
-     color: #000000 !important;
-  }
-
-
-  .badge { 
-    color: #000000 !important;
-    background-color: #eeeeee !important;
-    border: 1px solid #cccccc !important;
-  }
-
-  a {
-    color: #000000 !important;
-    text-decoration: none !important; /* Remove underlines for cleaner print, unless specifically styled */
-  }
-
-  table { 
-    page-break-inside: auto; 
-    border-collapse: collapse !important;
-  }
-  tr    { page-break-inside: avoid; page-break-after: auto; }
-  thead { display: table-header-group; } /* Ensure table headers repeat on each page */
-  tbody { display: table-row-group; }
-  tfoot { display: table-footer-group; }
-
-  /* Ensure table cells have borders for print if desired */
-  th, td {
-    border: 1px solid #000 !important;
-  }
-
-  th, td {
-    padding: 4px 8px !important; /* Adjust padding for print */
-  }
-
-  /* Ensure specific background colors print */
-  .bg-gray-100 { /* For table header example */
-    background-color: #f3f4f6 !important; /* Tailwind gray-100 */
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   @page {
     size: A4;
-    margin: 0.05in 0.10in 0.10in 0.10in;
     margin: 0.2in;
   }
 }
