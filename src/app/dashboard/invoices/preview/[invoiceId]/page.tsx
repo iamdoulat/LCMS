@@ -166,7 +166,7 @@ export default function PrintInvoicePage() {
   const showDiscountColumn = invoiceData.showDiscountColumn ?? false;
   const showTaxColumn = invoiceData.showTaxColumn ?? false;
 
-  const qrCodeValue = `INVOICE\nInvoice Number: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount, '')}`;
+  const qrCodeValue = `PROFORMA INVOICE\nProforma Invoice No: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount, '')}`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
@@ -193,9 +193,9 @@ export default function PrintInvoicePage() {
           </div>
 
           <div className="text-right">
-              <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
+              <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2">PROFORMA INVOICE</h2>
               <div className="flex justify-end items-baseline gap-2 text-sm">
-                  <span className="font-semibold">Invoice Number :</span>
+                  <span className="font-semibold">Proforma Invoice No :</span>
                   <span>{invoiceData.id}</span>
               </div>
               <div className="flex justify-end items-baseline gap-2 text-sm">
@@ -332,7 +332,7 @@ export default function PrintInvoicePage() {
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
-          <Printer className="mr-2 h-4 w-4" /> Print Invoice
+          <Printer className="mr-2 h-4 w-4" /> Print Proforma Invoice
         </Button>
         <Button onClick={() => router.back()} variant="outline" className="ml-2">
           Close
