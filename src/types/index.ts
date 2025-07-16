@@ -41,6 +41,7 @@ export const toNumberOrUndefined = (val: unknown): number | undefined => {
   return isNaN(num) ? undefined : num;
 };
 
+// Updated getValidOption function to correctly handle types
 export const getValidOption = <T extends string>(
   value: T | T[] | undefined | null,
   optionsArray: readonly T[],
@@ -56,7 +57,7 @@ export const getValidOption = <T extends string>(
   }
 
   if (optionsArray.includes(value)) {
-    return value as T;
+    return value;
   }
 
   return fallbackDefault;
@@ -1086,4 +1087,3 @@ export interface OrderDocument {
   showTaxColumn?: boolean;
 }
 // --- END Order Types ---
-
