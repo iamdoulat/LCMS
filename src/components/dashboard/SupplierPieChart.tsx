@@ -26,7 +26,7 @@ const CustomTooltip: FC<any> = ({ active, payload }) => {
   return null;
 };
 
-export const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
+const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground">No data to display.</p>;
   }
@@ -61,3 +61,4 @@ export const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
     </ResponsiveContainer>
   );
 };
+export default SupplierPieChart;

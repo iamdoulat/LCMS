@@ -1,4 +1,4 @@
-
+// src/components/dashboard/YearlyLcValueBarChart.tsx
 "use client";
 
 import type { FC } from 'react';
@@ -37,7 +37,7 @@ const yAxisTickFormatter = (value: number) => {
   return value.toString();
 };
 
-export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) => {
+const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) => {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground">No yearly L/C value data to display.</p>;
   }
@@ -78,3 +78,5 @@ export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) 
     </ResponsiveContainer>
   );
 };
+export default YearlyLcValueBarChart;
+
