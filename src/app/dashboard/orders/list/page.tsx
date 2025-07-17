@@ -225,7 +225,7 @@ export default function OrdersListPage() {
 
   const totalPages = Math.ceil(displayedOrders.length / ORDER_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ORDER_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ORDER_ITEMS_PER_PAGE;
   const currentItems = displayedOrders.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
