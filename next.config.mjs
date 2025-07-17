@@ -1,19 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    webpack: (config, { isServer }) => {
-    // This is to polyfill some node specific modules that are not available in the browser
-    // and are dependencies of easyinvoice.
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+       {
+        protocol: 'https',
+        hostname: 'public.easyinvoice.cloud',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+  webpack: (config, { isServer }) => {
+    // This is a workaround for a bug in `easyinvoice` that causes issues with webpack.
     if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false, // You can provide a mock here if needed, or just an empty module
-        path: false,
-        os: false,
-        net: false,
-        tls: false,
-        child_process: false,
-      };
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            path: require.resolve("path-browserify")
+        };
     }
+
     return config;
   },
 };
