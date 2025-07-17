@@ -1,4 +1,3 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -7,36 +6,34 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
         port: '',
-        pathname: '**',
       },
       {
         protocol: 'https',
         hostname: 'placehold.co',
         port: '',
-        pathname: '**',
       },
-      {
+       {
         protocol: 'https',
         hostname: 'public.easyinvoice.cloud',
         port: '',
-        pathname: '**',
-      }
+      },
     ],
   },
   webpack: (config, { isServer }) => {
-    // This is needed to support `easyinvoice` which has some node-specific dependencies.
-    // By providing a fallback, we tell webpack to use a browser-compatible version.
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      // Use the browser-compatible version of the 'path' module.
-      path: 'path-browserify',
-    };
+    // This is the standard way to handle canvas with Next.js for server-side rendering
+    if (isServer) {
+      config.externals.push('canvas');
+    }
     
-    // This rule is to handle a specific '.node' file issue within a dependency of easyinvoice.
-    config.module.rules.push({
-      test: /\.node$/,
-      use: 'raw-loader',
-    });
+    // This was the incorrect polyfill that was causing issues. It's now removed.
+    // config.resolve.fallback = {
+    //   ...config.resolve.fallback,
+    //   "path-browserify": false,
+    //   "fs": false,
+    //   "os": false,
+    //   "path": false,
+    //   "canvas": false,
+    // };
 
     return config;
   },
