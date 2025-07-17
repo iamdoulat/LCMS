@@ -33,7 +33,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
+    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
   } catch (e) {
     return 'N/A';
   }
@@ -234,7 +234,7 @@ export default function QuotesListPage() {
 
   const totalPages = Math.ceil(displayedQuotes.length / QUOTE_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * QUOTE_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - QUOTE_ITEMS_PER_PAGE;
   const currentItems = displayedQuotes.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
