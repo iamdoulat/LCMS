@@ -217,8 +217,26 @@ export default function InvoicesListPage() {
     });
   };
 
-  const handleDownloadPdf = (invoiceId: string) => {
-    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
+  const handleDownloadPdf = async (invoiceId: string) => {
+    const downloadUrl = `/api/generate-pdf?type=invoice&id=${invoiceId}`;
+    try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+            throw new Error(`PDF generation failed: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice_${invoiceId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Error downloading PDF:", error);
+        Swal.fire("Download Error", "Could not download the PDF.", "error");
+    }
   };
 
   const clearFilters = () => {

@@ -208,8 +208,26 @@ export default function OrdersListPage() {
     });
   };
 
-  const handleDownloadPdf = (orderId: string) => {
-    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
+  const handleDownloadPdf = async (orderId: string) => {
+    const downloadUrl = `/api/generate-pdf?type=order&id=${orderId}`;
+    try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+            throw new Error(`PDF generation failed: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Order_${orderId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Error downloading PDF:", error);
+        Swal.fire("Download Error", "Could not download the PDF.", "error");
+    }
   };
 
   const clearFilters = () => {

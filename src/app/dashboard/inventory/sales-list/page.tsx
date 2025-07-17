@@ -212,9 +212,26 @@ export default function SalesListPage() {
     });
   };
 
-  const handleDownloadPdf = (saleId: string, saleIdentifier?: string) => {
-    // Open the print page in a new tab
-    window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
+  const handleDownloadPdf = async (saleId: string) => {
+    const downloadUrl = `/api/generate-pdf?type=sale&id=${saleId}`;
+    try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+            throw new Error(`PDF generation failed: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Sale_${saleId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Error downloading PDF:", error);
+        Swal.fire("Download Error", "Could not download the PDF.", "error");
+    }
   };
 
 
@@ -395,7 +412,7 @@ export default function SalesListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sale.id && handleDownloadPdf(sale.id, sale.id.substring(0,8))}>
+                            <DropdownMenuItem onClick={() => sale.id && handleDownloadPdf(sale.id)}>
                               <FileDown className="mr-2 h-4 w-4" />
                               <span>Download Invoice</span>
                             </DropdownMenuItem>

@@ -219,7 +219,7 @@ export default function QuotesListPage() {
   };
 
   const handleDownloadPdf = async (quoteId: string) => {
-    const downloadUrl = `/api/generate-pdf?url=/dashboard/quotes/preview/${quoteId}`;
+    const downloadUrl = `/api/generate-pdf?type=quote&id=${quoteId}`;
     try {
       const response = await fetch(downloadUrl);
       if (!response.ok) {
