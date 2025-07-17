@@ -33,6 +33,7 @@ const getCompanyProfile = async (): Promise<Partial<CompanyProfile>> => {
 };
 
 const getCustomerOrSupplierInfo = async (docId: string, collectionName: 'customers' | 'suppliers'): Promise<any> => {
+    if (!docId) return {};
     try {
         const docRef = doc(firestore, collectionName, docId);
         const docSnap = await getDoc(docRef);
@@ -76,9 +77,17 @@ export async function GET(request: NextRequest) {
         customerInfo = await getCustomerOrSupplierInfo(documentData.beneficiaryId, 'suppliers');
     }
     
+    const information: { number: string; date: string; 'due-date'?: string } = {
+        number: documentData.id,
+        date: formatDisplayDate(documentData.invoiceDate || documentData.quoteDate || documentData.orderDate || documentData.saleDate),
+    };
+
+    if (documentData.dueDate) {
+        information['due-date'] = formatDisplayDate(documentData.dueDate);
+    }
+
     const invoiceData = {
-      // "documentTitle": "INVOICE", // Default is INVOICE, will be customized below
-      "currency": "USD",
+      "currency": documentData.currency || "USD",
       "marginTop": 25,
       "marginRight": 25,
       "marginLeft": 25,
@@ -103,22 +112,18 @@ export async function GET(request: NextRequest) {
         "country": "",
         "custom1": `BIN: ${customerInfo.binNo || 'N/A'}`
       },
-      "information": {
-        "number": documentData.id,
-        "date": formatDisplayDate(documentData.invoiceDate || documentData.quoteDate || documentData.orderDate || documentData.saleDate),
-        "due-date": formatDisplayDate(documentData.dueDate),
-      },
-      "products": documentData.lineItems.map((item: any) => ({
+      "information": information,
+      "products": documentData.lineItems?.map((item: any) => ({
         "quantity": item.qty?.toString() || '0',
         "description": item.itemName || 'N/A',
         "tax-rate": item.taxPercentage || 0,
         "price": item.unitPrice || 0
-      })),
+      })) || [],
       "bottom-notice": documentData.comments || "Thank you for your business.",
       "settings": {
         "locale": "en-US",
-        "tax-notation": "vat",
-        "currency": "USD"
+        "tax-notation": documentData.taxType || "vat",
+        "currency": documentData.currency || "USD"
       },
        "translate": {
            "products": "Item Description"
@@ -126,12 +131,12 @@ export async function GET(request: NextRequest) {
     };
     
     // Customize document title based on type
-    if (type === 'quote') invoiceData.documentTitle = "QUOTATION";
-    else if (type === 'order') invoiceData.documentTitle = "ORDER";
-    else if (type === 'sale') invoiceData.documentTitle = "SALE INVOICE";
-    else invoiceData.documentTitle = "INVOICE";
+    if (type === 'quote') (invoiceData as any).documentTitle = "QUOTATION";
+    else if (type === 'order') (invoiceData as any).documentTitle = "ORDER";
+    else if (type === 'sale') (invoiceData as any).documentTitle = "SALE INVOICE";
+    else (invoiceData as any).documentTitle = "INVOICE";
     
-    const result = await easyinvoice.createInvoice(invoiceData);
+    const result = await easyinvoice.createInvoice(invoiceData as any);
     const pdfBuffer = Buffer.from(result.pdf, 'base64');
     
     const headers = new Headers();
