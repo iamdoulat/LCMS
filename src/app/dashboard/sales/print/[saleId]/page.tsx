@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { SaleDocument, CustomerDocument, CompanyProfile } from '@/types';
-import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -40,7 +39,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number, currency: string = 'USD') => {
+const formatCurrency = (amount?: number) => {
   if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -55,7 +54,6 @@ export default function PrintSaleInvoicePage() {
   const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qrCodeValue, setQrCodeValue] = React.useState('');
 
   const fetchFinancialSettings = useCallback(async () => {
     try {
@@ -127,17 +125,13 @@ export default function PrintSaleInvoicePage() {
   }, [fetchFinancialSettings, fetchSaleAndCustomerData]);
 
   useEffect(() => {
-    if (!isLoading && saleData) {
-      const qrData = [
-        "INVOICE",
-        `Invoice No: ${saleData.id},`,
-        `Date: ${formatDisplayDate(saleData.saleDate)},`,
-        `Sales Person: ${saleData.salesperson || 'N/A'},`,
-        `Grand Total (USD): ${formatCurrency(saleData.totalAmount)}`
-      ].join('\n');
-      setQrCodeValue(qrData);
+    if (!isLoading && saleData && financialSettings) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [isLoading, saleData]);
+  }, [isLoading, saleData, financialSettings]);
 
   if (isLoading) {
     return (
@@ -178,133 +172,180 @@ export default function PrintSaleInvoicePage() {
   const showItemCodeColumn = saleData.showItemCodeColumn ?? false; 
   const showDiscountColumn = saleData.showDiscountColumn ?? false;
   const showTaxColumn = saleData.showTaxColumn ?? false;
+  
+  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-layout">
-        <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-            <header className="grid grid-cols-12 items-start p-8">
-                <div className="col-span-5 pr-4">
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+      
+      <div className="print-header pt-2 pb-2">
+        <div className="px-0">
+            <div className="flex justify-between items-start mb-2">
+            <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
-                    <Image
+                <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={298}
-                    height={150}
+                    width={396}
+                    height={58}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
-                    />
+                />
                 )}
                 {!hideCompanyName && (
-                    <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                <div className="text-xs text-gray-600">
-                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
-                    {displayCompanyPhone && <span className="ml-2">Phone: {displayCompanyPhone}</span>}
-                </div>
-                </div>
-                <div className="col-span-2 flex justify-center pt-2">
-                    {qrCodeValue && (
-                        <div style={{ height: "auto", margin: "0 auto", maxWidth: 80, width: "100%" }}>
-                            <QRCode
-                                size={256}
-                                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                value={qrCodeValue}
-                                viewBox={`0 0 256 256`}
-                                data-ai-hint="qr code"
-                            />
-                        </div>
-                    )}
-                </div>
-                <div className="col-span-5 text-right">
-                <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wider">INVOICE</h2>
-                <div className="mt-2 text-sm">
-                    <p><strong className="text-gray-600">Invoice No:</strong> {saleData.id}</p>
-                    <p><strong className="text-gray-600">Date:</strong> {formatDisplayDate(saleData.saleDate)}</p>
-                    {saleData.salesperson && <p><strong className="text-gray-600">Sales Person:</strong> {saleData.salesperson}</p>}
-                </div>
-                </div>
-            </header>
-            
-            <main className="flex-grow px-8 pt-0">
-                <div className="grid grid-cols-2 gap-4 my-2">
-                    <div className="border p-3 rounded-md text-sm">
-                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-                        <p className="font-medium text-gray-900">{saleData.customerName || 'N/A'}</p>
-                        <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
-                        {customerData?.binNo && <p className="text-gray-600">BIN: {customerData.binNo}</p>}
-                    </div>
-                    <div className="border p-3 rounded-md text-sm">
-                        <h3 className="font-semibold text-gray-700 mb-1 uppercase">Deliver To:</h3>
-                        <p className="text-gray-600 whitespace-pre-line">{saleData.shippingAddress || saleData.billingAddress || customerData?.address || 'N/A'}</p>
-                    </div>
-                </div>
+                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+            </div>
 
-                <section className="mt-4">
-                    <table className="w-full text-sm border-collapse table-auto">
-                        <thead className="bg-gray-100 text-gray-700">
-                        <tr>
-                            <th className="p-2 border font-semibold text-left w-[40px]">#</th>
-                            <th className="p-2 border font-semibold text-left">Item Description</th>
-                            {showItemCodeColumn && <th className="p-2 border font-semibold text-left w-[100px]">Item Code</th>}
-                            <th className="p-2 border font-semibold text-center w-[60px]">Qty</th>
-                            <th className="p-2 border font-semibold text-right w-[100px]">Unit Price</th>
-                            {showDiscountColumn && <th className="p-2 border font-semibold text-right w-[80px]">Discount</th>}
-                            {showTaxColumn && <th className="p-2 border font-semibold text-right w-[80px]">Tax</th>}
-                            <th className="p-2 border font-semibold text-right w-[110px]">Total</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {saleData.lineItems.map((item, index) => (
-                            <tr key={item.itemId || index} className="border-b">
-                            <td className="p-2 border text-center align-top">{index + 1}</td>
-                            <td className="p-2 border align-top break-words">
-                                <p className="font-medium text-gray-900">{item.itemName}</p>
-                                {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{item.description}</p>}
-                            </td>
-                            {showItemCodeColumn && <td className="p-2 border align-top break-words">{item.itemCode || 'N/A'}</td>}
-                            <td className="p-2 border text-center align-top">{item.qty}</td>
-                            <td className="p-2 border text-right align-top">{formatCurrency(item.unitPrice)}</td>
-                            {showDiscountColumn && <td className="p-2 border text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
-                            {showTaxColumn && <td className="p-2 border text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
-                            <td className="p-2 border text-right font-medium align-top">{formatCurrency(item.total)}</td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </section>
-                <section className="mt-6 flex justify-between items-start">
-                    <div className="w-2/3 pr-4 text-xs">
-                        {saleData.comments && (
-                        <div className="space-y-1">
-                            <h4 className="font-bold text-gray-800 uppercase tracking-wide">Terms and Conditions:</h4>
-                            <div className="text-gray-600 whitespace-pre-line">{saleData.comments}</div>
-                        </div>
-                        )}
+            <div className="text-right">
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Invoice No :</span>
+                    <span>{saleData.id}</span>
+                </div>
+                <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <span className="font-semibold">Date :</span>
+                    <span>{formatDisplayDate(saleData.saleDate)}</span>
+                </div>
+                {saleData.salesperson && (
+                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                        <span className="font-semibold">Sales Person :</span>
+                        <span>{saleData.salesperson}</span>
                     </div>
-                    <div className="w-1/3 text-sm space-y-1">
-                        <div className="flex justify-between"><span className="text-gray-600 font-medium">Subtotal:</span><span className="text-gray-800">{formatCurrency(saleData.subtotal)}</span></div>
-                        {showDiscountColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Discount:</span><span className="text-gray-800">(-) {formatCurrency(saleData.totalDiscountAmount)}</span></div>
-                        )}
-                        {showTaxColumn && (
-                            <div className="flex justify-between"><span className="text-gray-600 font-medium">Total Tax ({saleData.taxType}):</span><span className="text-gray-800">(+) {formatCurrency(saleData.totalTaxAmount)}</span></div>
-                        )}
-                        <Separator className="my-2 border-gray-400" />
-                        <div className="flex justify-between text-base font-bold"><span className="text-gray-900">Grand Total (USD):</span><span className="text-gray-900">{formatCurrency(saleData.totalAmount)}</span></div>
-                    </div>
-                </section>
-            </main>
+                )}
+            </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-2">
+            <div className="border p-2 rounded-md text-xs">
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
+                <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
+                {customerData?.binNo && (
+                    <p className="text-gray-600">
+                    <span>BIN: {customerData.binNo}</span>
+                    </p>
+                )}
+            </div>
+            <div className="border p-2 rounded-md text-xs">
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+                <p className="text-gray-600 whitespace-pre-line">{saleData.shippingAddress || saleData.billingAddress || customerData?.address || 'N/A'}</p>
+            </div>
+            </div>
         </div>
+      </div>
+
+      <div className="flex-grow flex flex-col">
+        <section className="flex-grow">
+          <table className="w-full text-sm border-collapse table-fixed">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
+                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
+                {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
+                {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
+                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {saleData.lineItems.map((item, index) => (
+                <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
+                  <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
+                  <td className="p-2 border border-gray-300 align-top break-words">
+                    <p className="font-medium text-gray-900">{item.itemName}</p>
+                    {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
+                  </td>
+                  {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
+                  <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
+                  <td className="p-2 border border-gray-300 text-right align-top">{formatCurrency(item.unitPrice)}</td>
+                  {showDiscountColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.discountPercentage?.toFixed(2) || '0.00'}%</td>}
+                  {showTaxColumn && <td className="p-2 border border-gray-300 text-right align-top">{item.taxPercentage?.toFixed(2) || '0.00'}%</td>}
+                  <td className="p-2 border border-gray-300 text-right font-medium align-top">{formatCurrency(item.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="mt-auto">
+          <div className="flex justify-between items-start pt-2">
+              <div className="w-1/2 pr-4 text-xs">
+                  {saleData.comments && (
+                  <div className="space-y-1">
+                      <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                      <div className="text-gray-600 whitespace-pre-line font-bold">{saleData.comments}</div>
+                  </div>
+                  )}
+              </div>
+              <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                  <div className="grid grid-cols-2 gap-x-4">
+                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
+                      <span className="text-gray-800 text-right">{formatCurrency(saleData.subtotal)}</span>
+                  </div>
+                  {showDiscountColumn && (
+                      <div className="grid grid-cols-2 gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                          <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
+                      </div>
+                  )}
+                  {showTaxColumn && (
+                      <div className="grid grid-cols-2 gap-x-4">
+                          <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
+                          <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
+                      </div>
+                  )}
+                  <Separator className="my-2 border-gray-300" />
+                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                      <span className="text-blue-600 text-right">{formatCurrency(saleData.totalAmount)}</span>
+                  </div>
+              </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="print-footer pb-4">
+        <section className="flex justify-between items-end mb-2 pt-16">
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+          </div>
+          
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="p-1 border">
+                <QRCode
+                    value={qrCodeValue}
+                    size={35}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+            <p className="text-[8px] text-gray-600">Thank you for your business!</p>
+          </div>
+          
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400"></div>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+          </div>
+        </section>
+      </div>
 
       <div className="print-only-utility-buttons mt-8 text-center noprint">
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Invoice
         </Button>
+        <Button onClick={() => router.back()} variant="outline" className="ml-2">
+          Close
+        </Button>
       </div>
     </div>
   );
 }
-
-    
