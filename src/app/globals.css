@@ -115,7 +115,7 @@ body {
     @apply bg-background text-foreground;
   }
   .print-preview-wrapper {
-    @apply bg-gray-200 dark:bg-gray-800 p-8 min-h-screen;
+    @apply bg-gray-200 dark:bg-gray-800 p-0 m-0 min-h-screen;
   }
 }
 
@@ -167,7 +167,7 @@ body {
 
   @page {
     size: A4;
-    margin: 0.5in;
+    margin: 0.29in;
   }
 
   /* Ensure text colors are black for readability */

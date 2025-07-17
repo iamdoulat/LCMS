@@ -119,10 +119,8 @@ export default function PrintQuotePage() {
 
    useEffect(() => {
     if (!isLoading && quoteData && financialSettings) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
+      // The automatic print call has been removed to allow for a stable preview.
+      // The user can use the browser's print function (Ctrl+P).
     }
   }, [isLoading, quoteData, financialSettings]);
 
@@ -169,9 +167,9 @@ export default function PrintQuotePage() {
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0.29in' }}>
       
-      <div className="print-header pt-2 pb-2">
+      <div className="print-header">
         <div className="px-0">
             <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
@@ -239,7 +237,7 @@ export default function PrintQuotePage() {
       </div>
 
       <div className="flex-grow flex flex-col">
-        <section className="flex-grow">
+        <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -273,8 +271,8 @@ export default function PrintQuotePage() {
           </table>
         </section>
 
-        <section className="mt-auto">
-          <div className="flex justify-between items-start pt-2">
+        <section className="mt-auto pt-2">
+          <div className="flex justify-between items-start">
               <div className="w-1/2 pr-4 text-xs">
                   {quoteData.comments && (
                   <div className="space-y-1">
@@ -310,7 +308,7 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="print-footer pb-4">
+      <div className="print-footer pb-0">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
@@ -327,7 +325,7 @@ export default function PrintQuotePage() {
                     level={"L"}
                 />
             </div>
-            <p className="text-[8px] text-gray-600">Thank you for your business!</p>
+            
           </div>
           
           <div className="w-1/3 text-center">

@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { SaleDocument, CustomerDocument, CompanyProfile } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -39,7 +40,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number) => {
+const formatCurrency = (amount?: number, currency: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -125,13 +126,11 @@ export default function PrintSaleInvoicePage() {
   }, [fetchFinancialSettings, fetchSaleAndCustomerData]);
 
   useEffect(() => {
-    if (!isLoading && saleData && financialSettings) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!isLoading && saleData) {
+      // The automatic print call has been removed to allow for a stable preview.
+      // The user can use the browser's print function (Ctrl+P).
     }
-  }, [isLoading, saleData, financialSettings]);
+  }, [isLoading, saleData]);
 
   if (isLoading) {
     return (
@@ -176,9 +175,9 @@ export default function PrintSaleInvoicePage() {
   const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0.29in' }}>
       
-      <div className="print-header pt-2 pb-2">
+      <div className="print-header">
         <div className="px-0">
             <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
@@ -240,7 +239,7 @@ export default function PrintSaleInvoicePage() {
       </div>
 
       <div className="flex-grow flex flex-col">
-        <section className="flex-grow">
+        <section>
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -274,8 +273,8 @@ export default function PrintSaleInvoicePage() {
           </table>
         </section>
 
-        <section className="mt-auto">
-          <div className="flex justify-between items-start pt-2">
+        <section className="mt-auto pt-2">
+          <div className="flex justify-between items-start">
               <div className="w-1/2 pr-4 text-xs">
                   {saleData.comments && (
                   <div className="space-y-1">
@@ -311,7 +310,7 @@ export default function PrintSaleInvoicePage() {
         </section>
       </div>
 
-      <div className="print-footer pb-4">
+      <div className="print-footer pb-0">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
@@ -328,7 +327,7 @@ export default function PrintSaleInvoicePage() {
                     level={"L"}
                 />
             </div>
-            <p className="text-[8px] text-gray-600">Thank you for your business!</p>
+            
           </div>
           
           <div className="w-1/3 text-center">
