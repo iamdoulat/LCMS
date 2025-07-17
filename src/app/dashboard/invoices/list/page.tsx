@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, MoreHorizontal, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -217,26 +217,8 @@ export default function InvoicesListPage() {
     });
   };
 
-  const handleDownloadPdf = async (invoiceId: string) => {
-    const downloadUrl = `/api/generate-pdf?type=invoice&id=${invoiceId}`;
-    try {
-        const response = await fetch(downloadUrl);
-        if (!response.ok) {
-            throw new Error(`PDF generation failed: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Invoice_${invoiceId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Error downloading PDF:", error);
-        Swal.fire("Download Error", "Could not download the PDF.", "error");
-    }
+  const handlePreviewPdf = (invoiceId: string) => {
+    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
   };
 
   const clearFilters = () => {
@@ -434,9 +416,9 @@ export default function InvoicesListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => invoice.id && handleDownloadPdf(invoice.id)}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              <span>Download Invoice</span>
+                            <DropdownMenuItem onClick={() => invoice.id && handlePreviewPdf(invoice.id)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              <span>Preview</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => invoice.id && handleDeleteInvoice(invoice.id, invoice.id)}
@@ -474,8 +456,3 @@ export default function InvoicesListPage() {
     </div>
   );
 }
-    
-
-    
-
-

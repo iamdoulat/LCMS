@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, MoreHorizontal, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -213,26 +212,8 @@ export default function SalesListPage() {
     });
   };
 
-  const handleDownloadPdf = async (saleId: string) => {
-    const downloadUrl = `/api/generate-pdf?type=sale&id=${saleId}`;
-    try {
-        const response = await fetch(downloadUrl);
-        if (!response.ok) {
-            throw new Error(`PDF generation failed: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Sale_${saleId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Error downloading PDF:", error);
-        Swal.fire("Download Error", "Could not download the PDF.", "error");
-    }
+  const handlePreviewPdf = (saleId: string) => {
+    window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
   };
 
 
@@ -249,7 +230,7 @@ export default function SalesListPage() {
 
   const totalPages = Math.ceil(displayedSales.length / SALE_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * SALE_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - SALE_ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedSales.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -413,9 +394,9 @@ export default function SalesListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sale.id && handleDownloadPdf(sale.id)}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              <span>Download Invoice</span>
+                            <DropdownMenuItem onClick={() => sale.id && handlePreviewPdf(sale.id)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              <span>Preview Invoice</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => sale.id && handleDeleteSale(sale.id, sale.id.substring(0,8))}
@@ -454,4 +435,3 @@ export default function SalesListPage() {
     </div>
   );
 }
-    

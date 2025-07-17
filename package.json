@@ -45,7 +45,6 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
-    "easyinvoice": "^3.0.47",
     "eslint-config-next": "14.2.3",
     "firebase": "^11.7.0",
     "firebase-admin": "^12.3.0",

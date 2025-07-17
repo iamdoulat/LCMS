@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Building, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, ShoppingCart, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Building, CalendarDays, DollarSign, ChevronLeft, ChevronRight, MoreHorizontal, Printer, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -208,26 +208,8 @@ export default function OrdersListPage() {
     });
   };
 
-  const handleDownloadPdf = async (orderId: string) => {
-    const downloadUrl = `/api/generate-pdf?type=order&id=${orderId}`;
-    try {
-        const response = await fetch(downloadUrl);
-        if (!response.ok) {
-            throw new Error(`PDF generation failed: ${response.statusText}`);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Order_${orderId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Error downloading PDF:", error);
-        Swal.fire("Download Error", "Could not download the PDF.", "error");
-    }
+  const handlePreviewPdf = (orderId: string) => {
+    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
   };
 
   const clearFilters = () => {
@@ -243,7 +225,7 @@ export default function OrdersListPage() {
 
   const totalPages = Math.ceil(displayedOrders.length / ORDER_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ORDER_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ORDER_ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedOrders.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -404,9 +386,9 @@ export default function OrdersListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => order.id && handleDownloadPdf(order.id)}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              <span>Download PDF</span>
+                            <DropdownMenuItem onClick={() => order.id && handlePreviewPdf(order.id)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              <span>Preview</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => order.id && handleDeleteOrder(order.id, order.id)}

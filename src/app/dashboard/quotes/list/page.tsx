@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal, FileDown } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -218,26 +218,8 @@ export default function QuotesListPage() {
     });
   };
 
-  const handleDownloadPdf = async (quoteId: string) => {
-    const downloadUrl = `/api/generate-pdf?type=quote&id=${quoteId}`;
-    try {
-      const response = await fetch(downloadUrl);
-      if (!response.ok) {
-        throw new Error(`PDF generation failed: ${response.statusText}`);
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Quote_${quoteId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-      Swal.fire("Download Error", "Could not download the PDF.", "error");
-    }
+  const handlePreviewPdf = (quoteId: string) => {
+    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
   };
 
   const clearFilters = () => {
@@ -252,7 +234,7 @@ export default function QuotesListPage() {
 
   const totalPages = Math.ceil(displayedQuotes.length / QUOTE_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * QUOTE_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - QUOTE_ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedQuotes.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -407,9 +389,9 @@ export default function QuotesListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => quote.id && handleDownloadPdf(quote.id)}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              <span>Download PDF</span>
+                             <DropdownMenuItem onClick={() => quote.id && handlePreviewPdf(quote.id)}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              <span>Preview</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => quote.id && handleDeleteQuote(quote.id, quote.id)}
