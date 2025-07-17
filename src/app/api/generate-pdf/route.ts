@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
 
     let documentData: any;
     let customerInfo: any = {};
-    const docRef = doc(firestore, `${type}s`, id); // e.g., 'invoices/INV-123'
+    const collectionName = type === 'sale' ? 'sales' : `${type}s`;
+    const docRef = doc(firestore, collectionName, id);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     // Fetch related customer/supplier info
     if (documentData.customerId) {
         customerInfo = await getCustomerOrSupplierInfo(documentData.customerId, 'customers');
-    } else if (documentData.beneficiaryId) {
+    } else if (documentData.beneficiaryId) { // For Orders
         customerInfo = await getCustomerOrSupplierInfo(documentData.beneficiaryId, 'suppliers');
     }
     
@@ -126,8 +127,9 @@ export async function GET(request: NextRequest) {
     
     // Customize document title based on type
     if (type === 'quote') invoiceData.documentTitle = "QUOTATION";
-    if (type === 'order') invoiceData.documentTitle = "ORDER";
-    if (type === 'sale') invoiceData.documentTitle = "SALE INVOICE";
+    else if (type === 'order') invoiceData.documentTitle = "ORDER";
+    else if (type === 'sale') invoiceData.documentTitle = "SALE INVOICE";
+    else invoiceData.documentTitle = "INVOICE";
     
     const result = await easyinvoice.createInvoice(invoiceData);
     const pdfBuffer = Buffer.from(result.pdf, 'base64');
