@@ -114,6 +114,9 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  .print-preview-wrapper {
+    @apply bg-gray-200 dark:bg-gray-800 p-8 min-h-screen;
+  }
 }
 
 /* Print-specific styles */
@@ -136,6 +139,11 @@ body {
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
+  }
+  
+  .print-preview-wrapper {
+    padding: 0 !important;
+    background-color: #ffffff !important;
   }
 
   .print-header {
