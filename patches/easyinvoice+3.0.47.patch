@@ -1,0 +1,29 @@
+diff --git a/node_modules/easyinvoice/easyinvoice.js b/node_modules/easyinvoice/easyinvoice.js
+index 72e450b..c610e20 100644
+--- a/node_modules/easyinvoice/easyinvoice.js
++++ b/node_modules/easyinvoice/easyinvoice.js
+@@ -107,7 +107,7 @@
+       },
+       Roboto: {
+         normal: Buffer.from(require('easyinvoice/base64/Roboto-Regular-normal.js'), 'base64'),
+-        bold: Buffer.from(require('easyinvoice/base64/Roboto-Medium-normal.js'), 'base64'),
+-        italics: Buffer.from(require('easyinvoice/base64/Roboto-Italic-normal.js'), 'base64'),
+-        bolditalics: Buffer.from(require('easyinvoice/base64/Roboto-MediumItalic-normal.js'), 'base64')
++        bold: Buffer.from(require('easyinvoice/base64/Roboto-Medium-normal.js'), 'base64')
++        // italics: Buffer.from(require('easyinvoice/base64/Roboto-Italic-normal.js'), 'base64'),
++        // bolditalics: Buffer.from(require('easyinvoice/base64/Roboto-MediumItalic-normal.js'), 'base64')
+       }
+     }
+diff --git a/node_modules/easyinvoice/webpack.config.js b/node_modules/easyinvoice/webpack.config.js
+index d089606..b776269 100644
+--- a/node_modules/easyinvoice/webpack.config.js
++++ b/node_modules/easyinvoice/webpack.config.js
+@@ -14,7 +14,7 @@
+   },
+   resolve: {
+     fallback: {
+-      path: require.resolve('path-browserify'),
++      // path: require.resolve('path-browserify'),
+       stream: require.resolve('stream-browserify'),
+       zlib: require.resolve('browserify-zlib'),
+       util: require.resolve('util/'),
