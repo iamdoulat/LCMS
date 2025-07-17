@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, FileDown, MoreHorizontal, Printer } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, DollarSign, ChevronLeft, ChevronRight, MoreHorizontal, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -41,7 +41,7 @@ const formatDisplayDate = (dateString?: string) => {
 
 const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const getTotalQuantity = (lineItems: SaleDocument['lineItems']): number => {
@@ -396,7 +396,7 @@ export default function SalesListPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => sale.id && handlePreviewPdf(sale.id)}>
                               <Printer className="mr-2 h-4 w-4" />
-                              <span>Preview Invoice</span>
+                              <span>Preview</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => sale.id && handleDeleteSale(sale.id, sale.id.substring(0,8))}
@@ -435,5 +435,4 @@ export default function SalesListPage() {
     </div>
   );
 }
-
     
