@@ -5,13 +5,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { SaleDocument, CustomerDocument } from '@/types';
+import type { SaleDocument, CustomerDocument, CompanyProfile } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
-import QRCode from "react-qr-code";
+import QRCode from 'react-qr-code';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -39,7 +40,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number) => {
+const formatCurrency = (amount?: number, currency: string = 'USD') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -49,11 +50,11 @@ export default function PrintSaleInvoicePage() {
   const router = useRouter();
   const saleId = params.saleId as string;
 
-  const [saleData, setSaleData] = React.useState<SaleDocument | null>(null);
-  const [customerData, setCustomerData] = React.useState<CustomerDocument | null>(null);
+  const [saleData, setSaleData] = useState<SaleDocument | null>(null);
+  const [customerData, setCustomerData] = useState<CustomerDocument | null>(null);
   const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchFinancialSettings = useCallback(async () => {
     try {
@@ -83,8 +84,11 @@ export default function PrintSaleInvoicePage() {
   const fetchSaleAndCustomerData = useCallback(async () => {
     if (!saleId) {
       setError("No Sale ID provided.");
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    setError(null);
     try {
       const saleDocRef = doc(firestore, "sales", saleId);
       const saleDocSnap = await getDoc(saleDocRef);
@@ -98,6 +102,8 @@ export default function PrintSaleInvoicePage() {
           const customerDocSnap = await getDoc(customerDocRef);
           if (customerDocSnap.exists()) {
             setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
+          } else {
+            console.warn(`Customer with ID ${sale.customerId} not found.`);
           }
         }
       } else {
@@ -105,6 +111,8 @@ export default function PrintSaleInvoicePage() {
       }
     } catch (err: any) {
       setError(`Failed to fetch sale data: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
   }, [saleId]);
 
@@ -119,8 +127,8 @@ export default function PrintSaleInvoicePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
         <p className="mt-4 text-gray-600">Loading invoice...</p>
       </div>
     );
@@ -128,7 +136,7 @@ export default function PrintSaleInvoicePage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <p className="text-red-600 font-semibold">Error loading invoice</p>
         <p className="text-gray-700 text-sm mb-4">{error}</p>
@@ -139,7 +147,7 @@ export default function PrintSaleInvoicePage() {
 
   if (!saleData) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
         <p className="text-gray-700">Sale data could not be loaded.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
@@ -152,18 +160,17 @@ export default function PrintSaleInvoicePage() {
   const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
   const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
   const hideCompanyName = financialSettings?.hideCompanyName ?? false;
-  
-  const showItemCodeColumn = saleData.showItemCodeColumn ?? false;
+
+  const showItemCodeColumn = saleData.showItemCodeColumn ?? false; 
   const showDiscountColumn = saleData.showDiscountColumn ?? false;
   const showTaxColumn = saleData.showTaxColumn ?? false;
-
-  const qrCodeValue = `INVOICE\nInvoice Number: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
+  
+  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-      
-      <div className="print-header pt-2 pb-2">
-        <div className="px-0">
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
+      <div className="p-4 flex flex-col flex-grow">
+        <div className="print-header">
             <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
@@ -188,7 +195,7 @@ export default function PrintSaleInvoicePage() {
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">INVOICE</h2>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Invoice Number :</span>
+                    <span className="font-semibold">Invoice No :</span>
                     <span>{saleData.id}</span>
                 </div>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
@@ -221,10 +228,8 @@ export default function PrintSaleInvoicePage() {
             </div>
             </div>
         </div>
-      </div>
 
-      <div className="flex-grow flex flex-col">
-        <section className="flex-grow">
+        <div className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -256,46 +261,44 @@ export default function PrintSaleInvoicePage() {
               ))}
             </tbody>
           </table>
-        </section>
+        </div>
 
-        <section className="mt-auto">
-          <div className="flex justify-between items-start pt-2">
-              <div className="w-1/2 pr-4 text-xs">
-                  {saleData.comments && (
-                  <div className="space-y-1">
-                      <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                      <div className="text-gray-600 whitespace-pre-line font-bold">{saleData.comments}</div>
-                  </div>
-                  )}
-              </div>
-              <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                      <span className="text-gray-800 text-right">{formatCurrency(saleData.subtotal)}</span>
-                  </div>
-                  {showDiscountColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                          <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
-                      </div>
-                  )}
-                  {showTaxColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
-                          <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
-                      </div>
-                  )}
-                  <Separator className="my-2 border-gray-300" />
-                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                      <span className="text-blue-600 text-right">{formatCurrency(saleData.totalAmount)}</span>
-                  </div>
-              </div>
-          </div>
-        </section>
+        <div className="flex justify-between items-start pt-2">
+            <div className="w-1/2 pr-4 text-xs">
+                {saleData.comments && (
+                <div className="space-y-1">
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <div className="text-gray-600 whitespace-pre-line font-bold">{saleData.comments}</div>
+                </div>
+                )}
+            </div>
+            <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                <div className="grid grid-cols-2 gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Subtotal:</span>
+                    <span className="text-gray-800 text-right">{formatCurrency(saleData.subtotal)}</span>
+                </div>
+                {showDiscountColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(saleData.totalDiscountAmount)}</span>
+                    </div>
+                )}
+                {showTaxColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Tax ({saleData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(saleData.totalTaxAmount)}</span>
+                    </div>
+                )}
+                <Separator className="my-2 border-gray-300" />
+                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                    <span className="text-blue-600 text-right">{formatCurrency(saleData.totalAmount)}</span>
+                </div>
+            </div>
+        </div>
       </div>
-
-      <div className="print-footer pb-4">
+      
+      <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>

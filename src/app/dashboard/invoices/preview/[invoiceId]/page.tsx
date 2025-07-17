@@ -117,13 +117,6 @@ export default function PrintInvoicePage() {
     loadAllData();
   }, [fetchFinancialSettings, fetchInvoiceData]);
 
-  useEffect(() => {
-    if (!isLoading && invoiceData && financialSettings) {
-      // The automatic print call has been removed to allow for a stable preview.
-      // The user can use the browser's print function (Ctrl+P).
-    }
-  }, [isLoading, invoiceData, financialSettings]);
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
@@ -167,10 +160,9 @@ export default function PrintInvoicePage() {
   const qrCodeValue = `INVOICE\nInvoice Number: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0.29in' }}>
-      
-      <div className="print-header">
-        <div className="px-0">
+    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
+      <div className="p-4 flex flex-col flex-grow">
+        <div className="print-header">
             <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
@@ -234,10 +226,8 @@ export default function PrintInvoicePage() {
             <p className="text-[12px] font-normal p-2 border rounded-md text-center">{invoiceData.subject}</p>
           </div>
         )}
-      </div>
 
-      <div className="flex-grow flex flex-col">
-        <section>
+        <div className="flex-grow">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -269,46 +259,44 @@ export default function PrintInvoicePage() {
               ))}
             </tbody>
           </table>
-        </section>
+        </div>
 
-        <section className="mt-auto pt-2">
-          <div className="flex justify-between items-start">
-              <div className="w-1/2 pr-4 text-xs">
-                  {invoiceData.comments && (
-                  <div className="space-y-1">
-                      <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
-                      <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
-                  </div>
-                  )}
-              </div>
-              <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                  <div className="grid grid-cols-2 gap-x-4">
-                      <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                      <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal)}</span>
-                  </div>
-                  {showDiscountColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                          <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount)}</span>
-                      </div>
-                  )}
-                  {showTaxColumn && (
-                      <div className="grid grid-cols-2 gap-x-4">
-                          <span className="text-gray-600 font-medium text-right">Total Tax ({invoiceData.taxType}):</span>
-                          <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount)}</span>
-                      </div>
-                  )}
-                  <Separator className="my-2 border-gray-300" />
-                  <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                      <span className="text-gray-900 text-right">Grand Total (USD):</span>
-                      <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount)}</span>
-                  </div>
-              </div>
-          </div>
-        </section>
+        <div className="flex justify-between items-start pt-2">
+            <div className="w-1/2 pr-4 text-xs">
+                {invoiceData.comments && (
+                <div className="space-y-1">
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
+                </div>
+                )}
+            </div>
+            <div className="w-auto text-sm space-y-1 min-w-[250px]">
+                <div className="grid grid-cols-2 gap-x-4">
+                    <span className="text-gray-600 font-medium text-right">Subtotal:</span>
+                    <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal)}</span>
+                </div>
+                {showDiscountColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
+                        <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount)}</span>
+                    </div>
+                )}
+                {showTaxColumn && (
+                    <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Total Tax ({invoiceData.taxType}):</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount)}</span>
+                    </div>
+                )}
+                <Separator className="my-2 border-gray-300" />
+                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                    <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount)}</span>
+                </div>
+            </div>
+        </div>
       </div>
-
-      <div className="print-footer pb-0">
+      
+      <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
