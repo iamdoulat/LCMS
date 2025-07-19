@@ -29,7 +29,7 @@ const ITEMS_PER_PAGE = 10;
 export default function ApplicantsListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allApplicants, setAllApplicants] = useState<CustomerDocument[]>([]);
   const [displayedApplicants, setDisplayedApplicants] = useState<CustomerDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
