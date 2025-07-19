@@ -33,7 +33,6 @@ export default function EditUserPage() {
   const router = useRouter();
   const { user: currentUser, userRole } = useAuth();
   const userId = params.userId as string;
-  const isReadOnly = userRole === 'Viewer';
 
   const [userData, setUserData] = useState<UserDocumentForAdmin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +43,8 @@ export default function EditUserPage() {
     resolver: zodResolver(editUserSchema),
     defaultValues: { displayName: '', role: 'User' },
   });
+  
+  const isReadOnly = userRole === 'Viewer';
 
   useEffect(() => {
     if (!userId) {
