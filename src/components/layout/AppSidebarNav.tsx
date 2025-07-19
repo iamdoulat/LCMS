@@ -81,7 +81,6 @@ interface NavItemGroup {
   groupLabel: string;
   icon: React.ElementType;
   iconColorClass?: string;
-  subLinks: NavItem[];
 }
 
 // Define Navigation Items
@@ -155,16 +154,16 @@ const settingsNavItems: NavItem[] = [
 ];
 
 // Define Group Structure
-const allNavGroups: NavItemGroup[] = [
-  { groupLabel: "T/T OR L/C Management", icon: FileText, subLinks: lcManagementNavItems },
+const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
+  { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems },
   { groupLabel: 'Financial Management', icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems },
-  { groupLabel: 'Inventory Management', icon: Package, subLinks: inventoryNavItems },
-  { groupLabel: "Commission Management", icon: Briefcase, subLinks: commissionManagementNavItems },
-  { groupLabel: 'Beneficiaries / Applicants', icon: UsersIcon, subLinks: partiesNavItems },
-  { groupLabel: 'Shipment Management', icon: Ship, subLinks: shipmentNavItems },
-  { groupLabel: 'Demo M/C Management', icon: Laptop, subLinks: demoNavItems },
-  { groupLabel: 'Warranty Management', icon: ShieldCheck, subLinks: serviceNavItems },
-  { groupLabel: 'Settings', icon: Settings, subLinks: settingsNavItems },
+  { groupLabel: 'Inventory Management', icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
+  { groupLabel: "Commission Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
+  { groupLabel: 'Beneficiaries / Applicants', icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
+  { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems },
+  { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems },
+  { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems },
+  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems },
 ];
 
 export function AppSidebarNav() {
@@ -265,7 +264,7 @@ export function AppSidebarNav() {
                               "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                               "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                               "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                               openAccordions.includes(group.groupLabel) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                               openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
                             )}
                           >
                             <span className="flex items-center gap-2">
