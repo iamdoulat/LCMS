@@ -12,8 +12,8 @@ import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import type { UserRole, CompanyProfile, UserDocumentForAdmin, userRoles } from '@/types';
 
-const COMPANY_PROFILE_COLLECTION = 'company_profile';
-const COMPANY_PROFILE_DOC_ID = 'main_profile';
+const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
+const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
