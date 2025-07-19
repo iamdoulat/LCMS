@@ -13,11 +13,14 @@ import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { DemoMachineFactoryDocument } from '@/types';
 import Swal from 'sweetalert2';
+import { useAuth } from '@/context/AuthContext';
 
 export default function EditDemoMachineFactoryPage() {
   const params = useParams();
   const router = useRouter();
   const factoryId = params.factoryId as string;
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
 
   const [factoryData, setFactoryData] = useState<DemoMachineFactoryDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,10 +120,10 @@ export default function EditDemoMachineFactoryPage() {
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FactoryIcon className="h-7 w-7 text-primary" />
-            Edit Demo Machine Factory
+            {isReadOnly ? 'View' : 'Edit'} Demo Machine Factory
           </CardTitle>
           <CardDescription>
-            Modify the details for factory ID: <span className="font-semibold text-foreground">{factoryId}</span>.
+            {isReadOnly ? 'Viewing details for factory ID:' : 'Modify the details for factory ID:'} <span className="font-semibold text-foreground">{factoryId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>

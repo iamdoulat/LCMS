@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox'; // Added for machineReturned
+import { useAuth } from '@/context/AuthContext';
 
 const phoneRegexForValidation = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -43,6 +44,8 @@ interface AvailableMachineOption extends ComboboxOption { // Renamed for clarity
 }
 
 export default function NewDemoMachineApplicationPage() {
+  const { userRole } = useAuth();
+  const isReadOnly = userRole === 'Viewer';
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [factoryOptions, setFactoryOptions] = React.useState<FactoryOption[]>([]);
   const [availableMachineOptions, setAvailableMachineOptions] = React.useState<AvailableMachineOption[]>([]); // For Combobox
@@ -528,7 +531,7 @@ export default function NewDemoMachineApplicationPage() {
                     />
                 </div>
 
-                <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingFactories || isLoadingMachines}>
+                <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingFactories || isLoadingMachines || isReadOnly}>
                   {isSubmitting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
                   ) : (

@@ -115,7 +115,7 @@ export default function EditDemoMachineApplicationPage() {
     }
   }, [applicationId, router]);
 
-  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatusPage) => {
+  const handleFormStatusChange = React.useCallback((status: CurrentDemoStatus) => {
     setCurrentDemoStatusPage(status);
   }, []);
 

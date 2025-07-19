@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   const fetchInitialCompanyProfile = useCallback(async () => {
     try {
-      const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
       const profileDocSnap = await getDoc(profileDocRef);
       if (profileDocSnap.exists()) {
         const profileData = profileDocSnap.data() as CompanyProfile;

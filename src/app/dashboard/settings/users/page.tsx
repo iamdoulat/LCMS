@@ -170,7 +170,7 @@ export default function UserListPage() {
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                             <DropdownMenuItem asChild>
                                                 <Link href={`/dashboard/settings/users/${u.id}/edit`}>
-                                                    <FileEdit className="mr-2 h-4 w-4" />Edit User
+                                                    <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
                                                 </Link>
                                             </DropdownMenuItem>
                                             {userRole === "Super Admin" && (
