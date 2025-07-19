@@ -82,7 +82,7 @@ export default function EditUserPage() {
   
   const onSubmit = async (data: EditUserFormValues) => {
     if (userData?.role === "Super Admin" && currentUser?.uid !== userId) {
-        Swal.fire("Permission Denied", "You cannot change the role of a Super Admin.", "error");
+        Swal.fire("Permission Denied", "You cannot change the role of another Super Admin.", "error");
         return;
     }
     setIsSubmitting(true);
@@ -117,7 +117,7 @@ export default function EditUserPage() {
     );
   }
   
-  const canEditRole = userRole === 'Super Admin' && (!userData || userData.role !== 'Super Admin' || userData.id === currentUser?.uid);
+  const canEditRole = (userRole === 'Super Admin' || userRole === 'Admin') && (!userData || userData.role !== 'Super Admin' || userData.id === currentUser?.uid);
 
   return (
     <div className="container mx-auto py-8">
@@ -166,7 +166,7 @@ export default function EditUserPage() {
                                     ))}
                                 </SelectContent>
                              </Select>
-                             {!canEditRole && <FormDescription>Only Super Admins can change roles. A Super Admin's role cannot be changed by another user.</FormDescription>}
+                             {!canEditRole && <FormDescription>Only Super Admins and Admins can change roles. Another Super Admin's role cannot be changed.</FormDescription>}
                             <FormMessage />
                         </FormItem>
                     )}
