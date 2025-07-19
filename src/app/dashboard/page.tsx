@@ -561,37 +561,43 @@ export default function DashboardPage() {
           title={`Total L/Cs Opened (${selectedYear})`}
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/50 to-transparent"
+          description={`${dashboardStats.thisMonthLCQty} this month`}
+          className="bg-[#4A90E2]"
         />
         <StatCard
-          title={`Total L/Cs Values (${selectedYear})`}
-          value={`USD ${dashboardStats.totalLCValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          title={`Total L/Cs Value (${selectedYear})`}
+          value={`$${(dashboardStats.totalLCValue / 1_000_000).toFixed(2)}M`}
           icon={<DollarSign />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-200/50 to-transparent lg:col-span-2 xl:col-span-1"
+          description="Total value in USD"
+          className="bg-[#50E3C2]"
         />
         <StatCard
           title={`Active Beneficiaries (${selectedYear})`}
           value={dashboardStats.activeSuppliers.toLocaleString()}
           icon={<Truck />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-green-200/50 to-transparent"
+          description="Unique suppliers"
+          className="bg-[#BD10E0]"
         />
         <StatCard
           title={`Active Applicants (${selectedYear})`}
           value={dashboardStats.activeApplicants.toLocaleString()}
           icon={<Factory />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-200/50 to-transparent"
+          description="Unique customers"
+          className="bg-[#F5A623]"
         />
         <StatCard
-          title={`This ${format(new Date(), 'MMMM')} L/Cs Quantities (${selectedYear})`}
-          value={dashboardStats.thisMonthLCQty.toLocaleString()}
-          icon={<TrendingUp />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-200/50 to-transparent"
-        />
-         <StatCard
-          title={`PI's Linked with L/Cs (${selectedYear})`}
+          title={`Linked PIs (${selectedYear})`}
           value={dashboardStats.totalLinkedPIs.toLocaleString()}
           icon={<Layers />}
-          className="bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-rose-200/50 to-transparent"
+          description="PIs connected to L/Cs"
+          className="bg-[#7ED321]"
+        />
+         <StatCard
+          title="Monthly L/C Quantity"
+          value={dashboardStats.thisMonthLCQty.toLocaleString()}
+          icon={<TrendingUp />}
+          description={`Opened in ${format(new Date(), 'MMMM')}`}
+          className="bg-[#9013FE]"
         />
       </div>
 
