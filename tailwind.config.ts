@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 export default {
     darkMode: ["class"],
@@ -61,6 +62,10 @@ export default {
   				ring: 'hsl(var(--sidebar-ring))'
   			}
   		},
+        fontFamily: {
+            sans: ["var(--font-geist-sans)", ...fontFamily.sans],
+            mono: ["var(--font-geist-mono)", ...fontFamily.mono],
+        },
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
