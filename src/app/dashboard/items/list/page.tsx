@@ -35,7 +35,7 @@ const formatCurrency = (value?: number, currencySymbol: string = '$') => {
 export default function ItemsListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allItems, setAllItems] = useState<ItemDocument[]>([]);
   const [displayedItems, setDisplayedItems] = useState<ItemDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
