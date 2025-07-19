@@ -371,35 +371,35 @@ export default function DemoMachineSearchPage() {
               <StatCard
                 title="Total Demo Machines"
                 value={demoMachineStats.totalDemoMachines.toLocaleString()}
-                icon={<Layers className="h-6 w-6 text-primary" />}
+                icon={<Layers />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
                 className="bg-[#4A90E2]"
               />
               <StatCard
                 title="Available Demo Machines"
                 value={demoMachineStats.availableDemoMachines.toLocaleString()}
-                icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
+                icon={<CheckCircle2 />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
                 className="bg-[#50E3C2]"
               />
               <StatCard
                 title="Machines In Use"
                 value={demoMachineStats.machinesInUse.toLocaleString()}
-                icon={<Hourglass className="h-6 w-6 text-primary" />}
+                icon={<Hourglass />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
                 className="bg-[#F5A623]"
               />
               <StatCard
                 title="Machines Under Maintenance"
                 value={demoMachineStats.machinesUnderMaintenance.toLocaleString()}
-                icon={<Laptop className="h-6 w-6 text-primary" />}
+                icon={<Laptop />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
                 className="bg-[#BD10E0]"
               />
                <StatCard
                 title="Overdue Demo Machines"
                 value={demoMachineStats.overdueDemoMachines.toLocaleString()}
-                icon={<AlertTriangle className="h-6 w-6 text-primary" />}
+                icon={<AlertTriangle />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
                 className="bg-[#D0021B]"
               />
@@ -410,5 +410,6 @@ export default function DemoMachineSearchPage() {
     </div>
   );
 }
+
 
 
