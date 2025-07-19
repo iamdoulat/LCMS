@@ -24,6 +24,23 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/payments', 
     '/dashboard/financial-management'
   ],
+  "Viewer": [
+    '/dashboard/items',
+    '/dashboard/inventory',
+    '/dashboard/quotes',
+    '/dashboard/invoices',
+    '/dashboard/orders',
+    '/dashboard/payments',
+    '/dashboard/financial-management',
+    '/dashboard/commission-management',
+    '/dashboard/total-lc',
+    '/dashboard/reports',
+    '/dashboard/shipments',
+    '/dashboard/demo',
+    '/dashboard/warranty-management',
+    '/dashboard/suppliers',
+    '/dashboard/customers',
+  ],
 };
 
 // Define paths that are explicitly disallowed for certain roles.
@@ -39,6 +56,7 @@ const roleRedirects: Record<string, string> = {
   "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
   "Store Manager": process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list',
+  "Viewer": '/dashboard', // Viewers land on the main dashboard
 };
 
 
@@ -70,6 +88,11 @@ export default function AuthGuard({ children }: PropsWithChildren) {
       
       const userRoles = Array.isArray(userRole) ? userRole : [userRole];
 
+      // Super Admins and Admins have full access, so we can exit early for them
+      if (userRoles.includes("Super Admin") || userRoles.includes("Admin")) {
+        return;
+      }
+      
       // Check for explicitly disallowed paths first
       for (const role of userRoles) {
         const disallowed = roleDisallowedPaths[role as UserRole];
@@ -80,25 +103,20 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         }
       }
       
-      // Determine the primary role for redirection purposes (could be the first in the list, or a prioritized one)
-      const primaryRole = userRoles[0]; // Simple approach: use the first role for redirects
+      // Check if any of the user's roles have specific path restrictions
+      const hasRestrictedRole = userRoles.some(role => roleAllowedPaths[role]);
 
-      // Check for roles with limited allowed paths
-      if (roleAllowedPaths[primaryRole]) {
+      if (hasRestrictedRole) {
         let isPathAllowed = userRoles.some(role => {
           const allowed = roleAllowedPaths[role];
           return allowed && allowed.some(prefix => pathname.startsWith(prefix));
         });
 
-        // Also allow access to core pages like account settings and notifications
         const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
 
         if (!isPathAllowed && !isCorePathAllowed) {
-          // If not allowed, redirect to their designated homepage
-          router.replace(roleRedirects[primaryRole]);
-        } else if (pathname === dashboardPath) {
-          // If they land on the main dashboard, redirect them to their specific start page
-           router.replace(roleRedirects[primaryRole]);
+          const primaryRole = userRoles[0]; // Simple approach: use the first role for redirects
+          router.replace(roleRedirects[primaryRole] || dashboardPath);
         }
       }
     }
@@ -116,5 +134,3 @@ export default function AuthGuard({ children }: PropsWithChildren) {
   // Render children if authenticated and access is permitted
   return <>{children}</>; 
 }
-
-    
