@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,9 +44,9 @@ const SMTP_SETTINGS_STORAGE_KEY = 'appSmtpSettings'; // Key for localStorage
 export default function SmtpSettingsPage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [isSubmittingSettings, setIsSubmittingSettings] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
-  const isReadOnly = userRole === 'Viewer';
+  const [isSubmittingSettings, setIsSubmittingSettings] = React.useState(false);
+  const [isSendingTest, setIsSendingTest] = React.useState(false);
+  const isReadOnly = userRole?.includes('Viewer');
 
   const settingsForm = useForm<SmtpSettingsFormValues>({
     resolver: zodResolver(smtpSettingsSchema),
@@ -68,7 +68,7 @@ export default function SmtpSettingsPage() {
   });
 
   // Load saved settings from localStorage on mount
-  useEffect(() => {
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedSettings = localStorage.getItem(SMTP_SETTINGS_STORAGE_KEY);
       if (savedSettings) {
@@ -92,8 +92,8 @@ export default function SmtpSettingsPage() {
 
 
   // Access control
-  useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && !isReadOnly) {
+  React.useEffect(() => {
+    if (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view/edit SMTP settings.',
@@ -153,7 +153,7 @@ export default function SmtpSettingsPage() {
   };
 
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && !isReadOnly)) {
+  if (authLoading || (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
