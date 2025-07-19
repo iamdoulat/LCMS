@@ -149,56 +149,59 @@ export default function UserListPage() {
                     ) : users.length === 0 ? (
                         <TableRow><TableCell colSpan={4} className="h-24 text-center">No users found.</TableCell></TableRow>
                     ) : (
-                        users.map(u => (
-                            <TableRow key={u.id}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-9 w-9">
-                                            <AvatarImage src={u.photoURL || undefined} alt={u.displayName} data-ai-hint="avatar person" />
-                                            <AvatarFallback>{getInitials(u.displayName)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="font-medium">{u.displayName}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>{u.email}</TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        {u.role?.map(r => <Badge key={r} variant={r === "Super Admin" || r === "Admin" ? "default" : "secondary"}>{r}</Badge>)}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {(u.role?.includes("Super Admin") && u.uid !== user?.uid) ? (
-                                    <span className="text-xs text-muted-foreground">No actions</span>
-                                  ) : (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/settings/users/${u.id}/edit`}>
-                                                    <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            {isSuperAdmin && (
-                                                <>
-                                                    <DropdownMenuSeparator/>
-                                                    <DropdownMenuItem 
-                                                        className="text-destructive focus:text-destructive focus:bg-destructive/10" 
-                                                        onClick={() => handleDeleteUser(u.id, u.displayName)} 
-                                                        disabled={u.uid === user?.uid || isReadOnly}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />Delete User
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    )}
-                                </TableCell>
-                            </TableRow>
-                        ))
+                        users.map(u => {
+                            const rolesToDisplay = Array.isArray(u.role) ? u.role : (u.role ? [u.role as UserRole] : []);
+                            return (
+                                <TableRow key={u.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-9 w-9">
+                                                <AvatarImage src={u.photoURL || undefined} alt={u.displayName} data-ai-hint="avatar person" />
+                                                <AvatarFallback>{getInitials(u.displayName)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="font-medium">{u.displayName}</div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{u.email}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {rolesToDisplay.map(r => <Badge key={r} variant={r === "Super Admin" || r === "Admin" ? "default" : "secondary"}>{r}</Badge>)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                    {(rolesToDisplay.includes("Super Admin") && u.uid !== user?.uid) ? (
+                                        <span className="text-xs text-muted-foreground">No actions</span>
+                                    ) : (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/settings/users/${u.id}/edit`}>
+                                                        <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                {isSuperAdmin && (
+                                                    <>
+                                                        <DropdownMenuSeparator/>
+                                                        <DropdownMenuItem 
+                                                            className="text-destructive focus:text-destructive focus:bg-destructive/10" 
+                                                            onClick={() => handleDeleteUser(u.id, u.displayName)} 
+                                                            disabled={u.uid === user?.uid || isReadOnly}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />Delete User
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
                     )}
                 </TableBody>
             </Table>
@@ -208,5 +211,3 @@ export default function UserListPage() {
     </div>
   );
 }
-
-    
