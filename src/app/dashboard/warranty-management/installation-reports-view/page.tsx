@@ -48,7 +48,7 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
 export default function InstallationReportsViewPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
   const [displayedReports, setDisplayedReports] = useState<InstallationReportDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -431,3 +431,5 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+
+    
