@@ -56,7 +56,7 @@ const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "de
 
 export default function DemoMachineListPage() {
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [demoMachines, setDemoMachines] = useState<DemoMachineDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
