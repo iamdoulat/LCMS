@@ -235,9 +235,9 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser || (userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Viewer")) {
-      setIsLoading(false);
-      return;
+    if (!authUser || !userRole?.some(r => ['Super Admin', 'Admin', 'Viewer'].includes(r))) {
+        setIsLoading(false);
+        return;
     }
     setIsLoading(true);
     try {
@@ -478,7 +478,7 @@ export default function DashboardPage() {
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
-  if (userRole && userRole !== 'Super Admin' && userRole !== 'Admin' && userRole !== 'Viewer') {
+  if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer'].includes(r))) {
     return (
         <div className="flex flex-col gap-8">
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
@@ -506,7 +506,7 @@ export default function DashboardPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>You have access to the <strong>{userRole}</strong> modules.</p>
+                    <p>You have access to the <strong>{userRole.join(', ')}</strong> modules.</p>
                 </CardContent>
             </Card>
         </div>
