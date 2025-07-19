@@ -134,6 +134,7 @@ body {
     .bg-icon-company { @apply bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200; }
     .bg-icon-users { @apply bg-teal-200 text-teal-700 dark:bg-teal-800 dark:text-teal-200; }
     .bg-icon-logs { @apply bg-indigo-200 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-200; }
+    .bg-icon-financial { @apply bg-green-200 text-blue-700 dark:bg-green-800 dark:text-blue-200; }
 }
 
 
