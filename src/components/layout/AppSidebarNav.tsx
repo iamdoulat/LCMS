@@ -211,7 +211,7 @@ export function AppSidebarNav() {
             />
             <span
               className={cn(
-                "font-bold text-lg group-data-[collapsible=icon]:hidden",
+                "font-bold text-sm group-data-[collapsible=icon]:hidden",
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
               )}
             >
@@ -331,3 +331,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
