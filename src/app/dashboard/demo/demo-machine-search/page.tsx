@@ -152,7 +152,7 @@ export default function DemoMachineSearchPage() {
   };
 
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
-  const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
+  const indexOfLastSearchItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
   const currentSearchItems = searchResults.slice(indexOfFirstSearchItem, indexOfLastSearchItem);
 
@@ -348,31 +348,35 @@ export default function DemoMachineSearchPage() {
               <span className="text-card-foreground/80">Calculating statistics...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"> {/* Changed to 4 for better fit */}
-              <StatCard
-                title="Total Demo Machines"
-                value={demoMachineStats.totalDemoMachines.toLocaleString()}
-                icon={<Layers className="h-6 w-6 text-primary" />}
-                description={`Overall count`}
-              />
-              <StatCard
-                title="Available Machines"
-                value={demoMachineStats.availableDemoMachines.toLocaleString()}
-                icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
-                description={`Currently available`}
-              />
-              <StatCard
-                title="Machines In Use (Allocated)"
-                value={demoMachineStats.machinesInUse.toLocaleString()}
-                icon={<Hourglass className="h-6 w-6 text-primary" />}
-                description={`Currently allocated`}
-              />
-              <StatCard
-                title="Machines Under Maintenance"
-                value={demoMachineStats.machinesUnderMaintenance.toLocaleString()}
-                icon={<Laptop className="h-6 w-6 text-primary" />} // Changed to Laptop from Wrench
-                description={`In maintenance mode`}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                    title="Total Demo Machines"
+                    value={demoMachineStats.totalDemoMachines.toLocaleString()}
+                    icon={<Layers className="h-6 w-6" />}
+                    description="Overall count"
+                    className="bg-[#4A90E2]"
+                />
+                <StatCard
+                    title="Available Machines"
+                    value={demoMachineStats.availableDemoMachines.toLocaleString()}
+                    icon={<CheckCircle2 className="h-6 w-6" />}
+                    description="Currently available"
+                    className="bg-[#50E3C2]"
+                />
+                <StatCard
+                    title="Machines In Use (Allocated)"
+                    value={demoMachineStats.machinesInUse.toLocaleString()}
+                    icon={<Hourglass className="h-6 w-6" />}
+                    description="Currently allocated"
+                    className="bg-[#F5A623]"
+                />
+                <StatCard
+                    title="Machines Under Maintenance"
+                    value={demoMachineStats.machinesUnderMaintenance.toLocaleString()}
+                    icon={<Laptop className="h-6 w-6" />}
+                    description="In maintenance mode"
+                    className="bg-[#BD10E0]"
+                />
             </div>
           )}
         </CardContent>
@@ -380,5 +384,3 @@ export default function DemoMachineSearchPage() {
     </div>
   );
 }
-
-    
