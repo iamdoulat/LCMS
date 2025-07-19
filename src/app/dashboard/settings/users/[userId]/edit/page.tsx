@@ -116,6 +116,8 @@ export default function EditUserPage() {
         <div className="container mx-auto py-8 text-center text-destructive">{error}</div>
     );
   }
+  
+  const canEditRole = userRole === 'Super Admin' && (!userData || userData.role !== 'Super Admin' || userData.id === currentUser?.uid);
 
   return (
     <div className="container mx-auto py-8">
@@ -149,19 +151,22 @@ export default function EditUserPage() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Role*</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={userData?.role === 'Super Admin' || isReadOnly}>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={field.value} 
+                              disabled={!canEditRole || isReadOnly}
+                            >
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    {userData?.role === "Super Admin" ? (
+                                    {userData?.role === "Super Admin" && (
                                         <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                    ) : (
-                                        userRolesForSelect.map(role => (
-                                            <SelectItem key={role} value={role}>{role}</SelectItem>
-                                        ))
                                     )}
+                                    {userRolesForSelect.map(role => (
+                                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                                    ))}
                                 </SelectContent>
                              </Select>
-                             {userData?.role === 'Super Admin' && <FormDescription>The Super Admin role cannot be changed.</FormDescription>}
+                             {!canEditRole && <FormDescription>Only Super Admins can change roles. A Super Admin's role cannot be changed by another user.</FormDescription>}
                             <FormMessage />
                         </FormItem>
                     )}
