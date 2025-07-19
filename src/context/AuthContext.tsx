@@ -10,7 +10,7 @@ import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import type { UserRole, CompanyProfile, UserDocumentForAdmin } from '@/types';
+import type { UserRole, CompanyProfile, UserDocumentForAdmin, userRoles } from '@/types';
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
 const COMPANY_PROFILE_DOC_ID = 'main_profile';
@@ -37,7 +37,7 @@ const VIEWER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_VIEWER_E
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  userRole: UserRole | null;
+  userRole: UserRole[] | null; // Changed to array of roles
   firestoreUser: UserDocumentForAdmin | null;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, displayName: string) => Promise<void>;
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useState<User | null>(null);
   const [firestoreUser, setFirestoreUser] = useState<UserDocumentForAdmin | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userRole, setUserRole] = useState<UserRole[] | null>(null); // Changed to array of roles
   const [companyName, setCompanyName] = useState<string>(DEFAULT_COMPANY_NAME);
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           if (userDocSnap.exists()) {
             const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
             setFirestoreUser(userProfileData);
-            setUserRole(userProfileData.role || "User");
+            setUserRole(Array.isArray(userProfileData.role) ? userProfileData.role : (userProfileData.role ? [userProfileData.role] : ["User"]));
           } else {
             console.warn(`Firestore document for user ${currentUser.uid} not found. This might happen briefly after registration or if doc creation failed.`);
             setFirestoreUser(null);
@@ -190,21 +190,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
       const userDocRef = doc(firestore, "users", user.uid);
       
-      let roleFromEnv: UserRole = "User"; // Default role
       const lowercasedUserEmail = user.email?.toLowerCase() || '';
-      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Super Admin";
-      else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Admin";
-      else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
-      else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
-      else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
-      else if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Viewer";
+      const roles: UserRole[] = [];
+      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
+      if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
+      if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
+      if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
+      if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
+      if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
+      if (roles.length === 0) roles.push("User");
 
       const newProfileData = {
           uid: user.uid,
           displayName: displayName,
           email: user.email,
           photoURL: user.photoURL || null,
-          role: roleFromEnv,
+          role: roles,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
       };
@@ -237,21 +238,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       const userDocSnap = await getDoc(userDocRef);
       
       if (!userDocSnap.exists()) {
-          let roleFromEnv: UserRole = "User";
           const lowercasedUserEmail = user.email?.toLowerCase() || '';
-          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Super Admin";
-          else if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Admin";
-          else if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Service";
-          else if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "DemoManager";
-          else if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Store Manager";
-          else if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roleFromEnv = "Viewer";
+          const roles: UserRole[] = [];
+          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
+          if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
+          if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
+          if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
+          if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
+          if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
+          if (roles.length === 0) roles.push("User");
           
           const newProfileData = {
               uid: user.uid,
               displayName: user.displayName,
               email: user.email,
               photoURL: user.photoURL,
-              role: roleFromEnv,
+              role: roles,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
           };
@@ -313,3 +315,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

@@ -7,23 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, UserCog, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
+import { userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const userRolesForSelect: [UserRole, ...UserRole[]] = ["Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"];
+import { Checkbox } from '@/components/ui/checkbox';
 
 const editUserSchema = z.object({
   displayName: z.string().min(1, "Display name is required."),
-  role: z.enum(userRolesForSelect, { required_error: "A role must be selected." }),
+  role: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "You have to select at least one role.",
+  }),
 });
 
 type EditUserFormValues = z.infer<typeof editUserSchema>;
@@ -31,7 +32,7 @@ type EditUserFormValues = z.infer<typeof editUserSchema>;
 export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
-  const { user: currentUser, userRole } = useAuth();
+  const { user: currentUser, userRole: currentUserRoles } = useAuth();
   const userId = params.userId as string;
 
   const [userData, setUserData] = useState<UserDocumentForAdmin | null>(null);
@@ -41,10 +42,10 @@ export default function EditUserPage() {
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: { displayName: '', role: 'User' },
+    defaultValues: { displayName: '', role: [] },
   });
   
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = currentUserRoles?.includes('Viewer');
 
   useEffect(() => {
     if (!userId) {
@@ -64,7 +65,7 @@ export default function EditUserPage() {
           setUserData(fetchedData);
           form.reset({
             displayName: fetchedData.displayName,
-            role: fetchedData.role as any, // Cast because form doesn't include Super Admin
+            role: fetchedData.role || [], 
           });
         } else {
           setError("User not found.");
@@ -82,7 +83,7 @@ export default function EditUserPage() {
   }, [userId, form]);
   
   const onSubmit = async (data: EditUserFormValues) => {
-    if (userData?.role === "Super Admin" && currentUser?.uid !== userId) {
+    if (userData?.role?.includes("Super Admin") && currentUser?.uid !== userId) {
         Swal.fire("Permission Denied", "You cannot change the role of another Super Admin.", "error");
         return;
     }
@@ -118,7 +119,7 @@ export default function EditUserPage() {
     );
   }
   
-  const canEditRole = (userRole === 'Super Admin' || userRole === 'Admin') && (!userData || userData.role !== 'Super Admin' || userData.id === currentUser?.uid);
+  const canEditRole = (currentUserRoles?.includes('Super Admin') || currentUserRoles?.includes('Admin')) && (!userData?.role?.includes('Super Admin') || userData.id === currentUser?.uid);
 
   return (
     <div className="container mx-auto py-8">
@@ -149,25 +150,52 @@ export default function EditUserPage() {
                  <FormField
                     control={form.control}
                     name="role"
-                    render={({ field }) => (
+                    render={() => (
                         <FormItem>
-                            <FormLabel>Role*</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              value={field.value} 
-                              disabled={!canEditRole || isReadOnly}
-                            >
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {userData?.role === "Super Admin" && (
-                                        <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                    )}
-                                    {userRolesForSelect.map(role => (
-                                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                             </Select>
-                             {!canEditRole && <FormDescription>Only Super Admins and Admins can change roles. Another Super Admin's role cannot be changed.</FormDescription>}
+                            <div className="mb-4">
+                                <FormLabel className="text-base">User Roles</FormLabel>
+                                <FormDescription>
+                                    Select the roles to assign to this user.
+                                </FormDescription>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {userRoles.map((role) => (
+                                    <FormField
+                                        key={role}
+                                        control={form.control}
+                                        name="role"
+                                        render={({ field }) => {
+                                        const isRoleDisabled = !canEditRole || (userData?.role?.includes('Super Admin') && role !== 'Super Admin');
+                                        return (
+                                            <FormItem
+                                            key={role}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                            >
+                                            <FormControl>
+                                                <Checkbox
+                                                checked={field.value?.includes(role)}
+                                                onCheckedChange={(checked) => {
+                                                    return checked
+                                                    ? field.onChange([...field.value, role])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                        (value) => value !== role
+                                                        )
+                                                    )
+                                                }}
+                                                disabled={isRoleDisabled || isReadOnly}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                                {role}
+                                            </FormLabel>
+                                            </FormItem>
+                                        )
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                            {!canEditRole && <FormDescription className="text-destructive mt-2">Only Super Admins and Admins can change roles. Another Super Admin's role cannot be changed.</FormDescription>}
                             <FormMessage />
                         </FormItem>
                     )}
@@ -182,3 +210,5 @@ export default function EditUserPage() {
     </div>
   );
 }
+
+    

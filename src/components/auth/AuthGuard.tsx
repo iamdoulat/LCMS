@@ -68,30 +68,37 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         return;
       }
       
-      const restrictedRole = userRole as keyof typeof roleRedirects;
+      const userRoles = Array.isArray(userRole) ? userRole : [userRole];
 
-      // 1. Check for explicitly disallowed paths
-      const disallowedPaths = roleDisallowedPaths[userRole];
-      if (disallowedPaths && disallowedPaths.some(prefix => pathname.startsWith(prefix))) {
-          router.replace(roleRedirects[userRole] || dashboardPath);
+      // Check for explicitly disallowed paths first
+      for (const role of userRoles) {
+        const disallowed = roleDisallowedPaths[role as UserRole];
+        if (disallowed && disallowed.some(prefix => pathname.startsWith(prefix))) {
+          const redirectPath = roleRedirects[role] || dashboardPath;
+          router.replace(redirectPath);
           return;
+        }
       }
+      
+      // Determine the primary role for redirection purposes (could be the first in the list, or a prioritized one)
+      const primaryRole = userRoles[0]; // Simple approach: use the first role for redirects
 
-      // 2. Check for roles with limited allowed paths
-      if (roleAllowedPaths[restrictedRole]) {
-        const allowedPaths = roleAllowedPaths[restrictedRole] || [];
-        // Check if the current path is allowed for this role
-        const isPathAllowed = allowedPaths.some(prefix => pathname.startsWith(prefix));
-        
+      // Check for roles with limited allowed paths
+      if (roleAllowedPaths[primaryRole]) {
+        let isPathAllowed = userRoles.some(role => {
+          const allowed = roleAllowedPaths[role];
+          return allowed && allowed.some(prefix => pathname.startsWith(prefix));
+        });
+
         // Also allow access to core pages like account settings and notifications
         const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
 
         if (!isPathAllowed && !isCorePathAllowed) {
           // If not allowed, redirect to their designated homepage
-          router.replace(roleRedirects[restrictedRole]);
+          router.replace(roleRedirects[primaryRole]);
         } else if (pathname === dashboardPath) {
           // If they land on the main dashboard, redirect them to their specific start page
-          router.replace(roleRedirects[restrictedRole]);
+           router.replace(roleRedirects[primaryRole]);
         }
       }
     }
@@ -109,3 +116,5 @@ export default function AuthGuard({ children }: PropsWithChildren) {
   // Render children if authenticated and access is permitted
   return <>{children}</>; 
 }
+
+    

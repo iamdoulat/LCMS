@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { UserDocumentForAdmin } from '@/types';
+import type { UserDocumentForAdmin, UserRole } from '@/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -32,10 +32,12 @@ export default function UserListPage() {
   const [users, setUsers] = useState<UserDocumentForAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const isReadOnly = userRole === 'Viewer';
+  const isAdminOrSuperAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
+  const isSuperAdmin = userRole?.includes('Super Admin');
+  const isReadOnly = userRole?.includes('Viewer');
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
+    if (!authLoading && !isAdminOrSuperAdmin && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view this page.',
@@ -48,7 +50,7 @@ export default function UserListPage() {
       return;
     }
 
-    if (userRole === "Super Admin" || userRole === "Admin" || isReadOnly) {
+    if (isAdminOrSuperAdmin || isReadOnly) {
       const fetchUsers = async () => {
         setIsLoading(true);
         setFetchError(null);
@@ -67,7 +69,7 @@ export default function UserListPage() {
       };
       fetchUsers();
     }
-  }, [userRole, authLoading, router, isReadOnly]);
+  }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly]);
 
   const handleDeleteUser = async (userId: string, userDisplayName: string) => {
     if (userId === user?.uid) {
@@ -102,7 +104,7 @@ export default function UserListPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
   
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
+  if (authLoading || (!isAdminOrSuperAdmin && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -137,7 +139,7 @@ export default function UserListPage() {
                     <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
+                        <TableHead>Role(s)</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -159,9 +161,15 @@ export default function UserListPage() {
                                     </div>
                                 </TableCell>
                                 <TableCell>{u.email}</TableCell>
-                                <TableCell><Badge variant={u.role === "Super Admin" || u.role === "Admin" ? "default" : "secondary"}>{u.role}</Badge></TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {u.role?.map(r => <Badge key={r} variant={r === "Super Admin" || r === "Admin" ? "default" : "secondary"}>{r}</Badge>)}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="text-right">
-                                  {u.role !== "Super Admin" || u.uid === user?.uid ? (
+                                  {(u.role?.includes("Super Admin") && u.uid !== user?.uid) ? (
+                                    <span className="text-xs text-muted-foreground">No actions</span>
+                                  ) : (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -173,7 +181,7 @@ export default function UserListPage() {
                                                     <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
                                                 </Link>
                                             </DropdownMenuItem>
-                                            {userRole === "Super Admin" && (
+                                            {isSuperAdmin && (
                                                 <>
                                                     <DropdownMenuSeparator/>
                                                     <DropdownMenuItem 
@@ -187,8 +195,6 @@ export default function UserListPage() {
                                             )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground">No actions</span>
                                     )}
                                 </TableCell>
                             </TableRow>
@@ -202,3 +208,5 @@ export default function UserListPage() {
     </div>
   );
 }
+
+    

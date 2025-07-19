@@ -403,7 +403,8 @@ export interface AppNotification {
   link?: string;
 }
 
-export type UserRole = "Super Admin" | "Admin" | "User" | "Service" | "DemoManager" | "Store Manager" | "Viewer";
+export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"] as const;
+export type UserRole = typeof userRoles[number];
 
 export interface CompanyProfile {
   companyName?: string;
@@ -425,7 +426,7 @@ export interface UserDocumentForAdmin {
   displayName: string;
   email: string;
   contactNumber?: string;
-  role: UserRole;
+  role: UserRole[]; // Changed to an array of roles
   photoURL?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -1078,3 +1079,6 @@ export interface OrderDocument {
 // --- END Order Types ---
 
 
+
+
+    
