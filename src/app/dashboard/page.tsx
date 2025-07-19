@@ -145,17 +145,18 @@ const formatDisplayDate = (dateString?: string | Date): string => {
   }
 };
 
-const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef: React.MutableRefObject<NodeJS.Timeout | null>, dependencies: any[]) => {
-  useEffect(() => {
+const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
     const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+
     let isPaused = false;
 
     const moveScroll = () => {
       if (scrollElement && !isPaused) {
-        if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight -1) {
-          scrollElement.scrollTop = 0; 
+        if (scrollElement.scrollTop >= scrollElement.scrollHeight - scrollElement.clientHeight - 1) {
+          scrollElement.scrollTop = 0;
         } else {
-          scrollElement.scrollTop += 1; 
+          scrollElement.scrollTop += 1;
         }
       }
     };
@@ -163,7 +164,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
     const startScrolling = () => {
       if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = setInterval(moveScroll, 75); 
+        intervalRef.current = setInterval(moveScroll, 75);
       }
     };
 
@@ -175,15 +176,11 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
     };
 
     const handleMouseEnter = () => { isPaused = true; };
-    const handleMouseLeave = () => { isPaused = false; startScrolling(); };
+    const handleMouseLeave = () => { isPaused = false; };
 
-    if (scrollElement && scrollElement.scrollHeight > scrollElement.clientHeight) {
-      startScrolling();
-      scrollElement.addEventListener('mouseenter', handleMouseEnter);
-      scrollElement.addEventListener('mouseleave', handleMouseLeave);
-    } else {
-      stopScrolling(); 
-    }
+    scrollElement.addEventListener('mouseenter', handleMouseEnter);
+    scrollElement.addEventListener('mouseleave', handleMouseLeave);
+    startScrolling();
 
     return () => {
       stopScrolling();
@@ -192,8 +189,6 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
         scrollElement.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...dependencies, scrollRef]);
 };
 
 
@@ -463,9 +458,16 @@ export default function DashboardPage() {
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
 
-  setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef, [upcomingEtdShipments, isLoading]);
-  setupAutoScroll(draftLcScrollRef, draftLcIntervalRef, [draftLCs, isLoading]);
-  setupAutoScroll(completedLcScrollRef, completedLcIntervalRef, [recentlyCompletedLCs, isLoading]);
+  useEffect(() => {
+    const cleanupEtdScroll = setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef);
+    const cleanupDraftScroll = setupAutoScroll(draftLcScrollRef, draftLcIntervalRef);
+    const cleanupCompletedScroll = setupAutoScroll(completedLcScrollRef, completedLcIntervalRef);
+    return () => {
+      cleanupEtdScroll?.();
+      cleanupDraftScroll?.();
+      cleanupCompletedScroll?.();
+    };
+  }, [isLoading, upcomingEtdShipments, draftLCs, recentlyCompletedLCs]);
 
   if (authLoading) {
     return (
