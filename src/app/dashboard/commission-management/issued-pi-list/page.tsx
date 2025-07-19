@@ -77,7 +77,7 @@ const PI_ITEMS_PER_PAGE = 10;
 export default function IssuedPIListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allProformaInvoices, setAllProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [displayedProformaInvoices, setDisplayedProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -527,3 +527,4 @@ export default function IssuedPIListPage() {
     
 
     
+
