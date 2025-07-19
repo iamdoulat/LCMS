@@ -152,7 +152,7 @@ export default function DemoMachineSearchPage() {
   };
 
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
-  const indexOfLastSearchItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
   const currentSearchItems = searchResults.slice(indexOfFirstSearchItem, indexOfLastSearchItem);
 
@@ -310,9 +310,6 @@ export default function DemoMachineSearchPage() {
 
       <Card
         className="shadow-xl max-w-6xl mx-auto"
-        style={{
-          background: 'linear-gradient(0deg, rgba(203,247,247,0.2) 30%, rgba(232,227,218,0.1) 100%)',
-        }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
@@ -322,24 +319,8 @@ export default function DemoMachineSearchPage() {
             </CardTitle>
             <CardDescription className="text-card-foreground/80">
                 Overview of demo machine status.
-                (Selected year: {selectedYear === "All Years" ? "Overall" : selectedYear})
             </CardDescription>
            </div>
-           <div className="w-full sm:w-auto">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-card shadow-sm">
-                  <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Select Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearFilterOptions.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
         </CardHeader>
         <CardContent>
           {isLoadingStats ? (
