@@ -80,7 +80,7 @@ const SALE_ITEMS_PER_PAGE = 10;
 export default function SalesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allSales, setAllSales] = useState<SaleDocument[]>([]);
   const [displayedSales, setDisplayedSales] = useState<SaleDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
