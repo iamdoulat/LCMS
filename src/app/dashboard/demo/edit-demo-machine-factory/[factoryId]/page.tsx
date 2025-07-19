@@ -20,7 +20,7 @@ export default function EditDemoMachineFactoryPage() {
   const router = useRouter();
   const factoryId = params.factoryId as string;
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
 
   const [factoryData, setFactoryData] = useState<DemoMachineFactoryDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
