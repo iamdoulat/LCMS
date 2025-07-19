@@ -85,7 +85,7 @@ const escapeCsvCell = (cellData: any): string => {
 export default function ReportsPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
