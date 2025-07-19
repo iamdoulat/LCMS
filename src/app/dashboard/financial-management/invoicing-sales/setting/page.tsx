@@ -13,7 +13,7 @@ import { FinancialDocumentSettingsForm } from '@/components/forms/FinancialDocum
 export default function FinancialManagementSettingPage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
 
   React.useEffect(() => {
     // A non-admin can't change settings, but a viewer might be allowed to see them
