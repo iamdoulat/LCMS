@@ -179,7 +179,7 @@ export function CompanySetupForm() {
     });
 
     try {
-      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
       updateCompanyProfile({ 
