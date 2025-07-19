@@ -457,7 +457,6 @@ export default function DashboardPage() {
     }
   }, [selectedYear, authUser, authLoading, fetchDashboardData]);
 
-
   useEffect(() => {
     const cleanupEtdScroll = setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef);
     const cleanupDraftScroll = setupAutoScroll(draftLcScrollRef, draftLcIntervalRef);

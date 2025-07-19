@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -460,9 +461,6 @@ export default function WarrantySearchPage() {
 
       <Card 
         className="shadow-xl max-w-6xl mx-auto"
-        style={{
-          background: 'linear-gradient(0deg, rgba(203,247,247,0.89) 30%, rgba(232,227,218,1) 100%)',
-        }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
@@ -505,30 +503,35 @@ export default function WarrantySearchPage() {
                 value={warrantyStats.totalLcMachineries.toLocaleString()}
                 icon={<Layers className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#4A90E2]"
               />
               <StatCard
                 title="Total Installed Machines"
                 value={warrantyStats.totalInstalledMachines.toLocaleString()}
                 icon={<Wrench className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#50E3C2]"
               />
               <StatCard
                 title="Total Pending Machines"
                 value={warrantyStats.totalPendingMachines.toLocaleString()}
                 icon={<Hourglass className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#F5A623]"
               />
               <StatCard
                 title="Machines Under Warranty"
                 value={warrantyStats.machinesUnderWarranty.toLocaleString()}
                 icon={<ShieldCheck className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#7ED321]"
               />
               <StatCard
                 title="Machines Out Of Warranty"
                 value={warrantyStats.machinesOutOfWarranty.toLocaleString()}
                 icon={<ShieldOff className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#BD10E0]"
               />
             </div>
           )}
@@ -538,4 +541,3 @@ export default function WarrantySearchPage() {
   );
 }
 
-    

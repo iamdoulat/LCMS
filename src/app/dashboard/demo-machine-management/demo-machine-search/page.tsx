@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -332,9 +333,6 @@ export default function DemoMachineSearchPage() {
 
       <Card
         className="shadow-xl max-w-6xl mx-auto"
-        style={{
-          background: 'linear-gradient(0deg, rgba(203, 247, 247, 0.2) 30%, rgba(232, 227, 218, 0.1) 100%)',
-        }}
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
@@ -375,30 +373,35 @@ export default function DemoMachineSearchPage() {
                 value={demoMachineStats.totalDemoMachines.toLocaleString()}
                 icon={<Layers className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
+                className="bg-[#4A90E2]"
               />
               <StatCard
                 title="Available Demo Machines"
                 value={demoMachineStats.availableDemoMachines.toLocaleString()}
                 icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
+                className="bg-[#50E3C2]"
               />
               <StatCard
                 title="Machines In Use"
                 value={demoMachineStats.machinesInUse.toLocaleString()}
                 icon={<Hourglass className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
+                className="bg-[#F5A623]"
               />
               <StatCard
                 title="Machines Under Maintenance"
                 value={demoMachineStats.machinesUnderMaintenance.toLocaleString()}
                 icon={<Laptop className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
+                className="bg-[#BD10E0]"
               />
                <StatCard
                 title="Overdue Demo Machines"
                 value={demoMachineStats.overdueDemoMachines.toLocaleString()}
                 icon={<AlertTriangle className="h-6 w-6 text-primary" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear} (illustrative)`}
+                className="bg-[#D0021B]"
               />
             </div>
           )}
@@ -407,4 +410,5 @@ export default function DemoMachineSearchPage() {
     </div>
   );
 }
+
 
