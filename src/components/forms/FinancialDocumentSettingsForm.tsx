@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
-const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
+const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
 interface FinancialSettingsProfile {
   companyName?: string;
@@ -50,7 +50,7 @@ export function FinancialDocumentSettingsForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   
   const [currentInvoiceLogoUrlForPreview, setCurrentInvoiceLogoUrlForPreview] = React.useState<string | undefined>(undefined);
 
@@ -70,7 +70,7 @@ export function FinancialDocumentSettingsForm() {
     const fetchFinancialSettings = async () => {
       setIsLoadingData(true);
       try {
-        const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+        const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
         
         if (profileDocSnap.exists()) {
@@ -117,7 +117,7 @@ export function FinancialDocumentSettingsForm() {
     });
 
     try {
-      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
       
       setCurrentInvoiceLogoUrlForPreview(data.invoiceLogoUrl || undefined);
