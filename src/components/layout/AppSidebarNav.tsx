@@ -111,7 +111,7 @@ const commissionManagementNavItems: NavItem[] = [
 ];
 
 const lcManagementNavItems: NavItem[] = [
-    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-lc' },
     { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, iconColorClass: 'bg-icon-sheets' },
     { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen, iconColorClass: 'bg-icon-drive' },
@@ -211,7 +211,7 @@ export function AppSidebarNav() {
             />
             <span
               className={cn(
-                "font-bold text-sm group-data-[collapsible=icon]:hidden",
+                "font-bold text-base group-data-[collapsible=icon]:hidden",
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
               )}
             >
@@ -331,5 +331,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
