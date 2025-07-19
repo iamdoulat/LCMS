@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -94,7 +96,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function TotalLCPage() {
   const router = useRouter();
-  const { userRole } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
   const isReadOnly = userRole === 'Viewer';
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
@@ -120,54 +122,70 @@ export default function TotalLCPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(lcQuery);
-        const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-             id: doc.id,
-             ...data,
-          } as LCEntryDocument;
-        });
-        setAllLcEntries(fetchedLCs);
-      } catch (error: any) {
-        console.error("Error fetching L/C entries: ", error);
-        const errorMsg = `Could not fetch L/C data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`;
-        setFetchError(errorMsg);
-        Swal.fire("Error", errorMsg, "error");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Role-based access check before fetching any data
+    if (!authLoading && userRole && !['Super Admin', 'Admin'].includes(userRole)) {
+      setFetchError("You do not have permission to view this data.");
+      setIsLoading(false);
+      setIsLoadingApplicants(false);
+      setIsLoadingBeneficiaries(false);
+      return;
+    }
 
-    const fetchFilterOptions = async () => {
-      setIsLoadingApplicants(true);
-      setIsLoadingBeneficiaries(true);
-      try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(
-          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-        );
-        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-        setBeneficiaryOptions(
-          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-        );
-      } catch (error: any) {
-        console.error("Error fetching filter options:", error);
-        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
-      } finally {
-        setIsLoadingApplicants(false);
-        setIsLoadingBeneficiaries(false);
-      }
-    };
+    if (!authLoading && user) {
+        const fetchInitialData = async () => {
+        setIsLoading(true);
+        setFetchError(null);
+        try {
+            const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(lcQuery);
+            const fetchedLCs = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+            } as LCEntryDocument;
+            });
+            setAllLcEntries(fetchedLCs);
+        } catch (error: any) {
+            console.error("Error fetching L/C entries: ", error);
+            let errorMsg = `Could not fetch L/C data. Ensure you have the necessary permissions.`;
+            if (error.code === 'permission-denied') {
+              errorMsg = "Permission denied. You do not have access to view this data.";
+            } else if (error.message) {
+              errorMsg += ` Error: ${error.message}`;
+            }
+            setFetchError(errorMsg);
+            Swal.fire("Error", errorMsg, "error");
+        } finally {
+            setIsLoading(false);
+        }
+        };
 
-    fetchInitialData();
-    fetchFilterOptions();
-  }, []);
+        const fetchFilterOptions = async () => {
+        setIsLoadingApplicants(true);
+        setIsLoadingBeneficiaries(true);
+        try {
+            const customersSnapshot = await getDocs(collection(firestore, "customers"));
+            setApplicantOptions(
+            customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+            );
+            const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+            setBeneficiaryOptions(
+            suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+            );
+        } catch (error: any) {
+            console.error("Error fetching filter options:", error);
+            Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
+        } finally {
+            setIsLoadingApplicants(false);
+            setIsLoadingBeneficiaries(false);
+        }
+        };
+
+        fetchInitialData();
+        fetchFilterOptions();
+    }
+  }, [userRole, authLoading, user]);
 
   useEffect(() => {
     let filtered = [...allLcEntries];
@@ -385,406 +403,411 @@ export default function TotalLCPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Card className="mb-6 shadow-md p-4">
-            <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
-                <div className="space-y-1">
-                  <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
-                  <Input
-                    id="lcNumberFilter"
-                    placeholder="Search by L/C No..."
-                    value={filterLcNumber}
-                    onChange={(e) => setFilterLcNumber(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Combobox
-                    options={applicantOptions}
-                    value={filterApplicantId}
-                    onValueChange={setFilterApplicantId}
-                    placeholder="Search Applicant..."
-                    selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
-                    emptyStateMessage="No applicant found."
-                    disabled={isLoadingApplicants}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Combobox
-                    options={beneficiaryOptions}
-                    value={filterBeneficiaryId}
-                    onValueChange={setFilterBeneficiaryId}
-                    placeholder="Search Beneficiary..."
-                    selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
-                    emptyStateMessage="No beneficiary found."
-                    disabled={isLoadingBeneficiaries}
-                  />
-                </div>
-                 <div className="space-y-1">
-                  <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
-                  <Select
-                    value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
-                    onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                  <DatePickerField
-                    field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }}
-                    placeholder="Select Date"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select
-                    value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
-                    onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                      {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                    <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+          {fetchError ? (
+             <Alert variant="destructive" className="mb-6">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Access Denied</AlertTitle>
+                <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <Card className="mb-6 shadow-md p-4">
+                <CardHeader className="p-2 pb-4">
+                  <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-1">
+                      <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
+                      <Input
+                        id="lcNumberFilter"
+                        placeholder="Search by L/C No..."
+                        value={filterLcNumber}
+                        onChange={(e) => setFilterLcNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
+                      <Combobox
+                        options={applicantOptions}
+                        value={filterApplicantId}
+                        onValueChange={setFilterApplicantId}
+                        placeholder="Search Applicant..."
+                        selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                        emptyStateMessage="No applicant found."
+                        disabled={isLoadingApplicants}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
+                      <Combobox
+                        options={beneficiaryOptions}
+                        value={filterBeneficiaryId}
+                        onValueChange={setFilterBeneficiaryId}
+                        placeholder="Search Beneficiary..."
+                        selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                        emptyStateMessage="No beneficiary found."
+                        disabled={isLoadingBeneficiaries}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
+                      <Select
+                        value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
+                        onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Years" />
+                        </SelectTrigger>
                         <SelectContent>
-                            {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                          {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                         </SelectContent>
-                    </Select>
-                </div>
-                 <div className="pt-6">
-                  <Button onClick={clearFilters} variant="outline" className="w-full">
-                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
+                      <DatePickerField
+                        field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }}
+                        placeholder="Select Date"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
+                      <Select
+                        value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
+                        onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
+                          {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                        <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="pt-6">
+                      <Button onClick={clearFilters} variant="outline" className="w-full">
+                        <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-2 sm:px-4">T/T OR L/C Number</TableHead>
-                  <TableHead className="px-2 sm:px-4">Applicant</TableHead>
-                  <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
-                  <TableHead className="px-2 sm:px-4">Amount</TableHead>
-                  <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
-                  <TableHead className="px-2 sm:px-4">Latest Shipment Date</TableHead>
-                  <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
-                  <TableHead className="px-2 sm:px-4">Status</TableHead>
-                  <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                 {isLoading ? (
-                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
-                       <div className="flex justify-center items-center">
-                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
-                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : fetchError ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4">
-                      {fetchError}
-                    </TableCell>
-                  </TableRow>
-                ) : currentItems.length > 0 ? (
-                  currentItems.map((lc) => (
-                    <React.Fragment key={lc.id}>
-                      <TableRow className="border-b-0">
-                        <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{lc.applicantName || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
-                        <TableCell className="px-2 sm:px-4">
-                            <div className="flex flex-wrap gap-1">
-                                {Array.isArray(lc.status) ? (
-                                    lc.status.map(s => (
-                                        <Badge
-                                            key={s}
-                                            variant={getStatusBadgeVariant(s)}
-                                            className={
-                                                s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                                s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                                s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                                s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                                s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                                            }
-                                        >
-                                            {s}
-                                        </Badge>
-                                    ))
-                                ) : lc.status ? (
-                                    <Badge
-                                        variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                        className={
-                                            lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
-                                            lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
-                                            lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
-                                            lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
-                                            lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
-                                        }
-                                    >
-                                        {lc.status}
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline">N/A</Badge>
-                                )}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right px-2 sm:px-4">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={!lc.id}>
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
-                                    <FileEdit className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
-                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                     disabled={isReadOnly}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                       <TableRow key={`${lc.id}-actions`}>
-                         <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
-                          <div className="flex flex-wrap justify-center items-center gap-2">
-                             <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={lc.etd && lc.eta ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn(
-                                                "h-7 w-7 rounded-full p-0",
-                                                lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
-                                            )}
-                                        >
-                                            <CalendarDays className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="p-2">
-                                        <div className="text-sm space-y-1">
-                                            <p className="font-semibold text-foreground">Shipment Info</p>
-                                            <Separator className="my-1"/>
-                                            <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
-                                            <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
-                                        </div>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                             <Button
-                                variant={ (lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber) ? "default" : "outline" }
-                                size="sm"
-                                onClick={() => {
-                                  let url;
-                                  if (lc.shipmentMode === "Sea" && lc.vesselImoNumber) {
-                                    url = `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`;
-                                  } else if (lc.shipmentMode === "Air" && lc.flightNumber) {
-                                    url = `https://www.flightradar24.com/${lc.flightNumber}`;
-                                  }
-                                  handleOpenLink(url);
-                                }}
-                                disabled={!((lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber))}
-                                title={lc.shipmentMode === "Sea" ? "Track Vessel" : lc.shipmentMode === "Air" ? "Track Flight" : "Track Shipment"}
-                            >
-                                {lc.shipmentMode === "Sea" ? <Ship className="mr-1.5 h-3.5 w-3.5" /> : lc.shipmentMode === "Air" ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Search className="mr-1.5 h-3.5 w-3.5" />}
-                                {lc.shipmentMode === "Sea" ? "Vessel" : lc.shipmentMode === "Air" ? "Flight" : "Track"}
-                            </Button>
-                            <Button
-                              variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                let trackUrl = "";
-                                if (lc.trackingCourier === "DHL" && lc.trackingNumber) {
-                                  trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&submit=1`;
-                                } else if (lc.trackingCourier === "FedEx" && lc.trackingNumber) {
-                                  trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(lc.trackingNumber.trim())}`;
-                                }
-                                handleOpenLink(trackUrl || undefined);
-                              }}
-                              disabled={!lc.trackingCourier || !lc.trackingNumber}
-                              title="Track Original Document"
-                            >
-                              {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /> :
-                               lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /> :
-                               <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
-                              {lc.trackingCourier ? lc.trackingCourier : "Docs"}
-                            </Button>
-                            <Button
-                              variant={lc.finalLcUrl ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleOpenLink(lc.finalLcUrl)}
-                              disabled={!lc.finalLcUrl}
-                              title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
-                            >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" />
-                              {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
-                            </Button>
-                            <Button
-                              variant={lc.finalPIUrl ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleOpenLink(lc.finalPIUrl)}
-                              disabled={!lc.finalPIUrl}
-                              title="View Final Proforma Invoice"
-                            >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> PI
-                            </Button>
-                            <Button
-                              variant={lc.shippingDocumentsUrl ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleOpenLink(lc.shippingDocumentsUrl)}
-                              disabled={!lc.shippingDocumentsUrl}
-                              title="View Shipping Documents"
-                            >
-                              DOC
-                            </Button>
-                            <Button
-                              variant={lc.packingListUrl ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleOpenLink(lc.packingListUrl)}
-                              disabled={!lc.packingListUrl}
-                              title="View Packing List"
-                            >
-                              <FileText className="mr-1.5 h-3.5 w-3.5" /> PL
-                            </Button>
-                            <Button
-                              variant={lc.purchaseOrderUrl ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
-                              disabled={!lc.purchaseOrderUrl}
-                              title="View OCS / Purchase Order"
-                            >
-                              OCS / PO
-                            </Button>
-                            {[
-                                { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
-                                { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
-                                { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
-                            ].map((shipment, idx) => (
-                                <TooltipProvider key={idx} delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={shipment.flag ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn(
-                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                            )}
-                                            title={`${shipment.label} Shipment Status`}
-                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                        >
-                                            {shipment.label}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    {shipment.note && (
-                                    <TooltipContent>
-                                        <p className="max-w-xs">{shipment.note}</p>
-                                    </TooltipContent>
-                                    )}
-                                </Tooltip>
-                                </TooltipProvider>
-                            ))}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-2 sm:px-4">T/T OR L/C Number</TableHead>
+                      <TableHead className="px-2 sm:px-4">Applicant</TableHead>
+                      <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
+                      <TableHead className="px-2 sm:px-4">Amount</TableHead>
+                      <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
+                      <TableHead className="px-2 sm:px-4">Latest Shipment Date</TableHead>
+                      <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
+                      <TableHead className="px-2 sm:px-4">Status</TableHead>
+                      <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
                           </div>
                         </TableCell>
                       </TableRow>
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
-                       No L/C entries found matching your criteria. Ensure Firestore rules allow reads and data exists.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-              <TableCaption className="py-4">
-                A list of your Letters of Credit from Firestore.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allLcEntries.length)} of {allLcEntries.length} entries.
-              </TableCaption>
-            </Table>
-          </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              {getPageNumbers().map((page, index) =>
-                typeof page === 'number' ? (
+                    ) : currentItems.length > 0 ? (
+                      currentItems.map((lc) => (
+                        <React.Fragment key={lc.id}>
+                          <TableRow className="border-b-0">
+                            <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{lc.applicantName || 'N/A'}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
+                            <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
+                            <TableCell className="px-2 sm:px-4">
+                                <div className="flex flex-wrap gap-1">
+                                    {Array.isArray(lc.status) ? (
+                                        lc.status.map(s => (
+                                            <Badge
+                                                key={s}
+                                                variant={getStatusBadgeVariant(s)}
+                                                className={
+                                                    s === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                    s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                    s === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                    s === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                    s === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                                }
+                                            >
+                                                {s}
+                                            </Badge>
+                                        ))
+                                    ) : lc.status ? (
+                                        <Badge
+                                            variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                                            className={
+                                                lc.status === 'Payment Pending' ? 'bg-amber-500 text-black dark:bg-amber-600' :
+                                                lc.status === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' :
+                                                lc.status === 'Shipment Done' ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black' :
+                                                lc.status === 'Shipment Pending' ? 'bg-yellow-500 text-black dark:bg-yellow-600 dark:text-black' :
+                                                lc.status === 'Draft' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-700 dark:text-blue-100 dark:border-blue-500' : ''
+                                            }
+                                        >
+                                            {lc.status}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline">N/A</Badge>
+                                    )}
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right px-2 sm:px-4">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={!lc.id}>
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
+                                        <FileEdit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
+                                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                        disabled={isReadOnly}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                          <TableRow key={`${lc.id}-actions`}>
+                            <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
+                              <div className="flex flex-wrap justify-center items-center gap-2">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant={lc.etd && lc.eta ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn(
+                                                    "h-7 w-7 rounded-full p-0",
+                                                    lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
+                                                )}
+                                            >
+                                                <CalendarDays className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="p-2">
+                                            <div className="text-sm space-y-1">
+                                                <p className="font-semibold text-foreground">Shipment Info</p>
+                                                <Separator className="my-1"/>
+                                                <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
+                                                <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <Button
+                                    variant={ (lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber) ? "default" : "outline" }
+                                    size="sm"
+                                    onClick={() => {
+                                    let url;
+                                    if (lc.shipmentMode === "Sea" && lc.vesselImoNumber) {
+                                        url = `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`;
+                                    } else if (lc.shipmentMode === "Air" && lc.flightNumber) {
+                                        url = `https://www.flightradar24.com/${lc.flightNumber}`;
+                                    }
+                                    handleOpenLink(url);
+                                    }}
+                                    disabled={!((lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber))}
+                                    title={lc.shipmentMode === "Sea" ? "Track Vessel" : lc.shipmentMode === "Air" ? "Track Flight" : "Track Shipment"}
+                                >
+                                    {lc.shipmentMode === "Sea" ? <Ship className="mr-1.5 h-3.5 w-3.5" /> : lc.shipmentMode === "Air" ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Search className="mr-1.5 h-3.5 w-3.5" />}
+                                    {lc.shipmentMode === "Sea" ? "Vessel" : lc.shipmentMode === "Air" ? "Flight" : "Track"}
+                                </Button>
+                                <Button
+                                variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                    let trackUrl = "";
+                                    if (lc.trackingCourier === "DHL" && lc.trackingNumber) {
+                                    trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&submit=1`;
+                                    } else if (lc.trackingCourier === "FedEx" && lc.trackingNumber) {
+                                    trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(lc.trackingNumber.trim())}`;
+                                    }
+                                    handleOpenLink(trackUrl || undefined);
+                                }}
+                                disabled={!lc.trackingCourier || !lc.trackingNumber}
+                                title="Track Original Document"
+                                >
+                                {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /> :
+                                lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /> :
+                                <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
+                                {lc.trackingCourier ? lc.trackingCourier : "Docs"}
+                                </Button>
+                                <Button
+                                variant={lc.finalLcUrl ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOpenLink(lc.finalLcUrl)}
+                                disabled={!lc.finalLcUrl}
+                                title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
+                                >
+                                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                                {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
+                                </Button>
+                                <Button
+                                variant={lc.finalPIUrl ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOpenLink(lc.finalPIUrl)}
+                                disabled={!lc.finalPIUrl}
+                                title="View Final Proforma Invoice"
+                                >
+                                <FileText className="mr-1.5 h-3.5 w-3.5" /> PI
+                                </Button>
+                                <Button
+                                variant={lc.shippingDocumentsUrl ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOpenLink(lc.shippingDocumentsUrl)}
+                                disabled={!lc.shippingDocumentsUrl}
+                                title="View Shipping Documents"
+                                >
+                                DOC
+                                </Button>
+                                <Button
+                                variant={lc.packingListUrl ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOpenLink(lc.packingListUrl)}
+                                disabled={!lc.packingListUrl}
+                                title="View Packing List"
+                                >
+                                <FileText className="mr-1.5 h-3.5 w-3.5" /> PL
+                                </Button>
+                                <Button
+                                variant={lc.purchaseOrderUrl ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
+                                disabled={!lc.purchaseOrderUrl}
+                                title="View OCS / Purchase Order"
+                                >
+                                OCS / PO
+                                </Button>
+                                {[
+                                    { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                                    { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                                    { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                                ].map((shipment, idx) => (
+                                    <TooltipProvider key={idx} delayDuration={100}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant={shipment.flag ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn(
+                                                    "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                    shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                                )}
+                                                title={`${shipment.label} Shipment Status`}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                            >
+                                                {shipment.label}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        {shipment.note && (
+                                        <TooltipContent>
+                                            <p className="max-w-xs">{shipment.note}</p>
+                                        </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                    </TooltipProvider>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
+                          No L/C entries found matching your criteria.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                  <TableCaption className="py-4">
+                    A list of your Letters of Credit from Firestore.
+                    Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allLcEntries.length)} of {allLcEntries.length} entries.
+                  </TableCaption>
+                </Table>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center space-x-2 py-4">
                   <Button
-                    key={page}
-                    variant={currentPage === page ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    onClick={() => handlePageChange(page)}
-                    className="w-9 h-9 p-0"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
                   >
-                    {page}
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
                   </Button>
-                ) : (
-                  <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
-                    {page}
-                  </span>
-                )
+                  {getPageNumbers().map((page, index) =>
+                    typeof page === 'number' ? (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="w-9 h-9 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ) : (
+                      <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
+                        {page}
+                      </span>
+                    )
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
 
 

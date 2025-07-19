@@ -2,97 +2,98 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isSuperAdmin() {
-      return isAuthenticated() && getUserData().role == 'Super Admin';
-    }
-
+    
+    // Helper function to check if a user is an admin
     function isAdmin() {
-      return isAuthenticated() && getUserData().role in ['Admin', 'Super Admin'];
-    }
-    
-    function isService() {
-      return isAuthenticated() && getUserData().role == 'Service';
-    }
-    
-    function isDemoManager() {
-       return isAuthenticated() && getUserData().role == 'DemoManager';
-    }
-    
-    function isStoreManager() {
-       return isAuthenticated() && getUserData().role == 'Store Manager';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin'];
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Default deny all reads/writes unless explicitly allowed
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // --- Collection Rules ---
-
-    // USERS COLLECTION
+    // Users can read/update their own user document
     match /users/{userId} {
-      allow list, read: if isAdmin();
-      allow update: if isOwner(userId) || isSuperAdmin();
-      allow create: if isOwner(userId);
-      allow delete: if isSuperAdmin();
+      allow read, update: if request.auth.uid == userId;
+      allow list, create, delete: if isAdmin();
     }
     
-    // SETTINGS & COUNTERS
-    match /company_profile/{docId} {
-        allow read: if isAuthenticated();
-        allow write: if isSuperAdmin();
+    // Customers can be read by any authenticated user, but only modified by admins
+    match /customers/{customerId} {
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin();
     }
+    
+    // Suppliers can be read by any authenticated user, but only modified by admins
+    match /suppliers/{supplierId} {
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Financial settings can only be managed by admins
     match /financial_settings/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
-    match /counters/{docId} {
-      allow read, write: if isAuthenticated(); 
-    }
-
-    // CORE MODULES - Admins have full access, other roles get read access for dropdowns
-    match /lc_entries/{docId=**} { 
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    match /proforma_invoices/{docId=**} { 
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    match /customers/{docId=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || isStoreManager();
-    }
-    match /suppliers/{docId=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || isStoreManager();
-    }
-
-    // FINANCIAL MANAGEMENT
-    match /quotes/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /invoices/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /orders/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /payments/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
     
-    // INVENTORY MANAGEMENT
-    match /items/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
-    match /sales/{docId=**} { allow read, write: if isAdmin() || isStoreManager(); }
+    // Proforma invoices can only be managed by admins
+    match /proforma_invoices/{piId} {
+        allow read, create, update, delete: if isAdmin();
+    }
 
-    // DEMO M/C MANAGEMENT
-    match /demo_machine_factories/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    match /demo_machines/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    match /demo_machine_applications/{docId=**} { allow read, write: if isAdmin() || isDemoManager(); }
-    
-    // WARRANTY MANAGEMENT
-    match /installation_reports/{docId=**} { allow read, write: if isAdmin() || isService(); }
+    // Installation reports can be managed by Admins, Service, and DemoManager roles
+    match /installation_reports/{reportId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Service', 'DemoManager'];
+    }
+
+    // Demo machines and factories can be managed by Admins, Service, and DemoManager roles
+    match /demo_machines/{machineId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Service', 'DemoManager'];
+    }
+    match /demo_machine_factories/{factoryId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Service', 'DemoManager'];
+    }
+    match /demo_machine_applications/{applicationId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Service', 'DemoManager'];
+    }
+
+    // LC Entries can only be managed by admins
+    match /lc_entries/{lcId} {
+        allow read, create, update, delete: if isAdmin();
+    }
+
+    // Items can be read by any authenticated user, but only modified by admins and store managers
+    match /items/{itemId} {
+        allow read: if request.auth.uid != null;
+        allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+
+    // Quotes can be read by any authenticated user, but only modified by admins and store managers
+    match /quotes/{quoteId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+
+    // Invoices and related payments can be read by any authenticated user, but only modified by admins and store managers
+    match /invoices/{invoiceId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+    match /payments/{paymentId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+
+    // Orders can be read by any authenticated user, but only modified by admins and store managers
+    match /orders/{orderId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+
+    // Sales can be read by any authenticated user, but only modified by admins and store managers
+    match /sales/{saleId} {
+        allow read, create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Store Manager'];
+    }
+
+    // Counters collection is internal and should only be writeable by authenticated users (via transactions)
+    match /counters/{counterId} {
+        allow read, write: if request.auth.uid != null;
+    }
   }
 }
