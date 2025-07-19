@@ -84,7 +84,7 @@ const getDemoStatusBadgeVariant = (status: DemoAppDisplayStatus): "default" | "s
 
 export default function DemoMachineProgramPage() {
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allApplications, setAllApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [displayedApplications, setDisplayedApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -509,3 +509,6 @@ export default function DemoMachineProgramPage() {
   );
 }
 
+
+
+    
