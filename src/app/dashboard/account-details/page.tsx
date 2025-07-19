@@ -38,7 +38,7 @@ export default function AccountDetailsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
 
   const form = useForm<AccountDetailsFormValues>({
     resolver: zodResolver(accountDetailsSchema),
@@ -404,3 +404,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
