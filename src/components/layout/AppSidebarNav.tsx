@@ -74,6 +74,7 @@ interface NavItem {
   href: string;
   label: string;
   icon?: React.ElementType;
+  iconColorClass?: string;
 }
 
 interface NavItemGroup {
@@ -84,72 +85,72 @@ interface NavItemGroup {
 
 // Define Navigation Items
 const mainNavItems: NavItem[] = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
 ];
 
 const inventoryNavItems: NavItem[] = [
-    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle },
-    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks },
-    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign },
-    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks },
-    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2 },
+    { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
+    { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, iconColorClass: 'bg-icon-sale' },
+    { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/inventory/refunds-returns', label: 'Inventory Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
 ];
 
 const financialNavItems: NavItem[] = [
-    { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks },
-    { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks },
-    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks },
-    { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard },
-    { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks },
-    { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2 },
-    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Layout Settings', icon: LayoutGrid },
+    { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
+    { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
+    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Layout Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
 ];
 
 const commissionManagementNavItems: NavItem[] = [
-    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks },
+    { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
 ];
 
 const lcManagementNavItems: NavItem[] = [
-    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks },
-    { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
-    { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet },
-    { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen },
+    { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+    { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, iconColorClass: 'bg-icon-sheets' },
+    { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen, iconColorClass: 'bg-icon-drive' },
 ];
 
 const partiesNavItems: NavItem[] = [
-    { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: Truck },
-    { href: '/dashboard/customers', label: 'View Applicants', icon: Factory },
+    { href: '/dashboard/suppliers', label: 'View Beneficiaries', icon: Truck, iconColorClass: 'bg-icon-beneficiary' },
+    { href: '/dashboard/customers', label: 'View Applicants', icon: Factory, iconColorClass: 'bg-icon-applicant' },
 ];
 
 const shipmentNavItems: NavItem[] = [
-    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock },
-    { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck },
-    { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign },
-    { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign },
+    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock, iconColorClass: 'bg-icon-upcoming' },
+    { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck, iconColorClass: 'bg-icon-shipment-done' },
+    { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign, iconColorClass: 'bg-icon-payment-pending' },
+    { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, iconColorClass: 'bg-icon-payment-done' },
 ];
 
 const demoNavItems: NavItem[] = [
-    { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search },
-    { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks },
-    { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks },
-    { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode },
-    { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock },
+    { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search, iconColorClass: 'bg-icon-search' },
+    { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode, iconColorClass: 'bg-icon-program' },
+    { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, iconColorClass: 'bg-icon-overdue' },
 ];
 
 const serviceNavItems: NavItem[] = [
-    { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search },
-    { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList },
-    { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive },
-    { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck },
-    { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff },
+    { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, iconColorClass: 'bg-icon-search' },
+    { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, iconColorClass: 'bg-icon-reports' },
+    { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, iconColorClass: 'bg-icon-archive' },
+    { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty' },
+    { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, iconColorClass: 'bg-icon-no-warranty' },
 ];
 
 const settingsNavItems: NavItem[] = [
-    { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-    { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building },
-    { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon },
-    { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings },
-    { href: '/dashboard/settings/logs', label: 'Logs', icon: History },
+    { href: '/dashboard/notifications', label: 'Notifications', icon: Bell, iconColorClass: 'bg-icon-notifications' },
+    { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
+    { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
+    { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+    { href: '/dashboard/settings/logs', label: 'Logs', icon: History, iconColorClass: 'bg-icon-logs' },
 ];
 
 // Define Group Structure
@@ -238,7 +239,11 @@ export function AppSidebarNav() {
                         <Link href={subLink.href} passHref>
                         <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
                             <span className="flex items-center gap-2">
-                            {subLink.icon && <subLink.icon className="h-5 w-5" />}
+                             {subLink.icon && (
+                                <div className={cn("flex h-6 w-6 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
+                                    <subLink.icon className="h-4 w-4" />
+                                </div>
+                             )}
                             <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
                             </span>
                         </SidebarMenuButton>
@@ -288,7 +293,11 @@ export function AppSidebarNav() {
                                 tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                               >
                                 <span className="flex items-center gap-2">
-                                   {subLink.icon && <subLink.icon className="h-4 w-4" />}
+                                   {subLink.icon && (
+                                    <div className={cn("flex h-6 w-6 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
+                                        <subLink.icon className="h-4 w-4" />
+                                    </div>
+                                   )}
                                   <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
                                 </span>
                               </SidebarMenuButton>
