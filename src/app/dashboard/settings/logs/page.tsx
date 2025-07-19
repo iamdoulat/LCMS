@@ -45,10 +45,10 @@ export default function LogsPage() {
   const router = useRouter();
   const [allLogs, setAllLogs] = useState<AppLog[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
 
   useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && !isReadOnly) {
+    if (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view this page.',
@@ -58,7 +58,7 @@ export default function LogsPage() {
       }).then(() => {
         router.push('/dashboard');
       });
-    } else if (!authLoading && (userRole === "Super Admin" || isReadOnly)) {
+    } else if (!authLoading && (userRole?.includes("Super Admin") || isReadOnly)) {
       // Only generate logs if they haven't been cleared previously in this session
       // or if the component mounts for the first time.
       if (allLogs.length === 0) {
@@ -136,7 +136,7 @@ export default function LogsPage() {
   };
 
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && !isReadOnly)) {
+  if (authLoading || (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
