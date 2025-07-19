@@ -4,59 +4,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user has a specific role
-    function hasRole(role) {
-      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      if (userRoles is list) {
-        return role in userRoles;
-      }
-      return userRoles == role; // Fallback for single role
-    }
-    
-    // Helper function to check for multiple roles
+    // Helper function to check if a user has at least one of the specified roles.
+    // Handles both list (new) and string (old) role formats.
     function isOneOfRoles(roles) {
-      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-       if (userRoles is list) {
-        return userRoles.hasAny(roles);
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      if (userRole is list) {
+        return userRole.hasAny(roles);
       }
-      return userRoles in roles; // Fallback for single role
+      return userRole in roles; // Fallback for single role stored as string
     }
 
     match /users/{userId} {
-      allow list: if request.auth != null && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Viewer'));
-      allow get: if request.auth != null && (request.auth.uid == userId || hasRole('Admin') || hasRole('Super Admin') || hasRole('Viewer'));
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (
-                      (request.auth.uid == userId && !('role' in request.resource.data)) ||
-                      hasRole('Admin') || 
-                      hasRole('Super Admin')
-                    );
-      allow delete: if request.auth != null && hasRole('Super Admin');
+
+      allow get: if request.auth != null && (request.auth.uid == userId || isOneOfRoles(['Super Admin', 'Admin', 'Viewer']));
+      allow list: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Viewer']);
+      
+      // Combine update rules: 
+      // 1. User can update their own profile, but not change their role.
+      // 2. Admins/Super Admins can update anything.
+      allow update: if request.auth != null && 
+                    ( (request.auth.uid == userId && !('role' in request.resource.data)) || 
+                      isOneOfRoles(['Super Admin', 'Admin']) );
+      
+      allow delete: if request.auth != null && isOneOfRoles(['Super Admin']);
     }
 
     match /lc_entries/{lcId} {
-      allow read: if request.auth != null && !hasRole('User');
-      allow write: if request.auth != null && (hasRole('Admin') || hasRole('Super Admin'));
+      allow read: if request.auth != null && !isOneOfRoles(['User']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin']);
     }
-    
+
     match /proforma_invoices/{piId} {
-      allow read: if request.auth != null && (isOneOfRoles(['Super Admin', 'Admin', 'Viewer']) || hasRole('Store Manager'));
-      allow write: if request.auth != null && (isOneOfRoles(['Super Admin', 'Admin']) || hasRole('Store Manager'));
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Viewer', 'Store Manager']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /customers/{customerId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && !hasRole('Viewer');
+      allow write: if request.auth != null && !isOneOfRoles(['Viewer']);
     }
 
     match /suppliers/{supplierId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && !hasRole('Viewer');
+      allow write: if request.auth != null && !isOneOfRoles(['Viewer']);
     }
 
     match /installation_reports/{reportId} {
-      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service', 'Viewer']);
-      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service']);
+        allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service', 'Viewer']);
+        allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service']);
     }
     
     match /demo_machine_factories/{factoryId} {
@@ -93,22 +89,18 @@ service cloud.firestore {
     }
 
     match /quotes/{quoteId} {
-      allow read, write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /orders/{orderId} {
-      allow read, write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /invoices/{invoiceId} {
-      allow read, write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
-    }
-
-    // Default deny all other collections unless specified
-    match /{document=**} {
-      allow read, write: if false;
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
   }
 }
-
-    
