@@ -235,7 +235,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser || (userRole !== "Super Admin" && userRole !== "Admin")) {
+    if (!authUser || (userRole !== "Super Admin" && userRole !== "Admin" && userRole !== "Viewer")) {
       setIsLoading(false);
       return;
     }
@@ -478,7 +478,7 @@ export default function DashboardPage() {
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
-  if (userRole && userRole !== 'Super Admin' && userRole !== 'Admin') {
+  if (userRole && userRole !== 'Super Admin' && userRole !== 'Admin' && userRole !== 'Viewer') {
     return (
         <div className="flex flex-col gap-8">
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">

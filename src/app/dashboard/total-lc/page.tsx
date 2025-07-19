@@ -123,7 +123,7 @@ export default function TotalLCPage() {
 
   useEffect(() => {
     // Role-based access check before fetching any data
-    if (!authLoading && userRole && !['Super Admin', 'Admin'].includes(userRole)) {
+    if (!authLoading && userRole && !['Super Admin', 'Admin', 'Viewer'].includes(userRole)) {
       setFetchError("You do not have permission to view this data.");
       setIsLoading(false);
       setIsLoadingApplicants(false);
@@ -588,7 +588,7 @@ export default function TotalLCPage() {
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
                                         <FileEdit className="mr-2 h-4 w-4" />
-                                        <span>Edit</span>
+                                        <span>{isReadOnly ? "View" : "Edit"}</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() => lc.id && handleDeleteLC(lc.id, lc.documentaryCreditNumber)}
@@ -807,6 +807,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
