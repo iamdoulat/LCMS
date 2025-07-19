@@ -97,7 +97,7 @@ const ITEMS_PER_PAGE = 10;
 export default function TotalLCPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +123,8 @@ export default function TotalLCPage() {
 
   useEffect(() => {
     // Role-based access check before fetching any data
-    if (!authLoading && userRole && !['Super Admin', 'Admin', 'Viewer'].includes(userRole)) {
+    const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer'].includes(role));
+    if (!authLoading && !canView && userRole !== null) {
       setFetchError("You do not have permission to view this data.");
       setIsLoading(false);
       setIsLoadingApplicants(false);
@@ -807,6 +808,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
