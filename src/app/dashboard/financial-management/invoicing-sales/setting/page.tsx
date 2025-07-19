@@ -17,7 +17,7 @@ export default function FinancialManagementSettingPage() {
 
   React.useEffect(() => {
     // A non-admin can't change settings, but a viewer might be allowed to see them
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
+    if (!authLoading && !userRole?.includes("Super Admin") && !userRole?.includes("Admin") && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You do not have permission to view or edit these settings.',
@@ -31,7 +31,7 @@ export default function FinancialManagementSettingPage() {
   }, [userRole, authLoading, router, isReadOnly]);
 
   // Show loading indicator while auth state is being resolved.
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
+  if (authLoading || (!authLoading && !userRole?.includes("Super Admin") && !userRole?.includes("Admin") && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
