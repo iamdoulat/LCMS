@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { useEffect } from 'react';
+import type { UserRole } from '@/types';
 
 const publicPaths = ['/login', '/register']; // Paths accessible without authentication
 const dashboardPath = '/dashboard';
@@ -25,9 +26,16 @@ const roleAllowedPaths: Record<string, string[]> = {
   ],
 };
 
+// Define paths that are explicitly disallowed for certain roles.
+const roleDisallowedPaths: Partial<Record<UserRole, string[]>> = {
+  "User": ['/dashboard/total-lc'],
+};
+
+
 // Define default redirect paths for restricted roles
 // Fallback values are provided in case the environment variables are not set.
 const roleRedirects: Record<string, string> = {
+  "User": '/dashboard', // Default for "User" role if they access a disallowed path
   "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
   "Store Manager": process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list',
@@ -53,7 +61,7 @@ export default function AuthGuard({ children }: PropsWithChildren) {
     }
 
     // If authenticated, handle redirection and access control
-    if (user) {
+    if (user && userRole) {
       // Redirect away from public pages if logged in
       if (publicPaths.includes(pathname)) {
         router.replace(dashboardPath);
@@ -62,8 +70,15 @@ export default function AuthGuard({ children }: PropsWithChildren) {
       
       const restrictedRole = userRole as keyof typeof roleRedirects;
 
-      // Check if the user has a restricted role with a defined redirect path
-      if (roleRedirects[restrictedRole]) {
+      // 1. Check for explicitly disallowed paths
+      const disallowedPaths = roleDisallowedPaths[userRole];
+      if (disallowedPaths && disallowedPaths.some(prefix => pathname.startsWith(prefix))) {
+          router.replace(roleRedirects[userRole] || dashboardPath);
+          return;
+      }
+
+      // 2. Check for roles with limited allowed paths
+      if (roleAllowedPaths[restrictedRole]) {
         const allowedPaths = roleAllowedPaths[restrictedRole] || [];
         // Check if the current path is allowed for this role
         const isPathAllowed = allowedPaths.some(prefix => pathname.startsWith(prefix));
