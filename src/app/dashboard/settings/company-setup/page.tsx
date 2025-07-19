@@ -14,10 +14,10 @@ import { CompanySetupForm } from '@/components/forms/CompanySetupForm';
 export default function CompanySetupPage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
 
   React.useEffect(() => {
-    if (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly) {
+    if (!authLoading && !userRole?.includes("Super Admin") && !userRole?.includes("Admin") && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
         text: 'You are not permitted to view/edit company settings.',
@@ -30,7 +30,7 @@ export default function CompanySetupPage() {
     }
   }, [userRole, authLoading, router, isReadOnly]);
 
-  if (authLoading || (!authLoading && userRole !== "Super Admin" && userRole !== "Admin" && !isReadOnly)) {
+  if (authLoading || (!authLoading && !userRole?.includes("Super Admin") && !userRole?.includes("Admin") && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
