@@ -52,7 +52,7 @@ const formatFactoryDate = (dateInput?: string | Timestamp | Date): string => {
 export default function DemoMachineFactoriesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [factories, setFactories] = useState<DemoMachineFactoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -262,3 +262,5 @@ export default function DemoMachineFactoriesListPage() {
     </div>
   );
 }
+
+    
