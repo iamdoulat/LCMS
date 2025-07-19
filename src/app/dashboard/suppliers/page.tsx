@@ -29,7 +29,7 @@ const ITEMS_PER_PAGE = 10;
 export default function BeneficiariesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole === 'Viewer';
+  const isReadOnly = userRole?.includes('Viewer');
   const [allBeneficiaries, setAllBeneficiaries] = useState<SupplierDocument[]>([]);
   const [displayedBeneficiaries, setDisplayedBeneficiaries] = useState<SupplierDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
