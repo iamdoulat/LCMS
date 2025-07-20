@@ -13,16 +13,17 @@ service cloud.firestore {
       return isOneOfRoles(['Super Admin', 'Admin']);
     }
 
+    function isViewer() {
+      return isOneOfRoles(['Viewer']);
+    }
+
     match /users/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId;
-
       allow get: if request.auth != null && (request.auth.uid == userId || isOneOfRoles(['Super Admin', 'Admin', 'Viewer']));
       allow list: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Viewer']);
-      
       allow update: if request.auth != null && 
                     ( (request.auth.uid == userId && !('role' in request.resource.data)) || 
                       isAdmin() );
-      
       allow delete: if request.auth != null && isOneOfRoles(['Super Admin']);
     }
 
@@ -76,33 +77,34 @@ service cloud.firestore {
        allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
     
-    match /sales/{saleId} {
+    match /quote_items/{quoteItemId} {
        allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
+    }
+
+    match /sales/{saleId} {
+       allow read: if request.auth != null && (isAdmin() || isOneOfRoles(['Store Manager', 'Viewer']));
        allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
     
     match /payments/{paymentId} {
-       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+       allow read: if request.auth != null && (isAdmin() || isOneOfRoles(['Store Manager', 'Viewer']));
        allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /quotes/{quoteId} {
-      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow read: if request.auth != null && (isAdmin() || isOneOfRoles(['Store Manager', 'Viewer']));
       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /orders/{orderId} {
-      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow read: if request.auth != null && (isAdmin() || isOneOfRoles(['Store Manager', 'Viewer']));
       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
 
     match /invoices/{invoiceId} {
-      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow read: if request.auth != null && (isAdmin() || isOneOfRoles(['Store Manager', 'Viewer']));
       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
-    }
-    
-    match /counters/{counterId} {
-      allow read, write: if request.auth != null;
     }
   }
 }
