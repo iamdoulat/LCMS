@@ -158,7 +158,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems },
   { groupLabel: 'Quotes and Invoices', icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems },
   { groupLabel: 'Inventory Management', icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
-  { groupLabel: "Commission Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
+  { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
   { groupLabel: 'Beneficiaries / Applicants', icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
   { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems },
