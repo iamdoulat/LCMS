@@ -117,7 +117,7 @@ export function CreateQuoteForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         setCustomerOptions(
@@ -507,35 +507,12 @@ export function CreateQuoteForm() {
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Columns className="mr-2 h-4 w-4" />
-                    Columns
-                </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                    checked={showItemCodeColumn}
-                    onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}
-                >
-                    Item Code
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={showDiscountColumn}
-                    onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}
-                >
-                    Discount %
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={showTaxColumn}
-                    onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}
-                >
-                    Tax %
-                </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>

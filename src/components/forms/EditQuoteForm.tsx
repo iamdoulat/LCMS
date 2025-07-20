@@ -104,7 +104,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedCustomers = customersSnap.docs.map(docSnap => {
@@ -658,7 +658,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || watchedStatus === 'Invoiced'}>
               <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
             </Button>
         </div>
@@ -666,5 +666,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+
 
 
