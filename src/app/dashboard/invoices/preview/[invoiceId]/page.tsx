@@ -169,8 +169,8 @@ export default function PrintInvoicePage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
+                    width={317}
+                    height={46}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -185,7 +185,7 @@ export default function PrintInvoicePage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PROFORMA INVOICE</h2>
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">PROFORMA INVOICE</h2>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Invoice Number :</span>
                     <span>{invoiceData.id}</span>
