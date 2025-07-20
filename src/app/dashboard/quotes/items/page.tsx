@@ -46,7 +46,7 @@ export default function QuoteItemsListPage() {
   const [filterItemName, setFilterItemName] = useState('');
   const [filterItemCode, setFilterItemCode] = useState('');
   const [filterBrandName, setFilterBrandName] = useState('');
-  const [filterSupplierName, setFilterSupplierName] = useState('');
+  const [filterSupplierName, setFilterSupplierName] = useState(''); // New filter state
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -96,14 +96,14 @@ export default function QuoteItemsListPage() {
         item.brandName?.toLowerCase().includes(filterBrandName.toLowerCase())
       );
     }
-    if (filterSupplierName) {
+    if (filterSupplierName) { // Filter by supplier name
       filtered = filtered.filter(item =>
         item.supplierName?.toLowerCase().includes(filterSupplierName.toLowerCase())
       );
     }
 
     setDisplayedItems(filtered);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [allItems, filterItemName, filterItemCode, filterBrandName, filterSupplierName]);
 
 
@@ -143,7 +143,7 @@ export default function QuoteItemsListPage() {
     setFilterItemName('');
     setFilterItemCode('');
     setFilterBrandName('');
-    setFilterSupplierName('');
+    setFilterSupplierName(''); // Clear supplier filter
     setCurrentPage(1);
   };
 
@@ -201,10 +201,10 @@ export default function QuoteItemsListPage() {
                 Browse, filter, and manage all your quote items.
               </CardDescription>
             </div>
-            <Link href="/dashboard/items/add" passHref>
+            <Link href="/dashboard/quotes/items/add" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Item
+                Add New Quote Item
               </Button>
             </Link>
           </div>
@@ -215,7 +215,7 @@ export default function QuoteItemsListPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end"> {/* Adjusted for 5 columns */}
                 <div>
                   <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
                   <Input
@@ -243,7 +243,7 @@ export default function QuoteItemsListPage() {
                     onChange={(e) => setFilterBrandName(e.target.value)}
                   />
                 </div>
-                <div>
+                <div> {/* New Supplier Filter */}
                   <Label htmlFor="supplierNameFilter" className="text-sm font-medium">Supplier Name</Label>
                   <Input
                     id="supplierNameFilter"
@@ -252,7 +252,7 @@ export default function QuoteItemsListPage() {
                     onChange={(e) => setFilterSupplierName(e.target.value)}
                   />
                 </div>
-                <div className="lg:col-span-1 md:col-span-2 self-end xl:col-start-5">
+                <div className="lg:col-span-1 md:col-span-2 self-end xl:col-start-5"> {/* Ensure button aligns well */}
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters
                   </Button>
@@ -268,7 +268,7 @@ export default function QuoteItemsListPage() {
                   <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
-                  <TableHead className="px-2 sm:px-4">Supplier Name</TableHead>
+                  <TableHead className="px-2 sm:px-4">Supplier Name</TableHead> {/* New Header */}
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
