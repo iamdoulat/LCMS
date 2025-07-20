@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Package, Save, DollarSign, Tag, Building } from 'lucide-react';
+import { Loader2, Package, Save, DollarSign, Tag, Building, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 
@@ -32,6 +32,7 @@ export function AddQuoteItemForm() {
       modelNumber: '',
       itemCode: '',
       brandName: '',
+      countryOfOrigin: '',
       supplierId: '',
       description: '',
       unit: 'pcs',
@@ -69,6 +70,7 @@ export function AddQuoteItemForm() {
       itemName: data.modelNumber, // Map modelNumber to itemName
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
+      countryOfOrigin: data.countryOfOrigin || undefined,
       supplierId: data.supplierId || undefined,
       supplierName: selectedSupplier?.label || undefined,
       description: data.description || undefined,
@@ -96,7 +98,7 @@ export function AddQuoteItemForm() {
         showConfirmButton: true,
       });
       form.reset({
-        modelNumber: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
+        modelNumber: '', itemCode: '', brandName: '', countryOfOrigin: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
       });
     } catch (error) {
       console.error("Error adding quote item document: ", error);
@@ -152,7 +154,7 @@ export function AddQuoteItemForm() {
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="itemCode"
@@ -174,6 +176,19 @@ export function AddQuoteItemForm() {
                 <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand Name</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter brand name" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="countryOfOrigin"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Globe className="h-4 w-4 mr-1 text-muted-foreground" />Country of origin</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter country" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

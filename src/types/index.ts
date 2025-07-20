@@ -703,6 +703,7 @@ export interface Item {
   itemName: string;
   itemCode?: string; // SKU
   brandName?: string;
+  countryOfOrigin?: string; // Added field
   supplierId?: string; // New field
   supplierName?: string; // New field (denormalized for display)
   description?: string;
@@ -773,9 +774,10 @@ export type ItemFormValues = z.infer<typeof itemSchema>;
 // --- Quote Item Types ---
 // This schema is for items that are used in quotes/invoices and don't need stock management fields.
 export const quoteItemSchema = z.object({
-  modelNumber: z.string().min(1, "Model Number is required."), // Changed from itemName
+  modelNumber: z.string().min(1, "Model Number is required."),
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
+  countryOfOrigin: z.string().optional(),
   supplierId: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building, MoreHorizontal, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -108,7 +108,7 @@ export default function QuoteItemsListPage() {
 
 
   const handleEditItem = (itemId: string) => {
-    router.push(`/dashboard/quotes/items/${itemId}/edit`); // Changed URL
+    router.push(`/dashboard/quotes/items/${itemId}/edit`);
   };
 
   const handleDeleteItem = (itemId: string, itemName?: string) => {
@@ -124,7 +124,7 @@ export default function QuoteItemsListPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteDoc(doc(firestore, "quote_items", itemId)); // Changed collection
+          await deleteDoc(doc(firestore, "quote_items", itemId));
           setAllItems(prevItems => prevItems.filter(item => item.id !== itemId));
           Swal.fire(
             'Deleted!',
@@ -268,6 +268,7 @@ export default function QuoteItemsListPage() {
                   <TableHead className="w-[200px] px-2 sm:px-4">Model Number</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
+                  <TableHead className="px-2 sm:px-4">Country</TableHead>
                   <TableHead className="px-2 sm:px-4">Supplier Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
@@ -277,15 +278,16 @@ export default function QuoteItemsListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
+                      <TableCell className="px-2 sm:px-4">{item.countryOfOrigin || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
@@ -318,7 +320,7 @@ export default function QuoteItemsListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
