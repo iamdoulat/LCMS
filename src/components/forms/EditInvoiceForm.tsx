@@ -85,7 +85,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedCustomers = customersSnap.docs.map(docSnap => {

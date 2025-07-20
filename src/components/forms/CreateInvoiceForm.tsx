@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -116,7 +115,7 @@ export function CreateInvoiceForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
         setCustomerOptions(
           customersSnap.docs.map(doc => {
