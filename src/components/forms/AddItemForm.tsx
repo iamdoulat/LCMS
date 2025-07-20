@@ -140,7 +140,7 @@ export function AddItemForm() {
             name="itemName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Item Name*</FormLabel>
+                <FormLabel>Model Number*</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter item name" {...field} />
                 </FormControl>

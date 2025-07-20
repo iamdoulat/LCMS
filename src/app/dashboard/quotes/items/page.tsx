@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building, MoreHorizontal, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -217,10 +217,10 @@ export default function QuoteItemsListPage() {
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
                 <div>
-                  <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
+                  <Label htmlFor="itemNameFilter" className="text-sm font-medium">Model Number</Label>
                   <Input
                     id="itemNameFilter"
-                    placeholder="Search by Item Name..."
+                    placeholder="Search by Model Number..."
                     value={filterItemName}
                     onChange={(e) => setFilterItemName(e.target.value)}
                   />
@@ -265,9 +265,9 @@ export default function QuoteItemsListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
-                  <TableHead className="px-2 sm:px-4">Item Code</TableHead>
+                  <TableHead className="w-[200px] px-2 sm:px-4">Model Number</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
+                  <TableHead className="px-2 sm:px-4">Country</TableHead>
                   <TableHead className="px-2 sm:px-4">Supplier Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
@@ -284,8 +284,8 @@ export default function QuoteItemsListPage() {
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
-                      <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
+                      <TableCell className="px-2 sm:px-4">{item.countryOfOrigin || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
