@@ -100,7 +100,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotation List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/quotes/items', label: 'Quote Item List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/orders/create', label: 'Create New Order', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
