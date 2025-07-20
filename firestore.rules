@@ -1,117 +1,108 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for roles
-    function isSuperAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin']);
+    function isOneOfRoles(roles) {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userRole is list ? userRole.hasAny(roles) : userRole in roles;
     }
+
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin', 'Admin']);
-    }
-    function isViewer() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Viewer']);
+      return isOneOfRoles(['Super Admin', 'Admin']);
     }
 
-    // Users can read their own profile, Admins can read/write all profiles
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if isAdmin();
-    }
-    
-    // Admins can read/write financial settings
-    match /financial_settings/{docId} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Admins can read/write counters
-    match /counters/{docId} {
-      allow read, write: if isAdmin();
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      allow get: if request.auth != null && (request.auth.uid == userId || isOneOfRoles(['Super Admin', 'Admin', 'Viewer']));
+      allow list: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Viewer']);
+      
+      allow update: if request.auth != null && 
+                    ( (request.auth.uid == userId && !('role' in request.resource.data)) || 
+                      isAdmin() );
+      
+      allow delete: if request.auth != null && isOneOfRoles(['Super Admin']);
     }
 
-    // General Collections
-    match /{collection}/{docId} {
-      // Default deny
-      allow read, write: if false;
-    }
-
-    // LC Entries: Admins can read/write. Viewers can read.
     match /lc_entries/{lcId} {
-      allow read: if isAdmin() || isViewer();
-      allow write: if isAdmin();
+      allow read: if request.auth != null && !isOneOfRoles(['User']);
+      allow write: if request.auth != null && isAdmin();
     }
     
-    // Customers: Admins can read/write. Viewers can read.
-    match /customers/{customerId} {
-      allow read: if isAdmin() || isViewer();
-      allow write: if isAdmin();
-    }
-    
-    // Suppliers: Admins can read/write. Viewers can read.
-    match /suppliers/{supplierId} {
-      allow read: if isAdmin() || isViewer();
-      allow write: if isAdmin();
-    }
-
-    // Proforma Invoices: Admins can read/write. Viewers can read.
     match /proforma_invoices/{piId} {
-        allow read: if isAdmin() || isViewer();
-        allow write: if isAdmin();
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Viewer', 'Store Manager']);
+      allow write: if request.auth != null && isAdmin();
     }
 
-    // Installation Reports: Admins can read/write. Viewers and Service role can read.
+    match /customers/{customerId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && !isOneOfRoles(['Viewer']);
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && !isOneOfRoles(['Viewer']);
+    }
+
     match /installation_reports/{reportId} {
-        allow read: if isAdmin() || isViewer() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Service']);
-        allow write: if isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Service']);
+        allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service', 'Viewer']);
+        allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Service']);
     }
     
-    // Demo Machines & Factories: Admins can read/write. Viewers and DemoManager can read.
-    match /demo_machines/{machineId} {
-      allow read: if isAdmin() || isViewer() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-      allow write: if isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-    }
     match /demo_machine_factories/{factoryId} {
-      allow read: if isAdmin() || isViewer() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-      allow write: if isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-    }
-     match /demo_machine_applications/{appId} {
-      allow read: if isAdmin() || isViewer() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-      allow write: if isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['DemoManager']);
-    }
-    
-    // Inventory, Sales, Financials: Admins read/write. Viewers and Store Manager can read.
-    function canAccessFinancials() {
-        let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        return userRoles.hasAny(['Super Admin', 'Admin', 'Viewer', 'Store Manager']);
-    }
-    function canWriteFinancials() {
-        let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        return userRoles.hasAny(['Super Admin', 'Admin', 'Store Manager']);
+       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager']);
     }
 
+    match /demo_machines/{machineId} {
+       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager']);
+    }
+
+    match /demo_machine_applications/{applicationId} {
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'DemoManager']);
+    }
+
+    match /financial_settings/{docId} {
+       allow read: if request.auth != null;
+       allow write: if request.auth != null && isAdmin();
+    }
+    
     match /items/{itemId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
+       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
+    
     match /sales/{saleId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
+       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
+    
+    match /payments/{paymentId} {
+       allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+       allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
+    }
+
     match /quotes/{quoteId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
+
+    match /orders/{orderId} {
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
+    }
+
     match /invoices/{invoiceId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
+      allow read: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager', 'Viewer']);
+      allow write: if request.auth != null && isOneOfRoles(['Super Admin', 'Admin', 'Store Manager']);
     }
-     match /orders/{orderId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
-    }
-     match /payments/{paymentId} {
-        allow read: if canAccessFinancials();
-        allow write: if canWriteFinancials();
+    
+    match /counters/{counterId} {
+      allow read, write: if request.auth != null;
     }
   }
 }
