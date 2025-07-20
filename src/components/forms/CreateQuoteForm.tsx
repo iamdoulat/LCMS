@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -24,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useRouter } from 'next/navigation'; // Added for navigation
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,35 +166,46 @@ export function CreateQuoteForm() {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
+
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
+        
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
+          
+          // The line total shown in the table now ONLY shows qty * unit price
+          lineTotal = itemTotalBeforeDiscount;
+          
+          // These calculations are still needed for the grand total at the bottom
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
+          currentTotalTax += taxAmountVal;
         }
+        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
+
     setSubtotal(currentSubtotal);
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
+
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
+
   }, [watchedLineItems, watchedTaxType, watchedGlobalDiscount, watchedGlobalTaxRate, setValue, getValues]);
 
 
@@ -236,10 +246,10 @@ export function CreateQuoteForm() {
         const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0')) || 0;
-          const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-          const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
-          const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
+          const qty = parseFloat(String(item.qty || '0'));
+          const unitPrice = parseFloat(String(item.unitPrice || '0'));
+          const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
+          const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
     
           const itemTotalBeforeDiscount = qty * unitPrice;
           const discountAmountVal = itemTotalBeforeDiscount * (discountPercentage / 100);
@@ -518,7 +528,7 @@ export function CreateQuoteForm() {
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-            <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+            <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
