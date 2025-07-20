@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -491,7 +490,7 @@ export default function DashboardPage() {
                     )}
                     <h1
                         className={cn(
-                        "font-bold text-xl sm:text-2xl lg:text-3xl",
+                        "font-bold text-lg sm:text-2xl lg:text-3xl",
                         "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
                         )}
                     >
@@ -525,7 +524,7 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-xl sm:text-2xl lg:text-3xl",
+              "font-bold text-lg sm:text-2xl lg:text-3xl",
               "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
