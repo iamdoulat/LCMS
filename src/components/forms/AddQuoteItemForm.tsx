@@ -29,7 +29,7 @@ export function AddQuoteItemForm() {
   const form = useForm<QuoteItemFormValues>({
     resolver: zodResolver(quoteItemSchema),
     defaultValues: {
-      itemName: '',
+      modelNumber: '',
       itemCode: '',
       brandName: '',
       supplierId: '',
@@ -37,7 +37,6 @@ export function AddQuoteItemForm() {
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
-      manageStock: false, // This is optional in the schema but good to have a default
     },
   });
 
@@ -66,9 +65,8 @@ export function AddQuoteItemForm() {
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
-    // Casting to 'any' for dataToSave to add timestamp fields.
     const dataToSave: any = {
-      itemName: data.itemName,
+      itemName: data.modelNumber, // Map modelNumber to itemName
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
       supplierId: data.supplierId || undefined,
@@ -92,13 +90,13 @@ export function AddQuoteItemForm() {
       const docRef = await addDoc(collection(firestore, "quote_items"), dataToSave);
       Swal.fire({
         title: "Quote Item Added!",
-        text: `Quote Item "${data.itemName}" saved successfully with ID: ${docRef.id}.`,
+        text: `Quote Item "${data.modelNumber}" saved successfully with ID: ${docRef.id}.`,
         icon: "success",
         timer: 2500,
         showConfirmButton: true,
       });
       form.reset({
-        itemName: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
+        modelNumber: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
       });
     } catch (error) {
       console.error("Error adding quote item document: ", error);
@@ -123,12 +121,12 @@ export function AddQuoteItemForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="itemName"
+            name="modelNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Item Name*</FormLabel>
+                <FormLabel>Model Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter item name" {...field} />
+                  <Input placeholder="Enter model number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

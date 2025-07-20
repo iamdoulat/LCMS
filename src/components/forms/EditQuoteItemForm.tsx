@@ -35,7 +35,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
   const form = useForm<QuoteItemFormValues>({
     resolver: zodResolver(quoteItemSchema),
     defaultValues: {
-      itemName: '',
+      modelNumber: '',
       itemCode: '',
       brandName: '',
       supplierId: '',
@@ -69,7 +69,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
   React.useEffect(() => {
     if (initialData) {
       form.reset({
-        itemName: initialData.itemName || '',
+        modelNumber: initialData.itemName || '', // Map itemName to modelNumber
         itemCode: initialData.itemCode || '',
         brandName: initialData.brandName || '',
         supplierId: initialData.supplierId || '',
@@ -87,7 +87,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
     const dataToUpdate: Partial<Omit<ItemDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
-      itemName: data.itemName,
+      itemName: data.modelNumber, // Map modelNumber to itemName for saving
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
       supplierId: data.supplierId || undefined,
@@ -111,7 +111,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       await updateDoc(itemDocRef, dataToUpdate);
       Swal.fire({
         title: "Quote Item Updated!",
-        text: `Quote Item "${data.itemName}" has been successfully updated.`,
+        text: `Quote Item "${data.modelNumber}" has been successfully updated.`,
         icon: "success",
         timer: 2500,
         showConfirmButton: true,
@@ -138,12 +138,12 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="itemName"
+            name="modelNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Item Name*</FormLabel>
+                <FormLabel>Model Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter item name" {...field} />
+                  <Input placeholder="Enter model number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

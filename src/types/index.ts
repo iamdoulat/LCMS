@@ -773,7 +773,7 @@ export type ItemFormValues = z.infer<typeof itemSchema>;
 // --- Quote Item Types ---
 // This schema is for items that are used in quotes/invoices and don't need stock management fields.
 export const quoteItemSchema = z.object({
-  itemName: z.string().min(1, "Item Name is required."),
+  modelNumber: z.string().min(1, "Model Number is required."), // Changed from itemName
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
   supplierId: z.string().optional(),
@@ -787,8 +787,6 @@ export const quoteItemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Purchase Price must be a number." }).nonnegative("Purchase Price cannot be negative.").optional()
   ),
-  // Explicitly remove stock fields
-  manageStock: z.boolean().default(false).optional(),
 });
 
 export type QuoteItemFormValues = z.infer<typeof quoteItemSchema>;
