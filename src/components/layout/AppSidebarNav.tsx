@@ -97,9 +97,13 @@ const inventoryNavItems: NavItem[] = [
 ];
 
 const financialNavItems: NavItem[] = [
+    { href: '/dashboard/quotes/create', label: 'Create New Quote', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/quotes/items/add', label: 'Add New Quote Item', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/quotes/items', label: 'Quote Item List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/invoices/create', label: 'Create New Invoice', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/orders/create', label: 'Create New Order', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
@@ -108,10 +112,12 @@ const financialNavItems: NavItem[] = [
 ];
 
 const commissionManagementNavItems: NavItem[] = [
+    { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
 ];
 
 const lcManagementNavItems: NavItem[] = [
+    { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-lc' },
     { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, iconColorClass: 'bg-icon-sheets' },
@@ -132,14 +138,18 @@ const shipmentNavItems: NavItem[] = [
 
 const demoNavItems: NavItem[] = [
     { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search, iconColorClass: 'bg-icon-search' },
+    { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add New Factory', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/demo/demo-machine-application', label: 'New Demo Application', icon: FileEdit, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode, iconColorClass: 'bg-icon-program' },
     { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, iconColorClass: 'bg-icon-overdue' },
 ];
 
 const serviceNavItems: NavItem[] = [
     { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, iconColorClass: 'bg-icon-search' },
+    { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, iconColorClass: 'bg-icon-archive' },
     { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty' },
@@ -158,9 +168,9 @@ const settingsNavItems: NavItem[] = [
 const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems },
   { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems },
-  { groupLabel: 'Accounts and Inventory', icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
+  { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
   { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
-  { groupLabel: 'Suppliers / Applicants', icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
+  { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
   { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems },
