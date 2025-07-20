@@ -46,25 +46,25 @@ export default function QuoteItemsListPage() {
   const [filterItemName, setFilterItemName] = useState('');
   const [filterItemCode, setFilterItemCode] = useState('');
   const [filterBrandName, setFilterBrandName] = useState('');
-  const [filterSupplierName, setFilterSupplierName] = useState(''); // New filter state
+  const [filterSupplierName, setFilterSupplierName] = useState('');
 
   useEffect(() => {
     const fetchItems = async () => {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const itemsCollectionRef = collection(firestore, "items");
+        const itemsCollectionRef = collection(firestore, "quote_items"); // Changed collection
         const q = query(itemsCollectionRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const fetchedItems = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ItemDocument));
         setAllItems(fetchedItems);
       } catch (error: any) {
-        console.error("Error fetching items: ", error);
-        let errorMessage = `Could not fetch items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
+        console.error("Error fetching quote items: ", error);
+        let errorMessage = `Could not fetch quote items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required for 'items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
+            errorMessage = `Could not fetch data: A Firestore index might be required for 'quote_items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions for 'items'. Please check Firestore security rules.`;
+           errorMessage = `Could not fetch data: Missing or insufficient permissions for 'quote_items'. Please check Firestore security rules.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -96,7 +96,7 @@ export default function QuoteItemsListPage() {
         item.brandName?.toLowerCase().includes(filterBrandName.toLowerCase())
       );
     }
-    if (filterSupplierName) { // Filter by supplier name
+    if (filterSupplierName) {
       filtered = filtered.filter(item =>
         item.supplierName?.toLowerCase().includes(filterSupplierName.toLowerCase())
       );
@@ -108,7 +108,7 @@ export default function QuoteItemsListPage() {
 
 
   const handleEditItem = (itemId: string) => {
-    router.push(`/dashboard/items/${itemId}/edit`);
+    router.push(`/dashboard/quotes/items/${itemId}/edit`);
   };
 
   const handleDeleteItem = (itemId: string, itemName?: string) => {
@@ -124,7 +124,7 @@ export default function QuoteItemsListPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteDoc(doc(firestore, "items", itemId));
+          await deleteDoc(doc(firestore, "quote_items", itemId));
           setAllItems(prevItems => prevItems.filter(item => item.id !== itemId));
           Swal.fire(
             'Deleted!',
@@ -143,7 +143,7 @@ export default function QuoteItemsListPage() {
     setFilterItemName('');
     setFilterItemCode('');
     setFilterBrandName('');
-    setFilterSupplierName(''); // Clear supplier filter
+    setFilterSupplierName('');
     setCurrentPage(1);
   };
 
@@ -195,7 +195,7 @@ export default function QuoteItemsListPage() {
             <div>
               <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <PackageIcon className="h-7 w-7 text-primary" />
-                Quote Item List
+                Manage Quote Items
               </CardTitle>
               <CardDescription>
                 Browse, filter, and manage all your quote items.
@@ -215,7 +215,7 @@ export default function QuoteItemsListPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end"> {/* Adjusted for 5 columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
                 <div>
                   <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
                   <Input
@@ -243,7 +243,7 @@ export default function QuoteItemsListPage() {
                     onChange={(e) => setFilterBrandName(e.target.value)}
                   />
                 </div>
-                <div> {/* New Supplier Filter */}
+                <div>
                   <Label htmlFor="supplierNameFilter" className="text-sm font-medium">Supplier Name</Label>
                   <Input
                     id="supplierNameFilter"
@@ -252,7 +252,7 @@ export default function QuoteItemsListPage() {
                     onChange={(e) => setFilterSupplierName(e.target.value)}
                   />
                 </div>
-                <div className="lg:col-span-1 md:col-span-2 self-end xl:col-start-5"> {/* Ensure button aligns well */}
+                <div className="lg:col-span-1 md:col-span-2 self-end xl:col-start-5">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters
                   </Button>
@@ -268,20 +268,18 @@ export default function QuoteItemsListPage() {
                   <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
-                  <TableHead className="px-2 sm:px-4">Supplier Name</TableHead> {/* New Header */}
+                  <TableHead className="px-2 sm:px-4">Supplier Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
                   <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
-                  <TableHead className="px-2 sm:px-4">Stock Status</TableHead>
-                  <TableHead className="px-2 sm:px-4">Location</TableHead>
                   <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
@@ -292,25 +290,6 @@ export default function QuoteItemsListPage() {
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.purchasePrice)}</TableCell>
-                      <TableCell className="px-2 sm:px-4">
-                        {item.manageStock ? (
-                          <Badge variant="default" className="bg-green-500/80 hover:bg-green-600">
-                            Managed: {item.currentQuantity ?? 0}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Not Managed</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-2 sm:px-4">
-                        {item.location ? (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            {item.location}
-                          </span>
-                        ) : (
-                          'N/A'
-                        )}
-                      </TableCell>
                       <TableCell className="text-right px-2 sm:px-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -339,7 +318,7 @@ export default function QuoteItemsListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={10} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Item\" to get started."}</p></div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
