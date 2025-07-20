@@ -98,6 +98,7 @@ const inventoryNavItems: NavItem[] = [
 
 const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotes List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/quotes/items', label: 'Quote Item List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/invoices/list', label: 'Invoices List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
