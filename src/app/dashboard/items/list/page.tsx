@@ -217,7 +217,7 @@ export default function ItemsListPage() {
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end"> {/* Adjusted for 5 columns */}
                 <div>
-                  <Label htmlFor="itemNameFilter" className="text-sm font-medium">Item Name</Label>
+                  <Label htmlFor="itemNameFilter" className="text-sm font-medium">Model Number</Label>
                   <Input
                     id="itemNameFilter"
                     placeholder="Search by Item Name..."
@@ -265,7 +265,7 @@ export default function ItemsListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
+                  <TableHead className="w-[200px] px-2 sm:px-4">Model Number</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Supplier Name</TableHead> {/* New Header */}
