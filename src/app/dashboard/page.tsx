@@ -610,7 +610,7 @@ export default function DashboardPage() {
               Breakdown of T/T and L/C value by beneficiary brand name for {selectedYear}.
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[350px] w-full">
+          <CardContent className="h-[400px] md:h-[350px] w-full">
             {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
