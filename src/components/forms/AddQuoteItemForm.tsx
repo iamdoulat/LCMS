@@ -7,17 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ItemFormValues, Item, SupplierDocument } from '@/types';
-import { itemSchema } from '@/types';
+import type { QuoteItemFormValues, Item, SupplierDocument } from '@/types';
+import { quoteItemSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, Package, Save, DollarSign, Tag, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 
@@ -29,8 +26,8 @@ export function AddQuoteItemForm() {
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
 
-  const form = useForm<ItemFormValues>({
-    resolver: zodResolver(itemSchema),
+  const form = useForm<QuoteItemFormValues>({
+    resolver: zodResolver(quoteItemSchema),
     defaultValues: {
       itemName: '',
       itemCode: '',
@@ -40,15 +37,9 @@ export function AddQuoteItemForm() {
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
-      manageStock: false,
-      currentQuantity: 0,
-      location: '',
-      idealQuantity: undefined,
-      warningQuantity: undefined,
+      manageStock: false, // This is optional in the schema but good to have a default
     },
   });
-
-  const watchManageStock = form.watch("manageStock");
 
   React.useEffect(() => {
     const fetchSuppliers = async () => {
@@ -63,7 +54,6 @@ export function AddQuoteItemForm() {
         );
       } catch (error) {
         console.error("Error fetching suppliers for item form: ", error);
-        // Optionally show an error to the user
       } finally {
         setIsLoadingSuppliers(false);
       }
@@ -71,12 +61,13 @@ export function AddQuoteItemForm() {
     fetchSuppliers();
   }, []);
 
-  async function onSubmit(data: ItemFormValues) {
+  async function onSubmit(data: QuoteItemFormValues) {
     setIsSubmitting(true);
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
-    const dataToSave: Omit<Item, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+    // Casting to 'any' for dataToSave to add timestamp fields.
+    const dataToSave: any = {
       itemName: data.itemName,
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
@@ -86,15 +77,11 @@ export function AddQuoteItemForm() {
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
       purchasePrice: data.purchasePrice,
-      manageStock: data.manageStock,
-      currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-      location: data.manageStock ? (data.location || undefined) : undefined,
-      idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-      warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
+    // Clean up undefined fields
     Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key as keyof typeof dataToSave] === undefined) {
         delete dataToSave[key as keyof typeof dataToSave];
@@ -112,7 +99,6 @@ export function AddQuoteItemForm() {
       });
       form.reset({
         itemName: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
-        manageStock: false, currentQuantity: 0, location: '', idealQuantity: undefined, warningQuantity: undefined,
       });
     } catch (error) {
       console.error("Error adding quote item document: ", error);
@@ -252,100 +238,6 @@ export function AddQuoteItemForm() {
             )}
           />
         </div>
-
-        <Separator />
-
-        <h3 className={cn(sectionHeadingClass)}>
-          <Warehouse className="h-5 w-5" /> Inventory Management
-        </h3>
-        <FormField
-          control={form.control}
-          name="manageStock"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="hover:cursor-pointer">
-                  Manage inventory stock levels for this item
-                </FormLabel>
-                <FormDescription>
-                  Enable to track current quantity, ideal levels, and warning thresholds.
-                </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        {watchManageStock && (
-          <Card className="bg-muted/30 p-6">
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                    control={form.control}
-                    name="currentQuantity"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Current Quantity*</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="idealQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ideal Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="warningQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormDescription>
-                        Receive alerts when stock reaches this level.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
           {isSubmitting ? (

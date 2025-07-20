@@ -7,19 +7,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
-import type { ItemFormValues, ItemDocument, SupplierDocument } from '@/types';
-import { itemSchema } from '@/types';
+import type { QuoteItemFormValues, ItemDocument, SupplierDocument } from '@/types';
+import { quoteItemSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, Package, Save, DollarSign, Tag, Building, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import Link from 'next/link';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
 const PLACEHOLDER_SUPPLIER_VALUE = "__EDIT_QUOTE_ITEM_SUPPLIER__";
@@ -34,8 +32,8 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
 
-  const form = useForm<ItemFormValues>({
-    resolver: zodResolver(itemSchema),
+  const form = useForm<QuoteItemFormValues>({
+    resolver: zodResolver(quoteItemSchema),
     defaultValues: {
       itemName: '',
       itemCode: '',
@@ -45,11 +43,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
-      manageStock: false,
-      currentQuantity: 0,
-      location: '',
-      idealQuantity: undefined,
-      warningQuantity: undefined,
     },
   });
 
@@ -84,18 +77,11 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         unit: initialData.unit || 'pcs',
         salesPrice: initialData.salesPrice,
         purchasePrice: initialData.purchasePrice,
-        manageStock: initialData.manageStock ?? false,
-        currentQuantity: initialData.currentQuantity ?? 0,
-        location: initialData.location || '',
-        idealQuantity: initialData.idealQuantity,
-        warningQuantity: initialData.warningQuantity,
       });
     }
   }, [initialData, form]);
 
-  const watchManageStock = form.watch("manageStock");
-
-  async function onSubmit(data: ItemFormValues) {
+  async function onSubmit(data: QuoteItemFormValues) {
     setIsSubmitting(true);
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
@@ -110,14 +96,10 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
       purchasePrice: data.purchasePrice,
-      manageStock: data.manageStock,
-      currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-      location: data.manageStock ? (data.location || undefined) : undefined,
-      idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-      warningQuantity: data.manageStock ? data.warningQuantity : undefined,
       updatedAt: serverTimestamp(),
     };
 
+    // Remove any undefined keys to avoid errors with Firestore update
     Object.keys(dataToUpdate).forEach(key => {
       if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
         delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -271,100 +253,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
             )}
           />
         </div>
-
-        <Separator />
-
-        <h3 className={cn(sectionHeadingClass)}>
-          <Warehouse className="h-5 w-5" /> Inventory Management
-        </h3>
-        <FormField
-          control={form.control}
-          name="manageStock"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="hover:cursor-pointer">
-                  Manage inventory stock levels for this item
-                </FormLabel>
-                <FormDescription>
-                  Enable to track current quantity, ideal levels, and warning thresholds.
-                </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        {watchManageStock && (
-          <Card className="bg-muted/30 p-6">
-            <CardContent className="space-y-4 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                    control={form.control}
-                    name="currentQuantity"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Current Quantity*</FormLabel>
-                        <FormControl>
-                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="idealQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ideal Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="warningQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormDescription>
-                        Receive alerts when stock reaches this level.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
           {isSubmitting ? (
