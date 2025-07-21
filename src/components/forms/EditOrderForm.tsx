@@ -201,7 +201,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -282,7 +282,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
 
 
     try {
-      const orderDocRef = doc(firestore, "purchase_orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
@@ -444,7 +444,4 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     </Form>
   );
 }
-
-
-
 

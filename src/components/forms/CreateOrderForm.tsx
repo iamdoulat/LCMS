@@ -225,7 +225,7 @@ export function CreateOrderForm() {
     setIsSubmitting(true);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "purchaseOrderNumberGenerator");
+    const counterRef = doc(firestore, "counters", "inventoryOrderNumberGenerator");
 
     try {
       const newOrderId = await runTransaction(firestore, async (transaction) => {
@@ -236,31 +236,40 @@ export function CreateOrderForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `PO${currentYear}-${String(newCount).padStart(3, '0')}`;
+        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-            const qty = parseFloat(String(item.qty || '0'));
+            const qty = parseFloat(String(item.qty || '0')) || 0;
             const unitPriceStr = String(item.unitPrice || '0');
-            const finalUnitPrice = parseFloat(unitPriceStr);
+            const finalUnitPrice = parseFloat(unitPriceStr) || 0;
             const discountPercentageStr = String(item.discountPercentage || '0');
-            const finalDiscountPercentage = parseFloat(discountPercentageStr);
+            const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
             const taxPercentageStr = String(item.taxPercentage || '0');
-            const finalTaxPercentage = parseFloat(taxPercentageStr);
-
+            const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
+    
             const itemTotalBeforeDiscount = qty * finalUnitPrice;
             
             const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-            return {
+    
+            const lineItemData: Record<string, any> = {
                 itemId: item.itemId,
                 itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
                 itemCode: itemDetailsFromOptions?.itemCode,
-                description: item.description,
-                qty,
+                description: item.description || '',
+                qty: qty,
                 unitPrice: finalUnitPrice,
                 discountPercentage: finalDiscountPercentage,
                 taxPercentage: finalTaxPercentage,
                 total: itemTotalBeforeDiscount,
             };
+            // Clean up undefined/empty fields within the line item
+            Object.keys(lineItemData).forEach(key => {
+                const value = lineItemData[key];
+                if (value === undefined || value === null || value === '') {
+                    delete lineItemData[key];
+                }
+            });
+            return lineItemData;
         });
         
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
@@ -268,7 +277,7 @@ export function CreateOrderForm() {
         const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const orderDataToSave = {
+        const orderDataToSave: Record<string, any> = {
           beneficiaryId: data.beneficiaryId,
           beneficiaryName: selectedBeneficiary?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -283,7 +292,7 @@ export function CreateOrderForm() {
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
           totalAmount: finalGrandTotal,
-          status: "Pending", // Default status for new order
+          status: "Pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           showItemCodeColumn: data.showItemCodeColumn,
@@ -291,15 +300,15 @@ export function CreateOrderForm() {
           showTaxColumn: data.showTaxColumn,
         };
 
-        const cleanedDataToSave: Record<string, any> = {};
+        const cleanedDataToSave: { [key: string]: any } = {};
         for (const key in orderDataToSave) {
-          const value = orderDataToSave[key as keyof typeof orderDataToSave];
+          const value = orderDataToSave[key];
           if (value !== undefined && value !== null && value !== '') {
             cleanedDataToSave[key] = value;
           }
         }
         
-        const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
+        const newOrderRef = doc(firestore, "inventory_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
 
         const newCounters = {
@@ -317,7 +326,7 @@ export function CreateOrderForm() {
       console.error("Error in saveOrderLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save purchase order: ${error.message}`,
+        text: `Failed to save order: ${error.message}`,
         icon: "error",
       });
       return null;
@@ -331,8 +340,8 @@ export function CreateOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Purchase Order Saved!",
-        text: `Purchase Order successfully saved with ID: ${newId}.`,
+        title: "Order Saved!",
+        text: `Order successfully saved with ID: ${newId}.`,
         icon: "success",
       });
     }
@@ -343,22 +352,22 @@ export function CreateOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Purchase Order Saved!",
-        text: `Purchase Order successfully saved with ID: ${newId}. Navigating to preview...`,
+        title: "Order Saved!",
+        text: `Order successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(`/dashboard/purchase-orders/preview/${newId}`);
+        router.push(`/dashboard/orders/preview/${newId}`);
       });
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedOrderId) {
-      router.push(`/dashboard/purchase-orders/preview/${generatedOrderId}`);
+      router.push(`/dashboard/orders/preview/${generatedOrderId}`);
     } else {
-      Swal.fire("No Order Saved", "Please save a purchase order first to preview it.", "info");
+      Swal.fire("No Order Saved", "Please save an order first to preview it.", "info");
     }
   };
   
@@ -603,6 +612,4 @@ export function CreateOrderForm() {
     </Form>
   );
 }
-
-
 

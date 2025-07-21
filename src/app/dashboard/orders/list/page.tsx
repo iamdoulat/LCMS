@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -100,7 +101,7 @@ export default function OrdersListPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const ordersQuery = query(collection(firestore, "orders"), firestoreOrderBy("createdAt", "desc"));
+        const ordersQuery = query(collection(firestore, "inventory_orders"), firestoreOrderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(ordersQuery);
         const fetchedOrders = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
@@ -198,7 +199,7 @@ export default function OrdersListPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteDoc(doc(firestore, "orders", orderId));
+          await deleteDoc(doc(firestore, "inventory_orders", orderId));
           setAllOrders(prevOrders => prevOrders.filter(o => o.id !== orderId));
           Swal.fire('Deleted!', `Order "${orderIdentifier || orderId}" has been removed.`, 'success');
         } catch (error: any) {
@@ -427,3 +428,4 @@ export default function OrdersListPage() {
     </div>
   );
 }
+

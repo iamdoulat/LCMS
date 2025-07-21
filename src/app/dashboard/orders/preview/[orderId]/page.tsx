@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -86,7 +87,7 @@ export default function PrintOrderPage() {
       return;
     }
     try {
-      const orderDocRef = doc(firestore, "orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -285,7 +286,7 @@ export default function PrintOrderPage() {
             </div>
         </div>
       </div>
-
+      
       <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
@@ -324,3 +325,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+
