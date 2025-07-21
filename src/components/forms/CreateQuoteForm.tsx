@@ -272,18 +272,18 @@ export function CreateQuoteForm() {
         const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+        const quoteDataToSave = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           salesperson: data.salesperson,
-          subject: data.subject || undefined,
+          subject: data.subject,
           lineItems: processedLineItems,
           taxType: data.taxType,
-          comments: data.comments || undefined,
-          privateComments: data.privateComments || undefined,
+          comments: data.comments,
+          privateComments: data.privateComments,
           subtotal: finalSubtotal,
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
@@ -294,11 +294,13 @@ export function CreateQuoteForm() {
           showItemCodeColumn: data.showItemCodeColumn,
           showDiscountColumn: data.showDiscountColumn,
           showTaxColumn: data.showTaxColumn,
+          convertedToInvoiceId: data.convertedToInvoiceId,
         };
-
+        
         const cleanedDataToSave = Object.fromEntries(
-          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
-        ) as typeof quoteDataToSave;
+          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
+        ) as Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any };
+
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
         transaction.set(newQuoteRef, cleanedDataToSave);
@@ -391,7 +393,7 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(() => {})} className="space-y-8"> 
+      <form onSubmit={handleSubmit(() => {})} className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />
@@ -590,3 +592,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+

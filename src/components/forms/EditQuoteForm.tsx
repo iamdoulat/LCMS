@@ -386,18 +386,18 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-    const dataToUpdate: Partial<Omit<QuoteDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+    const dataToUpdate = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       salesperson: data.salesperson,
-      subject: data.subject || undefined,
+      subject: data.subject,
       lineItems: processedLineItems,
       taxType: data.taxType,
-      comments: data.comments || undefined,
-      privateComments: data.privateComments || undefined,
+      comments: data.comments,
+      privateComments: data.privateComments,
       subtotal: finalSubtotal,
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
@@ -410,8 +410,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
 
     const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    ) as typeof dataToUpdate;
+      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    ) as Partial<Omit<QuoteDocument, 'id' | 'createdAt'>> & { updatedAt: any };
+
 
     try {
       const quoteDocRef = doc(firestore, "quotes", quoteId);
@@ -618,7 +619,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
@@ -666,3 +667,4 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
+
