@@ -251,10 +251,10 @@ export function CreatePurchaseOrderForm() {
           
           const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
     
-          return {
+          const lineItemData: Record<string, any> = {
             itemId: item.itemId,
             itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-            itemCode: itemDetailsFromOptions?.itemCode || undefined,
+            itemCode: itemDetailsFromOptions?.itemCode,
             description: item.description || '',
             qty: qty,
             unitPrice: finalUnitPrice,
@@ -262,14 +262,22 @@ export function CreatePurchaseOrderForm() {
             taxPercentage: finalTaxPercentage,
             total: itemTotalBeforeDiscount,
           };
+          // Clean up undefined/empty fields within the line item
+          Object.keys(lineItemData).forEach(key => {
+            const value = lineItemData[key];
+            if (value === undefined || value === null || value === '') {
+              delete lineItemData[key];
+            }
+          });
+          return lineItemData;
         });
         
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total || 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const orderDataToSave: Omit<OrderDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+        const orderDataToSave: Record<string, any> = {
           beneficiaryId: data.beneficiaryId,
           beneficiaryName: selectedBeneficiary?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -284,7 +292,7 @@ export function CreatePurchaseOrderForm() {
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
           totalAmount: finalGrandTotal,
-          status: "Pending", // Default status for new order
+          status: "Pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           showItemCodeColumn: data.showItemCodeColumn,
@@ -292,17 +300,16 @@ export function CreatePurchaseOrderForm() {
           showTaxColumn: data.showTaxColumn,
         };
 
-        const cleanedData: { [key: string]: any } = {};
+        const cleanedDataToSave: { [key: string]: any } = {};
         for (const key in orderDataToSave) {
-          const typedKey = key as keyof typeof orderDataToSave;
-          const value = orderDataToSave[typedKey];
+          const value = orderDataToSave[key];
           if (value !== undefined && value !== null && value !== '') {
-            cleanedData[key] = value;
+            cleanedDataToSave[key] = value;
           }
         }
         
         const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
-        transaction.set(newOrderRef, cleanedData);
+        transaction.set(newOrderRef, cleanedDataToSave);
 
         const newCounters = {
           yearlyCounts: {
@@ -572,7 +579,6 @@ export function CreatePurchaseOrderForm() {
             )}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
@@ -606,6 +612,7 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
 
 
 
