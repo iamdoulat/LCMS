@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -180,6 +181,7 @@ export function CreateQuoteForm() {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
+          lineTotal = itemTotalAfterDiscount + taxAmountVal;
           
           // The line total shown in the table now ONLY shows qty * unit price
           lineTotal = itemTotalBeforeDiscount;
@@ -247,28 +249,21 @@ export function CreateQuoteForm() {
         
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0'));
-          const unitPrice = parseFloat(String(item.unitPrice || '0'));
-          const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
-          const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
-    
-          const itemTotalBeforeDiscount = qty * unitPrice;
-          const discountAmountVal = itemTotalBeforeDiscount * (discountPercentage / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-          const taxAmountVal = itemTotalAfterDiscount * (taxPercentage / 100);
-          const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
-          
-          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-    
+          const unitPriceStr = String(item.unitPrice || '0');
+          const finalUnitPrice = parseFloat(unitPriceStr);
+          const discountPercentageStr = String(item.discountPercentage || '0');
+          const finalDiscountPercentage = parseFloat(discountPercentageStr);
+          const taxPercentageStr = String(item.taxPercentage || '0');
+          const finalTaxPercentage = parseFloat(taxPercentageStr);
+          const itemTotalBeforeDiscount = qty * finalUnitPrice;
+          const discountAmount = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
+          const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
+          const taxAmount = totalAfterDiscount * (finalTaxPercentage / 100);
+          const total = totalAfterDiscount + taxAmount;
+          const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
-            itemId: item.itemId,
-            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-            itemCode: itemDetailsFromOptions?.itemCode || undefined,
-            description: item.description || '',
-            qty: qty,
-            unitPrice: unitPrice,
-            discountPercentage: discountPercentage,
-            taxPercentage: taxPercentage,
-            total: calculatedLineTotal,
+            itemId: item.itemId, itemName: itemDetails?.label.split(' (')[0] || 'N/A', itemCode: itemDetails?.itemCode,
+            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
           };
         });
         
@@ -302,7 +297,7 @@ export function CreateQuoteForm() {
         };
 
         const cleanedDataToSave = Object.fromEntries(
-          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined)
+          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
         ) as typeof quoteDataToSave;
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
@@ -526,9 +521,9 @@ export function CreateQuoteForm() {
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
-            {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
-            {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-            <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
+          {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -557,7 +552,7 @@ export function CreateQuoteForm() {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
