@@ -244,28 +244,26 @@ export function CreateQuoteForm() {
         const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
-          const total = qty * finalUnitPrice;
-          
           const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
-            itemId: item.itemId, itemName: itemDetails?.label.split(' (')[0] || 'N/A', itemCode: itemDetails?.itemCode,
-            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: total,
+            itemId: item.itemId,
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+            itemCode: itemDetails?.itemCode || undefined,
+            description: item.description || '',
+            qty: parseFloat(String(item.qty || '0')),
+            unitPrice: parseFloat(String(item.unitPrice || '0')),
+            discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+            taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+            total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
           };
         });
         
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const quoteDataToSave = {
+        const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -291,9 +289,8 @@ export function CreateQuoteForm() {
         };
         
         const cleanedDataToSave = Object.fromEntries(
-          Object.entries(quoteDataToSave).filter(([_, value]) => value !== undefined && value !== null && value !== '')
-        ) as Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any };
-
+          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
+        );
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
         transaction.set(newQuoteRef, cleanedDataToSave);
@@ -587,3 +584,5 @@ export function CreateQuoteForm() {
 }
 
 
+
+    

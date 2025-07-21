@@ -357,33 +357,23 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty || '0'));
-      const unitPriceStr = String(item.unitPrice || '0');
-      const finalUnitPrice = parseFloat(unitPriceStr);
-      const discountPercentageStr = String(item.discountPercentage || '0');
-      const finalDiscountPercentage = parseFloat(discountPercentageStr);
-      const taxPercentageStr = String(item.taxPercentage || '0');
-      const finalTaxPercentage = parseFloat(taxPercentageStr);
-
-      const total = qty * finalUnitPrice;
-      
-      const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+      const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
       return {
         itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
-        itemCode: itemDetailsFromOptions?.itemCode,
+        itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+        itemCode: itemDetails?.itemCode || undefined,
         description: item.description || '',
-        qty,
-        unitPrice: finalUnitPrice,
-        discountPercentage: finalDiscountPercentage,
-        taxPercentage: finalTaxPercentage,
-        total: total,
+        qty: parseFloat(String(item.qty || '0')),
+        unitPrice: parseFloat(String(item.unitPrice || '0')),
+        discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+        taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+        total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
       };
     });
     
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
     const dataToUpdate = {
@@ -670,3 +660,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 }
 
 
+
+
+    
