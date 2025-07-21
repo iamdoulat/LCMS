@@ -12,15 +12,47 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 
 *   **Intuitive & Dynamic Dashboard**: Get a bird's-eye view of your entire operation with a visually engaging dashboard. Track key metrics, monitor upcoming deadlines, and analyze performance with beautiful, real-time charts and summaries.
 
-    ![Dashboard](https://res.cloudinary.com/dzepzzvh8/image/upload/v1753073651/Dashboard_r9smym.jpg)
+*   **T/T OR L/C Management**: Your central hub for all trade finance activities.
+    *   **New T/T OR L/C Entry**: A comprehensive form to capture every detail of new Letters of Credit or Telegraphic Transfers with precision.
+    *   **Total T/T OR L/C List**: View, search, and filter all LC/TT records. Quickly access shipment tracking, document links, and status updates from a powerful, centralized list.
+    *   **Reports**: Generate, print, and export custom reports based on dynamic filters like status, year, applicant, or beneficiary.
+    *   **Google Sheets & Drive Integration**: Seamlessly embed and interact with your critical financial spreadsheets and documents directly within the application for a unified workflow.
 
-*   **End-to-End LC/TT Management**: Create, track, and manage all your Letters of Credit and Telegraphic Transfers from a centralized dashboard. Monitor every stage, from draft to payment completion, with real-time status updates.
-*   **Integrated Sales & Inventory**: Seamlessly manage your entire sales pipeline. Create professional quotations, convert them to invoices, and track sales, all while automatically managing inventory levels.
-*   **Comprehensive Financial Tools**: Handle everything from Proforma Invoices (PI) and Purchase Orders (PO) to payment application and refund processing.
-*   **Advanced Shipment Tracking**: Never lose sight of your goods. Track shipments by sea or air with integrated vessel/flight tracking and monitor original document delivery via courier services.
-*   **Warranty & Service Management**: A dedicated module to manage product installations, track warranty periods, and identify machines that are under or out of warranty, ensuring premium after-sales service.
-*   **Demo Machine Management**: Effortlessly track and manage the allocation, return, and status of your demo machines, ensuring they are always ready for your next sales pitch.
-*   **Powerful Reporting & Search**: Generate insightful reports with custom filters and export data to PDF or Excel. Our global search engine helps you find any record in seconds.
+*   **Quotes and Invoices**: Manage your entire sales documentation process from start to finish.
+    *   **Quotation & Quote Item Management**: Create professional quotations, manage a reusable list of quote items, and track quote status.
+    *   **Invoice & Order Management**: Effortlessly convert quotes to invoices or create standalone invoices and purchase orders with a powerful and flexible editor.
+    *   **Payment Processing**: Apply and track payments against invoices, with real-time status updates from "Draft" to "Paid".
+    *   **Refunds & Returns**: Handle customer returns and process refunds, with automatic updates to invoice status and inventory levels.
+    *   **Layout Settings**: Customize the look and feel of your printable documents with your company logo and details.
+
+*   **Accounts and Inventory**: Gain full control over your stock and sales records.
+    *   **Item Management**: Maintain a complete inventory of all your items, with details on pricing, stock levels, and location.
+    *   **Sales Tracking**: Record new sales transactions, which automatically deduct from your inventory for real-time stock management.
+    *   **Inventory Returns**: Process returned items from sales back into your inventory, ensuring accurate stock counts.
+
+*   **Commission Management**: Simplify your commission tracking with dedicated tools for Proforma Invoices (PI).
+    *   **Add & Manage PIs**: Easily create new PIs and connect them to existing L/C entries.
+    *   **Issued PI List**: A centralized view to track, filter, and manage all issued Proforma Invoices and their calculated commissions.
+
+*   **Suppliers / Applicants**: Centralize your key business contacts for easy access and management.
+    *   **Beneficiary Profiles**: Manage a complete database of your suppliers, including contact details, bank information, and brand details.
+    *   **Applicant Profiles**: Keep a detailed record of your customers, including addresses, contact persons, and financial information.
+
+*   **Shipment Management**: Never lose sight of your goods with real-time tracking and status updates.
+    *   **Upcoming Shipments**: Proactively monitor all active L/Cs with approaching shipment deadlines.
+    *   **Shipment & Payment Status**: Get dedicated views for L/Cs that are "Shipment Done," "Payment Pending," or "Payment Done" to stay on top of your logistics pipeline.
+
+*   **Demo M/C Management**: A complete suite for managing your valuable demonstration machines.
+    *   **Machine & Factory Database**: Add and manage your demo machines and the factories they are assigned to.
+    *   **Application & Program Tracking**: Create and track demo applications, manage allocations, and monitor the program status of each machine.
+    *   **Overdue Tracking**: Instantly identify and manage demo machines that have not been returned by their due date.
+    *   **Powerful Search**: A dedicated search engine to find any demo machine by model, serial number, status, or owner.
+
+*   **Warranty Management**: Provide premium after-sales service with a robust warranty tracking system.
+    *   **Installation Reporting**: Create detailed installation reports, linking machines to customers and automatically calculating warranty periods.
+    *   **Warranty Status Lists**: Get instant access to lists of all machines currently "Under Warranty" or "Out of Warranty".
+    *   **Missing & Found Items**: Track and resolve discrepancies in shipments with a dedicated module for missing or extra items found during installation.
+    *   **Warranty Search Engine**: A comprehensive search tool to find any machine's warranty status by serial number, model, or customer.
 
 ### User Permissions & Management
 
