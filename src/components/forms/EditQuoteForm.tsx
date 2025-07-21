@@ -142,7 +142,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               unitPrice: item.unitPrice?.toString() || '0',
               discountPercentage: item.discountPercentage?.toString() || '0',
               taxPercentage: item.taxPercentage?.toString() || '0',
-              total: item.total.toFixed(2) || '0.00',
+              total: (item.qty * item.unitPrice).toFixed(2) || '0.00',
             })),
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
@@ -358,17 +358,28 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
     const processedLineItems = data.lineItems.map(item => {
       const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-      return {
+      const qty = parseFloat(String(item.qty || '0'));
+      const unitPrice = parseFloat(String(item.unitPrice || '0'));
+      const total = qty * unitPrice;
+
+      const lineItemData: any = {
         itemId: item.itemId,
         itemName: itemDetails?.label.split(' (')[0] || 'N/A',
         itemCode: itemDetails?.itemCode || undefined,
         description: item.description || '',
-        qty: parseFloat(String(item.qty || '0')),
-        unitPrice: parseFloat(String(item.unitPrice || '0')),
+        qty,
+        unitPrice,
         discountPercentage: parseFloat(String(item.discountPercentage || '0')),
         taxPercentage: parseFloat(String(item.taxPercentage || '0')),
-        total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
+        total,
       };
+      
+      Object.keys(lineItemData).forEach(key => {
+          if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+              delete lineItemData[key];
+          }
+      });
+      return lineItemData;
     });
     
     const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
@@ -376,7 +387,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-    const dataToUpdate = {
+    const dataToUpdate: Record<string, any> = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
       billingAddress: data.billingAddress,
@@ -400,14 +411,16 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       convertedToInvoiceId: data.convertedToInvoiceId,
     };
 
-    const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== null && value !== '')
-    ) as Partial<Omit<QuoteDocument, 'id' | 'createdAt'>> & { updatedAt: any };
-
+    // Final cleaning
+    Object.keys(dataToUpdate).forEach(key => {
+        if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
+            delete dataToUpdate[key];
+        }
+    });
 
     try {
       const quoteDocRef = doc(firestore, "quotes", quoteId);
-      await updateDoc(quoteDocRef, cleanedDataToUpdate);
+      await updateDoc(quoteDocRef, dataToUpdate);
       Swal.fire({
         title: "Quote Updated!",
         text: `Quote Number: ${quoteId} successfully updated.`,
@@ -615,8 +628,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -638,7 +651,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   unitPrice: item.unitPrice.toString(),
                   discountPercentage: item.discountPercentage?.toString() || '0',
                   taxPercentage: item.taxPercentage?.toString() || '0',
-                  total: item.total.toFixed(2),
+                  total: (item.qty * item.unitPrice).toFixed(2),
                 })),
                 status: initialData.status,
                 showItemCodeColumn: initialData.showItemCodeColumn,
@@ -647,7 +660,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
-            <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || watchedStatus === 'Invoiced'}>
+             <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || watchedStatus === 'Invoiced'}>
               <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>

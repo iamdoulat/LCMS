@@ -3,10 +3,10 @@
 "use client";
 
 import * as React from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
 import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument } from '@/types';
@@ -167,7 +167,6 @@ export function CreateQuoteForm() {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -196,14 +195,11 @@ export function CreateQuoteForm() {
         }
       });
     }
-
     setSubtotal(currentSubtotal);
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
-
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
 
 
@@ -231,7 +227,6 @@ export function CreateQuoteForm() {
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
-
     try {
       const newQuoteId = await runTransaction(firestore, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
@@ -244,26 +239,37 @@ export function CreateQuoteForm() {
         const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(2, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-          return {
-            itemId: item.itemId,
-            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-            itemCode: itemDetails?.itemCode || undefined,
-            description: item.description || '',
-            qty: parseFloat(String(item.qty || '0')),
-            unitPrice: parseFloat(String(item.unitPrice || '0')),
-            discountPercentage: parseFloat(String(item.discountPercentage || '0')),
-            taxPercentage: parseFloat(String(item.taxPercentage || '0')),
-            total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
-          };
+            const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+            const qty = parseFloat(String(item.qty || '0'));
+            const unitPrice = parseFloat(String(item.unitPrice || '0'));
+            const total = qty * unitPrice;
+
+            const lineItemData: any = {
+                itemId: item.itemId,
+                itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+                itemCode: itemDetails?.itemCode || undefined,
+                description: item.description || '',
+                qty,
+                unitPrice,
+                discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+                taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+                total,
+            };
+             // Clean the line item itself
+            Object.keys(lineItemData).forEach(key => {
+                if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+                    delete lineItemData[key];
+                }
+            });
+            return lineItemData;
         });
         
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalDiscount = data.showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const quoteDataToSave: Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+        const quoteDataToSave: Record<string, any> = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -288,12 +294,15 @@ export function CreateQuoteForm() {
           convertedToInvoiceId: data.convertedToInvoiceId,
         };
         
-        const cleanedDataToSave = Object.fromEntries(
-          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
-        );
+        // Final cleaning of the main object before saving
+        Object.keys(quoteDataToSave).forEach(key => {
+          if (quoteDataToSave[key] === undefined || quoteDataToSave[key] === null || quoteDataToSave[key] === '') {
+            delete quoteDataToSave[key];
+          }
+        });
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
-        transaction.set(newQuoteRef, cleanedDataToSave);
+        transaction.set(newQuoteRef, quoteDataToSave);
 
         const newCounters = {
           yearlyCounts: {
@@ -549,8 +558,8 @@ export function CreateQuoteForm() {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
