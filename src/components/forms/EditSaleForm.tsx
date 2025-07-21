@@ -151,13 +151,12 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let lineTotal = 0;
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
           
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
@@ -218,10 +217,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
             
             const processedLineItems = data.lineItems.map(item => {
-                const qty = parseFloat(String(item.qty || '0')) || 0;
-                const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-                const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
-                const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
+                const qty = parseFloat(String(item.qty || '0'));
+                const unitPrice = parseFloat(String(item.unitPrice || '0'));
+                const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
+                const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
                 const total = qty * unitPrice; // Base total, discount/tax applied later
                 
                 const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
@@ -445,5 +444,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
-
-

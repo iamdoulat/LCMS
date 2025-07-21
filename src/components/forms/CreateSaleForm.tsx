@@ -174,13 +174,12 @@ export function CreateSaleForm() {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let lineTotal = 0;
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
           
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
@@ -317,8 +316,8 @@ export function CreateSaleForm() {
             };
 
             const cleanedDataToSave = Object.fromEntries(
-                Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
-            ) as typeof dataToSave;
+                Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
+            ) as Partial<Omit<SaleDocument, 'id'>>;
             
             const newSaleRef = doc(firestore, "sales", formattedSaleId);
             transaction.set(newSaleRef, cleanedDataToSave);
@@ -500,9 +499,9 @@ export function CreateSaleForm() {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={setShowItemCodeColumn}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={setShowDiscountColumn}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={setShowTaxColumn}>Tax %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
                 </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
@@ -566,5 +565,3 @@ export function CreateSaleForm() {
     </Form>
   );
 }
-
-
