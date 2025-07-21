@@ -93,6 +93,7 @@ const inventoryNavItems: NavItem[] = [
     { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, iconColorClass: 'bg-icon-sale' },
     { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
@@ -102,7 +103,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotation List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/quotes/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/invoices/list', label: 'Proforma Invoice List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Layout Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
 ];
 
