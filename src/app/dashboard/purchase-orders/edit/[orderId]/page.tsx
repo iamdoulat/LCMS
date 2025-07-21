@@ -1,5 +1,6 @@
 
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ShoppingCart, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditOrderForm } from '@/components/forms/EditOrderForm';
+import { EditPurchaseOrderForm } from '@/components/forms/EditPurchaseOrderForm';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { OrderDocument } from '@/types';
@@ -110,7 +111,7 @@ export default function EditPurchaseOrderPage() {
           </CardTitle>
           <CardDescription>Modify the details for Purchase Order ID: <span className="font-semibold text-foreground">{orderId}</span>.</CardDescription>
         </CardHeader>
-        <CardContent><EditOrderForm initialData={orderData} orderId={orderId} /></CardContent>
+        <CardContent><EditPurchaseOrderForm initialData={orderData} orderId={orderId} /></CardContent>
       </Card>
     </div>
   );

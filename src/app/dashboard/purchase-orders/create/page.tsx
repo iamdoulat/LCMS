@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { CreateOrderForm } from '@/components/forms/CreateOrderForm';
+import { CreatePurchaseOrderForm } from '@/components/forms/CreatePurchaseOrderForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,9 +21,10 @@ export default function CreateNewPurchaseOrderPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateOrderForm />
+          <CreatePurchaseOrderForm />
         </CardContent>
       </Card>
     </div>
   );
 }
+
