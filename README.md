@@ -1,8 +1,8 @@
-# LC Vision: The Ultimate LC & Business Operations Platform
+# LCMS: The Ultimate LC Management & Business Operations Platform
 
-**Transform your trade finance and business operations with LC Vision, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
+**Transform your trade finance and business operations with LCMS, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
 
-LC Vision is not just another management tool; it is a fully-integrated ecosystem that streamlines everything from Letter of Credit (L/C) and Telegraphic Transfer (T/T) management to sales, inventory, and warranty tracking. Built on cutting-edge technology, our platform offers unparalleled speed, robust security, and an intuitive user experience to empower your team and accelerate your business growth.
+LCMS is not just another management tool; it is a fully-integrated ecosystem that streamlines everything from Letter of Credit (L/C) and Telegraphic Transfer (T/T) management to sales, inventory, and warranty tracking. Built on cutting-edge technology, our platform offers unparalleled speed, robust security, and an intuitive user experience to empower your team and accelerate your business growth.
 
 ---
 
@@ -10,6 +10,7 @@ LC Vision is not just another management tool; it is a fully-integrated ecosyste
 
 Harness the power of a unified system that brings clarity and efficiency to every corner of your business.
 
+*   **Intuitive & Dynamic Dashboard**: Get a bird's-eye view of your entire operation with a visually engaging dashboard. Track key metrics, monitor upcoming deadlines, and analyze performance with beautiful, real-time charts and summaries.
 *   **End-to-End LC/TT Management**: Create, track, and manage all your Letters of Credit and Telegraphic Transfers from a centralized dashboard. Monitor every stage, from draft to payment completion, with real-time status updates.
 *   **Integrated Sales & Inventory**: Seamlessly manage your entire sales pipeline. Create professional quotations, convert them to invoices, and track sales, all while automatically managing inventory levels.
 *   **Comprehensive Financial Tools**: Handle everything from Proforma Invoices (PI) and Purchase Orders (PO) to payment application and refund processing.
@@ -20,7 +21,7 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 
 ### User Permissions & Management
 
-LC Vision is built for teams, with a robust and flexible role-based access control (RBAC) system.
+LCMS is built for teams, with a robust and flexible role-based access control (RBAC) system.
 
 *   **Granular Roles**: Assign users specific roles like `Super Admin`, `Admin`, `Store Manager`, `Service`, `DemoManager`, or `Viewer`, each with precisely defined permissions.
 *   **Secure Access**: Users only see and interact with the modules and data relevant to their role, ensuring data integrity and security.
