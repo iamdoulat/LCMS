@@ -224,7 +224,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       const itemTotalBeforeDiscount = qty * finalUnitPrice;
       
       const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-      return {
+      const lineItemData: Record<string, any> = {
         itemId: item.itemId,
         itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
         itemCode: itemDetailsFromOptions?.itemCode,
@@ -235,14 +235,22 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         taxPercentage: finalTaxPercentage,
         total: itemTotalBeforeDiscount,
       };
+      // Clean up undefined/empty fields within the line item
+      Object.keys(lineItemData).forEach(key => {
+        const value = lineItemData[key];
+        if (value === undefined || value === null || value === '') {
+          delete lineItemData[key];
+        }
+      });
+      return lineItemData;
     });
     
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total || 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-    const dataToUpdate: Omit<OrderDocument, 'id' | 'createdAt'> = {
+    const dataToUpdate: Record<string, any> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || initialData.beneficiaryName,
       billingAddress: data.billingAddress,
@@ -264,9 +272,14 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       updatedAt: serverTimestamp(),
     };
 
-    const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== null && value !== '')
-    ) as Record<string, any>;
+    const cleanedDataToUpdate: { [key: string]: any } = {};
+    for (const key in dataToUpdate) {
+        const value = dataToUpdate[key];
+        if (value !== undefined && value !== null && value !== '') {
+            cleanedDataToUpdate[key] = value;
+        }
+    }
+
 
     try {
       const orderDocRef = doc(firestore, "purchase_orders", orderId);
@@ -431,6 +444,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     </Form>
   );
 }
+
 
 
 
