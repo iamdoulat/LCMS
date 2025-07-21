@@ -12,6 +12,8 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 
 *   **Intuitive & Dynamic Dashboard**: Get a bird's-eye view of your entire operation with a visually engaging dashboard. Track key metrics, monitor upcoming deadlines, and analyze performance with beautiful, real-time charts and summaries.
 
+    ![Dashboard](https://res.cloudinary.com/dzepzzvh8/image/upload/v1753073651/Dashboard_r9smym.jpg)
+
 *   **T/T OR L/C Management**: Your central hub for all trade finance activities.
     *   **New T/T OR L/C Entry**: A comprehensive form to capture every detail of new Letters of Credit or Telegraphic Transfers with precision.
     *   **Total T/T OR L/C List**: View, search, and filter all LC/TT records. Quickly access shipment tracking, document links, and status updates from a powerful, centralized list.
