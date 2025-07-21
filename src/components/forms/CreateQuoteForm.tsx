@@ -172,10 +172,10 @@ export function CreateQuoteForm() {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let lineTotal = qty * unitPrice; // Changed calculation for display
+        const lineTotalForDisplay = qty * unitPrice;
         
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -188,7 +188,7 @@ export function CreateQuoteForm() {
           currentTotalTax += lineTaxAmount;
         }
         
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        const displayLineTotal = isNaN(lineTotalForDisplay) ? 0 : lineTotalForDisplay;
         
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -204,7 +204,7 @@ export function CreateQuoteForm() {
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
 
-  }, [watchedLineItems, watchedTaxType, watchedGlobalDiscount, watchedGlobalTaxRate, setValue, getValues]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -261,8 +261,8 @@ export function CreateQuoteForm() {
         });
         
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const quoteDataToSave = {
@@ -291,7 +291,7 @@ export function CreateQuoteForm() {
         };
         
         const cleanedDataToSave = Object.fromEntries(
-          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
+          Object.entries(quoteDataToSave).filter(([_, value]) => value !== undefined && value !== null && value !== '')
         ) as Omit<QuoteDocument, 'id'> & { createdAt: any, updatedAt: any };
 
 
@@ -552,8 +552,8 @@ export function CreateQuoteForm() {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -585,4 +585,5 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+
 
