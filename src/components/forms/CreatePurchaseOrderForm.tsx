@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types'; // Changed CustomerDocument to SupplierDocument
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types';
 import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns } from 'lucide-react'; // Changed Users to Building
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -38,7 +38,7 @@ import Link from 'next/link';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_BENEFICIARY_PLACEHOLDER__"; // Changed from CUSTOMER
+const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_BENEFICIARY_PLACEHOLDER__";
 const PLACEHOLDER_ITEM_VALUE = "__ORDER_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
@@ -47,7 +47,7 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
 }
 
-interface BeneficiaryOption extends ComboboxOption { // For consistency with Quote form
+interface BeneficiaryOption extends ComboboxOption {
   address?: string;
 }
 
@@ -55,7 +55,7 @@ interface BeneficiaryOption extends ComboboxOption { // For consistency with Quo
 export function CreatePurchaseOrderForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]); // Changed from customerOptions
+  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedOrderId, setGeneratedOrderId] = React.useState<string | null>(null);
@@ -68,7 +68,7 @@ export function CreatePurchaseOrderForm() {
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
-      beneficiaryId: '', // Changed from customerId
+      beneficiaryId: '',
       billingAddress: '',
       shippingAddress: '',
       orderDate: new Date(),
@@ -111,15 +111,15 @@ export function CreatePurchaseOrderForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [suppliersSnap, itemsSnap] = await Promise.all([ // Changed from customersSnap to suppliersSnap
-          getDocs(collection(firestore, "suppliers")), // Fetch from suppliers
-          getDocs(collection(firestore, "quote_items"))
+        const [suppliersSnap, itemsSnap] = await Promise.all([
+          getDocs(collection(firestore, "suppliers")),
+          getDocs(collection(firestore, "items"))
         ]);
 
-        setBeneficiaryOptions( // Changed from setCustomerOptions
+        setBeneficiaryOptions(
           suppliersSnap.docs.map(doc => {
-            const data = doc.data() as SupplierDocument; // Use SupplierDocument
-            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress }; // Use beneficiaryName and headOfficeAddress
+            const data = doc.data() as SupplierDocument;
+            return { value: doc.id, label: data.beneficiaryName || 'Unnamed Beneficiary', address: data.headOfficeAddress };
           })
         );
 
@@ -137,7 +137,7 @@ export function CreatePurchaseOrderForm() {
         );
 
       } catch (error) {
-        console.error("Error fetching dropdown options for Order form: ", error);
+        console.error("Error fetching dropdown options for Purchase Order form: ", error);
         Swal.fire("Error", "Could not load beneficiary or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
@@ -239,37 +239,37 @@ export function CreatePurchaseOrderForm() {
         const formattedOrderId = `PO${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0')) || 0;
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr) || 0;
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
+            const qty = parseFloat(String(item.qty || '0')) || 0;
+            const unitPriceStr = String(item.unitPrice || '0');
+            const finalUnitPrice = parseFloat(unitPriceStr) || 0;
+            const discountPercentageStr = String(item.discountPercentage || '0');
+            const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
+            const taxPercentageStr = String(item.taxPercentage || '0');
+            const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
     
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          
-          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+            const itemTotalBeforeDiscount = qty * finalUnitPrice;
+            
+            const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
     
-          const lineItemData: Record<string, any> = {
-            itemId: item.itemId,
-            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-            itemCode: itemDetailsFromOptions?.itemCode,
-            description: item.description || '',
-            qty: qty,
-            unitPrice: finalUnitPrice,
-            discountPercentage: finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage,
-            total: itemTotalBeforeDiscount,
-          };
-          // Clean up undefined/empty fields within the line item
-          Object.keys(lineItemData).forEach(key => {
-            const value = lineItemData[key];
-            if (value === undefined || value === null || value === '') {
-              delete lineItemData[key];
-            }
-          });
-          return lineItemData;
+            const lineItemData: Record<string, any> = {
+                itemId: item.itemId,
+                itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+                itemCode: itemDetailsFromOptions?.itemCode,
+                description: item.description || '',
+                qty: qty,
+                unitPrice: finalUnitPrice,
+                discountPercentage: finalDiscountPercentage,
+                taxPercentage: finalTaxPercentage,
+                total: itemTotalBeforeDiscount,
+            };
+            // Clean up undefined/empty fields within the line item
+            Object.keys(lineItemData).forEach(key => {
+                const value = lineItemData[key];
+                if (value === undefined || value === null || value === '') {
+                    delete lineItemData[key];
+                }
+            });
+            return lineItemData;
         });
         
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
@@ -388,24 +388,24 @@ export function CreatePurchaseOrderForm() {
       <form className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}>
-          <Building className="mr-2 h-5 w-5 text-primary" /> {/* Changed icon from Users */}
-          Beneficiary & Delivery Information {/* Changed from Customer */}
+          <Building className="mr-2 h-5 w-5 text-primary" />
+          Beneficiary & Delivery Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
               control={control}
-              name="beneficiaryId" // Changed from customerId
+              name="beneficiaryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Beneficiary*</FormLabel> {/* Changed from Customer */}
+                  <FormLabel>Beneficiary*</FormLabel>
                   <Combobox
-                    options={beneficiaryOptions} // Changed from customerOptions
-                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} // Changed from PLACEHOLDER_CUSTOMER_VALUE
+                    options={beneficiaryOptions}
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
                     onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
-                    placeholder="Search Beneficiary..." // Changed from Customer
-                    selectPlaceholder="Select Beneficiary" // Changed from Customer
-                    emptyStateMessage="No beneficiary found." // Changed from customer
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder="Select Beneficiary"
+                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -510,7 +510,7 @@ export function CreatePurchaseOrderForm() {
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotes/items/add" target="_blank">
+                <Link href="/dashboard/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
                     </Button>
@@ -612,7 +612,6 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
-
 
 
 

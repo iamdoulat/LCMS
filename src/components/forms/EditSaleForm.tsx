@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -215,10 +216,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
             
             const processedLineItems = data.lineItems.map(item => {
-                const qty = parseFloat(String(item.qty || '0'));
-                const unitPrice = parseFloat(String(item.unitPrice || '0'));
-                const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
-                const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
+                const qty = parseFloat(String(item.qty || '0')) || 0;
+                const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+                const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
+                const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
                 const itemTotalBeforeDiscount = qty * unitPrice;
                 const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
                 const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
@@ -337,9 +338,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
-                  </FormControl>
+                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -441,3 +440,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+
