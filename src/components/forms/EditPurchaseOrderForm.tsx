@@ -1,7 +1,5 @@
 
 
-
-
 "use client";
 
 import * as React from 'react';
@@ -90,7 +88,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -355,9 +353,9 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/items/add" target="_blank">
+                <Link href="/dashboard/quotes/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
                     </Button>
                 </Link>
                 <DropdownMenu>
@@ -446,6 +444,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     </Form>
   );
 }
+
 
 
 

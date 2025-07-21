@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -105,7 +104,6 @@ export function CreatePurchaseOrderForm() {
 
   const watchedBeneficiaryId = watch("beneficiaryId");
   const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -113,7 +111,7 @@ export function CreatePurchaseOrderForm() {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         setBeneficiaryOptions(
@@ -262,10 +260,9 @@ export function CreatePurchaseOrderForm() {
                 taxPercentage: finalTaxPercentage,
                 total: itemTotalBeforeDiscount,
             };
-            // Clean up undefined/empty fields within the line item
             Object.keys(lineItemData).forEach(key => {
                 const value = lineItemData[key];
-                if (value === undefined || value === null || value === '') {
+                if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
                     delete lineItemData[key];
                 }
             });
@@ -510,9 +507,9 @@ export function CreatePurchaseOrderForm() {
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/items/add" target="_blank">
+                <Link href="/dashboard/quotes/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
                     </Button>
                 </Link>
                 <DropdownMenu>
@@ -612,6 +609,7 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
 
 
 
