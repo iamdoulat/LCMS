@@ -142,7 +142,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               unitPrice: item.unitPrice?.toString() || '0',
               discountPercentage: item.discountPercentage?.toString() || '0',
               taxPercentage: item.taxPercentage?.toString() || '0',
-              total: item.total?.toFixed(2) || '0.00',
+              total: (item.qty * item.unitPrice).toFixed(2) || '0.00',
             })),
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
@@ -160,7 +160,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-  
+
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedGlobalDiscount = watch("globalDiscount");
@@ -176,17 +176,19 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        let lineTotal = 0;
+        
+        let lineTotal = qty * unitPrice;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
+        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -362,10 +364,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       const finalTaxPercentage = parseFloat(taxPercentageStr);
 
       const itemTotalBeforeDiscount = qty * finalUnitPrice;
-      const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
+      const discountAmount = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
+      const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
+      const taxAmount = totalAfterDiscount * (finalTaxPercentage / 100);
+      const total = totalAfterDiscount + taxAmount;
       
       const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
       return {
@@ -377,7 +379,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         unitPrice: finalUnitPrice,
         discountPercentage: finalDiscountPercentage,
         taxPercentage: finalTaxPercentage,
-        total: calculatedLineTotal,
+        total: total,
       };
     });
     
@@ -590,7 +592,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>

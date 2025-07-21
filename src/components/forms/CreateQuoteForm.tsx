@@ -175,21 +175,17 @@ export function CreateQuoteForm() {
         const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
         const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
         
-        let lineTotal = 0;
+        let lineTotal = qty * unitPrice; // Changed calculation for display
+        
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + taxAmountVal;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           
-          // The line total shown in the table now ONLY shows qty * unit price
-          lineTotal = itemTotalBeforeDiscount;
-          
-          // These calculations are still needed for the grand total at the bottom
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += taxAmountVal;
+          currentTotalTax += lineTaxAmount;
         }
         
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
@@ -255,15 +251,12 @@ export function CreateQuoteForm() {
           const finalDiscountPercentage = parseFloat(discountPercentageStr);
           const taxPercentageStr = String(item.taxPercentage || '0');
           const finalTaxPercentage = parseFloat(taxPercentageStr);
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          const discountAmount = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-          const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
-          const taxAmount = totalAfterDiscount * (finalTaxPercentage / 100);
-          const total = totalAfterDiscount + taxAmount;
+          const total = qty * finalUnitPrice;
+          
           const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
             itemId: item.itemId, itemName: itemDetails?.label.split(' (')[0] || 'N/A', itemCode: itemDetails?.itemCode,
-            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
+            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: total,
           };
         });
         
