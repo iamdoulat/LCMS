@@ -11,6 +11,9 @@ LCMS is not just another management tool; it is a fully-integrated ecosystem tha
 Harness the power of a unified system that brings clarity and efficiency to every corner of your business.
 
 *   **Intuitive & Dynamic Dashboard**: Get a bird's-eye view of your entire operation with a visually engaging dashboard. Track key metrics, monitor upcoming deadlines, and analyze performance with beautiful, real-time charts and summaries.
+
+    ![Dashboard](https://res.cloudinary.com/dzepzzvh8/image/upload/v1753073651/Dashboard_r9smym.jpg)
+
 *   **End-to-End LC/TT Management**: Create, track, and manage all your Letters of Credit and Telegraphic Transfers from a centralized dashboard. Monitor every stage, from draft to payment completion, with real-time status updates.
 *   **Integrated Sales & Inventory**: Seamlessly manage your entire sales pipeline. Create professional quotations, convert them to invoices, and track sales, all while automatically managing inventory levels.
 *   **Comprehensive Financial Tools**: Handle everything from Proforma Invoices (PI) and Purchase Orders (PO) to payment application and refund processing.
