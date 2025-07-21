@@ -43,3 +43,8 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+firestore.rules
+storage.rules
+firestore.indexes.json
+firebase.json
+.firebaserc
