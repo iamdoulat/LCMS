@@ -223,7 +223,7 @@ export function CreatePurchaseOrderForm() {
 
   const saveOrderLogic = async (data: OrderFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId); // Changed from customer
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "purchaseOrderNumberGenerator");
 
@@ -269,9 +269,9 @@ export function CreatePurchaseOrderForm() {
         const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const orderDataToSave: Omit<OrderDocument, 'id'> = {
-          beneficiaryId: data.beneficiaryId, // Changed from customerId
-          beneficiaryName: selectedBeneficiary?.label || 'N/A', // Changed from customerName
+        const orderDataToSave: Omit<OrderDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+          beneficiaryId: data.beneficiaryId,
+          beneficiaryName: selectedBeneficiary?.label || 'N/A',
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           orderDate: format(data.orderDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -292,12 +292,17 @@ export function CreatePurchaseOrderForm() {
           showTaxColumn: data.showTaxColumn,
         };
 
-        const cleanedDataToSave = Object.fromEntries(
-            Object.entries(orderDataToSave).filter(([, value]) => value !== undefined && value !== '' && value !== null)
-        ) as Record<string, any>;
-
+        const cleanedData: { [key: string]: any } = {};
+        for (const key in orderDataToSave) {
+          const typedKey = key as keyof typeof orderDataToSave;
+          const value = orderDataToSave[typedKey];
+          if (value !== undefined && value !== null && value !== '') {
+            cleanedData[key] = value;
+          }
+        }
+        
         const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
-        transaction.set(newOrderRef, cleanedDataToSave);
+        transaction.set(newOrderRef, cleanedData);
 
         const newCounters = {
           yearlyCounts: {
@@ -601,8 +606,6 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
-
-
 
 
 
