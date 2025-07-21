@@ -113,7 +113,6 @@ const commissionManagementNavItems: NavItem[] = [
 ];
 
 const lcManagementNavItems: NavItem[] = [
-    { href: '/dashboard/new-lc-entry', label: 'New T/T OR L/C Entry', icon: FilePlus2, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-lc' },
     { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, iconColorClass: 'bg-icon-sheets' },
