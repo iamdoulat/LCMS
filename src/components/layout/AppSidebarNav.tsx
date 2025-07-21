@@ -101,8 +101,8 @@ const inventoryNavItems: NavItem[] = [
 
 const financialNavItems: NavItem[] = [
     { href: '/dashboard/quotes/list', label: 'Quotation List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/quotes/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/invoices/list', label: 'Proforma Invoice List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/quotes/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/purchase-orders/list', label: 'Purchase Orders', icon: ShoppingCart, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Layout Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
 ];
