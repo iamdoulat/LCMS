@@ -273,10 +273,14 @@ export function CreateSaleForm() {
             
             const processedLineItems = data.lineItems.map(item => {
                 const qty = parseFloat(String(item.qty || '0'));
-                const unitPrice = parseFloat(String(item.unitPrice || '0'));
-                const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
-                const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
-                const total = qty * unitPrice; // Base total, discount/tax applied later
+                const unitPriceStr = String(item.unitPrice || '0');
+                const finalUnitPrice = parseFloat(unitPriceStr);
+                const discountPercentageStr = String(item.discountPercentage || '0');
+                const finalDiscountPercentage = parseFloat(discountPercentageStr);
+                const taxPercentageStr = String(item.taxPercentage || '0');
+                const finalTaxPercentage = parseFloat(taxPercentageStr);
+
+                const itemTotalBeforeDiscount = qty * finalUnitPrice;
                 
                 const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
 
@@ -285,7 +289,7 @@ export function CreateSaleForm() {
                     itemName: itemDetails?.label.split(' (')[0] || 'N/A',
                     itemCode: itemDetails?.itemCode,
                     description: item.description || '',
-                    qty, unitPrice, discountPercentage, taxPercentage, total,
+                    qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
                 };
                  Object.keys(lineItemData).forEach(key => {
                     if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
@@ -508,7 +512,7 @@ export function CreateSaleForm() {
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
