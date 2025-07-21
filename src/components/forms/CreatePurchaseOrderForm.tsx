@@ -184,7 +184,7 @@ export function CreatePurchaseOrderForm() {
           currentTotalTax += taxAmountVal;
         }
         
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        const displayLineTotal = isNaN(lineTotal) ? 0 : itemTotalBeforeDiscount;
         
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -265,13 +265,13 @@ export function CreatePurchaseOrderForm() {
             unitPrice: finalUnitPrice,
             discountPercentage: finalDiscountPercentage,
             taxPercentage: finalTaxPercentage,
-            total: calculatedLineTotal,
+            total: itemTotalBeforeDiscount,
           };
         });
         
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0);
+        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
         const orderDataToSave: Omit<OrderDocument, 'id'> & { createdAt: any, updatedAt: any } = {
@@ -541,7 +541,7 @@ export function CreatePurchaseOrderForm() {
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
             {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
             {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-            <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+            <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -606,6 +606,7 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
 
 
 

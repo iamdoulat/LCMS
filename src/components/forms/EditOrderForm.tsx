@@ -88,7 +88,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -167,7 +167,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        const displayLineTotal = isNaN(lineTotal) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -235,13 +235,13 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         unitPrice: finalUnitPrice,
         discountPercentage: finalDiscountPercentage,
         taxPercentage: finalTaxPercentage,
-        total: calculatedLineTotal,
+        total: itemTotalBeforeDiscount,
       };
     });
     
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0);
+    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
     const dataToUpdate: Partial<Omit<OrderDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
@@ -360,7 +360,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
