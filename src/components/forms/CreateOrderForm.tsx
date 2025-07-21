@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
 import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types'; // Changed CustomerDocument to SupplierDocument
 import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -226,7 +226,7 @@ export function CreateOrderForm() {
     setIsSubmitting(true);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId); // Changed from customer
     const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "orderNumberGenerator");
+    const counterRef = doc(firestore, "counters", "purchaseOrderNumberGenerator");
 
     try {
       const newOrderId = await runTransaction(firestore, async (transaction) => {
@@ -237,7 +237,7 @@ export function CreateOrderForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(2, '0')}`;
+        const formattedOrderId = `PO${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -301,7 +301,7 @@ export function CreateOrderForm() {
           Object.entries(orderDataToSave).filter(([, value]) => value !== undefined)
         ) as typeof orderDataToSave;
 
-        const newOrderRef = doc(firestore, "orders", formattedOrderId);
+        const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
 
         const newCounters = {
@@ -319,7 +319,7 @@ export function CreateOrderForm() {
       console.error("Error in saveOrderLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save order: ${error.message}`,
+        text: `Failed to save purchase order: ${error.message}`,
         icon: "error",
       });
       return null;
@@ -333,8 +333,8 @@ export function CreateOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Order Saved!",
-        text: `Order successfully saved with ID: ${newId}.`,
+        title: "Purchase Order Saved!",
+        text: `Purchase Order successfully saved with ID: ${newId}.`,
         icon: "success",
       });
     }
@@ -345,22 +345,22 @@ export function CreateOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Order Saved!",
-        text: `Order successfully saved with ID: ${newId}. Navigating to preview...`,
+        title: "Purchase Order Saved!",
+        text: `Purchase Order successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(`/dashboard/orders/preview/${newId}`);
+        router.push(`/dashboard/purchase-orders/preview/${newId}`);
       });
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedOrderId) {
-      router.push(`/dashboard/orders/preview/${generatedOrderId}`);
+      router.push(`/dashboard/purchase-orders/preview/${generatedOrderId}`);
     } else {
-      Swal.fire("No Order Saved", "Please save an order first to preview it.", "info");
+      Swal.fire("No Order Saved", "Please save a purchase order first to preview it.", "info");
     }
   };
   
@@ -413,9 +413,7 @@ export function CreateOrderForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill To*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Billing address" {...field} rows={3} />
-                  </FormControl>
+                  <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -573,7 +571,7 @@ export function CreateOrderForm() {
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Enter internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="flex justify-end space-y-2 mt-6">
@@ -609,4 +607,5 @@ export function CreateOrderForm() {
     </Form>
   );
 }
+
 
