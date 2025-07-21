@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -149,8 +148,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
         let lineTotal = 0;
         if (qty > 0 && unitPrice >= 0) {
           const itemTotalBeforeDiscount = qty * unitPrice;
@@ -158,11 +158,13 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
           lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -174,7 +176,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, watchedTaxType, setValue, getValues]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -220,28 +222,31 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
                 const discountPercentage = parseFloat(String(item.discountPercentage || '0')) || 0;
                 const taxPercentage = parseFloat(String(item.taxPercentage || '0')) || 0;
-                const itemTotalBeforeDiscount = qty * unitPrice;
-                const discountAmount = itemTotalBeforeDiscount * (discountPercentage / 100);
-                const totalAfterDiscount = itemTotalBeforeDiscount - discountAmount;
-                const taxAmount = totalAfterDiscount * (taxPercentage / 100);
-                const total = totalAfterDiscount + taxAmount;
+                const total = qty * unitPrice; // Base total, discount/tax applied later
                 
                 const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-                return {
+                
+                const lineItemData: any = {
                     itemId: item.itemId,
                     itemName: itemDetails?.label.split(' (')[0] || 'N/A',
                     itemCode: itemDetails?.itemCode,
                     description: item.description || '',
                     qty, unitPrice, discountPercentage, taxPercentage, total,
                 };
+                 Object.keys(lineItemData).forEach(key => {
+                    if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
+                        delete lineItemData[key];
+                    }
+                });
+                return lineItemData;
             });
-
-            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-            const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-            const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+            
+            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+            const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+            const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
             const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-            const dataToUpdate: Partial<Omit<SaleDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+            const dataToUpdate: Record<string, any> = {
                 customerId: data.customerId,
                 customerName: selectedCustomer?.label || originalSaleData.customerName,
                 billingAddress: data.billingAddress,
@@ -267,7 +272,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                 Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== '')
             ) as Partial<Omit<SaleDocument, 'id' | 'createdAt'>>;
 
-            const oldItemsMap = new Map(originalSaleData.lineItems.map(item => [item.itemId, item.qty]));
+            const oldItemsMap = new Map((originalSaleData.lineItems || []).map(item => [item.itemId, item.qty]));
             const newItemsMap = new Map(processedLineItems.map(item => [item.itemId, item.qty]));
             const allItemIds = new Set([...oldItemsMap.keys(), ...newItemsMap.keys()]);
             
@@ -357,7 +362,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
 
-        <Separator />
+        <Separator className="my-6" />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
@@ -401,8 +406,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
+                {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -440,4 +445,5 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+
 
