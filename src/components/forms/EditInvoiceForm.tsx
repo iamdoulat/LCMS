@@ -155,20 +155,24 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        let lineTotal = 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        let lineTotal = itemTotalBeforeDiscount;
+        
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
+        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -180,7 +184,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, watchedTaxType, setValue, getValues]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -212,53 +216,57 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
 
     const processedLineItems = data.lineItems.map(item => {
-      const qty = parseFloat(String(item.qty || '0'));
-      const unitPriceStr = String(item.unitPrice || '0');
-      const finalUnitPrice = parseFloat(unitPriceStr);
-      const discountPercentageStr = String(item.discountPercentage || '0');
-      const finalDiscountPercentage = parseFloat(discountPercentageStr);
-      const taxPercentageStr = String(item.taxPercentage || '0');
-      const finalTaxPercentage = parseFloat(taxPercentageStr);
+        const qty = parseFloat(String(item.qty || '0'));
+        const unitPriceStr = String(item.unitPrice || '0');
+        const finalUnitPrice = parseFloat(unitPriceStr);
+        const discountPercentageStr = String(item.discountPercentage || '0');
+        const finalDiscountPercentage = parseFloat(discountPercentageStr);
+        const taxPercentageStr = String(item.taxPercentage || '0');
+        const finalTaxPercentage = parseFloat(taxPercentageStr);
 
-      const itemTotalBeforeDiscount = qty * finalUnitPrice;
-      const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
-      
-      const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-      return {
-        itemId: item.itemId,
-        itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
-        itemCode: itemDetailsFromOptions?.itemCode,
-        description: item.description || '',
-        qty,
-        unitPrice: finalUnitPrice,
-        discountPercentage: finalDiscountPercentage,
-        taxPercentage: finalTaxPercentage,
-        total: calculatedLineTotal,
-      };
+        const itemTotalBeforeDiscount = qty * finalUnitPrice;
+        const total = itemTotalBeforeDiscount;
+        
+        const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+
+        const lineItemData: any = {
+            itemId: item.itemId,
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+            itemCode: itemDetails?.itemCode || undefined,
+            description: item.description || '',
+            qty,
+            unitPrice: finalUnitPrice,
+            discountPercentage: finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage,
+            total,
+        };
+        Object.keys(lineItemData).forEach(key => {
+            if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+                delete lineItemData[key];
+            }
+        });
+        return lineItemData;
     });
-    
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0)), 0);
-    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.qty * (item.unitPrice ?? 0) * ((item.discountPercentage ?? 0) / 100)), 0);
-    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.qty * (item.unitPrice ?? 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-    const dataToUpdate: Partial<Omit<InvoiceDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+    const dataToUpdate: Record<string, any> = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      paymentTerms: data.paymentTerms || undefined,
+      paymentTerms: data.paymentTerms,
       salesperson: data.salesperson,
-      subject: data.subject || undefined,
+      subject: data.subject,
       lineItems: processedLineItems,
       taxType: data.taxType,
-      comments: data.comments || undefined,
-      privateComments: data.privateComments || undefined,
+      comments: data.comments,
+      privateComments: data.privateComments,
       subtotal: finalSubtotal,
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
@@ -268,15 +276,18 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
+      convertedFromQuoteId: data.convertedFromQuoteId,
     };
-
-    const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    ) as typeof dataToUpdate;
+    
+    Object.keys(dataToUpdate).forEach(key => {
+        if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
+            delete dataToUpdate[key];
+        }
+    });
 
     try {
       const invoiceDocRef = doc(firestore, "invoices", invoiceId);
-      await updateDoc(invoiceDocRef, cleanedDataToUpdate);
+      await updateDoc(invoiceDocRef, dataToUpdate);
       Swal.fire("Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update invoice: ${error.message}`, "error");
@@ -403,7 +414,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
           {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
           {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Line Total</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -437,8 +448,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
