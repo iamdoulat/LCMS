@@ -168,23 +168,22 @@ export function CreatePurchaseOrderForm() {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let lineTotal = 0;
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + taxAmountVal;
           
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += taxAmountVal;
         }
         
-        const displayLineTotal = isNaN(lineTotal) ? 0 : itemTotalBeforeDiscount;
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -200,7 +199,7 @@ export function CreatePurchaseOrderForm() {
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
 
-  }, [watchedLineItems, watchedTaxType, setValue, getValues]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -249,10 +248,6 @@ export function CreatePurchaseOrderForm() {
           const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
     
           const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-          const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-          const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
           
           const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
     
@@ -270,11 +265,11 @@ export function CreatePurchaseOrderForm() {
         });
         
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-        const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0);
-        const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
         const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-        const orderDataToSave: Omit<OrderDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+        const orderDataToSave: Omit<OrderDocument, 'id'> = {
           beneficiaryId: data.beneficiaryId, // Changed from customerId
           beneficiaryName: selectedBeneficiary?.label || 'N/A', // Changed from customerName
           billingAddress: data.billingAddress,
@@ -283,8 +278,8 @@ export function CreatePurchaseOrderForm() {
           salesperson: data.salesperson,
           lineItems: processedLineItems,
           taxType: data.taxType,
-          comments: data.comments || undefined,
-          privateComments: data.privateComments || undefined,
+          comments: data.comments,
+          privateComments: data.privateComments,
           subtotal: finalSubtotal,
           totalDiscountAmount: finalTotalDiscount,
           totalTaxAmount: finalTotalTax,
@@ -298,8 +293,8 @@ export function CreatePurchaseOrderForm() {
         };
 
         const cleanedDataToSave = Object.fromEntries(
-          Object.entries(orderDataToSave).filter(([, value]) => value !== undefined)
-        ) as typeof orderDataToSave;
+            Object.entries(orderDataToSave).filter(([, value]) => value !== undefined && value !== '' && value !== null)
+        ) as Record<string, any>;
 
         const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
@@ -539,9 +534,9 @@ export function CreatePurchaseOrderForm() {
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
-            {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
-            {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-            <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
+          {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
+          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
@@ -576,8 +571,8 @@ export function CreatePurchaseOrderForm() {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                 <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -606,6 +601,7 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
 
 
 

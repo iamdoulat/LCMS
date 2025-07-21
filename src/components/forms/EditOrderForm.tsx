@@ -154,20 +154,22 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        let lineTotal = 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          lineTotal = itemTotalAfterDiscount + lineTaxAmount;
+          const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
+          currentTotalTax += taxAmountVal;
         }
-        const displayLineTotal = isNaN(lineTotal) ? 0 : itemTotalBeforeDiscount;
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -179,7 +181,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, watchedTaxType, setValue, getValues]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
   
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -199,7 +201,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -220,10 +222,6 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       const finalTaxPercentage = parseFloat(taxPercentageStr);
 
       const itemTotalBeforeDiscount = qty * finalUnitPrice;
-      const discountAmountVal = itemTotalBeforeDiscount * (finalDiscountPercentage / 100);
-      const itemTotalAfterDiscount = itemTotalBeforeDiscount - discountAmountVal;
-      const taxAmountVal = itemTotalAfterDiscount * (finalTaxPercentage / 100);
-      const calculatedLineTotal = itemTotalAfterDiscount + taxAmountVal;
       
       const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
       return {
@@ -240,11 +238,11 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     });
     
     const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-    const finalTotalDiscount = processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0);
-    const finalTotalTax = processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
 
-    const dataToUpdate: Partial<Omit<OrderDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+    const dataToUpdate: Omit<OrderDocument, 'id' | 'createdAt'> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || initialData.beneficiaryName,
       billingAddress: data.billingAddress,
@@ -253,8 +251,8 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       salesperson: data.salesperson,
       lineItems: processedLineItems,
       taxType: data.taxType,
-      comments: data.comments || undefined,
-      privateComments: data.privateComments || undefined,
+      comments: data.comments,
+      privateComments: data.privateComments,
       subtotal: finalSubtotal,
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
@@ -267,11 +265,11 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     };
 
     const cleanedDataToUpdate = Object.fromEntries(
-      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    ) as typeof dataToUpdate;
+      Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    ) as Record<string, any>;
 
     try {
-      const orderDocRef = doc(firestore, "orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
@@ -394,8 +392,8 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -433,4 +431,6 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
     </Form>
   );
 }
+
+
 
