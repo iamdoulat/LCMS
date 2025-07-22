@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Laptop as LaptopIcon, ListChecks, FileEdit, Trash2, Loader2, AlertTriangle, Info, CalendarDays, User, Phone, FileText as NoteIcon, Cog, Hash, Activity, FileBadge } from 'lucide-react';
+import Image from 'next/image';
+import { Laptop as LaptopIcon, ListChecks, FileEdit, Trash2, Loader2, AlertTriangle, Info, CalendarDays, User, Phone, FileText as NoteIcon, Cog, Hash, Activity, FileBadge, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
@@ -174,70 +175,90 @@ export default function DemoMachineListPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
-                  <CardHeader className="relative pb-2 pt-4 px-4">
-                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
-                        <div className="flex gap-1">
-                            <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`} passHref>
-                                <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                                    <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
-                                </Button>
-                            </Link>
-                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)} disabled={isReadOnly}>
-                              <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
-                            </Button>
-                        </div>
-                        {machine.currentStatus && (
-                            <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="text-xs">
-                                {machine.currentStatus}
-                            </Badge>
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
+                  <div className="grid grid-cols-12 gap-4 p-4">
+                    <div className="col-span-12 md:col-span-8 flex flex-col">
+                        <CardHeader className="relative p-0">
+                            <div className="absolute top-0 right-0 flex flex-col items-end gap-1.5 z-10">
+                                <div className="flex gap-1">
+                                    <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`} passHref>
+                                        <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                                            <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
+                                        </Button>
+                                    </Link>
+                                    <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)} disabled={isReadOnly}>
+                                      <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
+                                    </Button>
+                                </div>
+                                {machine.currentStatus && (
+                                    <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="text-xs">
+                                        {machine.currentStatus}
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20">
+                                <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
+                                   {formatReportValue(machine.machineModel)}
+                                </CardTitle>
+                                <CardDescription className="text-xs mt-0.5 flex items-center gap-2">
+                                   <span className="text-muted-foreground">Owner:</span> <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span>
+                                </CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0 pt-2 flex-grow flex flex-col justify-between">
+                            <div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
+                                    <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
+                                    <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
+                                    {machine.motorOrControlBoxModel && (
+                                        <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
+                                    )}
+                                    {machine.controlBoxSerialNo && (
+                                   <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 mt-2">
+                                    {machine.machineFeatures && (
+                                        <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                            <p className="text-xs font-bold text-foreground flex items-center">
+                                                <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:
+                                            </p>
+                                            <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
+                                        </div>
+                                    )}
+                                    {machine.note && (
+                                         <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
+                                            <p className="text-xs font-bold text-foreground flex items-center">
+                                                <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:
+                                            </p>
+                                            <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="mt-3 text-xs text-muted-foreground">
+                              Added: {formatDisplayDate(machine.createdAt)}
+                            </div>
+                          </CardContent>
+                    </div>
+                    <div className="col-span-12 md:col-span-4 flex items-center justify-center">
+                       {machine.imageUrl ? (
+                            <Image
+                                src={machine.imageUrl}
+                                alt={machine.machineModel || 'Demo machine image'}
+                                width={128}
+                                height={128}
+                                className="object-cover rounded-md border shadow-md w-32 h-32"
+                                data-ai-hint="sewing machine"
+                            />
+                        ) : (
+                            <div className="w-32 h-32 bg-muted/50 rounded-md flex items-center justify-center border border-dashed">
+                                <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                            </div>
                         )}
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20">
-                        <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
-                           {formatReportValue(machine.machineModel)}
-                        </CardTitle>
-                        <CardDescription className="text-xs mt-0.5 flex items-center gap-2">
-                           <span className="text-muted-foreground">Owner:</span> <span className="font-medium text-foreground">{formatReportValue(machine.machineOwner)}</span>
-                        </CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 pt-2 flex-grow flex flex-col justify-between">
-                    <div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
-                            <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
-                            <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
-                            {machine.motorOrControlBoxModel && (
-                                <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
-                            )}
-                            {machine.controlBoxSerialNo && (
-                           <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 mt-2">
-                            {machine.machineFeatures && (
-                                <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
-                                    <p className="text-xs font-bold text-foreground flex items-center">
-                                        <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Features:
-                                    </p>
-                                    <p className="text-xs text-foreground whitespace-pre-wrap">{machine.machineFeatures}</p>
-                                </div>
-                            )}
-                            {machine.note && (
-                                 <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
-                                    <p className="text-xs font-bold text-foreground flex items-center">
-                                        <NoteIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Note:
-                                    </p>
-                                    <p className="text-xs text-foreground whitespace-pre-wrap">{machine.note}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="mt-3 text-xs text-muted-foreground text-right">
-                      Added: {formatDisplayDate(machine.createdAt)}
-                    </div>
-                  </CardContent>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -247,3 +268,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
