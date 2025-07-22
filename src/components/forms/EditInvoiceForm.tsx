@@ -112,11 +112,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : new Date(),
-            dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
             paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
-            status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               itemCode: item.itemCode || '',
@@ -232,13 +230,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const lineItemData: any = {
             itemId: item.itemId,
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-            itemCode: itemDetails?.itemCode || undefined,
+            itemCode: itemDetails?.itemCode,
             description: item.description || '',
-            qty,
-            unitPrice: finalUnitPrice,
-            discountPercentage: finalDiscountPercentage,
-            taxPercentage: finalTaxPercentage,
-            total,
+            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
         };
         Object.keys(lineItemData).forEach(key => {
             if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
@@ -259,7 +253,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       paymentTerms: data.paymentTerms,
       salesperson: data.salesperson,
       subject: data.subject,
@@ -271,7 +264,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalDiscountAmount: finalTotalDiscount,
       totalTaxAmount: finalTotalTax,
       totalAmount: finalGrandTotal,
-      status: data.status,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
@@ -348,31 +340,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={invoiceId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {invoiceStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
 
         <Separator className="my-6" />
