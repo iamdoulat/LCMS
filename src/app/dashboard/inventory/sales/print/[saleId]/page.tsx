@@ -90,7 +90,7 @@ export default function PrintSaleInvoicePage() {
     setIsLoading(true);
     setError(null);
     try {
-      const saleDocRef = doc(firestore, "sales", saleId);
+      const saleDocRef = doc(firestore, "sales_invoice", saleId);
       const saleDocSnap = await getDoc(saleDocRef);
 
       if (saleDocSnap.exists()) {
