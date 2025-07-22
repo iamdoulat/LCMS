@@ -69,6 +69,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
     defaultValues: {
       factoryId: initialData.factoryId || '',
       challanNo: initialData.challanNo || '',
+      deliveryPersonName: initialData.deliveryPersonName || '',
       deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
       estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
       factoryInchargeName: initialData.factoryInchargeName || '',
@@ -147,6 +148,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
         const resetValues = {
             factoryId: initialData.factoryId || '',
             challanNo: initialData.challanNo || '',
+            deliveryPersonName: initialData.deliveryPersonName || '',
             deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
             estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
             factoryInchargeName: initialData.factoryInchargeName || '',
@@ -199,7 +201,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
 
   React.useEffect(() => {
     if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
-      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedEstReturnDate));
+      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay(initialData.demoPeriodDays ? `${initialData.demoPeriodDays} Day(s)` : '0 Days');
@@ -233,6 +235,7 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
       factoryName: selectedFactory?.label || initialData.factoryName,
       factoryLocation: selectedFactory?.location || initialData.factoryLocation,
       challanNo: data.challanNo,
+      deliveryPersonName: data.deliveryPersonName,
       deliveryDate: deliveryDateVal ? format(new Date(deliveryDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       estReturnDate: estReturnDateVal ? format(new Date(estReturnDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : initialData.demoPeriodDays,
@@ -319,19 +322,34 @@ export function EditDemoMachineApplicationForm({ initialData, applicationId, onA
             <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
             </FormItem>
         </div>
-        <FormField
-            control={form.control}
-            name="challanNo"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+              control={form.control}
+              name="challanNo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="deliveryPersonName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Delivery Person*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Delivery Person Name" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </div>
         <Separator />
 
         <h3 className="text-lg font-semibold text-foreground flex items-center">
