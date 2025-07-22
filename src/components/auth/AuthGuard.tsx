@@ -88,11 +88,17 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         router.replace(dashboardPath);
         return;
       }
-      
+
       const userRoles = Array.isArray(userRole) ? userRole : [userRole];
 
       // Super Admins and Admins have full access, so we can exit early for them
       if (userRoles.includes("Super Admin") || userRoles.includes("Admin")) {
+        return;
+      }
+      
+      // Core paths are always allowed for any authenticated user.
+      const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
+      if (isCorePathAllowed) {
         return;
       }
       
@@ -117,10 +123,7 @@ export default function AuthGuard({ children }: PropsWithChildren) {
           return !allowed || allowed.some(prefix => pathname.startsWith(prefix));
         });
 
-        // Core paths are always allowed for any authenticated user.
-        const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
-
-        if (!isPathAllowed && !isCorePathAllowed) {
+        if (!isPathAllowed) {
           // If the path is not allowed for ANY of the user's roles, redirect.
           // Use the first role in their list for a deterministic redirect path.
           const primaryRole = userRoles[0]; 
