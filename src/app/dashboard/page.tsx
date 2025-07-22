@@ -22,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 const SupplierPieChart = dynamic(() =>
-  import('@/components/dashboard/SupplierPieChart'),
+  import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
   {
     ssr: false,
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
@@ -30,7 +30,7 @@ const SupplierPieChart = dynamic(() =>
 );
 
 const YearlyLcValueBarChart = dynamic(() =>
-  import('@/components/dashboard/YearlyLcValueBarChart'),
+  import('@/components/dashboard/YearlyLcValueBarChart').then(mod => mod.YearlyLcValueBarChart),
   {
     ssr: false,
     loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
