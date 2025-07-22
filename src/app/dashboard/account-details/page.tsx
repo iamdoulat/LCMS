@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
@@ -151,8 +151,6 @@ export default function AccountDetailsPage() {
       return;
     }
 
-    // This is the key change: ensure crop dimensions are in pixels.
-    // If completedCrop has 0 width or height, it's invalid.
     if (completedCrop.width === 0 || completedCrop.height === 0) {
        Swal.fire("Error", "Invalid crop selection. Please try again.", "error");
        return;
@@ -172,14 +170,16 @@ export default function AccountDetailsPage() {
         const snapshot = await uploadBytes(storageRef, croppedImageBlob);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
-        await firebaseUpdateProfile(auth.currentUser!, { photoURL: downloadURL });
+        await updateProfile(auth.currentUser!, { photoURL: downloadURL });
+
         if (auth.currentUser!.uid) {
             const userDocRef = doc(firestore, "users", auth.currentUser!.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
         }
         
         if (setAuthUser && auth.currentUser) {
-            setAuthUser({ ...auth.currentUser });
+            const refreshedUser = { ...auth.currentUser, photoURL: downloadURL };
+            setAuthUser(refreshedUser);
         }
 
         setIsCroppingDialogOpen(false);
@@ -207,13 +207,13 @@ export default function AccountDetailsPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await firebaseUpdateProfile(auth.currentUser, { displayName: data.displayName });
+      await updateProfile(auth.currentUser, { displayName: data.displayName });
       if (auth.currentUser.uid) {
         const userDocRef = doc(firestore, "users", auth.currentUser.uid);
         await updateDoc(userDocRef, { displayName: data.displayName, updatedAt: serverTimestamp() });
       }
       if (setAuthUser && auth.currentUser) {
-        setAuthUser({ ...auth.currentUser });
+        setAuthUser({ ...auth.currentUser, displayName: data.displayName });
       }
       Swal.fire({
         title: "Profile Updated",
@@ -367,34 +367,9 @@ export default function AccountDetailsPage() {
               </Button>
             </form>
           </Form>
-
-          <Separator className="my-8" />
-          <div className="space-y-4">
-              <div>
-                  <h3 className="text-lg font-semibold text-foreground">Password</h3>
-                  <Button variant="outline" onClick={handlePasswordReset} disabled={!user.providerData.some(p => p.providerId === 'password') || isReadOnly}>
-                      Send Password Reset Email
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1">
-                      {user.providerData.some(p => p.providerId === 'password')
-                      ? "Click to send a password reset link to your email."
-                      : "Password reset is not available for accounts signed in via an external provider (e.g., Google)."}
-                  </p>
-              </div>
-              <Separator />
-              <h3 className="text-lg font-semibold text-foreground">User ID</h3>
-              <p className="text-sm text-muted-foreground break-all">{user.uid}</p>
-              <h3 className="text-lg font-semibold text-foreground mt-4">Provider Data</h3>
-              {user.providerData.map((provider, index) => (
-                  <div key={index} className="text-sm text-muted-foreground">
-                      <p>Provider ID: {provider.providerId}</p>
-                      {provider.displayName && <p>Provider Display Name: {provider.displayName}</p>}
-                      {provider.email && <p>Provider Email: {provider.email}</p>}
-                  </div>
-              ))}
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
