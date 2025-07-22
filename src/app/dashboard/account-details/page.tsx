@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 import Image from 'next/image';
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -35,16 +35,17 @@ type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 // --- Helper for creating a cropped image blob ---
 async function getCroppedImg(
   image: HTMLImageElement,
-  crop: Crop,
+  crop: PixelCrop, // Use PixelCrop for definite dimensions
   fileName: string
 ): Promise<File | null> {
   const canvas = document.createElement('canvas');
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
+  
   canvas.width = crop.width;
   canvas.height = crop.height;
+  
   const ctx = canvas.getContext('2d');
-
   if (!ctx) {
     return null;
   }
@@ -91,7 +92,7 @@ export default function AccountDetailsPage() {
   // States for image cropping
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isCroppingDialogOpen, setIsCroppingDialogOpen] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -144,12 +145,21 @@ export default function AccountDetailsPage() {
   }
 
   const handleCropAndUpload = async () => {
-    if (!completedCrop || !imgRef.current || !selectedFile) {
-        Swal.fire("Error", "Could not process the image crop.", "error");
-        return;
+    const image = imgRef.current;
+    if (!completedCrop || !image || !selectedFile) {
+      Swal.fire("Error", "Could not process the image crop.", "error");
+      return;
     }
+
+    // This is the key change: ensure crop dimensions are in pixels.
+    // If completedCrop has 0 width or height, it's invalid.
+    if (completedCrop.width === 0 || completedCrop.height === 0) {
+       Swal.fire("Error", "Invalid crop selection. Please try again.", "error");
+       return;
+    }
+
     setIsUploading(true);
-    const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, selectedFile.name);
+    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name);
 
     if (!croppedImageBlob) {
         Swal.fire("Error", "Failed to create cropped image.", "error");
@@ -162,14 +172,12 @@ export default function AccountDetailsPage() {
         const snapshot = await uploadBytes(storageRef, croppedImageBlob);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
-        // Now update user profile with the new URL
-        await updateProfile(auth.currentUser!, { photoURL: downloadURL });
+        await firebaseUpdateProfile(auth.currentUser!, { photoURL: downloadURL });
         if (auth.currentUser!.uid) {
             const userDocRef = doc(firestore, "users", auth.currentUser!.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
         }
         
-        // Update context and close dialog
         if (setAuthUser && auth.currentUser) {
             setAuthUser({ ...auth.currentUser });
         }
@@ -190,6 +198,7 @@ export default function AccountDetailsPage() {
     }
   };
 
+
   const onSubmitDisplayName = async (data: AccountDetailsFormValues) => {
     if (!auth.currentUser) {
       Swal.fire("Error", "No user logged in.", "error");
@@ -198,7 +207,7 @@ export default function AccountDetailsPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await updateProfile(auth.currentUser, { displayName: data.displayName });
+      await firebaseUpdateProfile(auth.currentUser, { displayName: data.displayName });
       if (auth.currentUser.uid) {
         const userDocRef = doc(firestore, "users", auth.currentUser.uid);
         await updateDoc(userDocRef, { displayName: data.displayName, updatedAt: serverTimestamp() });
@@ -289,8 +298,8 @@ export default function AccountDetailsPage() {
                 {imgSrc && (
                     <ReactCrop
                         crop={crop}
-                        onChange={c => setCrop(c)}
-                        onComplete={c => setCompletedCrop(c)}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
                         aspect={1}
                         circularCrop
                         minWidth={100}
@@ -300,7 +309,7 @@ export default function AccountDetailsPage() {
                 )}
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                    <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop}>
+                    <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
                         {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : 'Crop & Upload'}
                     </Button>
                 </DialogFooter>
