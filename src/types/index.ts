@@ -632,9 +632,10 @@ export interface DemoMachine {
   machineFeatures?: string;
   note?: string;
   machineReturned?: boolean; // Added for tracking if machine returned to inventory
+  imageUrl?: string; // For the machine image
 }
 
-export type DemoMachineDocument = Omit<DemoMachine, 'id'> & { id: string, createdAt: any, updatedAt: any, machineReturned?: boolean };
+export type DemoMachineDocument = Omit<DemoMachine, 'id'> & { id: string, createdAt: any, updatedAt: any, machineReturned?: boolean, imageUrl?: string };
 
 
 // --- Demo Machine Application Types ---
@@ -883,7 +884,7 @@ export interface QuoteDocument {
 // --- END Quote Types ---
 
 // --- Invoice Types ---
-export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Refunded"] as const;
+export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Cancelled", "Refunded"] as const;
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
 export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
@@ -1057,6 +1058,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 

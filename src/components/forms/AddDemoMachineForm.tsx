@@ -5,18 +5,24 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, Image as ImageIcon, Crop } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore, storage } from '@/lib/firebase/config';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { DemoMachine, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
+import Image from 'next/image';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { getCroppedImg } from '@/lib/image-utils'; // We'll create this helper
 
 const demoMachineSchema = z.object({
   machineModel: z.string().min(1, "Machine Model is required"),
@@ -27,13 +33,22 @@ const demoMachineSchema = z.object({
   machineOwner: z.enum(demoMachineOwnerOptions, { required_error: "Machine Owner selection is required" }),
   currentStatus: z.enum(demoMachineStatusOptions, { required_error: "Current Machine Status is required" }).default(demoMachineStatusOptions[0]),
   machineFeatures: z.string().optional(),
-  note: z.string().optional(), // Made optional
+  note: z.string().optional(),
 });
 
 type DemoMachineFormValues = z.infer<typeof demoMachineSchema>;
 
 export function AddDemoMachineForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // States for image cropping
+  const [imgSrc, setImgSrc] = React.useState('');
+  const [crop, setCrop] = React.useState<Crop>();
+  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [isCroppingDialogOpen, setIsCroppingDialogOpen] = React.useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
   const form = useForm<DemoMachineFormValues>({
     resolver: zodResolver(demoMachineSchema),
     defaultValues: {
@@ -49,39 +64,94 @@ export function AddDemoMachineForm() {
     },
   });
 
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined); // Reset crop state
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setIsCroppingDialogOpen(true);
+      });
+      reader.readAsDataURL(file);
+      e.target.value = ''; // Reset file input
+    }
+  };
+
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget;
+    const aspect = 1; // 512x512 is a 1:1 aspect ratio
+    const crop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
+      width, height
+    );
+    setCrop(crop);
+  }
+
   async function onSubmit(data: DemoMachineFormValues) {
     setIsSubmitting(true);
 
-    const dataToSave: Omit<DemoMachine, 'id' | 'createdAt' | 'updatedAt' | 'machineReturned'> & { createdAt: any, updatedAt: any } = {
-      ...data,
-      motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
-      controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-      machineFeatures: data.machineFeatures || undefined,
-      note: data.note || undefined, // Will be undefined if empty string
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    // Ensure optional fields that are empty strings become undefined for Firestore
-    Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof typeof dataToSave] === '') {
-         if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'machineFeatures', 'note'].includes(key)) {
-             (dataToSave as any)[key] = undefined;
-         }
-      }
-    });
-
-
     try {
-      const docRef = await addDoc(collection(firestore, "demo_machines"), dataToSave);
+      // 1. Create the document first to get an ID
+      const docRef = await addDoc(collection(firestore, "demo_machines"), {});
+      const machineId = docRef.id;
+
+      let imageUrl: string | undefined = undefined;
+
+      // 2. If an image was selected, crop and upload it
+      if (selectedFile && completedCrop) {
+          const croppedImageBlob = await getCroppedImg(
+              imgRef.current!,
+              completedCrop,
+              selectedFile.name,
+              512, // target width
+              512  // target height
+          );
+          if (croppedImageBlob) {
+              const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
+              const snapshot = await uploadBytes(storageRef, croppedImageBlob);
+              imageUrl = await getDownloadURL(snapshot.ref);
+          }
+      }
+
+      // 3. Prepare the final data with the image URL
+      const dataToSave: Omit<DemoMachine, 'id' | 'createdAt' | 'updatedAt' | 'machineReturned'> & { createdAt: any, updatedAt: any, imageUrl?: string } = {
+        ...data,
+        motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
+        controlBoxSerialNo: data.controlBoxSerialNo || undefined,
+        machineFeatures: data.machineFeatures || undefined,
+        note: data.note || undefined,
+        imageUrl: imageUrl, // Add the image URL here
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof typeof dataToSave] === '') {
+           if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'machineFeatures', 'note', 'imageUrl'].includes(key)) {
+               (dataToSave as any)[key] = undefined;
+           }
+        }
+      });
+      
+      // 4. Update the document with all the data
+      await updateDoc(docRef, dataToSave);
+
       Swal.fire({
         title: "Demo Machine Saved!",
-        text: `Demo Machine data saved successfully with ID: ${docRef.id}.`,
+        text: `Demo Machine data saved successfully with ID: ${machineId}.`,
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
       });
+
+      // Reset form and image states
       form.reset();
+      setImgSrc('');
+      setCompletedCrop(undefined);
+      setSelectedFile(null);
+      setIsCroppingDialogOpen(false);
+
     } catch (error) {
       console.error("Error adding demo machine document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -112,7 +182,6 @@ export function AddDemoMachineForm() {
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="machineBrand"
@@ -197,7 +266,6 @@ export function AddDemoMachineForm() {
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="currentStatus"
@@ -226,6 +294,56 @@ export function AddDemoMachineForm() {
           />
         </div>
 
+        <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Crop Machine Image (1:1)</DialogTitle></DialogHeader>
+                {imgSrc && (
+                    <ReactCrop
+                        crop={crop}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        aspect={1}
+                        minWidth={100}
+                    >
+                        <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
+                    </ReactCrop>
+                )}
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={() => setIsCroppingDialogOpen(false)} disabled={!completedCrop?.width}>
+                        Set Image
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <FormItem>
+          <FormLabel>Machine Image</FormLabel>
+          <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50">
+                  {completedCrop?.width && imgSrc ? (
+                      <Image
+                        src={URL.createObjectURL(selectedFile!)}
+                        alt="Cropped preview"
+                        width={96}
+                        height={96}
+                        style={{
+                            objectFit: 'cover',
+                            width: '96px',
+                            height: '96px',
+                            clipPath: `inset(${completedCrop.y}px ${96 - (completedCrop.x + completedCrop.width)}px ${96 - (completedCrop.y + completedCrop.height)}px ${completedCrop.x}px)`
+                        }}
+                        data-ai-hint="sewing machine"
+                      />
+                  ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  )}
+              </div>
+              <Input id="machine-image-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
+          </div>
+          <FormDescription>Upload a 512x512 image for the demo machine.</FormDescription>
+        </FormItem>
+
         <FormField
           control={form.control}
           name="machineFeatures"
@@ -239,7 +357,6 @@ export function AddDemoMachineForm() {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="note"
@@ -253,8 +370,6 @@ export function AddDemoMachineForm() {
             </FormItem>
           )}
         />
-
-
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -272,4 +387,3 @@ export function AddDemoMachineForm() {
     </Form>
   );
 }
-
