@@ -62,6 +62,7 @@ export default function NewDemoMachineApplicationPage() {
     defaultValues: {
       factoryId: '',
       challanNo: '',
+      deliveryPersonName: '',
       deliveryDate: undefined,
       estReturnDate: undefined,
       factoryInchargeName: '',
@@ -206,6 +207,7 @@ export default function NewDemoMachineApplicationPage() {
       factoryLocation: selectedFactory?.location || 'N/A',
       appliedMachines: machinesToSave,
       challanNo: data.challanNo,
+      deliveryPersonName: data.deliveryPersonName,
       deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
@@ -324,19 +326,34 @@ export default function NewDemoMachineApplicationPage() {
                     </FormItem>
                 </div>
 
-                <FormField
-                    control={form.control}
-                    name="challanNo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                      control={form.control}
+                      name="challanNo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="deliveryPersonName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Delivery Person*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter Delivery Person Name" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
                 <Separator />
 
                 <h3 className="text-lg font-semibold text-foreground flex items-center">
@@ -546,5 +563,4 @@ export default function NewDemoMachineApplicationPage() {
     </div>
   );
 }
-
     

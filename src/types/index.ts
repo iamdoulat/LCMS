@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -650,6 +651,7 @@ export type AppliedMachineItem = z.infer<typeof AppliedMachineItemSchema>;
 export const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
   challanNo: z.string().min(1, "Challan No. is required."),
+  deliveryPersonName: z.string().min(1, "Delivery Person Name is required."),
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
   factoryInchargeName: z.string().optional(),
@@ -678,6 +680,7 @@ export interface DemoMachineApplicationDocument {
   factoryName: string; // Denormalized
   factoryLocation: string; // Denormalized
   challanNo: string;
+  deliveryPersonName: string;
   deliveryDate: string; // ISO string
   estReturnDate: string; // ISO string
   demoPeriodDays: number;
@@ -881,6 +884,7 @@ export interface QuoteDocument {
 
 // --- Sale Types ---
 export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
+export const saleStatusOptions: SaleStatus[] = ["Draft", "Completed", "Cancelled", "Refunded"];
 
 export interface InvoiceLineItemDocument { // Reusing for consistency
   itemId: string;
