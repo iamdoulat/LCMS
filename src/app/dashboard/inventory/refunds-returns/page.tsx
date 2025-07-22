@@ -120,7 +120,7 @@ export default function InventoryRefundsReturnsPage() {
     if (filterCustomerId) filtered = filtered.filter(sale => sale.customerId === filterCustomerId);
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
-      filtered = filtered.filter(sale => sale.saleDate && getYear(parseISO(sale.saleDate)) === yearNum);
+      filtered = filtered.filter(sale => sale.invoiceDate && getYear(parseISO(sale.invoiceDate)) === yearNum);
     }
     if (filterStatus) filtered = filtered.filter(sale => sale.status === filterStatus);
     setDisplayedSales(filtered);
@@ -286,11 +286,11 @@ export default function InventoryRefundsReturnsPage() {
                     <TableRow key={sale.id}>
                       <TableCell className="font-medium p-2 sm:p-4">{sale.id.substring(0,8)}...</TableCell>
                       <TableCell className="p-2 sm:p-4">{sale.customerName || 'N/A'}</TableCell>
-                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(sale.saleDate)}</TableCell>
+                      <TableCell className="p-2 sm:p-4">{formatDisplayDate(sale.invoiceDate)}</TableCell>
                       <TableCell className="p-2 sm:p-4 truncate max-w-[200px]" title={getFirstItemName(sale.lineItems)}>{getFirstItemName(sale.lineItems)} ({getTotalQuantity(sale.lineItems)} qty)</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatCurrencyValue(sale.totalAmount)}</TableCell>
                       <TableCell className="p-2 sm:p-4"><Badge variant={getSaleStatusBadgeVariant(sale.status)}>{sale.status || "N/A"}</Badge></TableCell>
-                       <TableCell className="p-2 sm:p-4 text-xs text-muted-foreground truncate max-w-[150px]" title={sale.returnReason}>{sale.returnReason || 'N/A'}</TableCell>
+                       <TableCell className="p-2 sm:p-4 text-xs text-muted-foreground truncate max-w-[150px]" title={sale.refundReason}>{sale.refundReason || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-1 p-2 sm:p-4">
                         <TooltipProvider>
                            <Tooltip>
@@ -334,5 +334,6 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
+
 
 
