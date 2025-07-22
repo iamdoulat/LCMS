@@ -72,7 +72,7 @@ export function CreateSaleForm() {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      saleDate: new Date(),
+      invoiceDate: new Date(),
       salesperson: '',
       lineItems: [{
         itemId: '',
@@ -307,7 +307,7 @@ export function CreateSaleForm() {
             const dataToSave: Record<string, any> = {
                 customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
-                saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                 salesperson: data.salesperson,
                 lineItems: processedLineItems, taxType: data.taxType,
                 comments: data.comments, privateComments: data.privateComments,
@@ -462,7 +462,7 @@ export function CreateSaleForm() {
             </FormItem>
             <FormField
                 control={control}
-                name="saleDate"
+                name="invoiceDate"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
                     <FormLabel>Sale Date*</FormLabel>
