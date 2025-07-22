@@ -116,7 +116,7 @@ export function CreateSaleInvoiceForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
         setCustomerOptions(
           customersSnap.docs.map(doc => {

@@ -87,7 +87,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
 
         const fetchedCustomers = customersSnap.docs.map(docSnap => {
@@ -212,7 +212,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
 
   async function onSubmit(data: InvoiceFormValues) {
     if (!saleId) {
-      Swal.fire("Error", "Sale ID is missing. Cannot update.", "error");
+      Swal.fire("Error", "Invoice ID is missing. Cannot update.", "error");
       return;
     }
     setIsSubmitting(true);
@@ -235,7 +235,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const lineItemData: any = {
             itemId: item.itemId,
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-            itemCode: itemDetails?.itemCode || undefined,
+            itemCode: itemDetails?.itemCode,
             description: item.description || '',
             qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
         };
@@ -456,7 +456,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleViewPdf}>
+             <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
