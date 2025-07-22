@@ -282,24 +282,6 @@ export default function AccountDetailsPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
-          <div className="flex flex-col items-center space-y-4 mb-8">
-            <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-              <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar" />
-              <AvatarFallback className="text-4xl">
-                {getInitials(user.displayName || user.email || "U")}
-              </AvatarFallback>
-            </Avatar>
-             <div className="w-full max-w-sm">
-                <FormLabel htmlFor="profile-picture-upload">Profile Picture</FormLabel>
-                <div className="flex items-center gap-2 mt-1">
-                    <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
-                </div>
-                <FormDescription className="mt-2">
-                    Select a new image to upload and crop.
-                </FormDescription>
-            </div>
-          </div>
           
           <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
             <DialogContent className="max-w-md">
@@ -327,6 +309,24 @@ export default function AccountDetailsPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
+              <div className="flex flex-col items-center space-y-4 mb-8">
+                <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
+                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar" />
+                  <AvatarFallback className="text-4xl">
+                    {getInitials(user.displayName || user.email || "U")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="w-full max-w-sm">
+                    <FormLabel htmlFor="profile-picture-upload">Profile Picture</FormLabel>
+                    <div className="flex items-center gap-2 mt-1">
+                        <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                    </div>
+                    <FormDescription className="mt-2">
+                        Select a new image to upload and crop.
+                    </FormDescription>
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="displayName"
