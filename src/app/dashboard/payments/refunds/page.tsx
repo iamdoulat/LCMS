@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Undo2, Loader2, Filter, XCircle, Users, CalendarDays, ChevronLeft, ChevronRight, FileText, AlertTriangle, DollarSign } from 'lucide-react';
+import { Undo2, Loader2, Filter, XCircle, Users, CalendarDays, ChevronLeft, ChevronRight, FileText, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -83,15 +83,22 @@ export default function InvoiceRefundsPage() {
       const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded"];
       const invoicesQuery = query(
         collection(firestore, "sales_invoice"),
-        where("status", "in", eligibleStatuses),
-        firestoreOrderBy("updatedAt", "desc")
+        where("status", "in", eligibleStatuses)
       );
       const querySnapshot = await getDocs(invoicesQuery);
       const fetchedInvoices = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
         return { id: docSnap.id, ...data } as InvoiceDocument;
       });
-      setAllInvoices(fetchedInvoices);
+      
+      // Sort client-side
+      const sortedInvoices = fetchedInvoices.sort((a, b) => {
+        const dateA = a.updatedAt ? (a.updatedAt as any).toDate() : new Date(0);
+        const dateB = b.updatedAt ? (b.updatedAt as any).toDate() : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setAllInvoices(sortedInvoices);
     } catch (error: any) {
       let errorMsg = `Could not fetch invoice data. Error: ${error.message}`;
       if (error.message?.toLowerCase().includes("index")) {
@@ -130,9 +137,7 @@ export default function InvoiceRefundsPage() {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(inv => inv.invoiceDate && getYear(parseISO(inv.invoiceDate)) === yearNum);
     }
-    if (filterStatus) {
-      filtered = filtered.filter(inv => inv.status === filterStatus);
-    }
+    if (filterStatus) filtered = filtered.filter(inv => inv.status === filterStatus);
     setDisplayedInvoices(filtered);
     setCurrentPage(1);
   }, [allInvoices, filterInvoiceId, filterCustomerId, filterYear, filterStatus]);
@@ -310,7 +315,7 @@ export default function InvoiceRefundsPage() {
                                   variant="destructive"
                                   size="sm"
                                   onClick={() => handleProcessRefund(invoice)}
-                                  disabled={invoice.status === "Refunded" || invoice.status === "Void" || invoice.status === "Draft"}
+                                  disabled={invoice.status === "Refunded" || invoice.status === "Cancelled"}
                                 >
                                   <Undo2 className="mr-1.5 h-4 w-4" /> Process Refund
                                 </Button>
@@ -345,3 +350,4 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
+
