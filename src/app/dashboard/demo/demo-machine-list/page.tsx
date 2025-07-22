@@ -217,8 +217,8 @@ export default function DemoMachineListPage() {
                                    <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
                                     )}
                                 </div>
-
-                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                
+                                <div className="space-y-2 mt-2">
                                     {machine.machineFeatures && (
                                         <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
                                             <p className="text-xs font-bold text-foreground flex items-center">
