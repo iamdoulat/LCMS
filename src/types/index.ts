@@ -903,6 +903,7 @@ export const InvoiceSchema = z.object({
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
   invoiceDate: z.date({ required_error: "Invoice Date is required." }),
+  dueDate: z.date().optional(),
   paymentTerms: z.string().optional(),
   salesperson: z.string().min(1, "Salesperson is required."),
   subject: z.string().optional(),
@@ -942,6 +943,7 @@ export interface InvoiceDocument {
   billingAddress: string;
   shippingAddress: string;
   invoiceDate: string; // ISO string
+  dueDate?: string; // ISO string
   paymentTerms?: string;
   salesperson: string;
   subject?: string;
