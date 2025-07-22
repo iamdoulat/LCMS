@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -486,3 +487,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+

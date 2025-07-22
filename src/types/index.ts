@@ -1042,7 +1042,7 @@ export interface OrderDocument {
 // --- END Order Types ---
 
 // --- Sale Types (Duplicate for sales_invoice collection) ---
-export const saleStatusOptions = ["Draft", "Completed", "Cancelled", "Refunded"] as const;
+export const saleStatusOptions = ["Draft", "Completed", "Cancelled", "Refunded", "Sent", "Partial", "Paid", "Overdue", "Void"] as const;
 export type SaleStatus = (typeof saleStatusOptions)[number];
 
 export const SaleLineItemSchema = InvoiceLineItemSchema;
@@ -1063,3 +1063,4 @@ export type SaleDocument = Omit<InvoiceDocument, 'status' | 'amountPaid' | 'conv
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
