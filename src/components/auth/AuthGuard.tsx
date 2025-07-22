@@ -11,6 +11,14 @@ import type { UserRole } from '@/types';
 const publicPaths = ['/login', '/register']; // Paths accessible without authentication
 const dashboardPath = '/dashboard';
 
+// Paths that any authenticated user should be able to access regardless of role.
+const coreAllowedPaths = [
+    '/dashboard',
+    '/dashboard/account-details',
+    '/dashboard/notifications',
+    '/dashboard/search'
+];
+
 // Define allowed path prefixes for restricted roles
 const roleAllowedPaths: Record<string, string[]> = {
   "Service": ['/dashboard/warranty-management'],
@@ -88,21 +96,20 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         router.replace(dashboardPath);
         return;
       }
-
+      
       const userRoles = Array.isArray(userRole) ? userRole : [userRole];
 
-      // Super Admins and Admins have full access, so we can exit early for them
+      // Super Admins and Admins have full access
       if (userRoles.includes("Super Admin") || userRoles.includes("Admin")) {
         return;
       }
-      
-      // Core paths are always allowed for any authenticated user.
-      const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
-      if (isCorePathAllowed) {
+
+      // Check if the current path is one of the core paths allowed for all users.
+      if (coreAllowedPaths.some(corePath => pathname.startsWith(corePath))) {
         return;
       }
       
-      // Check for explicitly disallowed paths first
+      // Check for explicitly disallowed paths for any of the user's roles
       for (const role of userRoles) {
         const disallowed = roleDisallowedPaths[role as UserRole];
         if (disallowed && disallowed.some(prefix => pathname.startsWith(prefix))) {
@@ -112,23 +119,22 @@ export default function AuthGuard({ children }: PropsWithChildren) {
         }
       }
       
-      // Check if any of the user's roles have specific path restrictions
-      const hasRestrictedRole = userRoles.some(role => roleAllowedPaths[role]);
-
-      if (hasRestrictedRole) {
-        let isPathAllowed = userRoles.some(role => {
-          const allowed = roleAllowedPaths[role];
-          // A role is allowed if `allowed` is undefined (meaning no restrictions for this role)
-          // or if the current path starts with one of the allowed prefixes for this role.
-          return !allowed || allowed.some(prefix => pathname.startsWith(prefix));
-        });
-
-        if (!isPathAllowed) {
-          // If the path is not allowed for ANY of the user's roles, redirect.
-          // Use the first role in their list for a deterministic redirect path.
-          const primaryRole = userRoles[0]; 
-          router.replace(roleRedirects[primaryRole] || dashboardPath);
+      // For users with specific roles, check if the current path is allowed for AT LEAST ONE of their roles.
+      let isPathAllowed = false;
+      for (const role of userRoles) {
+        const allowed = roleAllowedPaths[role];
+        // If a role has no specific restrictions (allowed is undefined), it doesn't grant access on its own here.
+        // We must find an explicit match in the roleAllowedPaths for one of the user's roles.
+        if (allowed && allowed.some(prefix => pathname.startsWith(prefix))) {
+          isPathAllowed = true;
+          break; // Found a role that allows access, no need to check further.
         }
+      }
+
+      if (!isPathAllowed) {
+        // If no role grants access, redirect. Use the first role for a deterministic redirect path.
+        const primaryRole = userRoles[0]; 
+        router.replace(roleRedirects[primaryRole] || dashboardPath);
       }
     }
   }, [user, userRole, loading, router, pathname]);
