@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -9,7 +8,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { SaleDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, SaleStatus, SaleFormValues } from '@/types';
+import type { InvoiceDocument, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, SaleFormValues, SaleStatus, SaleDocument } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, saleStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,7 +66,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [grandTotal, setGrandTotal] = React.useState(0);
 
   const form = useForm<SaleFormValues>({
-    resolver: zodResolver(InvoiceSchema), // Still uses InvoiceSchema as the base for validation logic
+    resolver: zodResolver(InvoiceSchema.extend({
+        status: z.enum(saleStatusOptions).optional(),
+    })), 
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -116,6 +117,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : new Date(),
+            dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
+            paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
             status: initialData.status || "Draft",
@@ -226,7 +229,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const finalTaxPercentage = parseFloat(taxPercentageStr);
 
         const itemTotalBeforeDiscount = qty * finalUnitPrice;
-        const total = itemTotalBeforeDiscount;
         
         const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
 
@@ -235,7 +237,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
             itemCode: itemDetails?.itemCode,
             description: item.description || '',
-            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
+            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
         };
         Object.keys(lineItemData).forEach(key => {
             if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
@@ -256,6 +258,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      paymentTerms: data.paymentTerms,
       salesperson: data.salesperson,
       subject: data.subject,
       lineItems: processedLineItems,
@@ -339,12 +343,35 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={saleId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {saleStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
-
         <Separator className="my-6" />
         <FormField
           control={control}
@@ -458,3 +485,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+

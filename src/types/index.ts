@@ -1042,16 +1042,16 @@ export interface OrderDocument {
 // --- END Order Types ---
 
 // --- Sale Types (Duplicate for sales_invoice collection) ---
-export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
-export const saleStatusOptions: SaleStatus[] = ["Draft", "Completed", "Cancelled", "Refunded"];
+export const saleStatusOptions = ["Draft", "Completed", "Cancelled", "Refunded"] as const;
+export type SaleStatus = (typeof saleStatusOptions)[number];
 
 export const SaleLineItemSchema = InvoiceLineItemSchema;
 export type SaleLineItemFormValues = InvoiceLineItemFormValues;
 
 export const SaleSchema = InvoiceSchema.omit({ // Inherit from InvoiceSchema but omit invoice-specific fields
-    dueDate: true, 
-    paymentTerms: true,
-    status: true, // We'll add it back with SaleStatus type
+    // dueDate: true, 
+    // paymentTerms: true,
+    // status: true, // We'll add it back with SaleStatus type
     amountPaid: true,
     convertedFromQuoteId: true,
 }).extend({
@@ -1059,7 +1059,7 @@ export const SaleSchema = InvoiceSchema.omit({ // Inherit from InvoiceSchema but
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 
-export type SaleDocument = Omit<InvoiceDocument, 'status' | 'dueDate' | 'paymentTerms' | 'amountPaid' | 'convertedFromQuoteId'> & {
+export type SaleDocument = Omit<InvoiceDocument, 'status' | 'amountPaid' | 'convertedFromQuoteId'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
