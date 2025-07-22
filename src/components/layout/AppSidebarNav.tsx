@@ -131,7 +131,6 @@ const shipmentNavItems: NavItem[] = [
 
 const demoNavItems: NavItem[] = [
     { href: '/dashboard/demo/demo-machine-search', label: 'Demo Machine Search', icon: Search, iconColorClass: 'bg-icon-search' },
-    { href: '/dashboard/demo/add-demo-machine', label: 'Add Demo Machine', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/demo/add-demo-machine-factory', label: 'Add New Factory', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
