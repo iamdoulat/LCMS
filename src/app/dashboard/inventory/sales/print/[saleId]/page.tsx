@@ -165,7 +165,7 @@ export default function PrintSaleInvoicePage() {
   const showDiscountColumn = saleData.showDiscountColumn ?? false;
   const showTaxColumn = saleData.showTaxColumn ?? false;
   
-  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.saleDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
+  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.invoiceDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -200,7 +200,7 @@ export default function PrintSaleInvoicePage() {
                 </div>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Date :</span>
-                    <span>{formatDisplayDate(saleData.saleDate)}</span>
+                    <span>{formatDisplayDate(saleData.invoiceDate)}</span>
                 </div>
                 {saleData.salesperson && (
                     <div className="flex justify-end items-baseline gap-2 text-sm">
