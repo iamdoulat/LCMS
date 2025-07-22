@@ -87,8 +87,7 @@ export default function AccountDetailsPage() {
   const { user, loading: authLoading, setUser: setAuthUser, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isReadOnly = userRole?.includes('Viewer');
-
+  
   // States for image cropping
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
@@ -329,7 +328,7 @@ export default function AccountDetailsPage() {
                 <div className="w-full max-w-sm">
                     <FormLabel htmlFor="profile-picture-upload">Profile Picture</FormLabel>
                     <div className="flex items-center gap-2 mt-1">
-                        <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                        <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
                     </div>
                     <FormDescription className="mt-2">
                         Select a new image to upload and crop.
@@ -344,7 +343,7 @@ export default function AccountDetailsPage() {
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your display name" {...field} disabled={isReadOnly} />
+                      <Input placeholder="Your display name" {...field} />
                     </FormControl>
                     <FormDescription>This name will be displayed to others.</FormDescription>
                     <FormMessage />
@@ -363,7 +362,7 @@ export default function AccountDetailsPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting || isReadOnly}>
+              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
                 {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
               </Button>
             </form>
