@@ -61,7 +61,7 @@ export default function ApplyPaymentPage() {
   React.useEffect(() => {
     setIsLoadingDropdowns(true);
     const q = query(
-      collection(firestore, "invoices"),
+      collection(firestore, "sales_invoice"),
       where("status", "in", ["Sent", "Partial", "Overdue"])
     );
 
@@ -153,7 +153,7 @@ export default function ApplyPaymentPage() {
     }
     setIsSubmitting(true);
     try {
-        const invoiceRef = doc(firestore, "invoices", watchedInvoiceId);
+        const invoiceRef = doc(firestore, "sales_invoice", watchedInvoiceId);
         const paymentRef = doc(collection(firestore, "payments"));
 
         await runTransaction(firestore, async (transaction) => {
