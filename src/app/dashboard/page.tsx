@@ -559,7 +559,7 @@ export default function DashboardPage() {
           title={`Total L/Cs Opened (${selectedYear})`}
           value={dashboardStats.totalLCs.toLocaleString()}
           icon={<Package />}
-          description={`${dashboardStats.thisMonthLCQty} this month`}
+          description={`${dashboardStats.thisMonthLCQty} L/C this month`}
           className="bg-[#4A90E2]"
         />
         <StatCard
