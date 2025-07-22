@@ -131,10 +131,6 @@ export default function EditLCPage() {
             Back to L/C List
           </Button>
         </Link>
-        <Button variant="outline" onClick={handleDirectPrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            Ctrl+P
-        </Button>
       </div>
       <Card className="max-w-7xl mx-auto shadow-xl">
         <CardHeader>
