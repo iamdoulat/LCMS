@@ -22,7 +22,8 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/invoices', 
     '/dashboard/orders', 
     '/dashboard/payments', 
-    '/dashboard/financial-management'
+    '/dashboard/financial-management',
+    '/dashboard/purchase-orders'
   ],
   "Viewer": [
     '/dashboard/items',
@@ -40,6 +41,7 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/warranty-management',
     '/dashboard/suppliers',
     '/dashboard/customers',
+    '/dashboard/purchase-orders',
   ],
 };
 
