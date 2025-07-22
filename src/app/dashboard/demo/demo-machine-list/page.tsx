@@ -218,7 +218,7 @@ export default function DemoMachineListPage() {
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4 mt-2">
+                                <div className="grid grid-cols-1 gap-2 mt-2">
                                     {machine.machineFeatures && (
                                         <div className="space-y-1 bg-muted/20 p-3 rounded-md border">
                                             <p className="text-xs font-bold text-foreground flex items-center">
@@ -242,7 +242,7 @@ export default function DemoMachineListPage() {
                             </div>
                           </CardContent>
                     </div>
-                    <div className="col-span-12 md:col-span-4 flex items-center justify-center">
+                     <div className="col-span-12 md:col-span-4 flex items-center justify-center">
                        {machine.imageUrl ? (
                             <Image
                                 src={machine.imageUrl}
