@@ -173,10 +173,10 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {demoMachines.map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow">
-                  <div className="grid grid-cols-12 gap-4 p-4">
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
+                  <div className="grid grid-cols-12 gap-4 p-4 flex-grow">
                     <div className="col-span-12 md:col-span-8 flex flex-col">
                         <CardHeader className="relative p-0">
                             <div className="absolute top-0 right-0 flex flex-col items-end gap-1.5 z-10">
@@ -237,9 +237,6 @@ export default function DemoMachineListPage() {
                                     )}
                                 </div>
                             </div>
-                            <div className="mt-3 text-xs text-muted-foreground">
-                              Added: {formatDisplayDate(machine.createdAt)}
-                            </div>
                           </CardContent>
                     </div>
                      <div className="col-span-12 md:col-span-4 flex items-center justify-center">
@@ -259,6 +256,11 @@ export default function DemoMachineListPage() {
                         )}
                     </div>
                   </div>
+                  <div className="px-4 pb-4 mt-auto">
+                    <div className="mt-3 text-xs text-muted-foreground border-t pt-2 text-right">
+                      Added: {formatDisplayDate(machine.createdAt)}
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -268,5 +270,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
-
