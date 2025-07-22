@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -42,17 +42,15 @@ async function getCroppedImg(
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
   
-  canvas.width = crop.width;
-  canvas.height = crop.height;
+  const pixelRatio = window.devicePixelRatio || 1;
+  canvas.width = crop.width * pixelRatio;
+  canvas.height = crop.height * pixelRatio;
   
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     return null;
   }
 
-  const pixelRatio = window.devicePixelRatio || 1;
-  canvas.width = crop.width * pixelRatio;
-  canvas.height = crop.height * pixelRatio;
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.imageSmoothingQuality = 'high';
 
@@ -310,7 +308,7 @@ export default function AccountDetailsPage() {
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
                     <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
-                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : 'Crop & Upload'}
+                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
                     </Button>
                 </DialogFooter>
             </DialogContent>
