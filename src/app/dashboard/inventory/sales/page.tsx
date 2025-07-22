@@ -1,27 +1,23 @@
 
-"use client"; // Added "use client" as forms are client-side interactive
+"use client";
 
-import { CreateSaleForm } from '@/components/forms/CreateSaleForm'; // Import the new form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
-export default function SalesManagementPage() {
+export default function DeprecatedRecordSalePage() {
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-screen-2xl mx-auto shadow-xl"> {/* Changed max-width for a potentially larger form */}
+      <Card>
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <DollarSign className="h-7 w-7 text-primary" />
-            Record New Sale
-          </CardTitle>
+          <CardTitle>Page Not Available</CardTitle>
           <CardDescription>
-            Fill in the details below to record a new sale.
+            This page has been removed. Please use the{' '}
+            <Link href="/dashboard/inventory/sales-list" className="text-primary hover:underline">
+              Sales List page
+            </Link>
+            {' '}to manage sales.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <CreateSaleForm /> {/* Use the imported form component */}
-        </CardContent>
       </Card>
     </div>
   );

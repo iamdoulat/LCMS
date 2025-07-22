@@ -91,7 +91,6 @@ const mainNavItems: NavItem[] = [
 const inventoryNavItems: NavItem[] = [
     { href: '/dashboard/items/add', label: 'Add New Item', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/items/list', label: 'Items List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/inventory/sales', label: 'Record New Sale', icon: DollarSign, iconColorClass: 'bg-icon-sale' },
     { href: '/dashboard/inventory/sales-list', label: 'Sales List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
