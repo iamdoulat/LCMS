@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -112,6 +112,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : new Date(),
+            dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
             paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
@@ -222,7 +223,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const finalTaxPercentage = parseFloat(taxPercentageStr);
 
         const itemTotalBeforeDiscount = qty * finalUnitPrice;
-        const total = itemTotalBeforeDiscount;
         
         const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
 
@@ -231,10 +231,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
             itemCode: itemDetails?.itemCode,
             description: item.description || '',
-            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
+            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
         };
         Object.keys(lineItemData).forEach(key => {
-            if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+            if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
                 delete lineItemData[key];
             }
         });
@@ -336,7 +336,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={invoiceId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
@@ -431,6 +431,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
                 invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : new Date(),
+                dueDate: initialData.dueDate ? parseISO(initialData.dueDate) : undefined,
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
                   itemCode: item.itemCode || '',
@@ -454,3 +455,4 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
