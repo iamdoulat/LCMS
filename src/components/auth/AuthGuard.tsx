@@ -31,6 +31,7 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/quotes',
     '/dashboard/invoices',
     '/dashboard/orders',
+    '/dashboard/purchase-orders',
     '/dashboard/payments',
     '/dashboard/financial-management',
     '/dashboard/commission-management',
@@ -111,13 +112,18 @@ export default function AuthGuard({ children }: PropsWithChildren) {
       if (hasRestrictedRole) {
         let isPathAllowed = userRoles.some(role => {
           const allowed = roleAllowedPaths[role];
-          return allowed && allowed.some(prefix => pathname.startsWith(prefix));
+          // A role is allowed if `allowed` is undefined (meaning no restrictions for this role)
+          // or if the current path starts with one of the allowed prefixes for this role.
+          return !allowed || allowed.some(prefix => pathname.startsWith(prefix));
         });
 
+        // Core paths are always allowed for any authenticated user.
         const isCorePathAllowed = pathname === dashboardPath || pathname.startsWith('/dashboard/account-details') || pathname.startsWith('/dashboard/notifications');
 
         if (!isPathAllowed && !isCorePathAllowed) {
-          const primaryRole = userRoles[0]; // Simple approach: use the first role for redirects
+          // If the path is not allowed for ANY of the user's roles, redirect.
+          // Use the first role in their list for a deterministic redirect path.
+          const primaryRole = userRoles[0]; 
           router.replace(roleRedirects[primaryRole] || dashboardPath);
         }
       }
