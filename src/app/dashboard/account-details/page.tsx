@@ -50,7 +50,7 @@ async function getCroppedImg(
     return null;
   }
 
-  const pixelRatio = window.devicePixelRatio;
+  const pixelRatio = window.devicePixelRatio || 1;
   canvas.width = crop.width * pixelRatio;
   canvas.height = crop.height * pixelRatio;
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -246,6 +246,7 @@ export default function AccountDetailsPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          // @ts-ignore - sendPasswordResetEmail is available on the auth object
           await sendPasswordResetEmail(auth, user.email!);
           Swal.fire('Email Sent!', 'Check your inbox for the password reset link.', 'success');
         } catch (error: any) {
@@ -372,4 +373,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
