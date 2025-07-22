@@ -45,7 +45,7 @@ export default function EditSalePage() {
         const processedData: SaleDocument = {
           ...data,
           id: saleDocSnap.id,
-          saleDate: data.saleDate && isValid(parseISO(data.saleDate)) ? data.saleDate : new Date().toISOString(),
+          invoiceDate: data.invoiceDate && isValid(parseISO(data.invoiceDate)) ? data.invoiceDate : new Date().toISOString(),
           lineItems: data.lineItems.map(item => ({
             ...item,
           })),
