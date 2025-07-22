@@ -229,7 +229,7 @@ export function CreateInvoiceForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(3, '0')}`;
+        const formattedInvoiceId = `SS${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
           const qty = parseFloat(String(item.qty || '0'));
