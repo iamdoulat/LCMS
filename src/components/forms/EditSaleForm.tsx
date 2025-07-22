@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -8,8 +9,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
-import { SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -23,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,24 +36,28 @@ import {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__SALE_EDIT_CUSTOMER__";
-const PLACEHOLDER_ITEM_VALUE_PREFIX = "__SALE_EDIT_ITEM__";
+const PLACEHOLDER_CUSTOMER_VALUE = "__INVOICE_EDIT_CUSTOMER__";
+const PLACEHOLDER_ITEM_VALUE_PREFIX = "__INVOICE_EDIT_ITEM__";
 
 interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
-  manageStock?: boolean;
+}
+
+interface CustomerOption extends ComboboxOption {
+  address?: string;
 }
 
 interface EditSaleFormProps {
-  initialData: SaleDocument;
+  initialData: InvoiceDocument;
   saleId: string;
 }
 
 export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
+  const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -60,8 +66,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const form = useForm<PageSaleFormValues>({
-    resolver: zodResolver(SaleSchema),
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(InvoiceSchema),
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -81,7 +87,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedCustomers = customersSnap.docs.map(docSnap => {
@@ -98,7 +104,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
-            manageStock: data.manageStock
+            manageStock: data.manageStock,
+            currentQuantity: data.currentQuantity,
           };
         });
         setItemOptions(fetchedItems);
@@ -108,8 +115,12 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             customerId: initialData.customerId || '',
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
-            saleDate: initialData.saleDate && isValid(parseISO(initialData.saleDate)) ? parseISO(initialData.saleDate) : new Date(),
+            invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : new Date(),
+            dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
+            paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
+            subject: initialData.subject || '',
+            status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               itemCode: item.itemCode || '',
@@ -151,9 +162,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let itemTotalBeforeDiscount = 0;
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        let lineTotal = itemTotalBeforeDiscount;
+        
         if (qty > 0 && unitPrice >= 0) {
-          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -163,7 +175,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           currentTotalTax += lineTaxAmount;
         }
         
-        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -198,111 +210,88 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
   };
 
-  async function onSubmit(data: PageSaleFormValues) {
+  async function onSubmit(data: InvoiceFormValues) {
     if (!saleId) {
-        Swal.fire("Error", "Sale ID is missing. Cannot update.", "error");
-        return;
+      Swal.fire("Error", "Sale ID is missing. Cannot update.", "error");
+      return;
     }
     setIsSubmitting(true);
-    
-    try {
-        await runTransaction(firestore, async (transaction) => {
-            const saleDocRef = doc(firestore, "sales", saleId);
-            const saleDocSnap = await transaction.get(saleDocRef);
-            if (!saleDocSnap.exists()) {
-                throw new Error("Sale does not exist.");
+    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+
+    const processedLineItems = data.lineItems.map(item => {
+        const qty = parseFloat(String(item.qty || '0'));
+        const unitPriceStr = String(item.unitPrice || '0');
+        const finalUnitPrice = parseFloat(unitPriceStr);
+        const discountPercentageStr = String(item.discountPercentage || '0');
+        const finalDiscountPercentage = parseFloat(discountPercentageStr);
+        const taxPercentageStr = String(item.taxPercentage || '0');
+        const finalTaxPercentage = parseFloat(taxPercentageStr);
+
+        const itemTotalBeforeDiscount = qty * finalUnitPrice;
+        const total = itemTotalBeforeDiscount;
+        
+        const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+
+        const lineItemData: any = {
+            itemId: item.itemId,
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+            itemCode: itemDetails?.itemCode || undefined,
+            description: item.description || '',
+            qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
+        };
+        Object.keys(lineItemData).forEach(key => {
+            if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+                delete lineItemData[key];
             }
-            const originalSaleData = saleDocSnap.data() as SaleDocument;
-
-            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
-            
-            const processedLineItems = data.lineItems.map(item => {
-                const qty = parseFloat(String(item.qty || '0'));
-                const unitPrice = parseFloat(String(item.unitPrice || '0'));
-                const discountPercentage = parseFloat(String(item.discountPercentage || '0'));
-                const taxPercentage = parseFloat(String(item.taxPercentage || '0'));
-                const total = qty * unitPrice; // Base total, discount/tax applied later
-                
-                const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-                
-                const lineItemData: any = {
-                    itemId: item.itemId,
-                    itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-                    itemCode: itemDetails?.itemCode,
-                    description: item.description || '',
-                    qty, unitPrice, discountPercentage, taxPercentage, total,
-                };
-                 Object.keys(lineItemData).forEach(key => {
-                    if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
-                        delete lineItemData[key];
-                    }
-                });
-                return lineItemData;
-            });
-            
-            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-            const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-            const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-            const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
-            const dataToUpdate: Record<string, any> = {
-                customerId: data.customerId,
-                customerName: selectedCustomer?.label || originalSaleData.customerName,
-                billingAddress: data.billingAddress,
-                shippingAddress: data.shippingAddress,
-                saleDate: format(data.saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                salesperson: data.salesperson,
-                lineItems: processedLineItems,
-                taxType: data.taxType,
-                comments: data.comments,
-                privateComments: data.privateComments,
-                subtotal: finalSubtotal,
-                totalDiscountAmount: finalTotalDiscount,
-                totalTaxAmount: finalTotalTax,
-                totalAmount: finalGrandTotal,
-                status: originalSaleData.status,
-                showItemCodeColumn: data.showItemCodeColumn,
-                showDiscountColumn: data.showDiscountColumn,
-                showTaxColumn: data.showTaxColumn,
-                updatedAt: serverTimestamp(),
-            };
-
-            const cleanedDataToUpdate = Object.fromEntries(
-                Object.entries(dataToUpdate).filter(([, value]) => value !== undefined && value !== '')
-            ) as Partial<Omit<SaleDocument, 'id' | 'createdAt'>>;
-
-            const oldItemsMap = new Map((originalSaleData.lineItems || []).map(item => [item.itemId, item.qty]));
-            const newItemsMap = new Map(processedLineItems.map(item => [item.itemId, item.qty]));
-            const allItemIds = new Set([...oldItemsMap.keys(), ...newItemsMap.keys()]);
-            
-            for (const itemId of allItemIds) {
-                if (!itemId) continue;
-                const itemOption = itemOptions.find(opt => opt.value === itemId);
-                if (itemOption?.manageStock) {
-                    const oldQty = oldItemsMap.get(itemId) || 0;
-                    const newQty = newItemsMap.get(itemId) || 0;
-                    const qtyDifference = newQty - oldQty;
-
-                    if (qtyDifference !== 0) {
-                        const itemRef = doc(firestore, "items", itemId);
-                        const itemSnap = await transaction.get(itemRef);
-                        if (!itemSnap.exists()) throw new Error(`Item "${itemOption.label}" not found.`);
-                        const currentStock = itemSnap.data().currentQuantity || 0;
-                        const adjustedStock = currentStock - qtyDifference;
-                        if (adjustedStock < 0) throw new Error(`Insufficient stock for ${itemOption.label}.`);
-                        transaction.update(itemRef, { currentQuantity: adjustedStock, updatedAt: serverTimestamp() });
-                    }
-                }
-            }
-            transaction.update(saleDocRef, cleanedDataToUpdate);
         });
+        return lineItemData;
+    });
 
-        Swal.fire("Sale Updated!", `Sale ID: ${saleId} and item stock levels have been successfully updated.`, "success");
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
+    const dataToUpdate: Record<string, any> = {
+      customerId: data.customerId,
+      customerName: selectedCustomer?.label || initialData.customerName,
+      billingAddress: data.billingAddress,
+      shippingAddress: data.shippingAddress,
+      invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      paymentTerms: data.paymentTerms,
+      salesperson: data.salesperson,
+      subject: data.subject,
+      lineItems: processedLineItems,
+      taxType: data.taxType,
+      comments: data.comments,
+      privateComments: data.privateComments,
+      subtotal: finalSubtotal,
+      totalDiscountAmount: finalTotalDiscount,
+      totalTaxAmount: finalTotalTax,
+      totalAmount: finalGrandTotal,
+      status: data.status,
+      showItemCodeColumn: data.showItemCodeColumn,
+      showDiscountColumn: data.showDiscountColumn,
+      showTaxColumn: data.showTaxColumn,
+      updatedAt: serverTimestamp(),
+      convertedFromQuoteId: data.convertedFromQuoteId,
+    };
+    
+    Object.keys(dataToUpdate).forEach(key => {
+        if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
+            delete dataToUpdate[key];
+        }
+    });
+
+    try {
+      const invoiceDocRef = doc(firestore, "sales_invoice", saleId);
+      await updateDoc(invoiceDocRef, dataToUpdate);
+      Swal.fire("Sales Invoice Updated!", `Invoice ID: ${saleId} successfully updated.`, "success");
     } catch (error: any) {
-        console.error("Error updating sale:", error);
-        Swal.fire("Update Failed", `Failed to update sale: ${error.message}`, "error");
+      Swal.fire("Update Failed", `Failed to update invoice: ${error.message}`, "error");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -354,14 +343,62 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
-        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Sale Details</h3>
+        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Sale ID</FormLabel><Input value={saleId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="saleDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Sale Date*</FormLabel><DatePickerField field={field} placeholder="Select sale date" /><FormMessage /></FormItem>)}/>
+            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={saleId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
+            <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
 
         <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
+                  className="text-sm font-normal"
+                  {...field}
+                  value={field.value ?? ''}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the invoice.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
+
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
@@ -398,15 +435,20 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
-                {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
+                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -414,13 +456,14 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-             <Button type="button" variant="outline" onClick={handleViewPdf}>
+            <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
-                saleDate: initialData.saleDate ? parseISO(initialData.saleDate) : new Date(),
+                invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : new Date(),
+                dueDate: initialData.dueDate ? parseISO(initialData.dueDate) : undefined,
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
                   itemCode: item.itemCode || '',

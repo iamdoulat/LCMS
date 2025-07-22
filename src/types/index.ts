@@ -882,82 +882,6 @@ export interface QuoteDocument {
 }
 // --- END Quote Types ---
 
-// --- Sale Types ---
-export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
-export const saleStatusOptions: SaleStatus[] = ["Draft", "Completed", "Cancelled", "Refunded"];
-
-export interface InvoiceLineItemDocument { // Reusing for consistency
-  itemId: string;
-  itemName: string;
-  itemCode?: string;
-  description?: string;
-  qty: number;
-  unitPrice: number;
-  discountPercentage?: number;
-  taxPercentage?: number;
-  total: number;
-}
-
-
-export interface SaleDocument {
-  id: string;
-  customerId: string;
-  customerName: string;
-  billingAddress: string;
-  shippingAddress: string;
-  saleDate: string; // ISO string
-  salesperson: string;
-  lineItems: InvoiceLineItemDocument[];
-  taxType: QuoteTaxType; // Reusing QuoteTaxType for simplicity
-  comments?: string;
-  privateComments?: string;
-  subtotal: number;
-  totalDiscountAmount: number;
-  totalTaxAmount: number;
-  totalAmount: number;
-  status: SaleStatus;
-  returnReason?: string;
-  refundDate?: string; // ISO string
-  createdAt: any; // Firestore ServerTimestamp
-  updatedAt: any; // Firestore ServerTimestamp
-  showItemCodeColumn?: boolean;
-  showDiscountColumn?: boolean;
-  showTaxColumn?: boolean;
-}
-
-export const SaleLineItemSchema = z.object({
-  itemId: z.string().min(1, "Item selection is required."),
-  itemCode: z.string().optional(),
-  description: z.string().optional(),
-  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
-  unitPrice: z.string().min(1, "Unit Price is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Unit Price must be non-negative" }),
-  discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
-  taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
-  total: z.string(), // Calculated, not for direct input
-});
-export type SaleLineItemFormValues = z.infer<typeof SaleLineItemSchema>;
-
-export const SaleSchema = z.object({
-  customerId: z.string().min(1, "Customer is required."),
-  billingAddress: z.string().min(1, "Billing Address is required."),
-  shippingAddress: z.string().min(1, "Shipping Address is required."),
-  saleDate: z.date({ required_error: "Sale Date is required." }),
-  salesperson: z.string().min(1, "Salesperson is required."),
-  lineItems: z.array(SaleLineItemSchema).min(1, "At least one line item is required."),
-  taxType: z.enum(quoteTaxTypes).default("Default"),
-  comments: z.string().optional(),
-  privateComments: z.string().optional(),
-  subtotal: z.number().optional(),
-  totalDiscountAmount: z.number().optional(),
-  totalTaxAmount: z.number().optional(),
-  totalAmount: z.number().optional(),
-  showItemCodeColumn: z.boolean().optional().default(true),
-  showDiscountColumn: z.boolean().optional().default(true),
-  showTaxColumn: z.boolean().optional().default(true),
-});
-export type SaleFormValues = z.infer<typeof SaleSchema>;
-// --- END Sale Types ---
-
 // --- Invoice Types ---
 export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Refunded"] as const;
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
@@ -1000,8 +924,20 @@ export const InvoiceSchema = z.object({
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
+export interface InvoiceLineItemDocument {
+  itemId: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  qty: number;
+  unitPrice: number;
+  discountPercentage?: number;
+  taxPercentage?: number;
+  total: number;
+}
+
 export interface InvoiceDocument {
-  id: string; // This will store the formatted INV{Year}-{Serial}
+  id: string;
   customerId: string;
   customerName: string;
   billingAddress: string;
@@ -1105,7 +1041,25 @@ export interface OrderDocument {
 }
 // --- END Order Types ---
 
+// --- Sale Types (Duplicate for sales_invoice collection) ---
+export type SaleStatus = "Draft" | "Completed" | "Cancelled" | "Refunded";
+export const saleStatusOptions: SaleStatus[] = ["Draft", "Completed", "Cancelled", "Refunded"];
 
+export const SaleLineItemSchema = InvoiceLineItemSchema;
+export type SaleLineItemFormValues = InvoiceLineItemFormValues;
 
+export const SaleSchema = InvoiceSchema.omit({ // Inherit from InvoiceSchema but omit invoice-specific fields
+    dueDate: true, 
+    paymentTerms: true,
+    status: true, // We'll add it back with SaleStatus type
+    amountPaid: true,
+    convertedFromQuoteId: true,
+}).extend({
+    status: z.enum(saleStatusOptions).optional(),
+});
+export type SaleFormValues = z.infer<typeof SaleSchema>;
 
-    
+export type SaleDocument = Omit<InvoiceDocument, 'status' | 'dueDate' | 'paymentTerms' | 'amountPaid' | 'convertedFromQuoteId'> & {
+    status?: SaleStatus;
+};
+// --- END Sale Types ---
