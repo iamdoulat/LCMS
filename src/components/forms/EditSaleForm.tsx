@@ -9,8 +9,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
-import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
+import type { SaleDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, SaleStatus, SaleFormValues } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, saleStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -50,7 +50,7 @@ interface CustomerOption extends ComboboxOption {
 }
 
 interface EditSaleFormProps {
-  initialData: InvoiceDocument;
+  initialData: SaleDocument;
   saleId: string;
 }
 
@@ -66,8 +66,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
   const [grandTotal, setGrandTotal] = React.useState(0);
 
-  const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(InvoiceSchema),
+  const form = useForm<SaleFormValues>({
+    resolver: zodResolver(InvoiceSchema), // Still uses InvoiceSchema as the base for validation logic
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -116,8 +116,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             billingAddress: initialData.billingAddress || '',
             shippingAddress: initialData.shippingAddress || '',
             invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : new Date(),
-            dueDate: initialData.dueDate && isValid(parseISO(initialData.dueDate)) ? parseISO(initialData.dueDate) : undefined,
-            paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
             status: initialData.status || "Draft",
@@ -163,7 +161,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
         const itemTotalBeforeDiscount = qty * unitPrice;
-        let lineTotal = itemTotalBeforeDiscount;
+        let lineTotal = itemTotalBeforeDiscount; 
         
         if (qty > 0 && unitPrice >= 0) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
@@ -174,7 +172,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
+
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -210,7 +208,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
   };
 
-  async function onSubmit(data: InvoiceFormValues) {
+  async function onSubmit(data: SaleFormValues) {
     if (!saleId) {
       Swal.fire("Error", "Invoice ID is missing. Cannot update.", "error");
       return;
@@ -258,8 +256,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      paymentTerms: data.paymentTerms,
       salesperson: data.salesperson,
       subject: data.subject,
       lineItems: processedLineItems,
@@ -275,7 +271,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
-      convertedFromQuoteId: data.convertedFromQuoteId,
     };
     
     Object.keys(dataToUpdate).forEach(key => {
@@ -347,31 +342,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={saleId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {invoiceStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
 
         <Separator className="my-6" />
