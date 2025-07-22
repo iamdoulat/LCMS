@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -447,7 +448,7 @@ export default function DemoMachineProgramPage() {
                       <div><span className="text-muted-foreground">Period: </span><span className="font-medium text-foreground">{formatReportValue(app.demoPeriodDays, "0")} Day(s)</span></div>
                       <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Incharge: </span><span className="font-medium text-foreground truncate" title={app.factoryInchargeName}>{formatReportValue(app.factoryInchargeName)}</span></div>
                       <div><Phone className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Cell: </span><span className="font-medium text-foreground truncate" title={app.inchargeCell}>{formatReportValue(app.inchargeCell)}</span></div>
-                      <div><FileBadge className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Challan: </span><span className="font-medium text-foreground truncate" title={app.challanNo}>{formatReportValue(app.challanNo)}</span></div>
+                      <div><User className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Delivery Person: </span><span className="font-medium text-foreground truncate" title={app.deliveryPersonName}>{formatReportValue(app.deliveryPersonName)}</span></div>
                     </div>
                     {app.notes && app.notes.trim() !== "" && (
                         <div className="mt-3 p-3 rounded-md border bg-muted/30">
