@@ -902,13 +902,12 @@ export const InvoiceSchema = z.object({
   customerId: z.string().min(1, "Customer is required."),
   billingAddress: z.string().min(1, "Billing Address is required."),
   shippingAddress: z.string().min(1, "Shipping Address is required."),
-  invoiceDate: z.date({ required_error: "Invoice Date is required." }), // Changed from quoteDate
-  dueDate: z.date().optional(), // Added for invoices
-  paymentTerms: z.string().optional(), // Added for invoices
+  invoiceDate: z.date({ required_error: "Invoice Date is required." }),
+  paymentTerms: z.string().optional(),
   salesperson: z.string().min(1, "Salesperson is required."),
   subject: z.string().optional(),
   lineItems: z.array(InvoiceLineItemSchema).min(1, "At least one line item is required."),
-  taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes for now
+  taxType: z.enum(quoteTaxTypes).default("Default"),
   comments: z.string().optional(),
   privateComments: z.string().optional(),
   subtotal: z.number().optional(),
@@ -943,7 +942,6 @@ export interface InvoiceDocument {
   billingAddress: string;
   shippingAddress: string;
   invoiceDate: string; // ISO string
-  dueDate?: string; // ISO string, optional
   paymentTerms?: string;
   salesperson: string;
   subject?: string;

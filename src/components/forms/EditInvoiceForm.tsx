@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +157,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
         const itemTotalBeforeDiscount = qty * unitPrice;
-        let lineTotal = itemTotalBeforeDiscount;
+        let lineTotal = itemTotalBeforeDiscount; 
         
         if (qty > 0 && unitPrice >= 0) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
@@ -170,7 +170,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         }
         
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
-        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -337,13 +336,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={invoiceId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
         <Separator className="my-6" />
         <FormField
           control={control}
@@ -433,7 +431,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <Button type="button" variant="outline" onClick={() => reset(initialData ? {
                 ...initialData,
                 invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : new Date(),
-                dueDate: initialData.dueDate ? parseISO(initialData.dueDate) : undefined,
                 lineItems: initialData.lineItems.map(item => ({
                   ...item,
                   itemCode: item.itemCode || '',
