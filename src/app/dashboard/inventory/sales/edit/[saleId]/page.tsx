@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -29,14 +30,14 @@ export default function EditSalePage() {
       setError("No Sale ID provided.");
       setIsLoading(false);
       Swal.fire("Error", "No Sale ID specified.", "error").then(() => {
-        router.push('/dashboard/inventory/sales-list');
+        router.push('/dashboard/inventory/sales-invoices');
       });
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const saleDocRef = doc(firestore, "sales", saleId);
+      const saleDocRef = doc(firestore, "sales_invoice", saleId);
       const saleDocSnap = await getDoc(saleDocRef);
 
       if (saleDocSnap.exists()) {
@@ -55,7 +56,7 @@ export default function EditSalePage() {
       } else {
         setError("Sale record not found.");
         Swal.fire("Error", `Sale with ID ${saleId} not found.`, "error").then(() => {
-             router.push('/dashboard/inventory/sales-list');
+             router.push('/dashboard/inventory/sales-invoices');
         });
       }
     } catch (err: any) {
@@ -85,7 +86,7 @@ export default function EditSalePage() {
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
           <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Sale</CardTitle></CardHeader>
           <CardContent><p className="text-destructive-foreground">{error}</p>
-            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/sales-list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales List</Link></Button>
+            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/sales-invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales Invoices List</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -96,18 +97,18 @@ export default function EditSalePage() {
      return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Sale data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/sales-list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales List</Link></Button>
+         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/sales-invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales Invoices List</Link></Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6"><Link href="/dashboard/inventory/sales-list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales List</Button></Link></div>
+      <div className="mb-6"><Link href="/dashboard/inventory/sales-invoices" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Sales Invoices List</Button></Link></div>
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <DollarSign className="h-7 w-7 text-primary" />Edit Sale
+            <DollarSign className="h-7 w-7 text-primary" />Edit Sale Invoice
           </CardTitle>
           <CardDescription>Modify the details for Sale ID: <span className="font-semibold text-foreground">{saleId}</span>.</CardDescription>
         </CardHeader>

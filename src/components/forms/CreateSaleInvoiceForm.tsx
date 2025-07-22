@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -218,7 +219,7 @@ export function CreateSaleInvoiceForm() {
     setIsSubmitting(true);
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
+    const counterRef = doc(firestore, "counters", "salesInvoiceNumberGenerator");
     try {
       const newInvoiceId = await runTransaction(firestore, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
@@ -282,7 +283,7 @@ export function CreateSaleInvoiceForm() {
             Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
         );
 
-        const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
+        const newInvoiceRef = doc(firestore, "sales_invoice", formattedInvoiceId);
         transaction.set(newInvoiceRef, cleanedData);
         transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
         return formattedInvoiceId;
@@ -311,13 +312,13 @@ export function CreateSaleInvoiceForm() {
       Swal.fire({
         title: "Invoice Saved!", text: `Invoice successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success", timer: 1500, showConfirmButton: false,
-      }).then(() => router.push(`/dashboard/invoices/preview/${newId}`));
+      }).then(() => router.push(`/dashboard/inventory/sales/print/${newId}`));
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedInvoiceId) {
-      router.push(`/dashboard/invoices/preview/${generatedInvoiceId}`);
+      router.push(`/dashboard/inventory/sales/print/${generatedInvoiceId}`);
     } else {
       Swal.fire("No Invoice Saved", "Please save an invoice first to preview it.", "info");
     }

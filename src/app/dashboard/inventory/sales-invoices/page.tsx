@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -192,7 +193,7 @@ export default function SalesInvoicesListPage() {
   }, [allInvoices, filterInvoiceNumber, filterCustomerId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditInvoice = (invoiceId: string) => {
-    router.push(`/dashboard/invoices/edit/${invoiceId}`);
+    router.push(`/dashboard/inventory/sales/edit/${invoiceId}`);
   };
 
   const handleDeleteInvoice = (invoiceId: string, invoiceIdentifier?: string) => {
@@ -218,7 +219,7 @@ export default function SalesInvoicesListPage() {
   };
 
   const handlePreviewPdf = (invoiceId: string) => {
-    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
+    window.open(`/dashboard/inventory/sales/print/${invoiceId}`, '_blank');
   };
 
   const clearFilters = () => {
