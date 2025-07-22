@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
 import type { SaleDocument, CustomerDocument, SaleStatus, ItemDocument } from '@/types';
+import { saleStatusOptions } from '@/types';
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { collection, getDocs, doc, query, orderBy as firestoreOrderBy, writeBatch, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -53,7 +54,6 @@ const getFirstItemName = (lineItems: SaleDocument['lineItems']): string => {
 
 const currentSystemYear = new Date().getFullYear();
 const saleYearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
-const saleStatusOptions: SaleStatus[] = ["Draft", "Completed", "Cancelled", "Refunded"];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_REFUND__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_REFUND__";
@@ -80,7 +80,7 @@ export default function InventoryRefundsReturnsPage() {
     setIsLoading(true);
     setFetchError(null);
     try {
-      const salesQuery = query(collection(firestore, "sales"), firestoreOrderBy("createdAt", "desc"));
+      const salesQuery = query(collection(firestore, "sales_invoice"), firestoreOrderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(salesQuery);
       const fetchedSales = querySnapshot.docs.map(docSnap => {
         const data = docSnap.data();
@@ -145,7 +145,7 @@ export default function InventoryRefundsReturnsPage() {
     if (reason !== undefined) { // User clicked "Confirm" (reason can be empty string)
       setIsLoading(true);
       const batch = writeBatch(firestore);
-      const saleDocRef = doc(firestore, "sales", sale.id);
+      const saleDocRef = doc(firestore, "sales_invoice", sale.id);
       
       batch.update(saleDocRef, {
         status: "Refunded" as SaleStatus,
@@ -222,8 +222,10 @@ export default function InventoryRefundsReturnsPage() {
 
   const getSaleStatusBadgeVariant = (status?: SaleStatus): "default" | "secondary" | "outline" | "destructive" => {
     switch (status) {
-      case "Completed": return "default";
+      case "Paid": return "default";
       case "Draft": return "outline";
+      case "Sent": case "Partial": return "secondary";
+      case "Overdue": case "Void": return "destructive";
       case "Cancelled": return "destructive";
       case "Refunded": return "secondary";
       default: return "outline";
@@ -334,6 +336,7 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
+
 
 
 
