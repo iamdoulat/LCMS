@@ -1048,17 +1048,15 @@ export type SaleStatus = (typeof saleStatusOptions)[number];
 export const SaleLineItemSchema = InvoiceLineItemSchema;
 export type SaleLineItemFormValues = InvoiceLineItemFormValues;
 
-export const SaleSchema = InvoiceSchema.omit({ // Inherit from InvoiceSchema but omit invoice-specific fields
-    amountPaid: true,
-    convertedFromQuoteId: true,
-}).extend({
+export const SaleSchema = InvoiceSchema.extend({
     status: z.enum(saleStatusOptions).optional(),
 });
 export type SaleFormValues = z.infer<typeof SaleSchema>;
 
-export type SaleDocument = Omit<InvoiceDocument, 'status' | 'amountPaid' | 'convertedFromQuoteId'> & {
+export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
