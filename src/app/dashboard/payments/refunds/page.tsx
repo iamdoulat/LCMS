@@ -80,12 +80,11 @@ export default function InvoiceRefundsPage() {
     setIsLoading(true);
     setFetchError(null);
     try {
-      // Filter for invoices that are 'Paid' or 'Partial' to be eligible for refund initially, or already 'Refunded'
       const eligibleStatuses: InvoiceStatus[] = ["Paid", "Partial", "Refunded"];
       const invoicesQuery = query(
-        collection(firestore, "invoices"),
+        collection(firestore, "sales_invoice"),
         where("status", "in", eligibleStatuses),
-        firestoreOrderBy("updatedAt", "desc") // Order by when they were last updated (e.g., paid or refunded)
+        firestoreOrderBy("updatedAt", "desc")
       );
       const querySnapshot = await getDocs(invoicesQuery);
       const fetchedInvoices = querySnapshot.docs.map(docSnap => {
@@ -96,7 +95,7 @@ export default function InvoiceRefundsPage() {
     } catch (error: any) {
       let errorMsg = `Could not fetch invoice data. Error: ${error.message}`;
       if (error.message?.toLowerCase().includes("index")) {
-            errorMsg = `Could not fetch invoice data: A Firestore index might be required for 'invoices' collection on 'status' (array-contains-any) and 'updatedAt' (descending). Please check the browser console for a link to create it or create manually.`;
+            errorMsg = `Could not fetch invoice data: A Firestore index might be required for 'sales_invoice' collection on 'status' (array-contains-any) and 'updatedAt' (descending). Please check the browser console for a link to create it or create manually.`;
       }
       setFetchError(errorMsg);
       Swal.fire("Fetch Error", errorMsg, "error");
@@ -157,7 +156,7 @@ export default function InvoiceRefundsPage() {
     if (reason !== undefined) {
       setIsLoading(true);
       const batch = writeBatch(firestore);
-      const invoiceDocRef = doc(firestore, "invoices", invoice.id);
+      const invoiceDocRef = doc(firestore, "sales_invoice", invoice.id);
       
       batch.update(invoiceDocRef, {
         status: "Refunded" as InvoiceStatus,
@@ -346,4 +345,3 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
-
