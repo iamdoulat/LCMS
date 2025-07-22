@@ -101,7 +101,7 @@ export default function SalesInvoicesListPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const invoicesQuery = query(collection(firestore, "invoices"), firestoreOrderBy("createdAt", "desc"));
+        const invoicesQuery = query(collection(firestore, "sales_invoice"), firestoreOrderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(invoicesQuery);
         const fetchedInvoices = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
@@ -115,7 +115,7 @@ export default function SalesInvoicesListPage() {
         console.error("Error fetching invoices: ", error);
         let errorMessage = `Could not fetch invoice data from Firestore. Please ensure Firestore rules allow reads.`;
         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-           errorMessage = `Could not fetch invoice data: Missing or insufficient permissions. Please check Firestore security rules for the 'invoices' collection.`;
+           errorMessage = `Could not fetch invoice data: Missing or insufficient permissions. Please check Firestore security rules for the 'sales_invoice' collection.`;
         } else if (error.message && error.message.toLowerCase().includes("index")) {
            errorMessage = `Could not fetch invoice data: A Firestore index might be required for this query. Please check the browser's developer console for a link to create it automatically.`;
         } else if (error.message) {
@@ -207,7 +207,7 @@ export default function SalesInvoicesListPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteDoc(doc(firestore, "invoices", invoiceId));
+          await deleteDoc(doc(firestore, "sales_invoice", invoiceId));
           setAllInvoices(prevInvoices => prevInvoices.filter(inv => inv.id !== invoiceId));
           Swal.fire('Deleted!', `Invoice "${invoiceIdentifier || invoiceId}" has been removed.`, 'success');
         } catch (error: any) {
