@@ -291,7 +291,7 @@ export default function InvoicesListPage() {
             <Link href="/dashboard/invoices/create" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
-                Create New Invoice
+                Create New Proforma Invoice
               </Button>
             </Link>
           </div>
