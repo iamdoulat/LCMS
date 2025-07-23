@@ -908,6 +908,9 @@ export const InvoiceSchema = z.object({
   taxType: z.enum(quoteTaxTypes).default("Default"),
   comments: z.string().optional(),
   privateComments: z.string().optional(),
+  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   subtotal: z.number().optional(),
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
@@ -948,6 +951,9 @@ export interface InvoiceDocument {
   taxType: QuoteTaxType;
   comments?: string;
   privateComments?: string;
+  packingCharge?: number;
+  handlingCharge?: number;
+  otherCharges?: number;
   subtotal: number;
   totalDiscountAmount: number;
   totalTaxAmount: number;
@@ -1054,6 +1060,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
