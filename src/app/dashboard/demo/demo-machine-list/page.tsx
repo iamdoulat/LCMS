@@ -239,7 +239,7 @@ export default function DemoMachineListPage() {
                             </div>
                           </CardContent>
                     </div>
-                     <div className="col-span-12 md:col-span-4 flex items-center justify-center">
+                     <div className="col-span-12 md:col-span-4 flex items-center justify-center md:mt-4">
                        {machine.imageUrl ? (
                             <Image
                                 src={machine.imageUrl}
@@ -270,4 +270,3 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
-
