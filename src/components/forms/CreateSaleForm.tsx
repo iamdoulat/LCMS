@@ -9,7 +9,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, writeBatch } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues } from '@/types'; // Updated types
-import { SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
+import { InvoiceSchema as SaleSchema, quoteTaxTypes } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -61,11 +61,6 @@ export function CreateSaleForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedSaleId, setGeneratedSaleId] = React.useState<string | null>(null);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(SaleSchema),
     defaultValues: {
@@ -107,6 +102,57 @@ export function CreateSaleForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedOtherCharges = watch("otherCharges");
+
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
+    let currentSubtotal = 0;
+    let currentTotalTax = 0;
+    let currentTotalDiscount = 0;
+
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item, index) => {
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
+        let itemTotalBeforeDiscount = 0;
+        if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
+          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
+          
+          currentSubtotal += itemTotalBeforeDiscount;
+          currentTotalDiscount += lineDiscountAmount;
+          currentTotalTax += lineTaxAmount;
+        }
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
+        }
+      });
+    }
+
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = packing + handling + other;
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+    
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -161,48 +207,6 @@ export function CreateSaleForm() {
       setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue]);
-
-  React.useEffect(() => {
-    let currentSubtotal = 0;
-    let currentTotalTax = 0;
-    let currentTotalDiscount = 0;
-
-    if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
-        const qty = parseFloat(String(item.qty || '0')) || 0;
-        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
-        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-        
-        let itemTotalBeforeDiscount = 0;
-        if (qty > 0 && unitPrice >= 0) {
-          itemTotalBeforeDiscount = qty * unitPrice;
-          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
-          currentSubtotal += itemTotalBeforeDiscount;
-          currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
-        }
-        
-        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
-        }
-      });
-    }
-
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
-
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    setGrandTotal(currentGrandTotal);
-
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -299,11 +303,6 @@ export function CreateSaleForm() {
                 return lineItemData;
             });
             
-            const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-            const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-            const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-            const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
             const dataToSave: Record<string, any> = {
                 customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
@@ -311,8 +310,11 @@ export function CreateSaleForm() {
                 salesperson: data.salesperson,
                 lineItems: processedLineItems, taxType: data.taxType,
                 comments: data.comments, privateComments: data.privateComments,
-                subtotal: finalSubtotal, totalDiscountAmount: finalTotalDiscount, totalTaxAmount: finalTotalTax,
-                totalAmount: finalGrandTotal, status: "Completed" as const,
+                subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
+                totalAmount: grandTotal, status: "Completed" as const,
+                packingCharge: data.packingCharge,
+                handlingCharge: data.handlingCharge,
+                otherCharges: data.otherCharges,
                 createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
@@ -323,7 +325,7 @@ export function CreateSaleForm() {
                 Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
             ) as Partial<Omit<SaleDocument, 'id'>>;
             
-            const newSaleRef = doc(firestore, "sales", formattedSaleId);
+            const newSaleRef = doc(firestore, "sales_invoice", formattedSaleId);
             transaction.set(newSaleRef, cleanedDataToSave);
 
             const newCounters = {
@@ -376,10 +378,7 @@ export function CreateSaleForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <Users className="mr-2 h-5 w-5 text-primary" />
-          Customer & Delivery Information
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -533,6 +532,13 @@ export function CreateSaleForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
@@ -543,6 +549,7 @@ export function CreateSaleForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
+                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -552,7 +559,6 @@ export function CreateSaleForm() {
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
-                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
                 setGeneratedSaleId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
@@ -569,3 +575,4 @@ export function CreateSaleForm() {
     </Form>
   );
 }
+
