@@ -1076,3 +1076,4 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
 
 
 
+

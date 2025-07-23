@@ -69,6 +69,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
+  const watchedStatus = watch("status");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -298,9 +299,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       : watchedShipmentMode === "CPT DHAKA"
       ? "CPT DHAKA TOTAL:"
       : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
+      ? "FOB TOTAL"
       : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
+      ? "EXW TOTAL"
       : "TOTAL:";
 
   if (isLoadingDropdowns) {
@@ -358,28 +359,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {invoiceStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
         <Separator className="my-6" />
         <div className="flex justify-between items-center">
