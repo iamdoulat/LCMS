@@ -77,11 +77,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(quoteId);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
   });
@@ -142,7 +137,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               unitPrice: item.unitPrice?.toString() || '0',
               discountPercentage: item.discountPercentage?.toString() || '0',
               taxPercentage: item.taxPercentage?.toString() || '0',
-              total: (item.qty * item.unitPrice).toFixed(2) || '0.00',
+              total: item.total?.toFixed(2) || '0.00',
             })),
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
@@ -162,55 +157,40 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }, [initialData, reset]);
 
   const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
   
-  React.useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (name && name.startsWith("lineItems")) {
-        recalculateTotals(value.lineItems as QuoteLineItemFormValues[]);
-      }
-    });
-    // Initial calculation
-    recalculateTotals(getValues("lineItems"));
-    
-    return () => subscription.unsubscribe();
-  }, [watch, getValues]);
-
-  const recalculateTotals = (lineItems: QuoteLineItemFormValues[]) => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
 
-    if (Array.isArray(lineItems)) {
-      lineItems.forEach((item, index) => {
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
-        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
-        
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+
         const itemTotalBeforeDiscount = qty * unitPrice;
-        
+
         if (qty > 0 && unitPrice >= 0) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
+
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
-        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
       });
     }
-
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    setGrandTotal(currentGrandTotal);
-  };
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -418,7 +398,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       updatedAt: serverTimestamp(),
       convertedToInvoiceId: data.convertedToInvoiceId,
     };
-
+    
     // Final cleaning of the main object before saving
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
@@ -451,6 +431,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }
   
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
+  const actionButtonsDisabled = !generatedQuoteId || isSubmitting;
 
   return (
     <Form {...form}>
@@ -613,7 +594,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
                   {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
-                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
+                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>
@@ -645,7 +626,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleViewPdf}>
+             <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
