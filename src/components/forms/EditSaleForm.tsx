@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { InvoiceDocument, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, SaleFormValues, SaleStatus, SaleDocument } from '@/types';
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, SaleDocument } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, saleStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +61,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
-  const form = useForm<SaleFormValues>({
+  const form = useForm<PageSaleFormValues>({
     resolver: zodResolver(InvoiceSchema.extend({
         status: z.enum(saleStatusOptions).optional(),
     })), 
@@ -78,6 +77,11 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     control,
     name: "lineItems",
   });
+
+  const watchedLineItems = watch("lineItems");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedOtherCharges = watch("otherCharges");
 
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
@@ -147,12 +151,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
-  const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
-  const watchedPackingCharge = watch("packingCharge");
-  const watchedHandlingCharge = watch("handlingCharge");
-  const watchedOtherCharges = watch("otherCharges");
-
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -164,10 +162,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        let lineTotal = itemTotalBeforeDiscount; 
-        
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -177,7 +174,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           currentTotalTax += lineTaxAmount;
         }
         
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -256,7 +253,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         });
         return lineItemData;
     });
-
+    
     const dataToUpdate: Record<string, any> = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
@@ -351,7 +348,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={saleId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
@@ -406,7 +403,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -417,11 +414,13 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
@@ -457,6 +456,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                status: initialData.status,
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
@@ -475,3 +475,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   );
 }
 
+    
