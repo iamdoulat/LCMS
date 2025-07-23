@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { getCroppedImg } from '@/lib/image-utils'; // We'll create this helper
+import { getCroppedImg } from '@/lib/image-utils';
 
 const demoMachineSchema = z.object({
   machineModel: z.string().min(1, "Machine Model is required"),
@@ -48,6 +48,7 @@ export function AddDemoMachineForm() {
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [isCroppingDialogOpen, setIsCroppingDialogOpen] = React.useState(false);
   const imgRef = React.useRef<HTMLImageElement>(null);
+  const [croppedImageUrl, setCroppedImageUrl] = React.useState<string | null>(null);
 
   const form = useForm<DemoMachineFormValues>({
     resolver: zodResolver(demoMachineSchema),
@@ -89,6 +90,28 @@ export function AddDemoMachineForm() {
     setCrop(crop);
   }
 
+  const handleSetCroppedImage = async () => {
+    if (!completedCrop || !imgRef.current || !selectedFile) {
+        Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+        return;
+    }
+    const croppedImageBlob = await getCroppedImg(
+        imgRef.current,
+        completedCrop,
+        selectedFile.name,
+        512, // target width
+        512  // target height
+    );
+    if (croppedImageBlob) {
+        const tempUrl = URL.createObjectURL(croppedImageBlob);
+        setCroppedImageUrl(tempUrl); // Set a temporary URL for preview
+        setSelectedFile(croppedImageBlob); // Replace the original file with the cropped blob
+        setIsCroppingDialogOpen(false);
+    } else {
+        Swal.fire("Error", "Failed to create cropped image.", "error");
+    }
+  };
+
   async function onSubmit(data: DemoMachineFormValues) {
     setIsSubmitting(true);
 
@@ -99,20 +122,11 @@ export function AddDemoMachineForm() {
 
       let imageUrl: string | undefined = undefined;
 
-      // 2. If an image was selected, crop and upload it
-      if (selectedFile && completedCrop) {
-          const croppedImageBlob = await getCroppedImg(
-              imgRef.current!,
-              completedCrop,
-              selectedFile.name,
-              512, // target width
-              512  // target height
-          );
-          if (croppedImageBlob) {
-              const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
-              const snapshot = await uploadBytes(storageRef, croppedImageBlob);
-              imageUrl = await getDownloadURL(snapshot.ref);
-          }
+      // 2. If a cropped image exists, upload it
+      if (selectedFile) {
+        const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
+        const snapshot = await uploadBytes(storageRef, selectedFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
       }
 
       // 3. Prepare the final data with the image URL
@@ -150,6 +164,7 @@ export function AddDemoMachineForm() {
       setImgSrc('');
       setCompletedCrop(undefined);
       setSelectedFile(null);
+      setCroppedImageUrl(null);
       setIsCroppingDialogOpen(false);
 
     } catch (error) {
@@ -310,8 +325,8 @@ export function AddDemoMachineForm() {
                 )}
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={() => setIsCroppingDialogOpen(false)} disabled={!completedCrop?.width}>
-                        Set Image
+                    <Button onClick={handleSetCroppedImage} disabled={!completedCrop?.width}>
+                        <CropIcon className="mr-2 h-4 w-4" />Set Cropped Image
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -320,19 +335,14 @@ export function AddDemoMachineForm() {
         <FormItem>
           <FormLabel>Machine Image</FormLabel>
           <div className="flex items-center gap-4">
-              <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50">
-                  {completedCrop?.width && imgSrc ? (
+              <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                  {croppedImageUrl ? (
                       <Image
-                        src={URL.createObjectURL(selectedFile!)}
+                        src={croppedImageUrl}
                         alt="Cropped preview"
                         width={96}
                         height={96}
-                        style={{
-                            objectFit: 'cover',
-                            width: '96px',
-                            height: '96px',
-                            clipPath: `inset(${completedCrop.y}px ${96 - (completedCrop.x + completedCrop.width)}px ${96 - (completedCrop.y + completedCrop.height)}px ${completedCrop.x}px)`
-                        }}
+                        className="object-cover"
                         data-ai-hint="sewing machine"
                       />
                   ) : (
