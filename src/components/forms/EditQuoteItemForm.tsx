@@ -43,7 +43,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
-      purchasePrice: undefined,
     },
   });
 
@@ -78,7 +77,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         description: initialData.description || '',
         unit: initialData.unit || 'pcs',
         salesPrice: initialData.salesPrice,
-        purchasePrice: initialData.purchasePrice,
       });
     }
   }, [initialData, form]);
@@ -98,7 +96,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
-      purchasePrice: data.purchasePrice,
       updatedAt: serverTimestamp(),
     };
 
@@ -228,7 +225,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="unit"
@@ -248,19 +245,6 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Sales Price</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="purchasePrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Purchase Price</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
                 </FormControl>

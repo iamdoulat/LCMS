@@ -789,10 +789,6 @@ export const quoteItemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Sales Price must be a number." }).nonnegative("Sales Price cannot be negative.").optional()
   ),
-  purchasePrice: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
-    z.number({ invalid_type_error: "Purchase Price must be a number." }).nonnegative("Purchase Price cannot be negative.").optional()
-  ),
 });
 
 export type QuoteItemFormValues = z.infer<typeof quoteItemSchema>;
@@ -1058,6 +1054,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
