@@ -62,6 +62,49 @@ export function CreateSaleInvoiceForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
 
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
+    let currentSubtotal = 0;
+    let currentTotalTax = 0;
+    let currentTotalDiscount = 0;
+
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item, index) => {
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
+        let itemTotalBeforeDiscount = 0;
+        if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
+          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
+          
+          currentSubtotal += itemTotalBeforeDiscount;
+          currentTotalDiscount += lineDiscountAmount;
+          currentTotalTax += lineTaxAmount;
+        }
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
+        }
+      });
+    }
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+    
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue]);
+
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(SaleSchema),
     defaultValues: {
@@ -81,9 +124,6 @@ export function CreateSaleInvoiceForm() {
         total: '0.00'
       }],
       taxType: 'Default',
-      packingCharge: undefined,
-      handlingCharge: undefined,
-      otherCharges: undefined,
       comments: '',
       privateComments: '',
       showItemCodeColumn: true,
@@ -164,54 +204,6 @@ export function CreateSaleInvoiceForm() {
       setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue]);
-
-  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
-    let currentSubtotal = 0;
-    let currentTotalTax = 0;
-    let currentTotalDiscount = 0;
-
-    if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
-        const qty = parseFloat(String(item.qty || '0')) || 0;
-        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
-        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-        
-        let itemTotalBeforeDiscount = 0;
-        if (qty > 0 && unitPrice >= 0) {
-          itemTotalBeforeDiscount = qty * unitPrice;
-          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
-          currentSubtotal += itemTotalBeforeDiscount;
-          currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
-        }
-        
-        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
-        }
-      });
-    }
-
-    const packing = Number(watchedPackingCharge || 0);
-    const handling = Number(watchedHandlingCharge || 0);
-    const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = packing + handling + other;
-
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-    
-    return {
-      subtotal: currentSubtotal,
-      totalDiscountAmount: currentTotalDiscount,
-      totalTaxAmount: currentTotalTax,
-      grandTotal: currentGrandTotal,
-    };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -317,9 +309,6 @@ export function CreateSaleInvoiceForm() {
                 comments: data.comments, privateComments: data.privateComments,
                 subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
                 totalAmount: grandTotal, status: "Completed" as const,
-                packingCharge: data.packingCharge,
-                handlingCharge: data.handlingCharge,
-                otherCharges: data.otherCharges,
                 createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
@@ -531,12 +520,6 @@ export function CreateSaleInvoiceForm() {
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-        </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
@@ -547,7 +530,6 @@ export function CreateSaleInvoiceForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                 <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -573,5 +555,4 @@ export function CreateSaleInvoiceForm() {
     </Form>
   );
 }
-
 
