@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -133,7 +134,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
-            handlingCharge: (initialData as any).freightChargeAmount,
+            handlingCharge: (initialData as any).handlingCharge, // Renamed from freightChargeAmount
             otherCharges: (initialData as any).otherCharges,
           });
         }
@@ -268,7 +269,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
-      freightChargeAmount: data.handlingCharge,
+      handlingCharge: data.handlingCharge,
       otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
@@ -301,10 +302,11 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       : watchedShipmentMode === "CPT DHAKA"
       ? "CPT DHAKA TOTAL:"
       : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL"
+      ? "FOB TOTAL:"
       : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL"
+      ? "EXW TOTAL:"
       : "TOTAL:";
+
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -468,7 +470,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                handlingCharge: (initialData as any).freightChargeAmount,
+                handlingCharge: (initialData as any).handlingCharge, // Renamed from freightChargeAmount
                 otherCharges: (initialData as any).otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
@@ -481,4 +483,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
