@@ -8,14 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues } from '@/types';
-import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, PIShipmentMode } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions, piShipmentModeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,15 +55,11 @@ interface EditInvoiceFormProps {
 }
 
 export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema),
@@ -116,6 +113,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             paymentTerms: initialData.paymentTerms || '',
             salesperson: initialData.salesperson || '',
             subject: initialData.subject || '',
+            status: initialData.status || "Draft",
             lineItems: initialData.lineItems.map(item => ({
               itemId: item.itemId || '',
               itemCode: item.itemCode || '',
@@ -132,6 +130,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
+            shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
+            handlingCharge: (initialData as any).handlingCharge,
+            otherCharges: (initialData as any).otherCharges,
           });
         }
       } catch (error) {
@@ -144,9 +145,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   }, [initialData, reset]);
 
   const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
+  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedOtherCharges = watch("otherCharges");
 
-  React.useEffect(() => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -157,10 +159,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        let lineTotal = itemTotalBeforeDiscount; 
-        
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -170,20 +171,27 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           currentTotalTax += lineTaxAmount;
         }
         
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
+    const handling = Number(watchedHandlingCharge || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = handling + other;
 
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+    
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge, watchedOtherCharges]);
+  
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -240,18 +248,14 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         });
         return lineItemData;
     });
-
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
+    
     const dataToUpdate: Record<string, any> = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
       invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       paymentTerms: data.paymentTerms,
       salesperson: data.salesperson,
       subject: data.subject,
@@ -259,15 +263,20 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       taxType: data.taxType,
       comments: data.comments,
       privateComments: data.privateComments,
-      subtotal: finalSubtotal,
-      totalDiscountAmount: finalTotalDiscount,
-      totalTaxAmount: finalTotalTax,
-      totalAmount: finalGrandTotal,
+      subtotal: subtotal,
+      totalDiscountAmount: totalDiscountAmount,
+      totalTaxAmount: totalTaxAmount,
+      totalAmount: grandTotal,
+      status: data.status,
+      packingCharge: data.packingCharge,
+      handlingCharge: data.handlingCharge,
+      otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
       updatedAt: serverTimestamp(),
       convertedFromQuoteId: data.convertedFromQuoteId,
+      shipmentMode: data.shipmentMode,
     };
     
     Object.keys(dataToUpdate).forEach(key => {
@@ -336,37 +345,36 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={invoiceId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
         <Separator className="my-6" />
-        <FormField
-          control={control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Invoice Subject</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-sm font-normal"
-                  {...field}
-                  value={field.value ?? ''}
-                  rows={2}
-                />
-              </FormControl>
-              <FormDescription>
-                This text will appear below the address section on the invoice.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Separator className="my-6" />
-
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
@@ -402,21 +410,43 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+              control={form.control}
+              name="shipmentMode"
+              render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Shipment Mode</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
+                          <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select shipment mode" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+              )}
+          />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+        </div>
+        
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
+                {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -441,9 +471,13 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
                 })),
+                status: initialData.status,
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
+                packingCharge: initialData.packingCharge,
+                handlingCharge: initialData.handlingCharge,
+                otherCharges: initialData.otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -455,4 +489,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
+
 

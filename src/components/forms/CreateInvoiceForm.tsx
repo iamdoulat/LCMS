@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus } from '@/types';
-import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, InvoiceStatus, PIShipmentMode } from '@/types';
+import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions, piShipmentModeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -80,14 +80,14 @@ export function CreateInvoiceForm() {
         total: '0.00'
       }],
       taxType: 'Default',
-      packingCharge: undefined,
-      handlingCharge: undefined,
-      otherCharges: undefined,
       comments: '',
       privateComments: '',
       showItemCodeColumn: true,
       showDiscountColumn: true,
       showTaxColumn: true,
+      shipmentMode: piShipmentModeOptions[0],
+      handlingCharge: undefined,
+      otherCharges: undefined,
     },
   });
 
@@ -105,9 +105,55 @@ export function CreateInvoiceForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-  const watchedPackingCharge = watch("packingCharge");
   const watchedHandlingCharge = watch("handlingCharge");
   const watchedOtherCharges = watch("otherCharges");
+
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
+    let currentSubtotal = 0;
+    let currentTotalTax = 0;
+    let currentTotalDiscount = 0;
+
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item, index) => {
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        
+        if (qty > 0 && unitPrice >= 0) {
+          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
+          
+          currentSubtotal += itemTotalBeforeDiscount;
+          currentTotalDiscount += lineDiscountAmount;
+          currentTotalTax += lineTaxAmount;
+        }
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
+        }
+      });
+    }
+    
+    const handling = Number(watchedHandlingCharge || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = handling + other;
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+    
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge, watchedOtherCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -158,54 +204,6 @@ export function CreateInvoiceForm() {
       setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue]);
-
-  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
-    let currentSubtotal = 0;
-    let currentTotalTax = 0;
-    let currentTotalDiscount = 0;
-
-    if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
-        const qty = parseFloat(String(item.qty || '0')) || 0;
-        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
-        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-        
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        
-        if (qty > 0 && unitPrice >= 0) {
-          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
-          currentSubtotal += itemTotalBeforeDiscount;
-          currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
-        }
-        
-        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
-        }
-      });
-    }
-
-    const packing = Number(watchedPackingCharge || 0);
-    const handling = Number(watchedHandlingCharge || 0);
-    const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = packing + handling + other;
-
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-    
-    return {
-      subtotal: currentSubtotal,
-      totalDiscountAmount: currentTotalDiscount,
-      totalTaxAmount: currentTotalTax,
-      grandTotal: currentGrandTotal,
-    };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -287,14 +285,14 @@ export function CreateInvoiceForm() {
           showDiscountColumn: data.showDiscountColumn,
           showTaxColumn: data.showTaxColumn,
           convertedFromQuoteId: data.convertedFromQuoteId,
-          packingCharge: data.packingCharge,
+          shipmentMode: data.shipmentMode,
           handlingCharge: data.handlingCharge,
           otherCharges: data.otherCharges,
         };
 
         const cleanedData = Object.fromEntries(
             Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
-        );
+        ) as Partial<Omit<InvoiceDocument, 'id'>>;
 
         const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
         transaction.set(newInvoiceRef, cleanedData);
@@ -488,22 +486,43 @@ export function CreateInvoiceForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+              control={form.control}
+              name="shipmentMode"
+              render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Shipment Mode</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
+                          <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select shipment mode" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+              )}
+          />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+        </div>
+
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
-                 <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
+                {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -511,7 +530,12 @@ export function CreateInvoiceForm() {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => { form.reset(); setGeneratedInvoiceId(null);}}><X className="mr-2 h-4 w-4" />Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => {
+                form.reset();
+                setGeneratedInvoiceId(null);
+            }}>
+                <X className="mr-2 h-4 w-4" />Cancel
+            </Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>
@@ -522,5 +546,6 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
+
 
 

@@ -460,6 +460,8 @@ export interface LcOption {
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
+export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA"] as const;
+export type PIShipmentMode = typeof piShipmentModeOptions[number];
 
 export interface ProformaInvoiceLineItem {
   slNo?: string;
@@ -487,6 +489,7 @@ export interface ProformaInvoice {
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
+  shipmentMode?: PIShipmentMode;
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number; // Sum of (qty * salesPrice) from line items
@@ -908,9 +911,6 @@ export const InvoiceSchema = z.object({
   taxType: z.enum(quoteTaxTypes).default("Default"),
   comments: z.string().optional(),
   privateComments: z.string().optional(),
-  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
-  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
-  otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   subtotal: z.number().optional(),
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
@@ -921,6 +921,9 @@ export const InvoiceSchema = z.object({
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedFromQuoteId: z.string().optional(),
+  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
@@ -1060,6 +1063,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
