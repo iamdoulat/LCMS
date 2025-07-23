@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -85,7 +86,7 @@ export function CreateInvoiceForm() {
       showDiscountColumn: true,
       showTaxColumn: true,
       shipmentMode: piShipmentModeOptions[0],
-      handlingCharge: undefined,
+      freightCharges: undefined,
       otherCharges: undefined,
     },
   });
@@ -105,7 +106,7 @@ export function CreateInvoiceForm() {
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
   const watchedShipmentMode = watch("shipmentMode");
-  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedFreightCharges = watch("freightCharges");
   const watchedOtherCharges = watch("otherCharges");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
@@ -141,9 +142,9 @@ export function CreateInvoiceForm() {
       });
     }
     
-    const handling = Number(watchedHandlingCharge || 0);
+    const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = handling + other;
+    const additionalCharges = freight + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
@@ -153,7 +154,7 @@ export function CreateInvoiceForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge, watchedOtherCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -286,7 +287,7 @@ export function CreateInvoiceForm() {
           showTaxColumn: data.showTaxColumn,
           convertedFromQuoteId: data.convertedFromQuoteId,
           shipmentMode: data.shipmentMode,
-          handlingCharge: data.handlingCharge,
+          freightCharges: data.freightCharges,
           otherCharges: data.otherCharges,
         };
 
@@ -520,7 +521,7 @@ export function CreateInvoiceForm() {
                   </FormItem>
               )}
           />
-          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -537,12 +538,12 @@ export function CreateInvoiceForm() {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0)).toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0)).toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Other Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />

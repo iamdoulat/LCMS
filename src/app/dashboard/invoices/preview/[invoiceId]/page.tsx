@@ -1,11 +1,12 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { InvoiceDocument, CustomerDocument } from '@/types';
+import type { InvoiceDocument, CustomerDocument, PIShipmentMode } from '@/types';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -159,6 +160,17 @@ export default function PrintInvoicePage() {
 
   const qrCodeValue = `INVOICE\nInvoice Number: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount)} (USD)`;
 
+  const grandTotalLabel =
+    invoiceData.shipmentMode === "CFR CHATTOGRAM"
+      ? "CFR CHATTOGRAM TOTAL (USD):"
+      : invoiceData.shipmentMode === "CPT DHAKA"
+      ? "CPT DHAKA TOTAL (USD):"
+      : invoiceData.shipmentMode === "FOB"
+      ? "FOB TOTAL (USD):"
+      : invoiceData.shipmentMode === "EXW"
+      ? "EXW TOTAL (USD):"
+      : "TOTAL (USD):";
+
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
@@ -265,7 +277,7 @@ export default function PrintInvoicePage() {
             <div className="w-1/2 pr-4 text-xs">
                 {invoiceData.comments && (
                 <div className="space-y-1">
-                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <h4 className="underline font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
                 </div>
                 )}
@@ -275,7 +287,7 @@ export default function PrintInvoicePage() {
                     <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                     <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal)}</span>
                 </div>
-                {showDiscountColumn && (
+                 {showDiscountColumn && (
                     <div className="grid grid-cols-2 gap-x-4">
                         <span className="text-gray-600 font-medium text-right">Total Discount:</span>
                         <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount)}</span>
@@ -287,9 +299,22 @@ export default function PrintInvoicePage() {
                         <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount)}</span>
                     </div>
                 )}
+                {(invoiceData.freightCharges || 0) > 0 && (
+                     <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.freightCharges)}</span>
+                    </div>
+                )}
+                {(invoiceData.otherCharges || 0) > 0 && (
+                     <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Other Charges:</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.otherCharges)}</span>
+                    </div>
+                )}
+
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                <div className="grid grid-cols-2 gap-x-4 text-xs font-bold">
+                    <span className="text-gray-900 text-right">{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount)}</span>
                 </div>
             </div>

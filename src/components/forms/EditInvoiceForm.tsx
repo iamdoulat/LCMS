@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -134,7 +135,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
-            handlingCharge: (initialData as any).handlingCharge, // Renamed from freightChargeAmount
+            freightCharges: (initialData as any).freightCharges,
             otherCharges: (initialData as any).otherCharges,
           });
         }
@@ -148,7 +149,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   }, [initialData, reset]);
 
   const watchedLineItems = watch("lineItems");
-  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedFreightCharges = watch("freightCharges");
+  const watchedOtherCharges = watch("otherCharges");
   const watchedShipmentMode = watch("shipmentMode");
   
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
@@ -182,9 +184,11 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       });
     }
 
-    const handling = Number(watchedHandlingCharge || 0);
+    const freight = Number(watchedFreightCharges || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = freight + other;
 
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + handling;
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
     return {
       subtotal: currentSubtotal,
@@ -192,7 +196,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -269,7 +273,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
-      handlingCharge: data.handlingCharge,
+      freightCharges: data.freightCharges,
       otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
@@ -422,7 +426,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   </FormItem>
               )}
           />
-          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -439,11 +443,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0)).toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Other Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
@@ -470,7 +475,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                handlingCharge: (initialData as any).handlingCharge, // Renamed from freightChargeAmount
+                freightCharges: (initialData as any).freightCharges,
                 otherCharges: (initialData as any).otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset

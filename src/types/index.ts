@@ -1,5 +1,6 @@
 
 
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -490,7 +491,7 @@ export interface ProformaInvoice {
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
   shipmentMode?: PIShipmentMode;
-  handlingCharge?: number;
+  freightCharges?: number;
   otherCharges?: number;
   totalQty: number;
   totalPurchasePrice: number;
@@ -924,7 +925,7 @@ export const InvoiceSchema = z.object({
   showTaxColumn: z.boolean().optional().default(true),
   convertedFromQuoteId: z.string().optional(),
   shipmentMode: z.enum(piShipmentModeOptions).optional(),
-  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
@@ -957,7 +958,7 @@ export interface InvoiceDocument {
   comments?: string;
   privateComments?: string;
   packingCharge?: number;
-  handlingCharge?: number;
+  freightCharges?: number;
   otherCharges?: number;
   subtotal: number;
   totalDiscountAmount: number;
@@ -1066,6 +1067,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
