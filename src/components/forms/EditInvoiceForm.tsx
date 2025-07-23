@@ -297,10 +297,14 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   
   const grandTotalLabel =
     watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM GRAND TOTAL:"
+      ? "CFR CHATTOGRAM TOTAL:"
       : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA GRAND TOTAL:"
-      : "Grand Total:";
+      ? "CPT DHAKA TOTAL:"
+      : watchedShipmentMode === "FOB"
+      ? "FOB TOTAL:"
+      : watchedShipmentMode === "EXW"
+      ? "EXW TOTAL:"
+      : "TOTAL:";
 
   return (
     <Form {...form}>
@@ -401,7 +405,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -414,7 +418,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <FormField
+          <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (

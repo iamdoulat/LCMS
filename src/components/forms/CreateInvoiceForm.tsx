@@ -349,10 +349,14 @@ export function CreateInvoiceForm() {
   
   const grandTotalLabel =
     watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM GRAND TOTAL:"
+      ? "CFR CHATTOGRAM TOTAL:"
       : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA GRAND TOTAL:"
-      : "Grand Total:";
+      ? "CPT DHAKA TOTAL:"
+      : watchedShipmentMode === "FOB"
+      ? "FOB TOTAL:"
+      : watchedShipmentMode === "EXW"
+      ? "EXW TOTAL:"
+      : "TOTAL:";
 
   return (
     <Form {...form}>
@@ -529,7 +533,7 @@ export function CreateInvoiceForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -553,3 +557,4 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
+
