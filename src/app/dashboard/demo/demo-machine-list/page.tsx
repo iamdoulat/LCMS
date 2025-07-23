@@ -207,7 +207,7 @@ export default function DemoMachineListPage() {
                           </CardHeader>
                           <CardContent className="p-0 pt-2 flex-grow flex flex-col justify-between">
                             <div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
                                     <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                                     <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
                                     {machine.motorOrControlBoxModel && (
