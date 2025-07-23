@@ -104,6 +104,7 @@ export function CreateInvoiceForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
+  const watchedShipmentMode = watch("shipmentMode");
   const watchedHandlingCharge = watch("handlingCharge");
   const watchedOtherCharges = watch("otherCharges");
 
@@ -345,6 +346,13 @@ export function CreateInvoiceForm() {
 
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedInvoiceId || isSubmitting;
+  
+  const grandTotalLabel =
+    watchedShipmentMode === "CFR CHATTOGRAM"
+      ? "CFR CHATTOGRAM GRAND TOTAL:"
+      : watchedShipmentMode === "CPT DHAKA"
+      ? "CPT DHAKA GRAND TOTAL:"
+      : "Grand Total:";
 
   return (
     <Form {...form}>
@@ -521,9 +529,9 @@ export function CreateInvoiceForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
@@ -545,4 +553,3 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
-

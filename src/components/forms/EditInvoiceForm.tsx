@@ -145,6 +145,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
   const watchedLineItems = watch("lineItems");
   const watchedHandlingCharge = watch("handlingCharge");
+  const watchedShipmentMode = watch("shipmentMode");
   
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -293,6 +294,13 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
+  
+  const grandTotalLabel =
+    watchedShipmentMode === "CFR CHATTOGRAM"
+      ? "CFR CHATTOGRAM GRAND TOTAL:"
+      : watchedShipmentMode === "CPT DHAKA"
+      ? "CPT DHAKA GRAND TOTAL:"
+      : "Grand Total:";
 
   return (
     <Form {...form}>
@@ -405,8 +413,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -441,7 +449,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
                 <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
