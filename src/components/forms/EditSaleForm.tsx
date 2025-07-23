@@ -148,7 +148,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
 
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-
+  
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -479,4 +479,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
-
