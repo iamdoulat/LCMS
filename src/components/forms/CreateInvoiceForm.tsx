@@ -120,9 +120,9 @@ export function CreateInvoiceForm() {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -335,6 +335,18 @@ export function CreateInvoiceForm() {
     }
   };
 
+  const grandTotalLabel =
+    watchedShipmentMode === "CFR CHATTOGRAM"
+      ? "CFR CHATTOGRAM TOTAL:"
+      : watchedShipmentMode === "CPT DHAKA"
+      ? "CPT DHAKA TOTAL:"
+      : watchedShipmentMode === "FOB"
+      ? "FOB TOTAL:"
+      : watchedShipmentMode === "EXW"
+      ? "EXW TOTAL:"
+      : "TOTAL:";
+
+
   if (isLoadingDropdowns) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -346,17 +358,6 @@ export function CreateInvoiceForm() {
 
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedInvoiceId || isSubmitting;
-  
-  const grandTotalLabel =
-    watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL:"
-      : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL:"
-      : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
-      : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
-      : "TOTAL:";
 
   return (
     <Form {...form}>
@@ -498,7 +499,7 @@ export function CreateInvoiceForm() {
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
               control={form.control}
               name="shipmentMode"
@@ -520,7 +521,6 @@ export function CreateInvoiceForm() {
               )}
           />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -533,7 +533,7 @@ export function CreateInvoiceForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -542,7 +542,7 @@ export function CreateInvoiceForm() {
         
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
-                form.reset();
+                reset();
                 setGeneratedInvoiceId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
@@ -557,4 +557,3 @@ export function CreateInvoiceForm() {
     </Form>
   );
 }
-
