@@ -102,8 +102,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
-            manageStock: data.manageStock,
-            currentQuantity: data.currentQuantity,
           };
         });
         setItemOptions(fetchedItems);
@@ -135,6 +133,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
+            packingCharge: initialData.packingCharge,
+            handlingCharge: initialData.handlingCharge,
+            otherCharges: initialData.otherCharges,
           });
         }
       } catch (error) {
@@ -148,7 +149,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
 
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-  
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedOtherCharges = watch("otherCharges");
+
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -172,7 +176,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-
+        
         const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -180,14 +184,21 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         }
       });
     }
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = packing + handling + other;
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+    
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -265,6 +276,9 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
+      packingCharge: data.packingCharge,
+      handlingCharge: data.handlingCharge,
+      otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
@@ -367,29 +381,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
             />
         </div>
         <Separator className="my-6" />
-        <FormField
-          control={control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Invoice Subject</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-sm font-normal"
-                  {...field}
-                  value={field.value ?? ''}
-                  rows={2}
-                />
-              </FormControl>
-              <FormDescription>
-                This text will appear below the address section on the invoice.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
@@ -426,21 +417,30 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormLabel className="font-bold">Terms and Conditions</FormLabel>
+                <FormControl><Textarea placeholder="Public terms and conditions" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
+        
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                 <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -479,3 +479,4 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     </Form>
   );
 }
+
