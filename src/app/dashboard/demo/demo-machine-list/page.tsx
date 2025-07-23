@@ -196,7 +196,7 @@ export default function DemoMachineListPage() {
                   <div className="grid grid-cols-12 gap-4 p-4 flex-grow">
                     <div className="col-span-12 md:col-span-8 flex flex-col">
                         <CardHeader className="relative p-0 pr-24">
-                           <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2">
+                           <div className="flex items-baseline gap-x-2">
                                 <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
                                    {formatReportValue(machine.machineModel)}
                                 </CardTitle>
@@ -210,12 +210,8 @@ export default function DemoMachineListPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
                                     <div><span className="text-muted-foreground">Serial: </span><span className="font-medium text-foreground truncate" title={machine.machineSerial}>{formatReportValue(machine.machineSerial)}</span></div>
                                     <div><span className="text-muted-foreground">Brand: </span><span className="font-medium text-foreground truncate" title={machine.machineBrand}>{formatReportValue(machine.machineBrand)}</span></div>
-                                    {machine.motorOrControlBoxModel && (
-                                        <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{machine.motorOrControlBoxModel}</span></div>
-                                    )}
-                                    {machine.controlBoxSerialNo && (
-                                   <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{machine.controlBoxSerialNo}</span></div>
-                                    )}
+                                    <div><Cog className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box Model: </span><span className="font-medium text-foreground truncate" title={machine.motorOrControlBoxModel}>{formatReportValue(machine.motorOrControlBoxModel)}</span></div>
+                                    <div className="sm:col-start-1 md:col-start-auto"><Hash className="inline-block mr-1 h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Ctl. Box S/N: </span><span className="font-medium text-foreground truncate" title={machine.controlBoxSerialNo}>{formatReportValue(machine.controlBoxSerialNo)}</span></div>
                                 </div>
                                 
                                 <div className="space-y-2 mt-2">
