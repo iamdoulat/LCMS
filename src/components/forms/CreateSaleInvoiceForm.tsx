@@ -59,11 +59,6 @@ export function CreateSaleInvoiceForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema),
     defaultValues: {
@@ -71,7 +66,6 @@ export function CreateSaleInvoiceForm() {
       billingAddress: '',
       shippingAddress: '',
       invoiceDate: new Date(),
-      dueDate: undefined,
       paymentTerms: '',
       salesperson: '',
       subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
@@ -88,7 +82,6 @@ export function CreateSaleInvoiceForm() {
       taxType: 'Default',
       comments: '',
       privateComments: '',
-      status: "Draft",
       showItemCodeColumn: true,
       showDiscountColumn: true,
       showTaxColumn: true,
@@ -160,19 +153,18 @@ export function CreateSaleInvoiceForm() {
     }
   }, [watchedCustomerId, customerOptions, setValue]);
 
-  React.useEffect(() => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
     if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
+      watchedLineItems.forEach((item) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
         const itemTotalBeforeDiscount = qty * unitPrice;
-        let lineTotal = itemTotalBeforeDiscount; 
         
         if (qty > 0 && unitPrice >= 0) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
@@ -183,20 +175,16 @@ export function CreateSaleInvoiceForm() {
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-
-        const displayLineTotal = isNaN(lineTotal) ? 0 : lineTotal;
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
-        }
       });
     }
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -257,11 +245,6 @@ export function CreateSaleInvoiceForm() {
           return lineItemData;
         });
 
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-        
         const invoiceDataToSave: Record<string, any> = {
           customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
@@ -271,12 +254,14 @@ export function CreateSaleInvoiceForm() {
           subject: data.subject,
           lineItems: processedLineItems, taxType: data.taxType,
           comments: data.comments, privateComments: data.privateComments,
-          subtotal: finalSubtotal, totalDiscountAmount: finalTotalDiscount, totalTaxAmount: finalTotalTax,
-          totalAmount: finalGrandTotal, status: data.status || "Draft", amountPaid: 0,
+          subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
+          totalAmount: grandTotal, amountPaid: 0,
+          status: "Draft",
           createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           showItemCodeColumn: data.showItemCodeColumn,
           showDiscountColumn: data.showDiscountColumn,
           showTaxColumn: data.showTaxColumn,
+          convertedFromQuoteId: data.convertedFromQuoteId,
         };
 
         const cleanedData = Object.fromEntries(
@@ -402,8 +387,7 @@ export function CreateSaleInvoiceForm() {
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} />
-                  </FormControl>
+                    <Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -414,31 +398,8 @@ export function CreateSaleInvoiceForm() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={generatedInvoiceId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {invoiceStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -488,8 +449,8 @@ export function CreateSaleInvoiceForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
-                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  <TableCell className="text-right font-medium">${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>
@@ -521,7 +482,7 @@ export function CreateSaleInvoiceForm() {
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => { form.reset(); setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0); setGeneratedInvoiceId(null);}}><X className="mr-2 h-4 w-4" />Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => { form.reset(); setGeneratedInvoiceId(null);}}><X className="mr-2 h-4 w-4" />Cancel</Button>
             <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
             </Button>

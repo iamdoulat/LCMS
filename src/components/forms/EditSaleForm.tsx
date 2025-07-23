@@ -62,11 +62,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(InvoiceSchema.extend({
         status: z.enum(saleStatusOptions).optional(),
@@ -154,7 +149,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
-  React.useEffect(() => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -185,12 +180,14 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         }
       });
     }
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedTaxType, setValue, getValues]);
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -249,11 +246,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         return lineItemData;
     });
 
-    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
     const dataToUpdate: Record<string, any> = {
       customerId: data.customerId,
       customerName: selectedCustomer?.label || initialData.customerName,
@@ -268,10 +260,10 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
       taxType: data.taxType,
       comments: data.comments,
       privateComments: data.privateComments,
-      subtotal: finalSubtotal,
-      totalDiscountAmount: finalTotalDiscount,
-      totalTaxAmount: finalTotalTax,
-      totalAmount: finalGrandTotal,
+      subtotal: subtotal,
+      totalDiscountAmount: totalDiscountAmount,
+      totalTaxAmount: totalTaxAmount,
+      totalAmount: grandTotal,
       status: data.status,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
@@ -423,7 +415,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
