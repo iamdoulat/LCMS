@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, ImageIcon, Crop as CropIcon } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, Image as ImageIcon, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -199,10 +199,11 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         'note',
       ];
       optionalFields.forEach(field => {
-        if (data[field]) {
-          dataToUpdate[field] = data[field];
+        const value = data[field];
+        if (value) {
+            (dataToUpdate as any)[field] = value;
         }
-      });
+    });
       
       const cleanedDataToUpdate: { [key: string]: any } = {};
       for (const key in dataToUpdate) {
