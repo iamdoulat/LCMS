@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -179,10 +178,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       });
     }
     const handling = Number(watchedHandlingCharge || 0);
-    const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = handling + other;
 
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + handling;
     
     return {
       subtotal: currentSubtotal,
@@ -233,7 +230,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const itemTotalBeforeDiscount = qty * finalUnitPrice;
         
         const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-
         const lineItemData: any = {
             itemId: item.itemId,
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
@@ -411,7 +407,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
               control={form.control}
               name="shipmentMode"
@@ -432,8 +428,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   </FormItem>
               )}
           />
-          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -446,7 +441,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedHandlingCharge||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -489,6 +484,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
 
 
 

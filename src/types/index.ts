@@ -921,7 +921,7 @@ export const InvoiceSchema = z.object({
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedFromQuoteId: z.string().optional(),
-  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  shipmentMode: z.enum(piShipmentModeOptions).optional(),
   handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
@@ -971,6 +971,7 @@ export interface InvoiceDocument {
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
   convertedFromQuoteId?: string;
+  shipmentMode?: PIShipmentMode;
 }
 // --- END Invoice Types ---
 
@@ -1063,6 +1064,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
