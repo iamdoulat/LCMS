@@ -161,17 +161,17 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         updatedAt: serverTimestamp(),
       };
       
-      Object.keys(dataToUpdate).forEach(key => {
-        const typedKey = key as keyof typeof dataToUpdate;
-        if (dataToUpdate[typedKey] === '') {
-           if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'machineFeatures', 'note'].includes(typedKey)) {
-              (dataToUpdate as any)[typedKey] = undefined;
-           }
+      // Clean up undefined values to prevent Firestore errors
+      const cleanedDataToUpdate: { [key: string]: any } = {};
+      for (const key in dataToUpdate) {
+        const value = (dataToUpdate as any)[key];
+        if (value !== undefined) {
+          cleanedDataToUpdate[key] = value;
         }
-      });
+      }
 
       const machineDocRef = doc(firestore, "demo_machines", machineId);
-      await updateDoc(machineDocRef, dataToUpdate);
+      await updateDoc(machineDocRef, cleanedDataToUpdate);
 
       Swal.fire({
         title: "Demo Machine Updated!",
