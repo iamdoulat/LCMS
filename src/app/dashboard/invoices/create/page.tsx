@@ -11,10 +11,10 @@ export default function CreateNewInvoicePage() {
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FilePlus2 className="h-7 w-7 text-primary" />
-            Create New Invoice
+            Create New Proforma Invoice
           </CardTitle>
           <CardDescription>
-            Fill in the details below to generate a new sales invoice.
+            Fill in the details below to generate a new Proforma Invoice.
           </CardDescription>
         </CardHeader>
         <CardContent>
