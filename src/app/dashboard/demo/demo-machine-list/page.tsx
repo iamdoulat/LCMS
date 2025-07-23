@@ -173,30 +173,30 @@ export default function DemoMachineListPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[calc(100vh-16rem)] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {demoMachines.map((machine) => (
-                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
+                <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col relative">
+                   <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
+                        <div className="flex gap-1">
+                            <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`} passHref>
+                                <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                                    <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
+                                </Button>
+                            </Link>
+                            <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)} disabled={isReadOnly}>
+                              <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
+                            </Button>
+                        </div>
+                        {machine.currentStatus && (
+                            <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="text-xs">
+                                {machine.currentStatus}
+                            </Badge>
+                        )}
+                    </div>
                   <div className="grid grid-cols-12 gap-4 p-4 flex-grow">
                     <div className="col-span-12 md:col-span-8 flex flex-col">
-                        <CardHeader className="relative p-0">
-                            <div className="absolute top-0 right-0 flex flex-col items-end gap-1.5 z-10">
-                                <div className="flex gap-1">
-                                    <Link href={`/dashboard/demo/edit-demo-machine/${machine.id}`} passHref>
-                                        <Button variant="default" size="icon" className="h-7 w-7 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                                            <span><FileEdit className="h-4 w-4" /> <span className="sr-only">Edit Demo Machine</span></span>
-                                        </Button>
-                                    </Link>
-                                    <Button variant="destructive" size="icon" className="h-7 w-7" onClick={() => handleDeleteMachine(machine.id, machine.machineModel)} disabled={isReadOnly}>
-                                      <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Demo Machine</span>
-                                    </Button>
-                                </div>
-                                {machine.currentStatus && (
-                                    <Badge variant={getDemoMachineStatusBadgeVariant(machine.currentStatus)} className="text-xs">
-                                        {machine.currentStatus}
-                                    </Badge>
-                                )}
-                            </div>
-                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2 mr-20">
+                        <CardHeader className="relative p-0 pr-24">
+                           <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-2">
                                 <CardTitle className="text-lg font-semibold text-primary mb-0 truncate">
                                    {formatReportValue(machine.machineModel)}
                                 </CardTitle>
@@ -270,3 +270,4 @@ export default function DemoMachineListPage() {
     </div>
   );
 }
+
