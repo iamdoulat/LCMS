@@ -460,7 +460,7 @@ export interface LcOption {
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
-export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA"] as const;
+export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
 export type PIShipmentMode = typeof piShipmentModeOptions[number];
 
 export interface ProformaInvoiceLineItem {
@@ -1066,6 +1066,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
