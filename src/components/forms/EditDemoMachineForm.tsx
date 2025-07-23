@@ -5,11 +5,11 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, ImageIcon } from 'lucide-react';
+import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, ImageIcon, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { DemoMachineDocument, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
 import Image from 'next/image';
@@ -36,6 +36,7 @@ const demoMachineSchema = z.object({
   machineReturned: z.boolean().optional().default(false),
   machineFeatures: z.string().optional(),
   note: z.string().optional(),
+  imageUrl: z.string().optional(), // Added to track image URL in form state
 });
 
 type DemoMachineEditFormValues = z.infer<typeof demoMachineSchema>;
@@ -49,13 +50,13 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const isInitialMountRef = React.useRef(true);
   
-  const [imgSrc, setImgSrc] = React.useState(initialData.imageUrl || '');
+  const [imgSrc, setImgSrc] = React.useState('');
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [isCroppingDialogOpen, setIsCroppingDialogOpen] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
   const imgRef = React.useRef<HTMLImageElement>(null);
-  const [currentImageUrl, setCurrentImageUrl] = React.useState(initialData.imageUrl || '');
 
   const form = useForm<DemoMachineEditFormValues>({
     resolver: zodResolver(demoMachineSchema),
@@ -70,11 +71,13 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       machineReturned: false,
       machineFeatures: '',
       note: '',
+      imageUrl: '',
     },
   });
 
   const { watch, setValue } = form;
   const watchedMachineReturned = watch("machineReturned");
+  const currentImageUrl = watch("imageUrl");
 
   React.useEffect(() => {
     if (initialData) {
@@ -89,8 +92,8 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineReturned: initialData.machineReturned ?? false,
         machineFeatures: initialData.machineFeatures || '',
         note: initialData.note || '',
+        imageUrl: initialData.imageUrl || '',
       });
-      setCurrentImageUrl(initialData.imageUrl || '');
       setTimeout(() => { isInitialMountRef.current = false; }, 0);
     }
   }, [initialData, form]);
@@ -131,37 +134,76 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
     setCrop(crop);
   }
 
+  const handleCropAndUpload = async () => {
+    if (!completedCrop || !imgRef.current || !selectedFile) {
+        Swal.fire("Error", "Could not process image crop. Please try again.", "error");
+        return;
+    }
+    setIsUploading(true);
+    try {
+        const croppedImageBlob = await getCroppedImg(
+            imgRef.current,
+            completedCrop,
+            selectedFile.name,
+            512, 512
+        );
+        if (!croppedImageBlob) {
+            throw new Error("Failed to create cropped image blob.");
+        }
+        const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
+        const snapshot = await uploadBytes(storageRef, croppedImageBlob);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        await updateDoc(doc(firestore, "demo_machines", machineId), {
+            imageUrl: downloadURL,
+            updatedAt: serverTimestamp(),
+        });
+        
+        setValue("imageUrl", downloadURL, { shouldDirty: true });
+        
+        setIsCroppingDialogOpen(false);
+        Swal.fire({
+            title: "Image Updated",
+            icon: "success",
+            timer: 2000,
+            showConfirmButton: false,
+        });
+
+    } catch (err: any) {
+        console.error("Error uploading demo machine image:", err);
+        Swal.fire("Upload Failed", `Failed to upload image: ${err.message}`, "error");
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
   async function onSubmit(data: DemoMachineEditFormValues) {
     setIsSubmitting(true);
-    let imageUrl = initialData.imageUrl;
 
     try {
-      if (selectedFile && completedCrop) {
-        const croppedImageBlob = await getCroppedImg(
-          imgRef.current!,
-          completedCrop,
-          selectedFile.name,
-          512,
-          512
-        );
-        if (croppedImageBlob) {
-          const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
-          const snapshot = await uploadBytes(storageRef, croppedImageBlob);
-          imageUrl = await getDownloadURL(snapshot.ref);
-        }
-      }
-
       const dataToUpdate: Partial<Omit<DemoMachineDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
-        ...data,
-        motorOrControlBoxModel: data.motorOrControlBoxModel || undefined,
-        controlBoxSerialNo: data.controlBoxSerialNo || undefined,
-        machineFeatures: data.machineFeatures || undefined,
-        note: data.note || undefined,
-        imageUrl: imageUrl,
+        machineModel: data.machineModel,
+        machineSerial: data.machineSerial,
+        machineBrand: data.machineBrand,
+        machineOwner: data.machineOwner,
+        currentStatus: data.currentStatus,
+        machineReturned: data.machineReturned,
+        imageUrl: data.imageUrl,
         updatedAt: serverTimestamp(),
       };
       
-      // Clean up undefined values to prevent Firestore errors
+      const optionalFields: (keyof DemoMachineEditFormValues)[] = [
+        'motorOrControlBoxModel',
+        'controlBoxSerialNo',
+        'machineFeatures',
+        'note',
+      ];
+      optionalFields.forEach(field => {
+        if (data[field]) {
+          dataToUpdate[field] = data[field];
+        }
+      });
+      
       const cleanedDataToUpdate: { [key: string]: any } = {};
       for (const key in dataToUpdate) {
         const value = (dataToUpdate as any)[key];
@@ -180,10 +222,6 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         timer: 2500,
         showConfirmButton: true,
       });
-
-      setCurrentImageUrl(imageUrl || '');
-      setSelectedFile(null);
-      setCompletedCrop(undefined);
 
     } catch (error: any) {
       const errorMessage = error.message || "An unknown error occurred.";
@@ -366,9 +404,9 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
                     </ReactCrop>
                 )}
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={() => { setIsCroppingDialogOpen(false); if (imgSrc) setCurrentImageUrl(imgSrc); }} disabled={!completedCrop?.width}>
-                        Set Image
+                    <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+                    <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
+                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
                     </Button>
                 </DialogFooter>
             </DialogContent>
