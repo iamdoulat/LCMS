@@ -62,6 +62,54 @@ export function CreateSaleInvoiceForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
 
+  const form = useForm<SaleFormValues>({
+    resolver: zodResolver(SaleSchema),
+    defaultValues: {
+      customerId: '',
+      billingAddress: '',
+      shippingAddress: '',
+      invoiceDate: new Date(),
+      salesperson: '',
+      lineItems: [{
+        itemId: '',
+        itemCode: '',
+        description: '',
+        qty: '1',
+        unitPrice: '0',
+        discountPercentage: '0',
+        taxPercentage: '0',
+        total: '0.00'
+      }],
+      taxType: 'Default',
+      comments: '',
+      privateComments: '',
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
+      packingCharge: undefined,
+      handlingCharge: undefined,
+      otherCharges: undefined,
+    },
+  });
+
+  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
+
+  const showItemCodeColumn = watch("showItemCodeColumn");
+  const showDiscountColumn = watch("showDiscountColumn");
+  const showTaxColumn = watch("showTaxColumn");
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "lineItems",
+  });
+
+  const watchedCustomerId = watch("customerId");
+  const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
+  const watchedOtherCharges = watch("otherCharges");
+
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -95,7 +143,12 @@ export function CreateSaleInvoiceForm() {
       });
     }
 
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = packing + handling + other;
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
     return {
       subtotal: currentSubtotal,
@@ -103,52 +156,7 @@ export function CreateSaleInvoiceForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue]);
-
-  const form = useForm<SaleFormValues>({
-    resolver: zodResolver(SaleSchema),
-    defaultValues: {
-      customerId: '',
-      billingAddress: '',
-      shippingAddress: '',
-      invoiceDate: new Date(),
-      salesperson: '',
-      lineItems: [{
-        itemId: '',
-        itemCode: '',
-        description: '',
-        qty: '1',
-        unitPrice: '0',
-        discountPercentage: '0',
-        taxPercentage: '0',
-        total: '0.00'
-      }],
-      taxType: 'Default',
-      comments: '',
-      privateComments: '',
-      showItemCodeColumn: true,
-      showDiscountColumn: true,
-      showTaxColumn: true,
-    },
-  });
-
-  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
-
-  const showItemCodeColumn = watch("showItemCodeColumn");
-  const showDiscountColumn = watch("showDiscountColumn");
-  const showTaxColumn = watch("showTaxColumn");
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "lineItems",
-  });
-
-  const watchedCustomerId = watch("customerId");
-  const watchedLineItems = watch("lineItems");
-  const watchedTaxType = watch("taxType");
-  const watchedPackingCharge = watch("packingCharge");
-  const watchedHandlingCharge = watch("handlingCharge");
-  const watchedOtherCharges = watch("otherCharges");
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
 
   React.useEffect(() => {
@@ -309,6 +317,9 @@ export function CreateSaleInvoiceForm() {
                 comments: data.comments, privateComments: data.privateComments,
                 subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
                 totalAmount: grandTotal, status: "Completed" as const,
+                packingCharge: data.packingCharge,
+                handlingCharge: data.handlingCharge,
+                otherCharges: data.otherCharges,
                 createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
@@ -520,6 +531,12 @@ export function CreateSaleInvoiceForm() {
 
         <Separator />
         
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
@@ -530,6 +547,7 @@ export function CreateSaleInvoiceForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
+                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
