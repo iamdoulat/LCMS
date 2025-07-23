@@ -61,7 +61,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
   const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(InvoiceSchema),
+    resolver: zodResolver(InvoiceSchema.extend({
+        status: z.enum(invoiceStatusOptions).optional(),
+    })),
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -422,8 +424,14 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="comments" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
+                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         
         <div className="flex justify-end space-y-2 mt-6">
@@ -460,7 +468,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                handlingCharge: initialData.handlingCharge,
+                handlingCharge: (initialData as any).freightChargeAmount,
                 otherCharges: (initialData as any).otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
@@ -473,3 +481,4 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
