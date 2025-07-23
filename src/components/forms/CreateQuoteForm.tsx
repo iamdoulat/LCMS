@@ -164,20 +164,32 @@ export function CreateQuoteForm() {
   }, [watchedCustomerId, customerOptions, setValue]);
 
   React.useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name && name.startsWith("lineItems")) {
+        recalculateTotals(value.lineItems as QuoteLineItemFormValues[]);
+      }
+    });
+    // Initial calculation
+    recalculateTotals(getValues("lineItems"));
+    
+    return () => subscription.unsubscribe();
+  }, [watch, getValues]);
+
+  const recalculateTotals = (lineItems: QuoteLineItemFormValues[]) => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-    if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
+
+    if (Array.isArray(lineItems)) {
+      lineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
-        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+        const discountP = parseFloat(String(item.discountPercentage || '0')) || 0;
+        const taxP = parseFloat(String(item.taxPercentage || '0')) || 0;
         
-        const lineTotalForDisplay = qty * unitPrice;
+        const itemTotalBeforeDiscount = qty * unitPrice;
         
         if (qty > 0 && unitPrice >= 0) {
-          const itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -187,21 +199,17 @@ export function CreateQuoteForm() {
           currentTotalTax += lineTaxAmount;
         }
         
-        const displayLineTotal = isNaN(lineTotalForDisplay) ? 0 : lineTotalForDisplay;
-        
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
-        }
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
       });
     }
+
     setSubtotal(currentSubtotal);
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
-
+  };
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
