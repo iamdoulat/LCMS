@@ -106,9 +106,9 @@ export default function EditInvoicePage() {
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <InvoiceIcon className="h-7 w-7 text-primary" />Edit Invoice
+            <InvoiceIcon className="h-7 w-7 text-primary" />Edit Proforma Invoice
           </CardTitle>
-          <CardDescription>Modify the details for Invoice ID: <span className="font-semibold text-foreground">{invoiceId}</span>.</CardDescription>
+          <CardDescription>Modify the details for Proforma Invoice ID: <span className="font-semibold text-foreground">{invoiceId}</span>.</CardDescription>
         </CardHeader>
         <CardContent><EditInvoiceForm initialData={invoiceData} invoiceId={invoiceId} /></CardContent>
       </Card>
