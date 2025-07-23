@@ -145,8 +145,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
   const watchedLineItems = watch("lineItems");
   const watchedHandlingCharge = watch("handlingCharge");
-  const watchedOtherCharges = watch("otherCharges");
-
+  
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -187,8 +186,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge, watchedOtherCharges]);
-  
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedHandlingCharge]);
+
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -264,7 +263,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
-      packingCharge: data.packingCharge,
       handlingCharge: data.handlingCharge,
       otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
@@ -430,7 +428,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (<FormItem><FormLabel>Comments (Public)</FormLabel><FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
@@ -484,7 +482,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
-
-
-

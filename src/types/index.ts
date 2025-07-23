@@ -490,6 +490,8 @@ export interface ProformaInvoice {
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
   shipmentMode?: PIShipmentMode;
+  handlingCharge?: number;
+  otherCharges?: number;
   totalQty: number;
   totalPurchasePrice: number;
   totalSalesPrice: number; // Sum of (qty * salesPrice) from line items
@@ -1064,6 +1066,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
