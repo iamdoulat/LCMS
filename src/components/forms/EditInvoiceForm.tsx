@@ -487,3 +487,4 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
