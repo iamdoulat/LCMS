@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,7 +134,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
-            freightCharges: initialData.freightCharges, // This is the corrected line
+            freightCharges: initialData.freightCharges,
             otherCharges: (initialData as any).otherCharges,
           });
         }
