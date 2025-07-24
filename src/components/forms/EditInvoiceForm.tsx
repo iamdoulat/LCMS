@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -134,7 +133,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
-            freightCharges: (initialData as any).freightCharges,
+            freightCharges: initialData.freightCharges, // This is the corrected line
             otherCharges: (initialData as any).otherCharges,
           });
         }
@@ -496,7 +495,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                freightCharges: (initialData as any).freightCharges,
+                freightCharges: initialData.freightCharges,
                 otherCharges: (initialData as any).otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
