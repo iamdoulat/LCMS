@@ -521,7 +521,7 @@ export function CreateInvoiceForm() {
                   </FormItem>
               )}
           />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -538,7 +538,6 @@ export function CreateInvoiceForm() {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0)).toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
                 <div className="flex justify-between"><span className="text-muted-foreground">Other Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
