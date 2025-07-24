@@ -307,7 +307,7 @@ export default function PrintInvoicePage() {
                 )}
                 {(invoiceData.otherCharges || 0) > 0 && (
                      <div className="grid grid-cols-2 gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Other Charges:</span>
+                        <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.otherCharges)}</span>
                     </div>
                 )}

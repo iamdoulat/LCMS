@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -369,6 +368,29 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Invoice Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
+                  className="text-sm font-normal"
+                  {...field}
+                  value={field.value ?? ''}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the invoice.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Separator className="my-6" />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
@@ -487,4 +509,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
