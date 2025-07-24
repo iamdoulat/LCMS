@@ -1,6 +1,5 @@
 
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -1067,6 +1066,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
