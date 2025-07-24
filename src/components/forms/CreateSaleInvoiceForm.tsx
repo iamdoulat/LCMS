@@ -60,7 +60,7 @@ export function CreateSaleInvoiceForm() {
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
+  const [generatedSaleId, setGeneratedSaleId] = React.useState<string | null>(null);
 
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(SaleSchema),
@@ -157,7 +157,6 @@ export function CreateSaleInvoiceForm() {
       grandTotal: currentGrandTotal,
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
-
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -307,7 +306,7 @@ export function CreateSaleInvoiceForm() {
                 });
                 return lineItemData;
             });
-
+            
             const dataToSave: Record<string, any> = {
                 customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
@@ -351,7 +350,7 @@ export function CreateSaleInvoiceForm() {
             return formattedSaleId;
         });
 
-      setGeneratedInvoiceId(newSaleId);
+      setGeneratedSaleId(newSaleId);
       Swal.fire({
         title: "Sale Recorded!",
         text: `Sale successfully recorded with ID: ${newSaleId}. Item stock levels updated.`,
@@ -370,7 +369,7 @@ export function CreateSaleInvoiceForm() {
     }
   }
 
-  const actionButtonsDisabled = !generatedInvoiceId || isSubmitting;
+  const actionButtonsDisabled = !generatedSaleId || isSubmitting;
 
   return (
     <Form {...form}>
@@ -455,7 +454,7 @@ export function CreateSaleInvoiceForm() {
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Sale ID</FormLabel>
-              <Input value={generatedInvoiceId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+              <Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
             <FormField
                 control={control}
@@ -557,7 +556,7 @@ export function CreateSaleInvoiceForm() {
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
-                setGeneratedInvoiceId(null);
+                setGeneratedSaleId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
@@ -573,4 +572,5 @@ export function CreateSaleInvoiceForm() {
     </Form>
   );
 }
+
 

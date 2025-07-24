@@ -924,6 +924,8 @@ export const InvoiceSchema = z.object({
   showTaxColumn: z.boolean().optional().default(true),
   convertedFromQuoteId: z.string().optional(),
   shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
@@ -957,6 +959,7 @@ export interface InvoiceDocument {
   comments?: string;
   privateComments?: string;
   packingCharge?: number;
+  handlingCharge?: number;
   freightCharges?: number;
   otherCharges?: number;
   subtotal: number;
@@ -1066,6 +1069,7 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
 
 
 
