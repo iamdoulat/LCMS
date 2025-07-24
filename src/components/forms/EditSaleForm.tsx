@@ -9,8 +9,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, SaleDocument } from '@/types';
-import { InvoiceSchema, quoteTaxTypes, saleStatusOptions } from '@/types';
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus } from '@/types';
+import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -54,6 +54,10 @@ interface EditSaleFormProps {
   saleId: string;
 }
 
+type SaleFormValues = PageSaleFormValues;
+type SaleLineItemFormValues = PageSaleLineItemFormValues;
+
+
 export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -61,8 +65,8 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
-  const form = useForm<PageSaleFormValues>({
-    resolver: zodResolver(InvoiceSchema.extend({
+  const form = useForm<SaleFormValues>({
+    resolver: zodResolver(SaleSchema.extend({
         status: z.enum(saleStatusOptions).optional(),
     })), 
   });
@@ -218,7 +222,7 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
     window.open(`/dashboard/inventory/sales/print/${saleId}`, '_blank');
   };
 
-  async function onSubmit(data: SaleFormValues) {
+  async function onSubmit(data: PageSaleFormValues) {
     if (!saleId) {
       Swal.fire("Error", "Invoice ID is missing. Cannot update.", "error");
       return;
@@ -238,7 +242,6 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
         const itemTotalBeforeDiscount = qty * finalUnitPrice;
         
         const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-
         const lineItemData: any = {
             itemId: item.itemId,
             itemName: itemDetails?.label.split(' (')[0] || 'N/A',
@@ -475,4 +478,3 @@ export function EditSaleForm({ initialData, saleId }: EditSaleFormProps) {
   );
 }
 
-    
