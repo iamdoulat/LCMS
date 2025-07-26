@@ -136,20 +136,21 @@ export function AddDemoMachineForm() {
         controlBoxSerialNo: data.controlBoxSerialNo || undefined,
         machineFeatures: data.machineFeatures || undefined,
         note: data.note || undefined,
-        imageUrl: imageUrl, // Add the image URL here
+        imageUrl: imageUrl,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === '') {
-           if (['motorOrControlBoxModel', 'controlBoxSerialNo', 'machineFeatures', 'note', 'imageUrl'].includes(key)) {
-               (dataToSave as any)[key] = undefined;
-           }
+      
+      const cleanedDataToSave: { [key: string]: any } = {};
+      for (const key in dataToSave) {
+        const value = (dataToSave as any)[key];
+        if (value !== undefined) {
+          cleanedDataToSave[key] = value;
         }
-      });
+      }
       
       // 4. Update the document with all the data
-      await updateDoc(docRef, dataToSave);
+      await updateDoc(docRef, cleanedDataToSave);
 
       Swal.fire({
         title: "Demo Machine Saved!",
