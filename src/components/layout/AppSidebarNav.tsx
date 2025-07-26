@@ -64,6 +64,7 @@ import {
   FolderOpen,
   Bell,
   BarChart3,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -95,6 +96,13 @@ const inventoryNavItems: NavItem[] = [
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
+    { href: '/dashboard/petty-cash/dashboard', label: 'Account Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
+    { href: '/dashboard/petty-cash/transactions', label: 'Daily Transactions', icon: DollarSign, iconColorClass: 'bg-icon-payment' },
+    { href: '/dashboard/petty-cash/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+];
+
+const pettyCashNavItems: NavItem[] = [
+    { href: '/dashboard/petty-cash/settings', label: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
 const financialNavItems: NavItem[] = [
@@ -159,6 +167,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems },
   { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems },
   { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
+  { groupLabel: "Petty Cash", icon: Wallet, iconColorClass: 'bg-icon-payment', subLinks: pettyCashNavItems },
   { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
   { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
   { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems },

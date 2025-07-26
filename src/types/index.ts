@@ -1069,3 +1069,74 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
+
+
+// --- Petty Cash Types ---
+export interface PettyCashAccount {
+  id?: string;
+  name: string;
+  balance: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type PettyCashAccountDocument = PettyCashAccount & { id: string };
+
+export interface PettyCashCategory {
+  id?: string;
+  name: string;
+  createdAt?: any;
+}
+export type PettyCashCategoryDocument = PettyCashCategory & { id: string };
+
+export const transactionTypes = ["Debit", "Credit"] as const;
+export type TransactionType = typeof transactionTypes[number];
+
+export interface PettyCashTransaction {
+  id?: string;
+  transactionDate: string; // ISO string
+  accountId: string;
+  accountName: string; // Denormalized
+  type: TransactionType;
+  payeeName?: string;
+  categoryId?: string;
+  categoryName?: string; // Denormalized
+  purpose?: string;
+  description?: string;
+  amount: number;
+  connectedSaleId?: string;
+  createdBy: string; // User's display name or ID
+  createdAt?: any;
+}
+export type PettyCashTransactionDocument = PettyCashTransaction & { id: string; createdAt: any; };
+
+export const PettyCashAccountSchema = z.object({
+  name: z.string().min(2, "Account name must be at least 2 characters long."),
+  balance: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Initial balance must be a number." }).min(0, "Balance cannot be negative.")
+  ),
+});
+export type PettyCashAccountFormValues = z.infer<typeof PettyCashAccountSchema>;
+
+export const PettyCashCategorySchema = z.object({
+  name: z.string().min(2, "Category name must be at least 2 characters long."),
+});
+export type PettyCashCategoryFormValues = z.infer<typeof PettyCashCategorySchema>;
+
+export const PettyCashTransactionSchema = z.object({
+  transactionDate: z.date({ required_error: "Transaction date is required." }),
+  accountId: z.string().min(1, "Source Account is required."),
+  type: z.enum(transactionTypes, { required_error: "Transaction Type is required." }),
+  payeeName: z.string().min(1, "Payee name is required."),
+  categoryId: z.string().min(1, "Category is required."),
+  purpose: z.string().optional(),
+  description: z.string().optional(),
+  amount: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+    z.number({ invalid_type_error: "Amount must be a number." }).positive("Amount must be a positive number.")
+  ),
+  connectedSaleId: z.string().optional(),
+});
+export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransactionSchema>;
+// --- END Petty Cash Types ---
+
