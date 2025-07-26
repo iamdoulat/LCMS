@@ -188,7 +188,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         machineOwner: data.machineOwner,
         currentStatus: data.currentStatus,
         machineReturned: data.machineReturned,
-        imageUrl: data.imageUrl,
+        imageUrl: data.imageUrl || null,
         updatedAt: serverTimestamp(),
       };
       
