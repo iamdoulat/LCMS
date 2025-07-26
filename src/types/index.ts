@@ -1069,17 +1069,3 @@ export type SaleDocument = Omit<InvoiceDocument, 'status'> & {
     status?: SaleStatus;
 };
 // --- END Sale Types ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
