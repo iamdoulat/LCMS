@@ -1107,7 +1107,7 @@ export interface PettyCashTransaction {
   createdBy: string; // User's display name or ID
   createdAt?: any;
 }
-export type PettyCashTransactionDocument = PettyCashTransaction & { id: string; createdAt: any; };
+export type PettyCashTransactionDocument = PettyCashTransaction & { id: string };
 
 export const PettyCashAccountSchema = z.object({
   name: z.string().min(2, "Account name must be at least 2 characters long."),
