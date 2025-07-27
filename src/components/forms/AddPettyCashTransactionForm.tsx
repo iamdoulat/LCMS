@@ -93,7 +93,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   React.useEffect(() => {
     if (!isLoadingDropdowns && accountOptions.length > 0) {
       if (form.getValues('accountIds').length === 0) {
-         form.setValue('accountIds', [accountOptions[0].value], { shouldValidate: true });
+         const pettyCashAccount = accountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
+         if (pettyCashAccount) {
+            form.setValue('accountIds', [pettyCashAccount.value], { shouldValidate: true });
+         } else if (accountOptions.length > 0) {
+            form.setValue('accountIds', [accountOptions[0].value], { shouldValidate: true });
+         }
       }
     }
   }, [isLoadingDropdowns, accountOptions, form]);
