@@ -20,9 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select'; // Import MultiSelect
 
 const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
-const PLACEHOLDER_CATEGORY_VALUE = "__PETTY_CASH_CATEGORY_PLACEHOLDER__";
 
 interface AddPettyCashTransactionFormProps {
   onFormSubmit: () => void;
@@ -32,7 +32,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
-  const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]); // Changed to MultiSelectOption
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
   const form = useForm<PettyCashTransactionFormValues>({
@@ -42,7 +42,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       accountId: '',
       type: 'Debit',
       payeeName: '',
-      categoryId: '',
+      categoryIds: [], // Changed from categoryId
       purpose: '',
       description: '',
       amount: undefined,
@@ -51,11 +51,13 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     },
   });
 
-  const watchedCategoryId = form.watch("categoryId");
-  const selectedCategoryName = React.useMemo(() => {
-    return categoryOptions.find(opt => opt.value === watchedCategoryId)?.label;
-  }, [watchedCategoryId, categoryOptions]);
-  const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
+  const watchedCategoryIds = form.watch("categoryIds");
+  const selectedCategoryNames = React.useMemo(() => {
+    return categoryOptions
+      .filter(opt => watchedCategoryIds?.includes(opt.value))
+      .map(opt => opt.label);
+  }, [watchedCategoryIds, categoryOptions]);
+  const showChequeFields = selectedCategoryNames.includes("Cheque Received") || selectedCategoryNames.includes("Cheque Payment");
   
   React.useEffect(() => {
     const fetchDropdowns = async () => {
@@ -89,23 +91,20 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   }, []);
 
   React.useEffect(() => {
-    if (!isLoadingDropdowns && accountOptions.length > 0 && categoryOptions.length > 0) {
+    if (!isLoadingDropdowns && accountOptions.length > 0) {
       if (!form.getValues('accountId')) {
          form.setValue('accountId', accountOptions[0].value, { shouldValidate: true });
       }
-      if (!form.getValues('categoryId')) {
-         form.setValue('categoryId', categoryOptions[0].value, { shouldValidate: true });
-      }
     }
-  }, [isLoadingDropdowns, accountOptions, categoryOptions, form]);
+  }, [isLoadingDropdowns, accountOptions, form]);
   
   React.useEffect(() => {
-    if (selectedCategoryName === "Cheque Received") {
+    if (selectedCategoryNames.includes("Cheque Received")) {
       form.setValue('type', 'Credit');
-    } else if (selectedCategoryName === "Cheque Payment") {
+    } else if (selectedCategoryNames.includes("Cheque Payment")) {
       form.setValue('type', 'Debit');
     }
-  }, [selectedCategoryName, form]);
+  }, [selectedCategoryNames, form]);
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
@@ -115,12 +114,13 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     setIsSubmitting(true);
     
     const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
-    const selectedCategory = categoryOptions.find(opt => opt.value === data.categoryId);
+    const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
 
     const dataToSave = {
       ...data,
       accountName: selectedAccount?.label || 'N/A',
-      categoryName: selectedCategory?.label || 'N/A',
+      categoryIds: data.categoryIds, // Ensure it's an array
+      categoryNames: selectedCategories.map(c => c.label), // Save array of names
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       amount: Number(data.amount),
       chequeType: showChequeFields ? data.chequeType : undefined,
@@ -132,7 +132,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     
     Object.keys(dataToSave).forEach(key => {
         const typedKey = key as keyof typeof dataToSave;
-        if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === '') {
+        if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === '' || (Array.isArray(dataToSave[typedKey]) && (dataToSave[typedKey] as any[]).length === 0)) {
             delete (dataToSave as any)[typedKey];
         }
     });
@@ -172,15 +172,16 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
                 </FormItem>
             )}/>
              <FormField
-                control={form.control} name="categoryId" render={({ field }) => (
+                control={form.control} name="categoryIds" render={({ field }) => (
                 <FormItem>
                     <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
-                    <Combobox
-                        options={categoryOptions}
-                        value={field.value || PLACEHOLDER_CATEGORY_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_CATEGORY_VALUE ? '' : value)}
-                        placeholder="Search Category..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select a Category"}
-                        emptyStateMessage="No category found." disabled={isLoadingDropdowns}/>
+                    <MultiSelect
+                      options={categoryOptions}
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Select categories..."
+                      disabled={isLoadingDropdowns}
+                    />
                     <FormMessage />
                 </FormItem>
             )}/>

@@ -1101,8 +1101,8 @@ export interface PettyCashTransaction {
   accountName: string; // Denormalized
   type: TransactionType;
   payeeName?: string;
-  categoryId?: string;
-  categoryName?: string; // Denormalized
+  categoryIds?: string[]; // Changed to array
+  categoryNames?: string[]; // Denormalized names
   purpose?: string;
   description?: string;
   amount: number;
@@ -1133,7 +1133,7 @@ export const PettyCashTransactionSchema = z.object({
   accountId: z.string().min(1, "Source Account is required."),
   type: z.enum(transactionTypes, { required_error: "Transaction Type is required." }),
   payeeName: z.string().min(1, "Payee name is required."),
-  categoryId: z.string().min(1, "Category is required."),
+  categoryIds: z.array(z.string()).min(1, "At least one category is required."), // Changed to array
   purpose: z.string().optional(),
   description: z.string().optional(),
   amount: z.preprocess(
@@ -1146,3 +1146,4 @@ export const PettyCashTransactionSchema = z.object({
 });
 export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransactionSchema>;
 // --- END Petty Cash Types ---
+
