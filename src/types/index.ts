@@ -1132,7 +1132,7 @@ export const PettyCashTransactionSchema = z.object({
   transactionDate: z.date({ required_error: "Transaction date is required." }),
   type: z.enum(transactionTypes, { required_error: "Transaction Type is required." }),
   payeeName: z.string().min(1, "Payee name is required."),
-  categoryId: z.string().optional(),
+  categoryId: z.string().min(1, "Category is required."),
   purpose: z.string().optional(),
   description: z.string().optional(),
   amount: z.preprocess(
@@ -1142,7 +1142,7 @@ export const PettyCashTransactionSchema = z.object({
   chequeType: z.enum(chequeTypeOptions).optional(),
   chequeNumber: z.string().optional(),
   connectedSaleId: z.string().optional(),
-  // accountId is no longer in the form, so it's not needed here for validation
 });
 export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransactionSchema>;
 // --- END Petty Cash Types ---
+
