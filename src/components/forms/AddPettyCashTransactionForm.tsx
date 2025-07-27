@@ -84,12 +84,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
 
             const defaultAccount = fetchedAccounts.find(acc => acc.label === "Petty Cash");
             if (defaultAccount) {
-                form.setValue("accountId", defaultAccount.value, { shouldDirty: true, shouldValidate: true });
+                form.setValue("accountId", defaultAccount.value);
             }
 
             const defaultCategory = fetchedCategories.find(cat => cat.label === "General Expense");
             if (defaultCategory) {
-                form.setValue("categoryId", defaultCategory.value, { shouldDirty: true, shouldValidate: true });
+                form.setValue("categoryId", defaultCategory.value);
             }
         } catch (error) {
             console.error("Error fetching dropdown options:", error);
