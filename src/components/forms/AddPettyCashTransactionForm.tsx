@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
-import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select'; // Import MultiSelect
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 
 const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
 
@@ -31,18 +31,18 @@ interface AddPettyCashTransactionFormProps {
 export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
-  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]); // Changed to MultiSelectOption
+  const [accountOptions, setAccountOptions] = React.useState<MultiSelectOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
   const form = useForm<PettyCashTransactionFormValues>({
     resolver: zodResolver(PettyCashTransactionSchema),
     defaultValues: {
       transactionDate: new Date(),
-      accountId: '',
+      accountIds: [],
       type: 'Debit',
       payeeName: '',
-      categoryIds: [], // Changed from categoryId
+      categoryIds: [],
       purpose: '',
       description: '',
       amount: undefined,
@@ -92,8 +92,8 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
 
   React.useEffect(() => {
     if (!isLoadingDropdowns && accountOptions.length > 0) {
-      if (!form.getValues('accountId')) {
-         form.setValue('accountId', accountOptions[0].value, { shouldValidate: true });
+      if (form.getValues('accountIds').length === 0) {
+         form.setValue('accountIds', [accountOptions[0].value], { shouldValidate: true });
       }
     }
   }, [isLoadingDropdowns, accountOptions, form]);
@@ -113,14 +113,15 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     }
     setIsSubmitting(true);
     
-    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
+    const selectedAccounts = accountOptions.filter(opt => data.accountIds?.includes(opt.value));
     const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
 
     const dataToSave = {
       ...data,
-      accountName: selectedAccount?.label || 'N/A',
-      categoryIds: data.categoryIds, // Ensure it's an array
-      categoryNames: selectedCategories.map(c => c.label), // Save array of names
+      accountIds: data.accountIds,
+      accountNames: selectedAccounts.map(a => a.label),
+      categoryIds: data.categoryIds,
+      categoryNames: selectedCategories.map(c => c.label),
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       amount: Number(data.amount),
       chequeType: showChequeFields ? data.chequeType : undefined,
@@ -159,15 +160,16 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
-                control={form.control} name="accountId" render={({ field }) => (
+                control={form.control} name="accountIds" render={({ field }) => (
                 <FormItem>
                     <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Source Account*</FormLabel>
-                    <Combobox
-                        options={accountOptions}
-                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
-                        placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
-                        emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
+                     <MultiSelect
+                      options={accountOptions}
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Select accounts..."
+                      disabled={isLoadingDropdowns}
+                    />
                     <FormMessage />
                 </FormItem>
             )}/>
