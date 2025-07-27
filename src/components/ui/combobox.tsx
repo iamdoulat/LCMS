@@ -11,7 +11,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import {
@@ -64,15 +63,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0 dropdown-popover-content-width">
-        <Command
-          filter={(value, search) => {
-            const option = options.find(option => option.label.toLowerCase() === value.toLowerCase());
-            if (option && option.label.toLowerCase().includes(search.toLowerCase())) {
-              return 1;
-            }
-            return 0;
-          }}
-        >
+        <Command>
           <CommandInput placeholder={placeholder} />
           <CommandList>
             <CommandEmpty>{emptyStateMessage}</CommandEmpty>
