@@ -64,7 +64,15 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0 dropdown-popover-content-width">
-        <Command shouldFilter={true}> {/* Let Command handle filtering based on CommandInput */}
+        <Command
+          filter={(value, search) => {
+            const option = options.find(option => option.label.toLowerCase() === value.toLowerCase());
+            if (option && option.label.toLowerCase().includes(search.toLowerCase())) {
+              return 1;
+            }
+            return 0;
+          }}
+        >
           <CommandInput placeholder={placeholder} />
           <CommandList>
             <CommandEmpty>{emptyStateMessage}</CommandEmpty>
@@ -72,9 +80,9 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label} // CommandInput filters based on this value (the label)
+                  value={option.label}
                   onSelect={() => {
-                    onValueChange(option.value === value ? "" : option.value); // Allow deselecting by clicking current, or select new
+                    onValueChange(option.value === value ? "" : option.value);
                     setOpen(false);
                   }}
                 >
