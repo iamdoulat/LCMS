@@ -6,9 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { format, parseISO, isValid } from 'date-fns';
-import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, PettyCashTransactionDocument, ChequeType } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
+import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, ChequeType } from '@/types';
 import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,12 +24,11 @@ import { useAuth } from '@/context/AuthContext';
 const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
 const PLACEHOLDER_CATEGORY_VALUE = "__PETTY_CASH_CATEGORY_PLACEHOLDER__";
 
-interface EditPettyCashTransactionFormProps {
-  initialData: PettyCashTransactionDocument;
+interface AddPettyCashTransactionFormProps {
   onFormSubmit: () => void;
 }
 
-export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: EditPettyCashTransactionFormProps) {
+export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
@@ -38,24 +37,19 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
 
   const form = useForm<PettyCashTransactionFormValues>({
     resolver: zodResolver(PettyCashTransactionSchema),
+    defaultValues: {
+      transactionDate: new Date(),
+      accountId: '',
+      type: 'Debit',
+      payeeName: '',
+      categoryId: '',
+      purpose: '',
+      description: '',
+      amount: undefined,
+      chequeType: undefined,
+      chequeNumber: undefined,
+    },
   });
-
-  React.useEffect(() => {
-    if (initialData) {
-        form.reset({
-            transactionDate: initialData.transactionDate ? parseISO(initialData.transactionDate) : new Date(),
-            accountId: initialData.accountId,
-            type: initialData.type,
-            payeeName: initialData.payeeName,
-            categoryId: initialData.categoryId,
-            purpose: initialData.purpose,
-            description: initialData.description,
-            amount: initialData.amount,
-            chequeType: initialData.chequeType,
-            chequeNumber: initialData.chequeNumber,
-        });
-    }
-  }, [initialData, form]);
 
   const watchedCategoryId = form.watch("categoryId");
   const selectedCategoryName = React.useMemo(() => {
@@ -63,36 +57,52 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
   }, [watchedCategoryId, categoryOptions]);
   const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
 
+
   React.useEffect(() => {
     const fetchDropdowns = async () => {
-        setIsLoadingDropdowns(true);
-        try {
-            const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
-            const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
+      setIsLoadingDropdowns(true);
+      try {
+        const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
+        const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
 
-            const [accountsSnapshot, categoriesSnapshot] = await Promise.all([
-                getDocs(accountsQuery),
-                getDocs(categoriesQuery)
-            ]);
+        const [accountsSnapshot, categoriesSnapshot] = await Promise.all([
+            getDocs(accountsQuery),
+            getDocs(categoriesQuery)
+        ]);
 
-            setAccountOptions(accountsSnapshot.docs.map(docSnap => ({
-                value: docSnap.id,
-                label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
-            })));
-            setCategoryOptions(categoriesSnapshot.docs.map(docSnap => ({
-              value: docSnap.id,
-              label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
-            })));
+        const fetchedAccounts = accountsSnapshot.docs.map(docSnap => ({
+            value: docSnap.id,
+            label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
+        }));
+        setAccountOptions(fetchedAccounts);
 
-        } catch (error) {
-            console.error("Error fetching dropdown options:", error);
-            Swal.fire("Error", "Could not load accounts or categories.", "error");
-        } finally {
-            setIsLoadingDropdowns(false);
+        const fetchedCategories = categoriesSnapshot.docs.map(docSnap => ({
+          value: docSnap.id,
+          label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
+        }));
+        setCategoryOptions(fetchedCategories);
+        
+        // Set default account after options are loaded
+        const defaultAccount = fetchedAccounts.find(acc => acc.label === "Petty Cash");
+        if (defaultAccount) {
+            form.setValue("accountId", defaultAccount.value);
         }
+
+        // Set default category after options are loaded
+        const defaultCategory = fetchedCategories.find(cat => cat.label === "General Expense");
+        if (defaultCategory) {
+            form.setValue("categoryId", defaultCategory.value);
+        }
+
+      } catch (error) {
+          console.error("Error fetching dropdown options:", error);
+          Swal.fire("Error", "Could not load accounts or categories.", "error");
+      } finally {
+          setIsLoadingDropdowns(false);
+      }
     };
     fetchDropdowns();
-  }, []);
+  }, [form]);
   
   React.useEffect(() => {
     if (selectedCategoryName === "Cheque Received") {
@@ -104,7 +114,7 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
-      Swal.fire("Authentication Error", "You must be logged in to update a transaction.", "error");
+      Swal.fire("Authentication Error", "You must be logged in to create a transaction.", "error");
       return;
     }
     setIsSubmitting(true);
@@ -112,36 +122,38 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategory = categoryOptions.find(opt => opt.value === data.categoryId);
 
-    const dataToUpdate = {
+    const dataToSave = {
       ...data,
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      accountName: selectedAccount?.label || initialData.accountName,
-      categoryName: selectedCategory?.label || initialData.categoryName,
+      accountName: selectedAccount?.label || 'Unknown Account',
+      categoryName: selectedCategory?.label || 'Unknown Category',
       amount: Number(data.amount),
       chequeType: showChequeFields ? data.chequeType : undefined,
       chequeNumber: showChequeFields ? data.chequeNumber : undefined,
+      createdBy: user.displayName || user.email || "Unknown User",
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
     
-    Object.keys(dataToUpdate).forEach(key => {
-        const typedKey = key as keyof typeof dataToUpdate;
-        if (dataToUpdate[typedKey] === undefined || dataToUpdate[typedKey] === '') {
-            delete (dataToUpdate as any)[typedKey];
+    Object.keys(dataToSave).forEach(key => {
+        const typedKey = key as keyof typeof dataToSave;
+        if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === '') {
+            delete (dataToSave as any)[typedKey];
         }
     });
 
     try {
-      const transactionDocRef = doc(firestore, "petty_cash_transactions", initialData.id);
-      await updateDoc(transactionDocRef, dataToUpdate);
+      await addDoc(collection(firestore, "petty_cash_transactions"), dataToSave);
       Swal.fire({
-        title: "Transaction Updated!",
+        title: "Transaction Saved!",
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       });
-      onFormSubmit();
+      form.reset();
+      onFormSubmit(); // Close the dialog
     } catch (error: any) {
-      Swal.fire("Update Failed", `Failed to update transaction: ${error.message}`, "error");
+      Swal.fire("Save Failed", `Failed to save transaction: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -247,11 +259,21 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
         )}/>
         <div className="flex justify-end pt-2">
             <Button type="submit" disabled={isSubmitting || isLoadingDropdowns}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+            {isSubmitting ? (
+                <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+                </>
+            ) : (
+                <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Transaction
+                </>
+            )}
             </Button>
         </div>
       </form>
     </Form>
   );
 }
+
