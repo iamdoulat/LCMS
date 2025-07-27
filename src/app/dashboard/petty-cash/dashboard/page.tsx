@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
@@ -185,6 +185,8 @@ export default function PettyCashDashboardPage() {
             }
         });
     };
+    
+    const netFlow = stats.thisMonthDebits - stats.thisMonthCredits;
 
     if (isLoading) {
         return (
@@ -236,9 +238,16 @@ export default function PettyCashDashboardPage() {
                     <StatCard
                         title="This Month's Credits"
                         value={formatCurrency(stats.thisMonthCredits)}
-                        icon={<Banknote />}
+                        icon={<TrendingDown />}
                         description={`In ${format(new Date(), 'MMMM')}`}
-                        className="bg-red-500"
+                        className="bg-orange-500"
+                    />
+                    <StatCard
+                        title="Net Flow (This Month)"
+                        value={formatCurrency(netFlow)}
+                        icon={<GitCommitVertical />}
+                        description={`In ${format(new Date(), 'MMMM')}`}
+                        className={cn(netFlow >= 0 ? "bg-green-600" : "bg-red-600")}
                     />
                     <StatCard
                         title="Total Unpaid Invoices"
