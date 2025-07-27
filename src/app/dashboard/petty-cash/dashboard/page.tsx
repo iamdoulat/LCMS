@@ -68,17 +68,18 @@ export default function PettyCashDashboardPage() {
     const [editingTransaction, setEditingTransaction] = React.useState<PettyCashTransactionDocument | null>(null);
 
     React.useEffect(() => {
-        const fetchStats = async () => {
+        let initialPettyCashBalance = 0;
+        
+        const fetchStatsAndListen = async () => {
             setIsLoading(true);
             setFetchError(null);
             try {
-                // Fetch petty cash account balance
+                // Fetch initial petty cash account balance once
                 const accountsQuery = query(collection(firestore, "petty_cash_accounts"), where("name", "==", "Petty Cash"));
                 const accountsSnapshot = await getDocs(accountsQuery);
-                let pettyCashBalance = 0;
                 if (!accountsSnapshot.empty) {
                     const pettyCashDoc = accountsSnapshot.docs[0];
-                    pettyCashBalance = (pettyCashDoc.data() as PettyCashAccountDocument).balance || 0;
+                    initialPettyCashBalance = (pettyCashDoc.data() as PettyCashAccountDocument).balance || 0;
                 }
 
                 // Fetch sales invoice stats
@@ -105,11 +106,12 @@ export default function PettyCashDashboardPage() {
                         }
                     }
                 });
-
-                setStats(prev => ({ ...prev, pettyCashBalance, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
+                
+                // Set initial stats once before starting listener
+                 setStats(prev => ({ ...prev, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
 
             } catch (error: any) {
-                console.error("Error fetching stats:", error);
+                console.error("Error fetching initial stats:", error);
                 setFetchError(error.message || "An unknown error occurred while fetching stats.");
             } finally {
                 setIsLoading(false);
@@ -124,27 +126,44 @@ export default function PettyCashDashboardPage() {
 
                 let thisMonthDebits = 0;
                 let thisMonthCredits = 0;
+                let totalDebits = 0;
+                let totalCredits = 0;
                 const now = new Date();
                 const start = startOfMonth(now);
                 const end = endOfMonth(now);
 
                 fetchedTransactions.forEach(tx => {
+                    const amount = tx.amount || 0;
+                    if (tx.type === 'Debit') {
+                        totalDebits += amount;
+                    } else if (tx.type === 'Credit') {
+                        totalCredits += amount;
+                    }
+
                     if (!tx.transactionDate) return;
                     let txDate: Date;
                     try {
                         txDate = parseISO(tx.transactionDate);
-                         if (!isValid(txDate)) return;
+                        if (!isValid(txDate)) return;
                     } catch(e) { return; }
                     
                     if (isWithinInterval(txDate, { start, end })) {
                         if (tx.type === 'Debit') {
-                            thisMonthDebits += tx.amount;
+                            thisMonthDebits += amount;
                         } else if (tx.type === 'Credit') {
-                            thisMonthCredits += tx.amount;
+                            thisMonthCredits += amount;
                         }
                     }
                 });
-                setStats(prev => ({...prev, thisMonthDebits, thisMonthCredits}));
+
+                const dynamicBalance = initialPettyCashBalance + totalCredits - totalDebits;
+
+                setStats(prev => ({
+                    ...prev, 
+                    thisMonthDebits, 
+                    thisMonthCredits,
+                    pettyCashBalance: dynamicBalance,
+                }));
                 setFetchError(null);
             },
             (error) => {
@@ -153,7 +172,7 @@ export default function PettyCashDashboardPage() {
             }
         );
 
-        fetchStats();
+        fetchStatsAndListen();
 
         return () => {
             unsubTransactions();
@@ -314,12 +333,12 @@ export default function PettyCashDashboardPage() {
                                                 <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
                                                 <TableCell>{tx.accountName}</TableCell>
                                                 <TableCell>
-                                                    <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-green-600' : 'text-red-600')}>
+                                                    <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-red-600' : 'text-green-600')}>
                                                         {tx.type}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>{tx.payeeName}</TableCell>
-                                                <TableCell>{tx.categoryNames?.join(', ') || 'N/A'}</TableCell>
+                                                <TableCell>{tx.categoryName || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -379,3 +398,4 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
+
