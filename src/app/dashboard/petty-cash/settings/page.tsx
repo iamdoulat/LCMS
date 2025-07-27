@@ -3,10 +3,18 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Wallet, List, Edit } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Wallet, List, Edit, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
@@ -121,7 +128,7 @@ export default function PettyCashSettingsPage() {
                         Manage source accounts and transaction categories for your petty cash.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <CardContent className="space-y-8">
                     {/* Source Accounts Card */}
                     <Dialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen}>
                         <Card>
@@ -140,19 +147,27 @@ export default function PettyCashSettingsPage() {
                                  accounts.length === 0 ? <div className="text-muted-foreground text-center p-4">No accounts found.</div> :
                                 (
                                     <div className="rounded-md border">
-                                        <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[100px]">Actions</TableHead></TableRow></TableHeader>
+                                        <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {accounts.map(acc => (
                                                 <TableRow key={acc.id}>
                                                     <TableCell>{acc.name}</TableCell>
                                                     <TableCell className="text-right font-medium">{formatCurrency(acc.balance)}</TableCell>
-                                                    <TableCell className="text-right space-x-1">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditAccount(acc)} disabled={isReadOnly}>
-                                                            <Edit className="h-4 w-4 text-accent"/>
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} disabled={isReadOnly}>
-                                                            <Trash2 className="h-4 w-4 text-destructive"/>
-                                                        </Button>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
+                                                                    <span className="sr-only">Open menu</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                <DropdownMenuItem onClick={() => handleEditAccount(acc)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -188,18 +203,26 @@ export default function PettyCashSettingsPage() {
                                  categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
                                 (
                                     <div className="rounded-md border">
-                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[100px]">Actions</TableHead></TableRow></TableHeader>
+                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {categories.map(cat => (
                                                 <TableRow key={cat.id}>
                                                     <TableCell>{cat.name}</TableCell>
-                                                    <TableCell className="text-right space-x-1">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditCategory(cat)} disabled={isReadOnly}>
-                                                            <Edit className="h-4 w-4 text-accent"/>
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} disabled={isReadOnly}>
-                                                            <Trash2 className="h-4 w-4 text-destructive"/>
-                                                        </Button>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
+                                                                    <span className="sr-only">Open menu</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                <DropdownMenuItem onClick={() => handleEditCategory(cat)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
