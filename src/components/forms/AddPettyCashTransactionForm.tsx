@@ -8,19 +8,20 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
-import type { PettyCashTransactionFormValues, PettyCashCategoryDocument, PettyCashTransactionDocument, ChequeType } from '@/types';
+import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, ChequeType } from '@/types';
 import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, DollarSign, User, List, HelpCircle } from 'lucide-react';
+import { Loader2, Save, DollarSign, User, List, HelpCircle, Wallet } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 
+const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
 const PLACEHOLDER_CATEGORY_VALUE = "__PETTY_CASH_CATEGORY_PLACEHOLDER__";
 
 interface AddPettyCashTransactionFormProps {
@@ -30,6 +31,7 @@ interface AddPettyCashTransactionFormProps {
 export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -37,6 +39,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     resolver: zodResolver(PettyCashTransactionSchema),
     defaultValues: {
       transactionDate: new Date(),
+      accountId: '',
       type: 'Debit',
       payeeName: '',
       categoryId: '',
@@ -55,34 +58,46 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
   
   React.useEffect(() => {
-    const fetchCategories = async () => {
-      setIsLoadingDropdowns(true);
-      try {
-        const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
-        const categoriesSnapshot = await getDocs(categoriesQuery);
-        setCategoryOptions(
-          categoriesSnapshot.docs.map(docSnap => ({
-            value: docSnap.id,
-            label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        Swal.fire("Error", "Could not load transaction categories.", "error");
-      } finally {
-        setIsLoadingDropdowns(false);
-      }
+    const fetchDropdowns = async () => {
+        setIsLoadingDropdowns(true);
+        try {
+            const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
+            const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
+
+            const [accountsSnapshot, categoriesSnapshot] = await Promise.all([
+                getDocs(accountsQuery),
+                getDocs(categoriesQuery)
+            ]);
+
+            setAccountOptions(accountsSnapshot.docs.map(docSnap => ({
+                value: docSnap.id,
+                label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
+            })));
+            setCategoryOptions(categoriesSnapshot.docs.map(docSnap => ({
+              value: docSnap.id,
+              label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
+            })));
+
+        } catch (error) {
+            console.error("Error fetching dropdown options:", error);
+            Swal.fire("Error", "Could not load accounts or categories.", "error");
+        } finally {
+            setIsLoadingDropdowns(false);
+        }
     };
-    fetchCategories();
+    fetchDropdowns();
   }, []);
 
   React.useEffect(() => {
-    if (!isLoadingDropdowns && categoryOptions.length > 0) {
+    if (!isLoadingDropdowns && accountOptions.length > 0 && categoryOptions.length > 0) {
+      if (!form.getValues('accountId')) {
+         form.setValue('accountId', accountOptions[0].value, { shouldValidate: true });
+      }
       if (!form.getValues('categoryId')) {
          form.setValue('categoryId', categoryOptions[0].value, { shouldValidate: true });
       }
     }
-  }, [isLoadingDropdowns, categoryOptions, form]);
+  }, [isLoadingDropdowns, accountOptions, categoryOptions, form]);
   
   React.useEffect(() => {
     if (selectedCategoryName === "Cheque Received") {
@@ -99,14 +114,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     }
     setIsSubmitting(true);
     
-    const defaultAccountId = 'main_petty_cash'; 
-    const defaultAccountName = 'Petty Cash';
+    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategory = categoryOptions.find(opt => opt.value === data.categoryId);
 
     const dataToSave = {
       ...data,
-      accountId: defaultAccountId,
-      accountName: defaultAccountName,
+      accountName: selectedAccount?.label || 'N/A',
       categoryName: selectedCategory?.label || 'N/A',
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       amount: Number(data.amount),
@@ -133,7 +146,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
         showConfirmButton: false,
       });
       form.reset();
-      onFormSubmit(); // Close the dialog
+      onFormSubmit();
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to save transaction: ${error.message}`, "error");
     } finally {
@@ -144,9 +157,20 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FormField control={form.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{transactionTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+                control={form.control} name="accountId" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Source Account*</FormLabel>
+                    <Combobox
+                        options={accountOptions}
+                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
+                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
+                        placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
+                        emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
+                    <FormMessage />
+                </FormItem>
+            )}/>
              <FormField
                 control={form.control} name="categoryId" render={({ field }) => (
                 <FormItem>
@@ -160,6 +184,10 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
                     <FormMessage />
                 </FormItem>
             )}/>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField control={form.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{transactionTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
