@@ -39,29 +39,13 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
   const form = useForm<PettyCashTransactionFormValues>({
     resolver: zodResolver(PettyCashTransactionSchema),
   });
-
-  React.useEffect(() => {
-    if (initialData) {
-        form.reset({
-            transactionDate: initialData.transactionDate ? parseISO(initialData.transactionDate) : new Date(),
-            accountId: initialData.accountId,
-            type: initialData.type,
-            payeeName: initialData.payeeName,
-            categoryId: initialData.categoryId,
-            purpose: initialData.purpose,
-            description: initialData.description,
-            amount: initialData.amount,
-            chequeType: initialData.chequeType,
-            chequeNumber: initialData.chequeNumber,
-        });
-    }
-  }, [initialData, form]);
-
+  
   const watchedCategoryId = form.watch("categoryId");
   const selectedCategoryName = React.useMemo(() => {
     return categoryOptions.find(opt => opt.value === watchedCategoryId)?.label;
   }, [watchedCategoryId, categoryOptions]);
   const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
+
 
   React.useEffect(() => {
     const fetchDropdowns = async () => {
@@ -93,6 +77,23 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     };
     fetchDropdowns();
   }, []);
+
+  React.useEffect(() => {
+    if (initialData && !isLoadingDropdowns) {
+        form.reset({
+            transactionDate: initialData.transactionDate ? parseISO(initialData.transactionDate) : new Date(),
+            accountId: initialData.accountId,
+            type: initialData.type,
+            payeeName: initialData.payeeName,
+            categoryId: initialData.categoryId,
+            purpose: initialData.purpose,
+            description: initialData.description,
+            amount: initialData.amount,
+            chequeType: initialData.chequeType,
+            chequeNumber: initialData.chequeNumber,
+        });
+    }
+  }, [initialData, form, isLoadingDropdowns]);
   
   React.useEffect(() => {
     if (selectedCategoryName === "Cheque Received") {
