@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -1090,6 +1091,9 @@ export type PettyCashCategoryDocument = PettyCashCategory & { id: string };
 export const transactionTypes = ["Debit", "Credit"] as const;
 export type TransactionType = typeof transactionTypes[number];
 
+export const chequeTypeOptions = ["Cash", "Account Pay"] as const;
+export type ChequeType = typeof chequeTypeOptions[number];
+
 export interface PettyCashTransaction {
   id?: string;
   transactionDate: string; // ISO string
@@ -1102,6 +1106,8 @@ export interface PettyCashTransaction {
   purpose?: string;
   description?: string;
   amount: number;
+  chequeType?: ChequeType;
+  chequeNumber?: string;
   connectedSaleId?: string;
   createdBy: string; // User's display name or ID
   createdAt?: any;
@@ -1134,6 +1140,8 @@ export const PettyCashTransactionSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Amount must be a number." }).positive("Amount must be a positive number.")
   ),
+  chequeType: z.enum(chequeTypeOptions).optional(),
+  chequeNumber: z.string().optional(),
   connectedSaleId: z.string().optional(),
 });
 export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransactionSchema>;

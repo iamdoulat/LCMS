@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
-import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument } from '@/types';
-import { PettyCashTransactionSchema, transactionTypes } from '@/types';
+import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, ChequeType } from '@/types';
+import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,6 +17,7 @@ import { DatePickerField } from './DatePickerField';
 import { Loader2, Save, DollarSign, User, List, HelpCircle } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 
@@ -45,10 +46,16 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       purpose: '',
       description: '',
       amount: undefined,
+      chequeType: undefined,
+      chequeNumber: undefined,
     },
   });
 
   const watchedCategoryId = form.watch("categoryId");
+  const selectedCategoryName = React.useMemo(() => {
+    return categoryOptions.find(opt => opt.value === watchedCategoryId)?.label;
+  }, [watchedCategoryId, categoryOptions]);
+  const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
 
   React.useEffect(() => {
     const fetchDropdowns = async () => {
@@ -74,7 +81,6 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             }));
             setCategoryOptions(fetchedCategoryOptions);
             
-            // Set default account to "Petty Cash" if it exists
             const defaultAccount = fetchedAccountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
             if (defaultAccount) {
                 form.setValue('accountId', defaultAccount.value);
@@ -91,18 +97,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   }, [form]);
   
   React.useEffect(() => {
-    if (watchedCategoryId && categoryOptions.length > 0) {
-      const selectedCategory = categoryOptions.find(opt => opt.value === watchedCategoryId);
-      if (selectedCategory) {
-        if (selectedCategory.label === "Cheque Received") {
-          form.setValue('type', 'Credit');
-        } else if (selectedCategory.label === "Cheque Payment") {
-          form.setValue('type', 'Debit');
-        }
-      }
+    if (selectedCategoryName === "Cheque Received") {
+      form.setValue('type', 'Credit');
+    } else if (selectedCategoryName === "Cheque Payment") {
+      form.setValue('type', 'Debit');
     }
-  }, [watchedCategoryId, categoryOptions, form]);
-
+  }, [selectedCategoryName, form]);
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
@@ -120,11 +120,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       accountName: selectedAccount?.label || 'N/A',
       categoryName: selectedCategory?.label || 'N/A',
       amount: Number(data.amount),
+      chequeType: showChequeFields ? data.chequeType : undefined,
+      chequeNumber: showChequeFields ? data.chequeNumber : undefined,
       createdBy: user.displayName || user.email,
       createdAt: serverTimestamp(),
     };
     
-    // Clean up optional fields that are empty
     Object.keys(dataToSave).forEach(key => {
         const typedKey = key as keyof typeof dataToSave;
         if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === '') {
@@ -141,7 +142,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
         showConfirmButton: false,
       });
       form.reset();
-      onFormSubmit(); // Close the dialog
+      onFormSubmit();
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to save transaction: ${error.message}`, "error");
     } finally {
@@ -200,14 +201,45 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
                 <FormMessage />
             </FormItem>
         )}/>
-        <FormField
-            control={form.control} name="amount" render={({ field }) => (
-            <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="mr-1.5 h-4 w-4 text-muted-foreground"/>Amount*</FormLabel>
-                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )}/>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <FormField
+                control={form.control} name="amount" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-1.5 h-4 w-4 text-muted-foreground"/>Amount*</FormLabel>
+                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+            {showChequeFields && (
+                <>
+                    <FormField
+                        control={form.control} name="chequeType" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Cheque Type</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
+                                    {chequeTypeOptions.map(type => (
+                                        <FormItem key={type} className="flex items-center space-x-2 space-y-0">
+                                            <FormControl><RadioGroupItem value={type} /></FormControl>
+                                            <FormLabel className="font-normal">{type}</FormLabel>
+                                        </FormItem>
+                                    ))}
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                    <FormField
+                        control={form.control} name="chequeNumber" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Cheque Number</FormLabel>
+                            <FormControl><Input placeholder="Enter cheque number" {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                </>
+            )}
+        </div>
         <FormField
             control={form.control} name="description" render={({ field }) => (
             <FormItem>
