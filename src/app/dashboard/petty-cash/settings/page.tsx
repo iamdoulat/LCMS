@@ -22,6 +22,8 @@ import type { PettyCashAccountDocument, PettyCashCategoryDocument } from '@/type
 import Swal from 'sweetalert2';
 import { AddPettyCashAccountForm } from '@/components/forms/AddPettyCashAccountForm';
 import { AddPettyCashCategoryForm } from '@/components/forms/AddPettyCashCategoryForm';
+import { EditPettyCashAccountForm } from '@/components/forms/EditPettyCashAccountForm';
+import { EditPettyCashCategoryForm } from '@/components/forms/EditPettyCashCategoryForm';
 import { useAuth } from '@/context/AuthContext';
 
 const formatCurrency = (value?: number) => {
@@ -39,8 +41,14 @@ export default function PettyCashSettingsPage() {
     const [isLoadingCategories, setIsLoadingCategories] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
 
-    const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
-    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
+    const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = React.useState(false);
+    const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = React.useState(false);
+
+    const [editingAccount, setEditingAccount] = React.useState<PettyCashAccountDocument | null>(null);
+    const [isEditAccountDialogOpen, setIsEditAccountDialogOpen] = React.useState(false);
+
+    const [editingCategory, setEditingCategory] = React.useState<PettyCashCategoryDocument | null>(null);
+    const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
         const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
@@ -69,6 +77,16 @@ export default function PettyCashSettingsPage() {
             unsubCategories();
         };
     }, [fetchError]);
+
+    const handleEditAccount = (account: PettyCashAccountDocument) => {
+        setEditingAccount(account);
+        setIsEditAccountDialogOpen(true);
+    };
+
+    const handleEditCategory = (category: PettyCashCategoryDocument) => {
+        setEditingCategory(category);
+        setIsEditCategoryDialogOpen(true);
+    };
 
     const handleDelete = async (collectionName: string, docId: string, docName: string) => {
         if (isReadOnly) return;
@@ -104,7 +122,8 @@ export default function PettyCashSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+                    {/* Source Accounts Card */}
+                    <Dialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
@@ -121,15 +140,20 @@ export default function PettyCashSettingsPage() {
                                  accounts.length === 0 ? <div className="text-muted-foreground text-center p-4">No accounts found.</div> :
                                 (
                                     <div className="rounded-md border">
-                                        <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[50px]">Action</TableHead></TableRow></TableHeader>
+                                        <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[100px]">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {accounts.map(acc => (
-                                                <TableRow key={acc.id}><TableCell>{acc.name}</TableCell><TableCell className="text-right font-medium">{formatCurrency(acc.balance)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} disabled={isReadOnly}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                                <TableRow key={acc.id}>
+                                                    <TableCell>{acc.name}</TableCell>
+                                                    <TableCell className="text-right font-medium">{formatCurrency(acc.balance)}</TableCell>
+                                                    <TableCell className="text-right space-x-1">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditAccount(acc)} disabled={isReadOnly}>
+                                                            <Edit className="h-4 w-4 text-accent"/>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} disabled={isReadOnly}>
+                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                        </Button>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody></Table>
@@ -142,11 +166,12 @@ export default function PettyCashSettingsPage() {
                                 <DialogTitle>Add New Source Account</DialogTitle>
                                 <DialogDescription>Create a new account to track petty cash funds.</DialogDescription>
                             </DialogHeader>
-                            <AddPettyCashAccountForm onFormSubmit={() => setIsAccountDialogOpen(false)} />
+                            <AddPettyCashAccountForm onFormSubmit={() => setIsAddAccountDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
 
-                    <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                    {/* Transaction Categories Card */}
+                    <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
@@ -163,15 +188,19 @@ export default function PettyCashSettingsPage() {
                                  categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
                                 (
                                     <div className="rounded-md border">
-                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Action</TableHead></TableRow></TableHeader>
+                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[100px]">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {categories.map(cat => (
-                                                <TableRow key={cat.id}><TableCell>{cat.name}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} disabled={isReadOnly}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                                <TableRow key={cat.id}>
+                                                    <TableCell>{cat.name}</TableCell>
+                                                    <TableCell className="text-right space-x-1">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditCategory(cat)} disabled={isReadOnly}>
+                                                            <Edit className="h-4 w-4 text-accent"/>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} disabled={isReadOnly}>
+                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                        </Button>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody></Table>
@@ -184,13 +213,43 @@ export default function PettyCashSettingsPage() {
                                 <DialogTitle>Add New Category</DialogTitle>
                                 <DialogDescription>Create a new category to classify transactions.</DialogDescription>
                             </DialogHeader>
-                            <AddPettyCashCategoryForm onFormSubmit={() => setIsCategoryDialogOpen(false)} />
+                            <AddPettyCashCategoryForm onFormSubmit={() => setIsAddCategoryDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
-
                 </CardContent>
             </Card>
+
+            {/* Edit Account Dialog */}
+            {editingAccount && (
+                <Dialog open={isEditAccountDialogOpen} onOpenChange={setIsEditAccountDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Source Account</DialogTitle>
+                            <DialogDescription>Update the details for the "{editingAccount.name}" account.</DialogDescription>
+                        </DialogHeader>
+                        <EditPettyCashAccountForm 
+                          initialData={editingAccount} 
+                          onFormSubmit={() => setIsEditAccountDialogOpen(false)} 
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {/* Edit Category Dialog */}
+            {editingCategory && (
+                <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Transaction Category</DialogTitle>
+                            <DialogDescription>Update the name for the "{editingCategory.name}" category.</DialogDescription>
+                        </DialogHeader>
+                        <EditPettyCashCategoryForm
+                          initialData={editingCategory}
+                          onFormSubmit={() => setIsEditCategoryDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
-
