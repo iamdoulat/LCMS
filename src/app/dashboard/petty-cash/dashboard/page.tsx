@@ -8,7 +8,7 @@ import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, Plu
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
-import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument } from '@/types';
+import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,8 @@ interface PettyCashStats {
     totalAccounts: number;
     thisMonthDebits: number;
     thisMonthCredits: number;
-    totalInvoices: number;
-    thisMonthInvoices: number;
+    totalUnpaidInvoices: number;
+    thisMonthUnpaidInvoices: number;
 }
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
@@ -58,8 +58,8 @@ export default function PettyCashDashboardPage() {
         totalAccounts: 0,
         thisMonthDebits: 0,
         thisMonthCredits: 0,
-        totalInvoices: 0,
-        thisMonthInvoices: 0,
+        totalUnpaidInvoices: 0,
+        thisMonthUnpaidInvoices: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -83,9 +83,12 @@ export default function PettyCashDashboardPage() {
                 const totalAccounts = accountsSnapshot.size;
 
                 // Fetch sales invoice stats
-                const salesSnapshot = await getDocs(collection(firestore, "sales_invoice"));
-                const totalInvoices = salesSnapshot.size;
-                let thisMonthInvoices = 0;
+                const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
+                const salesQuery = query(collection(firestore, "sales_invoice"), where("status", "in", unpaidStatuses));
+                const salesSnapshot = await getDocs(salesQuery);
+                
+                const totalUnpaidInvoices = salesSnapshot.size;
+                let thisMonthUnpaidInvoices = 0;
                 const now = new Date();
                 const start = startOfMonth(now);
                 const end = endOfMonth(now);
@@ -96,7 +99,7 @@ export default function PettyCashDashboardPage() {
                         try {
                             const invoiceDate = parseISO(saleData.invoiceDate);
                             if (isValid(invoiceDate) && isWithinInterval(invoiceDate, { start, end })) {
-                                thisMonthInvoices++;
+                                thisMonthUnpaidInvoices++;
                             }
                         } catch(e) {
                             console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate);
@@ -104,7 +107,7 @@ export default function PettyCashDashboardPage() {
                     }
                 });
 
-                setStats(prev => ({ ...prev, totalBalance, totalAccounts, totalInvoices, thisMonthInvoices }));
+                setStats(prev => ({ ...prev, totalBalance, totalAccounts, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
 
             } catch (error: any) {
                 console.error("Error fetching stats:", error);
@@ -246,10 +249,10 @@ export default function PettyCashDashboardPage() {
                         className="bg-purple-500"
                     />
                      <StatCard
-                        title="Total Invoices Issued"
-                        value={stats.totalInvoices.toLocaleString()}
+                        title="Total Unpaid Invoices"
+                        value={stats.totalUnpaidInvoices.toLocaleString()}
                         icon={<Receipt />}
-                        description={`${stats.thisMonthInvoices} this month`}
+                        description={`${stats.thisMonthUnpaidInvoices} this month (Unpaid)`}
                         className="bg-cyan-500"
                     />
                 </CardContent>
