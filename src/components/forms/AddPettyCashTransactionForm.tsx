@@ -49,45 +49,45 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   });
 
   React.useEffect(() => {
-    setIsLoadingDropdowns(true);
-    const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
-    const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
+    const fetchDropdowns = async () => {
+        setIsLoadingDropdowns(true);
+        try {
+            const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
+            const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
 
-    const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
-      setAccountOptions(
-        snapshot.docs.map(docSnap => ({
-          value: docSnap.id,
-          label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
-        }))
-      );
-      if (!snapshot.metadata.hasPendingWrites && !isLoadingDropdowns) {
-        // No-op if categories already loaded us.
-      }
-    }, (error) => {
-      console.error("Error fetching accounts:", error);
-      setIsLoadingDropdowns(false);
-    });
+            const [accountsSnapshot, categoriesSnapshot] = await Promise.all([
+                getDocs(accountsQuery),
+                getDocs(categoriesQuery)
+            ]);
 
-    const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
-      setCategoryOptions(
-        snapshot.docs.map(docSnap => ({
-          value: docSnap.id,
-          label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
-        }))
-      );
-       if (!snapshot.metadata.hasPendingWrites) {
-        setIsLoadingDropdowns(false);
-      }
-    }, (error) => {
-        console.error("Error fetching categories:", error);
-        setIsLoadingDropdowns(false);
-    });
-    
-    return () => {
-      unsubAccounts();
-      unsubCategories();
+            const fetchedAccountOptions = accountsSnapshot.docs.map(docSnap => ({
+                value: docSnap.id,
+                label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
+            }));
+            setAccountOptions(fetchedAccountOptions);
+
+            setCategoryOptions(
+                categoriesSnapshot.docs.map(docSnap => ({
+                    value: docSnap.id,
+                    label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
+                }))
+            );
+            
+            // Set default account to "Petty Cash" if it exists
+            const defaultAccount = fetchedAccountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
+            if (defaultAccount) {
+                form.setValue('accountId', defaultAccount.value);
+            }
+
+        } catch (error) {
+            console.error("Error fetching dropdown options:", error);
+            Swal.fire("Error", "Could not load accounts or categories.", "error");
+        } finally {
+            setIsLoadingDropdowns(false);
+        }
     };
-  }, [isLoadingDropdowns]);
+    fetchDropdowns();
+  }, [form]);
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
