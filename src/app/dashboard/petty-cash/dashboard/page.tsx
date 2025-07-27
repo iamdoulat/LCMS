@@ -40,7 +40,22 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
 };
 
 const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+    if (isNaN(value)) {
+        return 'BDT N/A';
+    }
+    const formatter = new Intl.NumberFormat('en-BD', {
+        style: 'currency',
+        currency: 'BDT',
+        currencyDisplay: 'code', // Use code to easily replace it
+    });
+
+    if (value < 0) {
+        // Format absolute value and manually insert the minus sign
+        const formatted = formatter.format(Math.abs(value));
+        return formatted.replace('BDT', 'BDT -');
+    }
+
+    return formatter.format(value).replace('BDT', 'BDT ');
 };
 
 const formatCurrencyValue = (amount?: number) => {
@@ -74,7 +89,6 @@ export default function PettyCashDashboardPage() {
             setIsLoading(true);
             setFetchError(null);
             try {
-                // Fetch initial petty cash account balance once
                 const accountsQuery = query(collection(firestore, "petty_cash_accounts"), where("name", "==", "Petty Cash"));
                 const accountsSnapshot = await getDocs(accountsQuery);
                 if (!accountsSnapshot.empty) {
@@ -82,7 +96,6 @@ export default function PettyCashDashboardPage() {
                     initialPettyCashBalance = (pettyCashDoc.data() as PettyCashAccountDocument).balance || 0;
                 }
 
-                // Fetch sales invoice stats
                 const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
                 const salesQuery = query(collection(firestore, "sales_invoice"), where("status", "in", unpaidStatuses));
                 const salesSnapshot = await getDocs(salesQuery);
@@ -107,7 +120,6 @@ export default function PettyCashDashboardPage() {
                     }
                 });
                 
-                // Set initial stats once before starting listener
                  setStats(prev => ({ ...prev, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
 
             } catch (error: any) {
@@ -331,14 +343,14 @@ export default function PettyCashDashboardPage() {
                                         {transactions.map(tx => (
                                             <TableRow key={tx.id}>
                                                 <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
-                                                <TableCell>{tx.accountName}</TableCell>
+                                                <TableCell>{tx.accountNames?.join(', ') || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-red-600' : 'text-green-600')}>
                                                         {tx.type}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>{tx.payeeName}</TableCell>
-                                                <TableCell>{tx.categoryName || 'N/A'}</TableCell>
+                                                <TableCell>{tx.categoryNames?.join(', ') || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -398,4 +410,3 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
-
