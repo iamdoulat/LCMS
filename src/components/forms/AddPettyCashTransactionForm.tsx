@@ -81,14 +81,15 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             }));
             setCategoryOptions(fetchedCategoryOptions);
             
+            // Set defaults *after* options are fetched and state is updated
             const defaultAccount = fetchedAccountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
             if (defaultAccount) {
-                form.setValue('accountId', defaultAccount.value);
+                form.setValue('accountId', defaultAccount.value, { shouldValidate: true, shouldDirty: true });
             }
             
             const defaultCategory = fetchedCategoryOptions.find(opt => opt.label.toLowerCase() === 'general expense');
             if (defaultCategory) {
-                form.setValue('categoryId', defaultCategory.value);
+                form.setValue('categoryId', defaultCategory.value, { shouldValidate: true, shouldDirty: true });
             }
 
         } catch (error) {
