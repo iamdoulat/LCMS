@@ -21,7 +21,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 
-const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
 const PLACEHOLDER_CATEGORY_VALUE = "__PETTY_CASH_CATEGORY_PLACEHOLDER__";
 
 interface AddPettyCashTransactionFormProps {
@@ -31,7 +30,6 @@ interface AddPettyCashTransactionFormProps {
 export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -39,7 +37,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     resolver: zodResolver(PettyCashTransactionSchema),
     defaultValues: {
       transactionDate: new Date(),
-      accountId: '',
+      accountId: 'default_petty_cash', // Default value, will be handled in submit
       type: 'Debit',
       payeeName: '',
       categoryId: '',
@@ -62,30 +60,13 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     const fetchOptions = async () => {
         setIsLoadingDropdowns(true);
         try {
-            const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
             const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
-
-            const [accountsSnapshot, categoriesSnapshot] = await Promise.all([
-                getDocs(accountsQuery),
-                getDocs(categoriesQuery)
-            ]);
-
-            const fetchedAccounts = accountsSnapshot.docs.map(docSnap => ({
-                value: docSnap.id,
-                label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
-            }));
-            setAccountOptions(fetchedAccounts);
-
+            const categoriesSnapshot = await getDocs(categoriesQuery);
             const fetchedCategories = categoriesSnapshot.docs.map(docSnap => ({
               value: docSnap.id,
               label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
             }));
             setCategoryOptions(fetchedCategories);
-
-            const defaultAccount = fetchedAccounts.find(acc => acc.label === "Petty Cash");
-            if (defaultAccount) {
-                form.setValue("accountId", defaultAccount.value);
-            }
 
             const defaultCategory = fetchedCategories.find(cat => cat.label === "General Expense");
             if (defaultCategory) {
@@ -93,7 +74,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             }
         } catch (error) {
             console.error("Error fetching dropdown options:", error);
-            Swal.fire("Error", "Could not load accounts or categories.", "error");
+            Swal.fire("Error", "Could not load categories.", "error");
         } finally {
             setIsLoadingDropdowns(false);
         }
@@ -115,14 +96,18 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       return;
     }
     setIsSubmitting(true);
+    
+    // Assuming a default account for simplicity since the field is removed
+    const defaultAccountId = 'main_petty_cash'; 
+    const defaultAccountName = 'Petty Cash';
 
-    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategory = categoryOptions.find(opt => opt.value === data.categoryId);
 
     const dataToSave = {
       ...data,
+      accountId: defaultAccountId,
+      accountName: defaultAccountName,
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      accountName: selectedAccount?.label || 'Unknown Account',
       categoryName: selectedCategory?.label || 'Unknown Category',
       amount: Number(data.amount),
       chequeType: showChequeFields ? data.chequeType : undefined,
@@ -165,19 +150,6 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
-                control={form.control} name="accountId" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Source Account*</FormLabel>
-                    <Combobox
-                        options={accountOptions}
-                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
-                        placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
-                        emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-            <FormField
                 control={form.control} name="categoryId" render={({ field }) => (
                 <FormItem>
                     <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
@@ -190,15 +162,15 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
                     <FormMessage />
                 </FormItem>
             )}/>
+            <FormField
+                control={form.control} name="payeeName" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><User className="mr-1.5 h-4 w-4 text-muted-foreground"/>Payee/Payer*</FormLabel>
+                    <FormControl><Input placeholder="e.g., Office Supplies Inc." {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}/>
         </div>
-        <FormField
-            control={form.control} name="payeeName" render={({ field }) => (
-            <FormItem>
-                <FormLabel className="flex items-center"><User className="mr-1.5 h-4 w-4 text-muted-foreground"/>Payee/Payer*</FormLabel>
-                <FormControl><Input placeholder="e.g., Office Supplies Inc." {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )}/>
          <FormField
             control={form.control} name="purpose" render={({ field }) => (
             <FormItem>

@@ -1130,7 +1130,7 @@ export type PettyCashCategoryFormValues = z.infer<typeof PettyCashCategorySchema
 
 export const PettyCashTransactionSchema = z.object({
   transactionDate: z.date({ required_error: "Transaction date is required." }),
-  accountId: z.string().min(1, "Source Account is required."),
+  accountId: z.string().optional(), // No longer required in form
   type: z.enum(transactionTypes, { required_error: "Transaction Type is required." }),
   payeeName: z.string().min(1, "Payee name is required."),
   categoryId: z.string().min(1, "Category is required."),
