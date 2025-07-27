@@ -1,4 +1,6 @@
 
+"use client";
+
 import type { PropsWithChildren } from 'react';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
