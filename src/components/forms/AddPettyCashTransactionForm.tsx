@@ -85,6 +85,11 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             if (defaultAccount) {
                 form.setValue('accountId', defaultAccount.value);
             }
+            
+            const defaultCategory = fetchedCategoryOptions.find(opt => opt.label.toLowerCase() === 'general expense');
+            if (defaultCategory) {
+                form.setValue('categoryId', defaultCategory.value);
+            }
 
         } catch (error) {
             console.error("Error fetching dropdown options:", error);
