@@ -121,6 +121,7 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
       chequeType: showChequeFields ? data.chequeType : undefined,
       chequeNumber: showChequeFields ? data.chequeNumber : undefined,
       updatedAt: serverTimestamp(),
+      updatedBy: user.displayName || user.email || "Unknown User",
     };
     
     Object.keys(dataToUpdate).forEach(key => {

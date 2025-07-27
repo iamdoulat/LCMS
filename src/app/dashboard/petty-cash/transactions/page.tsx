@@ -71,7 +71,7 @@ export default function DailyTransactionsPage() {
             setFetchError(null);
         }, (error) => {
             console.error("Error fetching transactions: ", error);
-            let errorMessage = "Could not fetch transaction data. Please ensure Firestore rules allow reads.";
+            let errorMessage = "Could not fetch transaction data. Please ensure Firestore rules allow reads for 'petty_cash_transactions' collection.";
             if (error.code === 'permission-denied') {
                 errorMessage = "Permission denied. You do not have access to view this data.";
             } else if (error.message?.toLowerCase().includes("index")) {
