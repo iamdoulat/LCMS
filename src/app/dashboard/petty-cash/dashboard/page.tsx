@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { DollarSign, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
@@ -190,7 +190,7 @@ export default function PettyCashDashboardPage() {
                     <StatCard
                         title="Total Balance"
                         value={formatCurrency(stats.totalBalance)}
-                        icon={<DollarSign />}
+                        icon={<Wallet />}
                         description={`Across ${stats.totalAccounts} accounts`}
                         className="bg-blue-500"
                     />
@@ -204,14 +204,14 @@ export default function PettyCashDashboardPage() {
                     <StatCard
                         title="This Month's Credits"
                         value={formatCurrency(stats.thisMonthCredits)}
-                        icon={<TrendingDown />}
+                        icon={<Banknote />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-red-500"
                     />
                      <StatCard
                         title="Net Flow (This Month)"
                         value={formatCurrency(stats.thisMonthDebits - stats.thisMonthCredits)}
-                        icon={<DollarSign />}
+                        icon={<Banknote />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-purple-500"
                     />
@@ -224,7 +224,7 @@ export default function PettyCashDashboardPage() {
                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                 <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                                    <DollarSign className="h-7 w-7 text-primary" />
+                                    <Banknote className="h-7 w-7 text-primary" />
                                     Daily Petty Cash Transactions
                                 </CardTitle>
                                 <CardDescription>
@@ -336,3 +336,4 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
+
