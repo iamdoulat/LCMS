@@ -22,8 +22,7 @@ import Swal from 'sweetalert2';
 
 
 interface PettyCashStats {
-    totalBalance: number;
-    totalAccounts: number;
+    pettyCashBalance: number;
     thisMonthDebits: number;
     thisMonthCredits: number;
     totalUnpaidInvoices: number;
@@ -54,8 +53,7 @@ export default function PettyCashDashboardPage() {
     const isReadOnly = userRole?.includes('Viewer');
 
     const [stats, setStats] = React.useState<PettyCashStats>({
-        totalBalance: 0,
-        totalAccounts: 0,
+        pettyCashBalance: 0,
         thisMonthDebits: 0,
         thisMonthCredits: 0,
         totalUnpaidInvoices: 0,
@@ -74,13 +72,14 @@ export default function PettyCashDashboardPage() {
             setIsLoading(true);
             setFetchError(null);
             try {
-                // Fetch petty cash accounts stats
-                const accountsSnapshot = await getDocs(collection(firestore, "petty_cash_accounts"));
-                let totalBalance = 0;
-                accountsSnapshot.forEach(doc => {
-                    totalBalance += (doc.data() as PettyCashAccountDocument).balance || 0;
-                });
-                const totalAccounts = accountsSnapshot.size;
+                // Fetch petty cash account balance
+                const accountsQuery = query(collection(firestore, "petty_cash_accounts"), where("name", "==", "Petty Cash"));
+                const accountsSnapshot = await getDocs(accountsQuery);
+                let pettyCashBalance = 0;
+                if (!accountsSnapshot.empty) {
+                    const pettyCashDoc = accountsSnapshot.docs[0];
+                    pettyCashBalance = (pettyCashDoc.data() as PettyCashAccountDocument).balance || 0;
+                }
 
                 // Fetch sales invoice stats
                 const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
@@ -107,7 +106,7 @@ export default function PettyCashDashboardPage() {
                     }
                 });
 
-                setStats(prev => ({ ...prev, totalBalance, totalAccounts, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
+                setStats(prev => ({ ...prev, pettyCashBalance, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
 
             } catch (error: any) {
                 console.error("Error fetching stats:", error);
@@ -221,10 +220,10 @@ export default function PettyCashDashboardPage() {
                 </CardHeader>
                 <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                      <StatCard
-                        title="Total Balance"
-                        value={formatCurrency(stats.totalBalance)}
+                        title="Balance"
+                        value={formatCurrency(stats.pettyCashBalance)}
                         icon={<Wallet />}
-                        description={`Across ${stats.totalAccounts} accounts`}
+                        description="Petty Cash Account"
                         className="bg-blue-500"
                     />
                     <StatCard
@@ -241,14 +240,7 @@ export default function PettyCashDashboardPage() {
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-red-500"
                     />
-                     <StatCard
-                        title="Net Flow (This Month)"
-                        value={formatCurrency(stats.thisMonthDebits - stats.thisMonthCredits)}
-                        icon={<Banknote />}
-                        description={`In ${format(new Date(), 'MMMM')}`}
-                        className="bg-purple-500"
-                    />
-                     <StatCard
+                    <StatCard
                         title="Total Unpaid Invoices"
                         value={stats.totalUnpaidInvoices.toLocaleString()}
                         icon={<Receipt />}
@@ -302,6 +294,7 @@ export default function PettyCashDashboardPage() {
                                             <TableHead>Account</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead>Payee/Purpose</TableHead>
+                                            <TableHead>Category</TableHead>
                                             <TableHead className="text-right">Amount</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
@@ -317,6 +310,7 @@ export default function PettyCashDashboardPage() {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>{tx.payeeName}</TableCell>
+                                                <TableCell>{tx.categoryNames?.join(', ') || 'N/A'}</TableCell>
                                                 <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
