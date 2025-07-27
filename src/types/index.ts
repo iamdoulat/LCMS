@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -1139,4 +1138,3 @@ export const PettyCashTransactionSchema = z.object({
 });
 export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransactionSchema>;
 // --- END Petty Cash Types ---
-

@@ -1,9 +1,96 @@
 
 "use client";
+
+import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Wallet, List, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { firestore } from '@/lib/firebase/config';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import type { PettyCashAccountDocument, PettyCashCategoryDocument } from '@/types';
+import Swal from 'sweetalert2';
+import { AddPettyCashAccountForm } from '@/components/forms/AddPettyCashAccountForm';
+import { AddPettyCashCategoryForm } from '@/components/forms/AddPettyCashCategoryForm';
+import { useAuth } from '@/context/AuthContext';
+
+const formatCurrency = (value?: number) => {
+  if (typeof value !== 'number' || isNaN(value)) return `USD N/A`;
+  return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 export default function PettyCashSettingsPage() {
+    const { userRole } = useAuth();
+    const isReadOnly = userRole?.includes('Viewer');
+
+    const [accounts, setAccounts] = React.useState<PettyCashAccountDocument[]>([]);
+    const [categories, setCategories] = React.useState<PettyCashCategoryDocument[]>([]);
+    const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
+    const [isLoadingCategories, setIsLoadingCategories] = React.useState(true);
+    const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+    const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+    const [isCategoryDialogOpen, setIsCategoryDialogOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
+        const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
+
+        const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
+            setAccounts(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashAccountDocument)));
+            setIsLoadingAccounts(false);
+        }, (error) => {
+            console.error("Error fetching accounts:", error);
+            setFetchError("Could not load accounts. Check permissions and console.");
+            setIsLoadingAccounts(false);
+        });
+
+        const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
+            setCategories(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashCategoryDocument)));
+            setIsLoadingCategories(false);
+        }, (error) => {
+            console.error("Error fetching categories:", error);
+            setFetchError(fetchError ? `${fetchError} & categories.` : "Could not load categories. Check permissions and console.");
+            setIsLoadingCategories(false);
+        });
+
+        return () => {
+            unsubAccounts();
+            unsubCategories();
+        };
+    }, [fetchError]);
+
+    const handleDelete = async (collectionName: string, docId: string, docName: string) => {
+        if (isReadOnly) return;
+        Swal.fire({
+            title: `Delete '${docName}'?`,
+            text: `This will permanently delete the item. This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: 'hsl(var(--destructive))',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteDoc(doc(firestore, collectionName, docId));
+                    Swal.fire('Deleted!', `'${docName}' has been removed.`, 'success');
+                } catch (error: any) {
+                    Swal.fire('Error!', `Could not delete item: ${error.message}`, 'error');
+                }
+            }
+        });
+    };
+
     return (
         <div className="container mx-auto py-8">
             <Card className="shadow-xl">
@@ -16,8 +103,91 @@ export default function PettyCashSettingsPage() {
                         Manage source accounts and transaction categories for your petty cash.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                     <p className="text-muted-foreground">Settings for Source Accounts and Categories are under construction.</p>
+                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Source Accounts</CardTitle>
+                                    <CardDescription>Manage accounts for transactions.</CardDescription>
+                                </div>
+                                <DialogTrigger asChild>
+                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Account</Button>
+                                </DialogTrigger>
+                            </CardHeader>
+                            <CardContent>
+                                {isLoadingAccounts ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
+                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
+                                 accounts.length === 0 ? <div className="text-muted-foreground text-center p-4">No accounts found.</div> :
+                                (
+                                    <div className="rounded-md border">
+                                        <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[50px]">Action</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {accounts.map(acc => (
+                                                <TableRow key={acc.id}><TableCell>{acc.name}</TableCell><TableCell className="text-right font-medium">{formatCurrency(acc.balance)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} disabled={isReadOnly}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody></Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add New Source Account</DialogTitle>
+                                <DialogDescription>Create a new account to track petty cash funds.</DialogDescription>
+                            </DialogHeader>
+                            <AddPettyCashAccountForm onFormSubmit={() => setIsAccountDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary"/>Transaction Categories</CardTitle>
+                                    <CardDescription>Organize your transactions.</CardDescription>
+                                </div>
+                                <DialogTrigger asChild>
+                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Category</Button>
+                                </DialogTrigger>
+                            </CardHeader>
+                            <CardContent>
+                                {isLoadingCategories ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
+                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
+                                 categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
+                                (
+                                    <div className="rounded-md border">
+                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Action</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {categories.map(cat => (
+                                                <TableRow key={cat.id}><TableCell>{cat.name}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} disabled={isReadOnly}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody></Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add New Category</DialogTitle>
+                                <DialogDescription>Create a new category to classify transactions.</DialogDescription>
+                            </DialogHeader>
+                            <AddPettyCashCategoryForm onFormSubmit={() => setIsCategoryDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
                 </CardContent>
             </Card>
         </div>
