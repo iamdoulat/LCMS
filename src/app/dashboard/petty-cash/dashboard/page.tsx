@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -46,16 +47,17 @@ const formatCurrency = (value: number) => {
     const formatter = new Intl.NumberFormat('en-BD', {
         style: 'currency',
         currency: 'BDT',
-        currencyDisplay: 'code', // Use code to easily replace it
+        currencyDisplay: 'code', 
     });
 
     if (value < 0) {
-        // Format absolute value and manually insert the minus sign
+        // Format absolute value and manually insert the minus sign with non-breaking spaces
         const formatted = formatter.format(Math.abs(value));
-        return formatted.replace('BDT', 'BDT -');
+        // Using non-breaking space and non-breaking hyphen
+        return formatted.replace('BDT', 'BDT\u00A0-\u00A0');
     }
 
-    return formatter.format(value).replace('BDT', 'BDT ');
+    return formatter.format(value).replace('BDT', 'BDT\u00A0');
 };
 
 const formatCurrencyValue = (amount?: number) => {
@@ -410,3 +412,4 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
+
