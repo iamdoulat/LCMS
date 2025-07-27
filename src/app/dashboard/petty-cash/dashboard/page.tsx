@@ -4,11 +4,11 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
-import type { PettyCashAccountDocument, PettyCashTransactionDocument } from '@/types';
+import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
+import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ interface PettyCashStats {
     totalAccounts: number;
     thisMonthDebits: number;
     thisMonthCredits: number;
+    totalInvoices: number;
+    thisMonthInvoices: number;
 }
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
@@ -56,6 +58,8 @@ export default function PettyCashDashboardPage() {
         totalAccounts: 0,
         thisMonthDebits: 0,
         thisMonthCredits: 0,
+        totalInvoices: 0,
+        thisMonthInvoices: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -70,15 +74,40 @@ export default function PettyCashDashboardPage() {
             setIsLoading(true);
             setFetchError(null);
             try {
+                // Fetch petty cash accounts stats
                 const accountsSnapshot = await getDocs(collection(firestore, "petty_cash_accounts"));
                 let totalBalance = 0;
                 accountsSnapshot.forEach(doc => {
                     totalBalance += (doc.data() as PettyCashAccountDocument).balance || 0;
                 });
                 const totalAccounts = accountsSnapshot.size;
-                setStats(prev => ({ ...prev, totalBalance, totalAccounts }));
+
+                // Fetch sales invoice stats
+                const salesSnapshot = await getDocs(collection(firestore, "sales_invoice"));
+                const totalInvoices = salesSnapshot.size;
+                let thisMonthInvoices = 0;
+                const now = new Date();
+                const start = startOfMonth(now);
+                const end = endOfMonth(now);
+
+                salesSnapshot.forEach(doc => {
+                    const saleData = doc.data() as SaleDocument;
+                    if (saleData.invoiceDate) {
+                        try {
+                            const invoiceDate = parseISO(saleData.invoiceDate);
+                            if (isValid(invoiceDate) && isWithinInterval(invoiceDate, { start, end })) {
+                                thisMonthInvoices++;
+                            }
+                        } catch(e) {
+                            console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate);
+                        }
+                    }
+                });
+
+                setStats(prev => ({ ...prev, totalBalance, totalAccounts, totalInvoices, thisMonthInvoices }));
+
             } catch (error: any) {
-                console.error("Error fetching petty cash stats:", error);
+                console.error("Error fetching stats:", error);
                 setFetchError(error.message || "An unknown error occurred while fetching stats.");
             } finally {
                 setIsLoading(false);
@@ -188,13 +217,6 @@ export default function PettyCashDashboardPage() {
                 </CardHeader>
                 <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                     <StatCard
-                        title="Total Balance"
-                        value={formatCurrency(stats.totalBalance)}
-                        icon={<Wallet />}
-                        description={`Across ${stats.totalAccounts} accounts`}
-                        className="bg-blue-500"
-                    />
-                    <StatCard
                         title="This Month's Debits"
                         value={formatCurrency(stats.thisMonthDebits)}
                         icon={<TrendingUp />}
@@ -214,6 +236,13 @@ export default function PettyCashDashboardPage() {
                         icon={<Banknote />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-purple-500"
+                    />
+                     <StatCard
+                        title="Total Invoices Issued"
+                        value={stats.totalInvoices.toLocaleString()}
+                        icon={<Receipt />}
+                        description={`${stats.thisMonthInvoices} this month`}
+                        className="bg-cyan-500"
                     />
                 </CardContent>
             </Card>
