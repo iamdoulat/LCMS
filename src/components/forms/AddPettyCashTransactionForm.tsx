@@ -48,6 +48,8 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     },
   });
 
+  const watchedCategoryId = form.watch("categoryId");
+
   React.useEffect(() => {
     const fetchDropdowns = async () => {
         setIsLoadingDropdowns(true);
@@ -66,12 +68,11 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             }));
             setAccountOptions(fetchedAccountOptions);
 
-            setCategoryOptions(
-                categoriesSnapshot.docs.map(docSnap => ({
-                    value: docSnap.id,
-                    label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
-                }))
-            );
+            const fetchedCategoryOptions = categoriesSnapshot.docs.map(docSnap => ({
+              value: docSnap.id,
+              label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
+            }));
+            setCategoryOptions(fetchedCategoryOptions);
             
             // Set default account to "Petty Cash" if it exists
             const defaultAccount = fetchedAccountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
@@ -88,6 +89,20 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     };
     fetchDropdowns();
   }, [form]);
+  
+  React.useEffect(() => {
+    if (watchedCategoryId && categoryOptions.length > 0) {
+      const selectedCategory = categoryOptions.find(opt => opt.value === watchedCategoryId);
+      if (selectedCategory) {
+        if (selectedCategory.label === "Cheque Received") {
+          form.setValue('type', 'Credit');
+        } else if (selectedCategory.label === "Cheque Payment") {
+          form.setValue('type', 'Debit');
+        }
+      }
+    }
+  }, [watchedCategoryId, categoryOptions, form]);
+
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
