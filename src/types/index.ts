@@ -1148,3 +1148,46 @@ export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransaction
 // --- END Petty Cash Types ---
 
 
+// --- Delivery Challan Types ---
+
+export const DeliveryChallanLineItemSchema = z.object({
+  itemId: z.string().optional(), // This can be optional if not linking to specific inventory items
+  description: z.string().min(1, "Description is required."),
+  qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+});
+export type DeliveryChallanLineItemFormValues = z.infer<typeof DeliveryChallanLineItemSchema>;
+
+export const DeliveryChallanSchema = z.object({
+  customerId: z.string().min(1, "Customer is required."),
+  billingAddress: z.string().min(1, "Billing Address is required."),
+  shippingAddress: z.string().min(1, "Shipping Address is required."),
+  challanDate: z.date({ required_error: "Challan Date is required." }),
+  linkedInvoiceId: z.string().optional(),
+  deliveryPerson: z.string().min(1, "Delivery Person is required."),
+  vehicleNo: z.string().optional(),
+  lineItems: z.array(DeliveryChallanLineItemSchema).min(1, "At least one item is required."),
+});
+export type DeliveryChallanFormValues = z.infer<typeof DeliveryChallanSchema>;
+
+export interface DeliveryChallanLineItemDocument {
+  itemId?: string;
+  description: string;
+  qty: number;
+}
+
+export interface DeliveryChallanDocument {
+  id: string; // Auto-generated ID like DCN{Year}-{Serial}
+  customerId: string;
+  customerName: string; // Denormalized
+  billingAddress: string;
+  shippingAddress: string;
+  challanDate: string; // ISO string
+  linkedInvoiceId?: string;
+  deliveryPerson: string;
+  vehicleNo?: string;
+  lineItems: DeliveryChallanLineItemDocument[];
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+
+// --- END Delivery Challan Types ---
