@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2, Info, AlertTriangle, DollarSign, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, Info, AlertTriangle, DollarSign, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { firestore } from '@/lib/firebase/config';
@@ -12,6 +12,15 @@ import { collection, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp } fro
 import type { PettyCashTransactionDocument } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { AddPettyCashTransactionForm } from '@/components/forms/AddPettyCashTransactionForm';
+import { EditPettyCashTransactionForm } from '@/components/forms/EditPettyCashTransactionForm';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +54,8 @@ export default function DailyTransactionsPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
     const [isAddFormOpen, setIsAddFormOpen] = React.useState(false);
+    const [isEditFormOpen, setIsEditFormOpen] = React.useState(false);
+    const [editingTransaction, setEditingTransaction] = React.useState<PettyCashTransactionDocument | null>(null);
 
     React.useEffect(() => {
         setIsLoading(true);
@@ -72,6 +83,11 @@ export default function DailyTransactionsPage() {
 
         return () => unsubscribe();
     }, []);
+    
+    const handleEdit = (transaction: PettyCashTransactionDocument) => {
+        setEditingTransaction(transaction);
+        setIsEditFormOpen(true);
+    };
 
     const handleDelete = (transactionId: string) => {
         Swal.fire({
@@ -156,10 +172,20 @@ export default function DailyTransactionsPage() {
                                                 <TableCell>{tx.payeeName}</TableCell>
                                                 <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(tx.id)} disabled={isReadOnly}>
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                        <span className="sr-only">Delete Transaction</span>
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => handleEdit(tx)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -180,6 +206,26 @@ export default function DailyTransactionsPage() {
                     <AddPettyCashTransactionForm onFormSubmit={() => setIsAddFormOpen(false)} />
                 </DialogContent>
             </Dialog>
+            
+            {editingTransaction && (
+                <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                     <DialogContent className="sm:max-w-[550px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Transaction</DialogTitle>
+                            <DialogDescription>
+                                Modify the details for transaction ID: {editingTransaction.id}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <EditPettyCashTransactionForm 
+                            initialData={editingTransaction}
+                            onFormSubmit={() => {
+                                setIsEditFormOpen(false);
+                                setEditingTransaction(null);
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
