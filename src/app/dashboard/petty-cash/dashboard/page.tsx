@@ -4,12 +4,14 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { DollarSign, Wallet, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { DollarSign, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashTransactionDocument } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 interface PettyCashStats {
     totalBalance: number;
@@ -26,10 +28,12 @@ export default function PettyCashDashboardPage() {
         thisMonthCredits: 0,
     });
     const [isLoading, setIsLoading] = React.useState(true);
+    const [fetchError, setFetchError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         const fetchStats = async () => {
             setIsLoading(true);
+            setFetchError(null);
             try {
                 const accountsSnapshot = await getDocs(collection(firestore, "petty_cash_accounts"));
                 const transactionsSnapshot = await getDocs(collection(firestore, "petty_cash_transactions"));
@@ -48,7 +52,20 @@ export default function PettyCashDashboardPage() {
 
                 transactionsSnapshot.forEach(doc => {
                     const tx = doc.data() as PettyCashTransactionDocument;
-                    const txDate = tx.transactionDate ? parseISO(tx.transactionDate) : new Date(0);
+                    if (!tx.transactionDate) return;
+                    
+                    let txDate: Date;
+                    try {
+                        txDate = parseISO(tx.transactionDate);
+                         if (!isValid(txDate)) {
+                            console.warn("Invalid date format found in transaction:", tx);
+                            return; // Skip this transaction
+                        }
+                    } catch(e) {
+                         console.error("Error parsing date for transaction:", tx, e);
+                         return; // Skip this transaction
+                    }
+                    
                     if (isWithinInterval(txDate, { start, end })) {
                         if (tx.type === 'Debit') {
                             thisMonthDebits += tx.amount;
@@ -64,8 +81,9 @@ export default function PettyCashDashboardPage() {
                     thisMonthDebits,
                     thisMonthCredits,
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching petty cash stats:", error);
+                setFetchError(error.message || "An unknown error occurred while fetching stats.");
             } finally {
                 setIsLoading(false);
             }
@@ -83,6 +101,18 @@ export default function PettyCashDashboardPage() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </div>
+        );
+    }
+
+    if (fetchError) {
+        return (
+            <div className="container mx-auto py-8">
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error Fetching Data</AlertTitle>
+                    <AlertDescription>{fetchError}</AlertDescription>
+                </Alert>
+            </div>
         );
     }
 
@@ -132,4 +162,3 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
-
