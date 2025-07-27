@@ -99,8 +99,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
         }
     };
     fetchOptions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [form]);
   
   React.useEffect(() => {
     if (selectedCategoryName === "Cheque Received") {
