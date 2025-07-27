@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, query, orderBy, updateDoc } from 'firebase/firestore';
 import { format, parseISO, isValid } from 'date-fns';
 import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, PettyCashTransactionDocument, ChequeType } from '@/types';
 import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
