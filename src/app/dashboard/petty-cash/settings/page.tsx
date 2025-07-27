@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -34,8 +35,8 @@ import { EditPettyCashCategoryForm } from '@/components/forms/EditPettyCashCateg
 import { useAuth } from '@/context/AuthContext';
 
 const formatCurrency = (value?: number) => {
-  if (typeof value !== 'number' || isNaN(value)) return `USD N/A`;
-  return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (typeof value !== 'number' || isNaN(value)) return `BDT N/A`;
+  return `BDT ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function PettyCashSettingsPage() {

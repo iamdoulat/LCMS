@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -32,9 +33,9 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrencyValue = (amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `BDT N/A`;
+  return `BDT ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const getTotalQuantity = (lineItems: SaleDocument['lineItems']): number => {
@@ -336,7 +337,3 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
-
-
-
-

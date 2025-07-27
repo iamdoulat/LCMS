@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -40,7 +41,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrency = (amount?: number, currency: string = 'USD') => {
+const formatCurrency = (amount?: number) => {
   if (typeof amount !== 'number' || isNaN(amount)) return `N/A`;
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -165,7 +166,7 @@ export default function PrintSaleInvoicePage() {
   const showDiscountColumn = saleData.showDiscountColumn ?? false;
   const showTaxColumn = saleData.showTaxColumn ?? false;
   
-  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.invoiceDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (USD)`;
+  const qrCodeValue = `INVOICE\nInvoice No: ${saleData.id}\nDate: ${formatDisplayDate(saleData.invoiceDate)}\nSales Person: ${saleData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(saleData.totalAmount)} (BDT)`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -291,7 +292,7 @@ export default function PrintSaleInvoicePage() {
                 )}
                 <Separator className="my-2 border-gray-300" />
                 <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                    <span className="text-gray-900 text-right">Grand Total (BDT):</span>
                     <span className="text-blue-600 text-right">{formatCurrency(saleData.totalAmount)}</span>
                 </div>
             </div>

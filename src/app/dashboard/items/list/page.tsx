@@ -27,9 +27,9 @@ import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
-const formatCurrency = (value?: number, currencySymbol: string = '$') => {
-  if (typeof value !== 'number' || isNaN(value)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (value?: number) => {
+  if (typeof value !== 'number' || isNaN(value)) return `BDT N/A`;
+  return `BDT ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function ItemsListPage() {

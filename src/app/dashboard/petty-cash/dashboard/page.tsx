@@ -39,12 +39,12 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
 };
 
 const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
 const formatCurrencyValue = (amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `USD N/A`;
-  return `USD ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (typeof amount !== 'number' || isNaN(amount)) return `BDT N/A`;
+  return `BDT ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function PettyCashDashboardPage() {

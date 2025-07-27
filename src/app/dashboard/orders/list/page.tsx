@@ -40,9 +40,9 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
-  return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrencyValue = (amount?: number) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return `BDT N/A`;
+  return `BDT ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const getTotalQuantity = (lineItems: OrderDocument['lineItems']): number => {
@@ -226,7 +226,7 @@ export default function OrdersListPage() {
 
   const totalPages = Math.ceil(displayedOrders.length / ORDER_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ORDER_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ORDER_ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedOrders.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -428,4 +428,3 @@ export default function OrdersListPage() {
     </div>
   );
 }
-
