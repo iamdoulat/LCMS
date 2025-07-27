@@ -60,8 +60,8 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
           label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
         }))
       );
-      if (!snapshot.metadata.hasPendingWrites) {
-        setIsLoadingDropdowns(false);
+      if (!snapshot.metadata.hasPendingWrites && !isLoadingDropdowns) {
+        // No-op if categories already loaded us.
       }
     }, (error) => {
       console.error("Error fetching accounts:", error);
@@ -87,7 +87,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
       unsubAccounts();
       unsubCategories();
     };
-  }, []);
+  }, [isLoadingDropdowns]);
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
@@ -136,42 +136,44 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField control={form.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{transactionTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
-        <FormField
-            control={form.control} name="accountId" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Source Account*</FormLabel>
-                <Combobox
-                    options={accountOptions}
-                    value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
-                    placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
-                    emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
-                <FormMessage />
-            </FormItem>
-        )}/>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+                control={form.control} name="accountId" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Source Account*</FormLabel>
+                    <Combobox
+                        options={accountOptions}
+                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
+                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
+                        placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
+                        emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+            <FormField
+                control={form.control} name="categoryId" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
+                    <Combobox
+                        options={categoryOptions}
+                        value={field.value || PLACEHOLDER_CATEGORY_VALUE}
+                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_CATEGORY_VALUE ? '' : value)}
+                        placeholder="Search Category..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select a Category"}
+                        emptyStateMessage="No category found." disabled={isLoadingDropdowns}/>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+        </div>
         <FormField
             control={form.control} name="payeeName" render={({ field }) => (
             <FormItem>
                 <FormLabel className="flex items-center"><User className="mr-1.5 h-4 w-4 text-muted-foreground"/>Payee/Payer*</FormLabel>
                 <FormControl><Input placeholder="e.g., Office Supplies Inc." {...field} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )}/>
-        <FormField
-            control={form.control} name="categoryId" render={({ field }) => (
-            <FormItem>
-                <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
-                <Combobox
-                    options={categoryOptions}
-                    value={field.value || PLACEHOLDER_CATEGORY_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_CATEGORY_VALUE ? '' : value)}
-                    placeholder="Search Category..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select a Category"}
-                    emptyStateMessage="No category found." disabled={isLoadingDropdowns}/>
                 <FormMessage />
             </FormItem>
         )}/>
