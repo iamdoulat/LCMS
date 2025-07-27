@@ -14,15 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, DollarSign, User, List, HelpCircle } from 'lucide-react';
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Loader2, Save, DollarSign, User, List, HelpCircle, Wallet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
-
-const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
-const PLACEHOLDER_CATEGORY_VALUE = "__PETTY_CASH_CATEGORY_PLACEHOLDER__";
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 
 interface EditPettyCashTransactionFormProps {
   initialData: PettyCashTransactionDocument;
@@ -32,19 +29,21 @@ interface EditPettyCashTransactionFormProps {
 export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: EditPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
-  const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
+  const [accountOptions, setAccountOptions] = React.useState<MultiSelectOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
   const form = useForm<PettyCashTransactionFormValues>({
     resolver: zodResolver(PettyCashTransactionSchema),
   });
   
-  const watchedCategoryId = form.watch("categoryId");
-  const selectedCategoryName = React.useMemo(() => {
-    return categoryOptions.find(opt => opt.value === watchedCategoryId)?.label;
-  }, [watchedCategoryId, categoryOptions]);
-  const showChequeFields = selectedCategoryName === "Cheque Received" || selectedCategoryName === "Cheque Payment";
+  const watchedCategoryIds = form.watch("categoryIds");
+  const selectedCategoryNames = React.useMemo(() => {
+    return categoryOptions
+      .filter(opt => watchedCategoryIds?.includes(opt.value))
+      .map(opt => opt.label);
+  }, [watchedCategoryIds, categoryOptions]);
+  const showChequeFields = selectedCategoryNames.includes("Cheque Received") || selectedCategoryNames.includes("Cheque Payment");
 
 
   React.useEffect(() => {
@@ -82,10 +81,10 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     if (initialData && !isLoadingDropdowns) {
         form.reset({
             transactionDate: initialData.transactionDate ? parseISO(initialData.transactionDate) : new Date(),
-            accountId: initialData.accountId,
+            accountIds: Array.isArray(initialData.accountIds) ? initialData.accountIds : [],
             type: initialData.type,
             payeeName: initialData.payeeName,
-            categoryId: initialData.categoryId,
+            categoryIds: Array.isArray(initialData.categoryIds) ? initialData.categoryIds : [],
             purpose: initialData.purpose,
             description: initialData.description,
             amount: initialData.amount,
@@ -96,12 +95,12 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
   }, [initialData, form, isLoadingDropdowns]);
   
   React.useEffect(() => {
-    if (selectedCategoryName === "Cheque Received") {
+    if (selectedCategoryNames.includes("Cheque Received")) {
       form.setValue('type', 'Credit');
-    } else if (selectedCategoryName === "Cheque Payment") {
+    } else if (selectedCategoryNames.includes("Cheque Payment")) {
       form.setValue('type', 'Debit');
     }
-  }, [selectedCategoryName, form]);
+  }, [selectedCategoryNames, form]);
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
@@ -110,14 +109,16 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     }
     setIsSubmitting(true);
 
-    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
-    const selectedCategory = categoryOptions.find(opt => opt.value === data.categoryId);
+    const selectedAccounts = accountOptions.filter(opt => data.accountIds?.includes(opt.value));
+    const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
 
-    const dataToUpdate = {
+    const dataToUpdate: Record<string, any> = {
       ...data,
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      accountName: selectedAccount?.label || initialData.accountName,
-      categoryName: selectedCategory?.label || initialData.categoryName,
+      accountIds: data.accountIds,
+      accountNames: selectedAccounts.map(a => a.label),
+      categoryIds: data.categoryIds,
+      categoryNames: selectedCategories.map(c => c.label),
       amount: Number(data.amount),
       chequeType: showChequeFields ? data.chequeType : undefined,
       chequeNumber: showChequeFields ? data.chequeNumber : undefined,
@@ -127,8 +128,8 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     
     Object.keys(dataToUpdate).forEach(key => {
         const typedKey = key as keyof typeof dataToUpdate;
-        if (dataToUpdate[typedKey] === undefined || dataToUpdate[typedKey] === '') {
-            delete (dataToUpdate as any)[typedKey];
+        if (dataToUpdate[typedKey] === undefined || dataToUpdate[typedKey] === '' || (Array.isArray(dataToUpdate[typedKey]) && (dataToUpdate[typedKey] as any[]).length === 0)) {
+            dataToUpdate[key] = null; // Use null to remove field in Firestore update
         }
     });
 
@@ -153,54 +154,48 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+                control={form.control} name="accountIds" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Source Account*</FormLabel>
+                     <MultiSelect
+                      options={accountOptions}
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Select accounts..."
+                      disabled={isLoadingDropdowns}
+                    />
+                    <FormMessage />
+                </FormItem>
+            )}/>
+             <FormField
+                control={form.control} name="categoryIds" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
+                    <MultiSelect
+                      options={categoryOptions}
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Select categories..."
+                      disabled={isLoadingDropdowns}
+                    />
+                    <FormMessage />
+                </FormItem>
+            )}/>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField control={form.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{transactionTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
-                control={form.control} name="accountId" render={({ field }) => (
+                control={form.control} name="payeeName" render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Source Account*</FormLabel>
-                    <Combobox
-                        options={accountOptions}
-                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
-                        placeholder="Search Account..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select an Account"}
-                        emptyStateMessage="No account found." disabled={isLoadingDropdowns}/>
+                    <FormLabel className="flex items-center"><User className="mr-1.5 h-4 w-4 text-muted-foreground"/>Payee/Payer*</FormLabel>
+                    <FormControl><Input placeholder="e.g., Office Supplies Inc." {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
             )}/>
-            <FormField
-                control={form.control} name="categoryId" render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
-                    <Combobox
-                        options={categoryOptions}
-                        value={field.value || PLACEHOLDER_CATEGORY_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_CATEGORY_VALUE ? '' : value)}
-                        placeholder="Search Category..." selectPlaceholder={isLoadingDropdowns ? "Loading..." : "Select a Category"}
-                        emptyStateMessage="No category found." disabled={isLoadingDropdowns}/>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-        </div>
-        <FormField
-            control={form.control} name="payeeName" render={({ field }) => (
-            <FormItem>
-                <FormLabel className="flex items-center"><User className="mr-1.5 h-4 w-4 text-muted-foreground"/>Payee/Payer*</FormLabel>
-                <FormControl><Input placeholder="e.g., Office Supplies Inc." {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )}/>
-         <FormField
-            control={form.control} name="purpose" render={({ field }) => (
-            <FormItem>
-                <FormLabel className="flex items-center"><HelpCircle className="mr-1.5 h-4 w-4 text-muted-foreground"/>Purpose</FormLabel>
-                <FormControl><Input placeholder="e.g., Monthly utility bill" {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-            </FormItem>
-        )}/>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <FormField
                 control={form.control} name="amount" render={({ field }) => (
                 <FormItem>
@@ -209,36 +204,46 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
                     <FormMessage />
                 </FormItem>
             )}/>
-            {showChequeFields && (
-                <>
-                    <FormField
-                        control={form.control} name="chequeType" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Cheque Type</FormLabel>
-                            <FormControl>
-                                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
-                                    {chequeTypeOptions.map(type => (
-                                        <FormItem key={type} className="flex items-center space-x-2 space-y-0">
-                                            <FormControl><RadioGroupItem value={type} /></FormControl>
-                                            <FormLabel className="font-normal">{type}</FormLabel>
-                                        </FormItem>
-                                    ))}
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                    <FormField
-                        control={form.control} name="chequeNumber" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Cheque Number</FormLabel>
-                            <FormControl><Input placeholder="Enter cheque number" {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                </>
-            )}
         </div>
+         <FormField
+            control={form.control} name="purpose" render={({ field }) => (
+            <FormItem>
+                <FormLabel className="flex items-center"><HelpCircle className="mr-1.5 h-4 w-4 text-muted-foreground"/>Purpose</FormLabel>
+                <FormControl><Input placeholder="e.g., Monthly utility bill" {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+            </FormItem>
+        )}/>
+        
+        {showChequeFields && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control} name="chequeType" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Cheque Type</FormLabel>
+                        <FormControl>
+                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
+                                {chequeTypeOptions.map(type => (
+                                    <FormItem key={type} className="flex items-center space-x-2 space-y-0">
+                                        <FormControl><RadioGroupItem value={type} /></FormControl>
+                                        <FormLabel className="font-normal">{type}</FormLabel>
+                                    </FormItem>
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+                <FormField
+                    control={form.control} name="chequeNumber" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Cheque Number</FormLabel>
+                        <FormControl><Input placeholder="Enter cheque number" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+            </div>
+        )}
+
         <FormField
             control={form.control} name="description" render={({ field }) => (
             <FormItem>
