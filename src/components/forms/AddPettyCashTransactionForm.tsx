@@ -60,6 +60,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
           label: (docSnap.data() as PettyCashAccountDocument).name || 'Unnamed Account'
         }))
       );
+      if (!snapshot.metadata.hasPendingWrites) {
+        setIsLoadingDropdowns(false);
+      }
+    }, (error) => {
+      console.error("Error fetching accounts:", error);
+      setIsLoadingDropdowns(false);
     });
 
     const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
@@ -69,10 +75,14 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
           label: (docSnap.data() as PettyCashCategoryDocument).name || 'Unnamed Category'
         }))
       );
+       if (!snapshot.metadata.hasPendingWrites) {
+        setIsLoadingDropdowns(false);
+      }
+    }, (error) => {
+        console.error("Error fetching categories:", error);
+        setIsLoadingDropdowns(false);
     });
     
-    setIsLoadingDropdowns(false); // Assume it's fast enough for initial load
-
     return () => {
       unsubAccounts();
       unsubCategories();
