@@ -164,6 +164,7 @@ export default function PettyCashDashboardPage() {
     };
 
     const handleDelete = (transactionId: string) => {
+        if (isReadOnly) return;
         Swal.fire({
             title: 'Are you sure?',
             text: `This will permanently delete the transaction. This action cannot be undone.`,
@@ -216,6 +217,13 @@ export default function PettyCashDashboardPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                     <StatCard
+                        title="Total Balance"
+                        value={formatCurrency(stats.totalBalance)}
+                        icon={<Wallet />}
+                        description={`Across ${stats.totalAccounts} accounts`}
+                        className="bg-blue-500"
+                    />
                     <StatCard
                         title="This Month's Debits"
                         value={formatCurrency(stats.thisMonthDebits)}
@@ -365,4 +373,3 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
-
