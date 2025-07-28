@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { DeliveryChallanDocument, FinancialSettingsProfile } from '@/types';
+import type { DeliveryChallanDocument, CompanyProfile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export default function PrintDeliveryChallanPage() {
   const challanId = params.challanId as string;
 
   const [challanData, setChallanData] = useState<DeliveryChallanDocument | null>(null);
-  const [companySettings, setCompanySettings] = useState<FinancialSettingsProfile | null>(null);
+  const [companySettings, setCompanySettings] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export default function PrintDeliveryChallanPage() {
             const [settingsSnap, challanSnap] = await Promise.all([getDoc(settingsDocRef), getDoc(challanDocRef)]);
 
             if(settingsSnap.exists()) {
-                setCompanySettings(settingsSnap.data() as FinancialSettingsProfile);
+                setCompanySettings(settingsSnap.data() as CompanyProfile);
             } else {
                 console.warn("Financial settings not found, using defaults.");
                 setCompanySettings({}); // Use empty object if no settings found
