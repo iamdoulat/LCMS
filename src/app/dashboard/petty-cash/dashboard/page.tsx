@@ -1,11 +1,10 @@
 
-
 "use client";
 
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
@@ -30,6 +29,8 @@ interface PettyCashStats {
     thisMonthUnpaidInvoices: number;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
   if (!dateString) return 'N/A';
   try {
@@ -53,7 +54,6 @@ const formatCurrency = (value: number) => {
     if (value < 0) {
         // Format absolute value and manually insert the minus sign with non-breaking spaces
         const formatted = formatter.format(Math.abs(value));
-        // Using non-breaking space and non-breaking hyphen to prevent line breaks
         return formatted.replace(/BDT/, 'BDT\u00A0-\u00A0');
     }
 
@@ -83,6 +83,8 @@ export default function PettyCashDashboardPage() {
     const [isAddFormOpen, setIsAddFormOpen] = React.useState(false);
     const [isEditFormOpen, setIsEditFormOpen] = React.useState(false);
     const [editingTransaction, setEditingTransaction] = React.useState<PettyCashTransactionDocument | null>(null);
+    const [currentPage, setCurrentPage] = React.useState(1);
+
 
     React.useEffect(() => {
         let initialPettyCashBalance = 0;
@@ -219,7 +221,40 @@ export default function PettyCashDashboardPage() {
         });
     };
     
-    const netFlow = stats.thisMonthDebits - stats.thisMonthCredits;
+    const netFlow = stats.thisMonthCredits - stats.thisMonthDebits;
+    
+    const totalPages = Math.ceil(transactions.length / ITEMS_PER_PAGE);
+    const currentTransactions = transactions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+    
+     const getPageNumbers = () => {
+        const pageNumbers = [];
+        const maxPagesToShow = 5; 
+        const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+        if (totalPages <= maxPagesToShow + 2) { 
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+        } else {
+        pageNumbers.push(1); 
+        let startPage = Math.max(2, currentPage - halfPagesToShow);
+        let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+        if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
+        if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+        if (startPage > 2) pageNumbers.push("...");
+        for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+        if (endPage < totalPages - 1) pageNumbers.push("...");
+        pageNumbers.push(totalPages); 
+        }
+        return pageNumbers;
+    };
+
 
     if (isLoading) {
         return (
@@ -253,7 +288,7 @@ export default function PettyCashDashboardPage() {
                         An overview of your petty cash accounts and recent activity.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                 <CardContent className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                      <StatCard
                         title="Balance"
                         value={formatCurrency(stats.pettyCashBalance)}
@@ -342,7 +377,7 @@ export default function PettyCashDashboardPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {transactions.map(tx => (
+                                        {currentTransactions.map(tx => (
                                             <TableRow key={tx.id}>
                                                 <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
                                                 <TableCell>{tx.accountNames?.join(', ') || 'N/A'}</TableCell>
@@ -373,8 +408,46 @@ export default function PettyCashDashboardPage() {
                                             </TableRow>
                                         ))}
                                     </TableBody>
-                                    <TableCaption>A list of your recent petty cash transactions.</TableCaption>
+                                    <TableCaption>
+                                        Showing {currentTransactions.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
+                                        {Math.min(currentPage * ITEMS_PER_PAGE, transactions.length)} of {transactions.length} transactions.
+                                    </TableCaption>
                                 </Table>
+                            </div>
+                        )}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+                                {getPageNumbers().map((page, index) =>
+                                    typeof page === 'number' ? (
+                                    <Button
+                                        key={`page-${page}`}
+                                        variant={currentPage === page ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => handlePageChange(page)}
+                                        className="w-9 h-9 p-0"
+                                    >
+                                        {page}
+                                    </Button>
+                                    ) : (<span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                                )}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
                             </div>
                         )}
                     </CardContent>
@@ -412,5 +485,4 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
-
 
