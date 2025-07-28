@@ -1149,7 +1149,6 @@ export type PettyCashTransactionFormValues = z.infer<typeof PettyCashTransaction
 
 
 // --- Delivery Challan Types ---
-
 export const DeliveryChallanLineItemSchema = z.object({
   itemId: z.string().optional(), // This can be optional if not linking to specific inventory items
   description: z.string().min(1, "Description is required."),
@@ -1189,5 +1188,44 @@ export interface DeliveryChallanDocument {
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
-
 // --- END Delivery Challan Types ---
+
+// --- Demo Machine Challan Types ---
+export const DemoChallanLineItemSchema = z.object({
+  demoMachineId: z.string().min(1, "Machine Model is required."),
+  description: z.string().min(1, "Description is required."),
+  qty: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
+});
+export type DemoChallanLineItemFormValues = z.infer<typeof DemoChallanLineItemSchema>;
+
+export const DemoChallanSchema = z.object({
+  factoryId: z.string().min(1, "Factory is required."),
+  deliveryAddress: z.string().min(1, "Delivery Address is required."),
+  challanDate: z.date({ required_error: "Challan Date is required." }),
+  linkedApplicationId: z.string().optional(),
+  deliveryPerson: z.string().min(1, "Delivery Person is required."),
+  vehicleNo: z.string().optional(),
+  lineItems: z.array(DemoChallanLineItemSchema).min(1, "At least one item is required."),
+});
+export type DemoChallanFormValues = z.infer<typeof DemoChallanSchema>;
+
+export interface DemoChallanLineItemDocument {
+  demoMachineId: string;
+  description: string;
+  qty: number;
+}
+
+export interface DemoChallanDocument {
+  id: string; // Auto-generated ID like DMCN{Year}-{Serial}
+  factoryId: string;
+  factoryName: string; // Denormalized
+  deliveryAddress: string;
+  challanDate: string; // ISO string
+  linkedApplicationId?: string;
+  deliveryPerson: string;
+  vehicleNo?: string;
+  lineItems: DemoChallanLineItemDocument[];
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+// --- END Demo Machine Challan Types ---

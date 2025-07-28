@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from 'next/link';
@@ -139,6 +140,7 @@ const demoNavItems: NavItem[] = [
     { href: '/dashboard/demo/demo-machine-list', label: 'Demo Machine List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/demo/demo-machine-factories-list', label: 'Demo Machine Factories List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/demo/demo-machine-program', label: 'Demo Machine Program', icon: FileCode, iconColorClass: 'bg-icon-program' },
+    { href: '/dashboard/demo/demo-machine-challan', label: 'Demo Machine Challan', icon: Truck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/demo/demo-mc-date-overdue', label: 'Demo M/C Date Overdue', icon: CalendarClock, iconColorClass: 'bg-icon-overdue' },
 ];
 
