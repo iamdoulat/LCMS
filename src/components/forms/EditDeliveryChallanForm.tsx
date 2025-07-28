@@ -12,7 +12,7 @@ import type { DeliveryChallanFormValues, CustomerDocument, SaleDocument as Invoi
 import { DeliveryChallanSchema } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, Save, X, ShoppingBag, Hash, Columns, Printer, Truck, User } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
