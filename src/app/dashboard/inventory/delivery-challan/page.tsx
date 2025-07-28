@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, MoreHorizontal, Printer, Truck, FileText } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, MoreHorizontal, Printer, Truck, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -37,7 +37,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_CHALLAN__";
 
 export default function DeliveryChallanListPage() {
@@ -133,7 +133,36 @@ export default function DeliveryChallanListPage() {
   };
 
   const totalPages = Math.ceil(displayedChallans.length / ITEMS_PER_PAGE);
-  const currentItems = displayedChallans.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = displayedChallans.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+  
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+    if (totalPages <= maxPagesToShow + 2) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      pageNumbers.push(1);
+      let startPage = Math.max(2, currentPage - halfPagesToShow);
+      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+      if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
+      if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+      if (startPage > 2) pageNumbers.push("...");
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages - 1) pageNumbers.push("...");
+      pageNumbers.push(totalPages);
+    }
+    return pageNumbers;
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -209,13 +238,46 @@ export default function DeliveryChallanListPage() {
                   <TableRow><TableCell colSpan={6} className="h-24 text-center">No challans found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
-              <TableCaption>A list of your delivery challans.</TableCaption>
+              <TableCaption className="py-4">
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedChallans.length)} of {displayedChallans.length} entries.
+              </TableCaption>
             </Table>
           </div>
-          {/* Pagination would go here */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                </Button>
+                {getPageNumbers().map((page, index) =>
+                    typeof page === 'number' ? (
+                    <Button
+                        key={`challan-page-${page}`}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="w-9 h-9 p-0"
+                    >
+                        {page}
+                    </Button>
+                    ) : (<span key={`ellipsis-challan-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                )}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
+                    Next <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
