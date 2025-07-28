@@ -44,6 +44,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (disabled) return;
       const input = e.target as HTMLInputElement;
       if (e.key === "Backspace" && input.value === "") {
         const newSelected = [...selected];
