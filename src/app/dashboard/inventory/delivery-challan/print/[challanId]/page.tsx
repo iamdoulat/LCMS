@@ -119,7 +119,7 @@ export default function PrintDeliveryChallanPage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">DELIVERY CHALLAN</h2>
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DELIVERY CHALLAN</h2>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Challan No :</span>
                     <span>{challanData.id}</span>
@@ -135,11 +135,18 @@ export default function PrintDeliveryChallanPage() {
             </div>
             </div>
             
-             <div className="border p-2 rounded-md text-xs mb-2">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase">M/S:</h3>
-                <p className="font-medium text-gray-900">{challanData.customerName || 'N/A'}</p>
-                <p className="text-gray-600 whitespace-pre-line">{challanData.shippingAddress || 'N/A'}</p>
-            </div>
+             <div className="grid grid-cols-2 gap-4 mb-2">
+                <div className="border p-2 rounded-md text-xs">
+                    <h3 className="font-semibold text-gray-700 mb-1 uppercase">M/S:</h3>
+                    <p className="font-medium text-gray-900">{challanData.customerName || 'N/A'}</p>
+                    <p className="text-gray-600 whitespace-pre-line">{challanData.billingAddress || 'N/A'}</p>
+                </div>
+                <div className="border p-2 rounded-md text-xs">
+                    <h3 className="font-semibold text-gray-700 mb-1 uppercase">DELIVER TO:</h3>
+                    <p className="font-medium text-gray-900">{challanData.customerName || 'N/A'}</p>
+                    <p className="text-gray-600 whitespace-pre-line">{challanData.shippingAddress || 'N/A'}</p>
+                </div>
+             </div>
              <div className="grid grid-cols-2 gap-4 mb-2 text-xs">
                  <div className="border p-2 rounded-md">
                      <span className="font-semibold text-gray-700">Delivery Person:</span>
