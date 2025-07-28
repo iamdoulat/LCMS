@@ -28,9 +28,15 @@ Harness the power of a unified system that brings clarity and efficiency to ever
     *   **Layout Settings**: Customize the look and feel of your printable documents with your company logo and details.
 
 *   **Accounts and Inventory**: Gain full control over your stock and sales records.
+    *   **Account Dashboard**:
     *   **Item Management**: Maintain a complete inventory of all your items, with details on pricing, stock levels, and location.
+    *   **Sales Invoices**:  
+    *   **Delivery Challan**:
+    *   **Orders List**:  
     *   **Sales Tracking**: Record new sales transactions, which automatically deduct from your inventory for real-time stock management.
-    *   **Inventory Returns**: Process returned items from sales back into your inventory, ensuring accurate stock counts.
+    *   **Refunds & Returns**: Process returned items from sales back into your inventory, ensuring accurate stock counts.
+    *   **Apply Payment**:
+    *   **Settings**:
 
 *   **Commission Management**: Simplify your commission tracking with dedicated tools for Proforma Invoices (PI).
     *   **Add & Manage PIs**: Easily create new PIs and connect them to existing L/C entries.
