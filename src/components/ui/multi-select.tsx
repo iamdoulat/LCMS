@@ -26,10 +26,11 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
-  ({ options, selected, onChange, className, placeholder = "Select...", ...props }, ref) => {
+  ({ options, selected, onChange, className, placeholder = "Select...", disabled = false, ...props }, ref) => {
     const [open, setOpen] = React.useState(false);
     const [inputValue, setInputValue] = React.useState("");
 
@@ -75,6 +76,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                     e.stopPropagation();
                   }}
                   onClick={() => handleUnselect(value)}
+                  disabled={disabled}
                 >
                   <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                 </button>
@@ -87,11 +89,12 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
               onFocus={() => setOpen(true)}
               placeholder={selected.length > 0 ? "" : placeholder}
               className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+              disabled={disabled}
             />
           </div>
         </div>
         <div className="relative mt-2">
-          {open && options.length > 0 ? (
+          {open && !disabled && options.length > 0 ? (
             <div className="absolute top-0 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
               <CommandList>
                 <CommandGroup className="h-full overflow-auto">
