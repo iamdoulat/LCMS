@@ -53,11 +53,11 @@ const formatCurrency = (value: number) => {
     if (value < 0) {
         // Format absolute value and manually insert the minus sign with non-breaking spaces
         const formatted = formatter.format(Math.abs(value));
-        // Using non-breaking space and non-breaking hyphen
-        return formatted.replace('BDT', 'BDT\u00A0-\u00A0');
+        // Using non-breaking space and non-breaking hyphen to prevent line breaks
+        return formatted.replace(/BDT/, 'BDT\u00A0-\u00A0');
     }
 
-    return formatter.format(value).replace('BDT', 'BDT\u00A0');
+    return formatter.format(value).replace(/BDT/, 'BDT\u00A0');
 };
 
 const formatCurrencyValue = (amount?: number) => {
@@ -253,7 +253,7 @@ export default function PettyCashDashboardPage() {
                         An overview of your petty cash accounts and recent activity.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <CardContent className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                      <StatCard
                         title="Balance"
                         value={formatCurrency(stats.pettyCashBalance)}
@@ -412,4 +412,5 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
+
 
