@@ -159,13 +159,21 @@ export function CreateDeliveryChallanForm() {
           billingAddress: data.billingAddress,
           shippingAddress: data.shippingAddress,
           challanDate: format(data.challanDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          linkedInvoiceId: data.linkedInvoiceId || undefined,
+          linkedInvoiceId: data.linkedInvoiceId || null, // Use null instead of undefined
           deliveryPerson: data.deliveryPerson,
           vehicleNo: data.vehicleNo,
           lineItems: data.lineItems.map(item => ({...item, qty: parseFloat(item.qty)})),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
+
+        // This removes any undefined or empty string fields before saving
+        Object.keys(challanDataToSave).forEach(key => {
+            if (challanDataToSave[key] === undefined || challanDataToSave[key] === '') {
+                delete challanDataToSave[key];
+            }
+        });
+
 
         const newChallanRef = doc(firestore, "delivery_challans", formattedChallanId);
         transaction.set(newChallanRef, challanDataToSave);
