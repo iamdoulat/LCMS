@@ -121,16 +121,13 @@ function PrintPageContent() {
     }
 
     const { transactions, filters, totals } = reportData;
-    const { companyName, invoiceLogoUrl, address } = companyProfile || {};
+    const { companyName, address } = companyProfile || {};
     
-    const displayCompanyLogo = invoiceLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-
     return (
         <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
         <div className="p-4 flex flex-col flex-grow">
             <header className="flex justify-between items-center mb-4 print-header">
                 <div>
-                    {displayCompanyLogo && <Image src={displayCompanyLogo} alt="Company Logo" width={200} height={50} className="object-contain" data-ai-hint="company logo"/>}
                     <h1 className="text-xl font-bold">{companyName || DEFAULT_COMPANY_NAME}</h1>
                     {address && <p className="text-xs">{address}</p>}
                 </div>
@@ -175,15 +172,17 @@ function PrintPageContent() {
                             </TableRow>
                         ))}
                     </TableBody>
-                    <TableRow className="bg-gray-100 font-bold">
-                        <TableCell colSpan={4} className="text-right">Totals:</TableCell>
-                        <TableCell className="text-right">{formatCurrencyValue(totals.totalDebits)}</TableCell>
-                        <TableCell className="text-right">{formatCurrencyValue(totals.totalCredits)}</TableCell>
-                    </TableRow>
-                    <TableRow className="bg-gray-200 font-bold text-lg">
-                        <TableCell colSpan={4} className="text-right">Net Flow:</TableCell>
-                        <TableCell colSpan={2} className="text-center">{formatCurrencyValue(totals.totalCredits - totals.totalDebits)}</TableCell>
-                    </TableRow>
+                    <TableCaption>
+                      <div className="grid grid-cols-6 gap-4 font-bold text-sm text-foreground">
+                        <div className="col-span-4 text-right">Totals:</div>
+                        <div className="text-right text-red-600">{formatCurrencyValue(totals.totalDebits)}</div>
+                        <div className="text-right text-green-600">{formatCurrencyValue(totals.totalCredits)}</div>
+                      </div>
+                       <div className="grid grid-cols-6 gap-4 font-bold text-base mt-2 pt-2 border-t text-foreground">
+                        <div className="col-span-4 text-right">Net Flow:</div>
+                        <div className="col-span-2 text-center">{formatCurrencyValue(totals.totalCredits - totals.totalDebits)}</div>
+                      </div>
+                    </TableCaption>
                 </Table>
             </div>
         </div>
