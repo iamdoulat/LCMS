@@ -126,10 +126,10 @@ function PrintPageContent() {
 
   return (
     <div className="print-container bg-white p-8 font-sans">
-      <header className="flex justify-between items-start mb-4 print-header">
-        <div className="w-full text-right">
-          <h1 className="text-xl font-bold">{displayCompanyName}</h1>
-          <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+      <header className="flex flex-col items-center mb-4 print-header">
+        <div className="text-center w-full">
+            <h1 className="text-xl font-bold">{displayCompanyName}</h1>
+            <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
         </div>
       </header>
       <hr className="my-4" />
