@@ -58,7 +58,7 @@ export default function PettyCashReportsPage() {
 
   const filteredTransactions = useMemo(() => {
     let filtered = [...allTransactions];
-    if (filterAccount) filtered = filtered.filter(tx => tx.accountIds?.includes(filterAccount));
+    if (filterAccount) filtered = filtered.filter(tx => tx.accountId === filterAccount);
     if (filterCategory) filtered = filtered.filter(tx => tx.categoryIds?.includes(filterCategory));
     if (filterType) filtered = filtered.filter(tx => tx.type === filterType);
     if (filterPayee) filtered = filtered.filter(tx => tx.payeeName?.toLowerCase().includes(filterPayee.toLowerCase()));
@@ -225,7 +225,7 @@ export default function PettyCashReportsPage() {
                                     <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
                                     <TableCell>{tx.payeeName}</TableCell>
                                     <TableCell>{tx.categoryNames?.join(', ')}</TableCell>
-                                    <TableCell>{tx.accountNames?.join(', ')}</TableCell>
+                                    <TableCell>{tx.accountName || 'N/A'}</TableCell>
                                     <TableCell className="text-right font-medium text-red-600">{tx.type === 'Debit' ? formatCurrencyValue(tx.amount) : '-'}</TableCell>
                                     <TableCell className="text-right font-medium text-green-600">{tx.type === 'Credit' ? formatCurrencyValue(tx.amount) : '-'}</TableCell>
                                 </TableRow>
