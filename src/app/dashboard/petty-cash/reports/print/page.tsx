@@ -166,7 +166,7 @@ function PrintPageContent() {
                                 <TableCell className="text-xs">{formatDisplayDate(tx.transactionDate)}</TableCell>
                                 <TableCell className="text-xs">{tx.payeeName}</TableCell>
                                 <TableCell className="text-xs">{tx.categoryNames?.join(', ')}</TableCell>
-                                <TableCell className="text-xs">{tx.accountNames?.join(', ')}</TableCell>
+                                <TableCell className="text-xs">{tx.accountName || 'N/A'}</TableCell>
                                 <TableCell className="text-right text-xs">{tx.type === 'Debit' ? formatCurrencyValue(tx.amount) : '-'}</TableCell>
                                 <TableCell className="text-right text-xs">{tx.type === 'Credit' ? formatCurrencyValue(tx.amount) : '-'}</TableCell>
                             </TableRow>
