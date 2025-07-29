@@ -122,24 +122,12 @@ function PrintPageContent() {
   }
 
   const displayCompanyName = companyProfile?.companyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = companyProfile?.invoiceLogoUrl || companyProfile?.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
   const displayCompanyAddress = companyProfile?.address || DEFAULT_ADDRESS;
 
   return (
     <div className="print-container bg-white p-8 font-sans">
       <header className="flex justify-between items-start mb-4 print-header">
-        <div className="w-1/3">
-          <Image
-            src={displayCompanyLogo}
-            alt="Company Logo"
-            width={248}
-            height={125}
-            className="object-contain"
-            data-ai-hint="company logo"
-            priority
-          />
-        </div>
-        <div className="w-2/3 text-right">
+        <div className="w-full text-right">
           <h1 className="text-xl font-bold">{displayCompanyName}</h1>
           <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
         </div>
