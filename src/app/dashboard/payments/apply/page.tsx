@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, query, where, runTransaction, serverTimestamp, onSnapshot, getDocs } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceStatus, PettyCashAccountDocument } from '@/types';
+import type { InvoiceDocument, InvoiceStatus, PettyCashAccountDocument, PettyCashCategoryDocument } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,9 @@ export default function ApplyPaymentPage() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [invoiceOptions, setInvoiceOptions] = React.useState<InvoiceOption[]>([]);
   const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = React.useState(true);
 
   const [selectedInvoiceDetails, setSelectedInvoiceDetails] = React.useState<{
     invoiceDate: string;
@@ -104,7 +106,25 @@ export default function ApplyPaymentPage() {
             setIsLoadingAccounts(false);
         }
     };
+    
+    const fetchCategories = async () => {
+        setIsLoadingCategories(true);
+        try {
+            const categoriesQuery = query(collection(firestore, "petty_cash_categories"));
+            const categoriesSnapshot = await getDocs(categoriesQuery);
+            setCategoryOptions(
+                categoriesSnapshot.docs.map(d => ({ value: d.id, label: (d.data() as PettyCashCategoryDocument).name || 'Unnamed Category' }))
+            );
+        } catch(e) {
+            console.error("Error fetching petty cash categories: ", e);
+            Swal.fire("Error", "Could not load categories.", "error");
+        } finally {
+            setIsLoadingCategories(false);
+        }
+    };
+
     fetchAccounts();
+    fetchCategories();
 
     return () => unsubscribeInvoices();
   }, []);
@@ -180,9 +200,15 @@ export default function ApplyPaymentPage() {
     setIsSubmitting(true);
     try {
         const selectedAccount = accountOptions.find(opt => opt.value === data.sourceAccountId);
+        const paymentCategory = categoryOptions.find(cat => cat.label.toLowerCase() === "invoice payment received");
+
+        if (!paymentCategory) {
+            throw new Error("The required category 'Invoice Payment Received' was not found. Please create it in Petty Cash Settings.");
+        }
+
         const invoiceRef = doc(firestore, "sales_invoice", watchedInvoiceId);
         const paymentRef = doc(collection(firestore, "payments"));
-        const transactionRef = doc(collection(firestore, "petty_cash_transactions")); // For petty cash debit
+        const transactionRef = doc(collection(firestore, "petty_cash_transactions"));
 
         await runTransaction(firestore, async (transaction) => {
             const invoiceDoc = await transaction.get(invoiceRef);
@@ -214,23 +240,25 @@ export default function ApplyPaymentPage() {
                 createdAt: serverTimestamp(),
             });
             
-            // Also create a corresponding debit transaction in petty cash
+            // Also create a corresponding credit transaction in petty cash
             transaction.set(transactionRef, {
                 transactionDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                 accountIds: [data.sourceAccountId],
                 accountNames: [selectedAccount?.label || 'N/A'],
-                type: 'Debit',
+                categoryIds: [paymentCategory.value],
+                categoryNames: [paymentCategory.label],
+                type: 'Credit',
                 payeeName: invoiceData.customerName || 'N/A',
                 amount: data.paymentAmount,
-                purpose: `Payment for Invoice ${invoiceDoc.id}`,
-                description: data.notes || `Applied payment to Invoice ${invoiceDoc.id}`,
+                purpose: `Payment received for Invoice ${invoiceDoc.id}`,
+                description: data.notes || `Payment applied to Invoice ${invoiceDoc.id}`,
                 connectedSaleId: invoiceDoc.id,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
         });
 
-        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated and petty cash debited.`, "success");
+        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated and petty cash credited.`, "success");
         setIsPaymentDialogOpen(false);
         invoiceSelectForm.reset({ invoiceId: '' });
     } catch (error: any) {
