@@ -16,7 +16,7 @@ const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const DEFAULT_COMPANY_NAME = 'Your Company Name';
 const DEFAULT_COMPANY_LOGO_URL = 'https://placehold.co/400x100.png';
-const DEFAULT_ADDRESS = 'Your Company Address';
+const DEFAULT_ADDRESS = '236A Serangoon Road, #02-236A, Singapore 218084\nTel: +6593218129, Reg. No. 201610840K';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -129,7 +129,7 @@ function PrintPageContent() {
             <header className="flex justify-between items-center mb-4 print-header">
                 <div>
                     <h1 className="text-xl font-bold">{companyName || DEFAULT_COMPANY_NAME}</h1>
-                    {address && <p className="text-xs">{address}</p>}
+                    <p className="text-xs text-gray-600 whitespace-pre-line">{address || DEFAULT_ADDRESS}</p>
                 </div>
                 <div className="text-right">
                     <h2 className="text-2xl font-bold uppercase">Petty Cash Report</h2>
