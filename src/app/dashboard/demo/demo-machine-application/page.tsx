@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
 import type { DemoMachineApplicationFormValues, DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus, AppliedMachineItem } from '@/types';
 import { demoMachineApplicationSchema } from '@/types';
 
