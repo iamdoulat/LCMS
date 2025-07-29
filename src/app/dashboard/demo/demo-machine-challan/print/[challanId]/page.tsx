@@ -112,14 +112,14 @@ export default function PrintDemoMachineChallanPage() {
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
-            <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3">
+            <div className="flex justify-between items-center mb-2">
+            <div className="w-1/3">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={277}
-                    height={41}
+                    width={317}
+                    height={46}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -131,7 +131,7 @@ export default function PrintDemoMachineChallanPage() {
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             </div>
             
-            <div className="flex flex-col items-center justify-center h-full mb-4">
+            <div className="flex-shrink-0 flex flex-col items-center justify-center h-full mb-4">
                  <div className="p-1 border bg-white">
                     <QRCode
                         value={qrCodeValue}
@@ -256,4 +256,5 @@ export default function PrintDemoMachineChallanPage() {
     </div>
   );
 }
+
 
