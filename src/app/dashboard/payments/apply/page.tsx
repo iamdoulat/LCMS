@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const invoiceSelectSchema = z.object({
   invoiceId: z.string().min(1, "Invoice selection is required."),
@@ -333,18 +334,29 @@ export default function ApplyPaymentPage() {
                                 control={paymentDetailsForm.control}
                                 name="sourceAccountId"
                                 render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel className="flex items-center"><Wallet className="mr-2 h-4 w-4 text-muted-foreground" />Source Account*</FormLabel>
-                                    <Combobox
-                                        options={accountOptions}
-                                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
-                                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
-                                        placeholder="Search Account..."
-                                        selectPlaceholder={isLoadingAccounts ? "Loading..." : "Select Source Account"}
-                                        emptyStateMessage="No account found."
-                                        disabled={isLoadingAccounts}
-                                    />
-                                    <FormMessage />
+                                    <FormItem className="space-y-3">
+                                        <FormLabel className="flex items-center"><Wallet className="mr-2 h-4 w-4 text-muted-foreground" />Source Account*</FormLabel>
+                                        <FormControl>
+                                            <RadioGroup
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                                className="flex flex-col space-y-1"
+                                                disabled={isLoadingAccounts}
+                                            >
+                                                {accountOptions.map((account) => (
+                                                    <FormItem key={account.value} className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl>
+                                                            <RadioGroupItem value={account.value} />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">
+                                                            {account.label}
+                                                        </FormLabel>
+                                                    </FormItem>
+                                                ))}
+                                            </RadioGroup>
+                                        </FormControl>
+                                        {isLoadingAccounts && <p className="text-sm text-muted-foreground">Loading accounts...</p>}
+                                        <FormMessage />
                                     </FormItem>
                                 )}
                             />
@@ -369,7 +381,7 @@ export default function ApplyPaymentPage() {
                                 )}
                             />
                              <FormField
-                                control={paymentDetailsForm.control}
+                                control={form.control}
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
