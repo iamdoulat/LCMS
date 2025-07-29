@@ -162,11 +162,13 @@ export function CreateDemoMachineChallanForm() {
           updatedAt: serverTimestamp(),
         };
 
+        // This removes any undefined or empty string fields before saving
         Object.keys(challanDataToSave).forEach(key => {
             if (challanDataToSave[key] === undefined || challanDataToSave[key] === '') {
                 delete challanDataToSave[key];
             }
         });
+
 
         const newChallanRef = doc(firestore, "demo_machine_challans", formattedChallanId);
         transaction.set(newChallanRef, challanDataToSave);
