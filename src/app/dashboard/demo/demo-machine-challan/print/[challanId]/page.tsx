@@ -129,7 +129,7 @@ export default function PrintDemoMachineChallanPage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C DELIVERY CHALLAN</h2>
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Challan No :</span>
                     <span>{challanData.id}</span>
@@ -215,10 +215,12 @@ export default function PrintDemoMachineChallanPage() {
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Receiver's Signature</p>
+            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
+            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
