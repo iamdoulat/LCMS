@@ -8,15 +8,15 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, query, where, runTransaction, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceStatus } from '@/types';
+import { collection, doc, query, where, runTransaction, serverTimestamp, onSnapshot, getDocs } from 'firebase/firestore';
+import type { InvoiceDocument, InvoiceStatus, PettyCashAccountDocument } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, CreditCard, Users, CalendarDays, DollarSign, FileText, Info } from 'lucide-react';
+import { Loader2, CreditCard, Users, CalendarDays, DollarSign, FileText, Info, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { DatePickerField } from '@/components/forms/DatePickerField';
@@ -31,6 +31,8 @@ type InvoiceSelectFormValues = z.infer<typeof invoiceSelectSchema>;
 const paymentMethods = ["Cash", "Bank Transfer", "Card", "Check"] as const;
 
 const PLACEHOLDER_INVOICE_VALUE = "__APPLY_PAYMENT_INVOICE__";
+const PLACEHOLDER_ACCOUNT_VALUE = "__APPLY_PAYMENT_ACCOUNT__";
+
 
 interface InvoiceOption extends ComboboxOption {
   invoiceData?: InvoiceDocument;
@@ -40,6 +42,9 @@ export default function ApplyPaymentPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [invoiceOptions, setInvoiceOptions] = React.useState<InvoiceOption[]>([]);
+  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
+
   const [selectedInvoiceDetails, setSelectedInvoiceDetails] = React.useState<{
     invoiceDate: string;
     customerName: string;
@@ -65,7 +70,7 @@ export default function ApplyPaymentPage() {
       where("status", "in", ["Sent", "Partial", "Overdue"])
     );
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribeInvoices = onSnapshot(q, (querySnapshot) => {
         const fetchedOptions = querySnapshot.docs.map(docSnap => {
             const data = docSnap.data() as InvoiceDocument;
             const amountDue = data.totalAmount - (data.amountPaid || 0);
@@ -82,8 +87,25 @@ export default function ApplyPaymentPage() {
         Swal.fire("Error", `Could not load invoices in real-time. Error: ${error.message}`, "error");
         setIsLoadingDropdowns(false);
     });
+    
+    const fetchAccounts = async () => {
+        setIsLoadingAccounts(true);
+        try {
+            const accountsQuery = query(collection(firestore, "petty_cash_accounts"));
+            const accountsSnapshot = await getDocs(accountsQuery);
+            setAccountOptions(
+                accountsSnapshot.docs.map(d => ({ value: d.id, label: (d.data() as PettyCashAccountDocument).name || 'Unnamed Account' }))
+            );
+        } catch(e) {
+            console.error("Error fetching petty cash accounts: ", e);
+            Swal.fire("Error", "Could not load source accounts.", "error");
+        } finally {
+            setIsLoadingAccounts(false);
+        }
+    };
+    fetchAccounts();
 
-    return () => unsubscribe();
+    return () => unsubscribeInvoices();
   }, []);
 
   React.useEffect(() => {
@@ -119,6 +141,7 @@ export default function ApplyPaymentPage() {
             { message: `Payment cannot exceed amount due ($${amountDue.toFixed(2)}).`, path: ["paymentAmount"] }
         ),
         paymentDate: z.date({ required_error: "Payment date is required." }),
+        sourceAccountId: z.string().min(1, "Source account is required."),
         paymentMethod: z.enum(paymentMethods, { required_error: "Payment method is required." }),
         notes: z.string().optional(),
     });
@@ -131,6 +154,7 @@ export default function ApplyPaymentPage() {
     defaultValues: {
         paymentAmount: undefined,
         paymentDate: new Date(),
+        sourceAccountId: '',
         paymentMethod: "Cash",
         notes: '',
     }
@@ -140,6 +164,7 @@ export default function ApplyPaymentPage() {
     paymentDetailsForm.reset({
         paymentAmount: selectedInvoiceDetails?.amountDue ?? undefined,
         paymentDate: new Date(),
+        sourceAccountId: '',
         paymentMethod: "Cash",
         notes: '',
     });
@@ -153,8 +178,10 @@ export default function ApplyPaymentPage() {
     }
     setIsSubmitting(true);
     try {
+        const selectedAccount = accountOptions.find(opt => opt.value === data.sourceAccountId);
         const invoiceRef = doc(firestore, "sales_invoice", watchedInvoiceId);
         const paymentRef = doc(collection(firestore, "payments"));
+        const transactionRef = doc(collection(firestore, "petty_cash_transactions")); // For petty cash debit
 
         await runTransaction(firestore, async (transaction) => {
             const invoiceDoc = await transaction.get(invoiceRef);
@@ -174,20 +201,37 @@ export default function ApplyPaymentPage() {
 
             transaction.set(paymentRef, {
                 invoiceId: watchedInvoiceId,
-                invoiceNumber: invoiceDoc.id, // Correctly use the document ID
+                invoiceNumber: invoiceDoc.id,
                 customerId: invoiceData.customerId,
                 customerName: invoiceData.customerName,
                 paymentAmount: data.paymentAmount,
                 paymentDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                 paymentMethod: data.paymentMethod,
+                sourceAccountId: data.sourceAccountId,
+                sourceAccountName: selectedAccount?.label || 'N/A',
                 notes: data.notes || "",
                 createdAt: serverTimestamp(),
             });
+            
+            // Also create a corresponding debit transaction in petty cash
+            transaction.set(transactionRef, {
+                transactionDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                accountIds: [data.sourceAccountId],
+                accountNames: [selectedAccount?.label || 'N/A'],
+                type: 'Debit',
+                payeeName: invoiceData.customerName || 'N/A',
+                amount: data.paymentAmount,
+                purpose: `Payment for Invoice ${invoiceDoc.id}`,
+                description: data.notes || `Applied payment to Invoice ${invoiceDoc.id}`,
+                connectedSaleId: invoiceDoc.id,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
         });
 
-        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated.`, "success");
-        setIsPaymentDialogOpen(false); // Close dialog on success
-        invoiceSelectForm.reset({ invoiceId: '' }); // Clear selection
+        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated and petty cash debited.`, "success");
+        setIsPaymentDialogOpen(false);
+        invoiceSelectForm.reset({ invoiceId: '' });
     } catch (error: any) {
         Swal.fire("Error", `Failed to apply payment: ${error.message}`, "error");
     } finally {
@@ -282,6 +326,25 @@ export default function ApplyPaymentPage() {
                                         <FormLabel>Payment Date</FormLabel>
                                         <DatePickerField field={field} placeholder="Select payment date" />
                                         <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={paymentDetailsForm.control}
+                                name="sourceAccountId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel className="flex items-center"><Wallet className="mr-2 h-4 w-4 text-muted-foreground" />Source Account*</FormLabel>
+                                    <Combobox
+                                        options={accountOptions}
+                                        value={field.value || PLACEHOLDER_ACCOUNT_VALUE}
+                                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_ACCOUNT_VALUE ? '' : value)}
+                                        placeholder="Search Account..."
+                                        selectPlaceholder={isLoadingAccounts ? "Loading..." : "Select Source Account"}
+                                        emptyStateMessage="No account found."
+                                        disabled={isLoadingAccounts}
+                                    />
+                                    <FormMessage />
                                     </FormItem>
                                 )}
                             />
