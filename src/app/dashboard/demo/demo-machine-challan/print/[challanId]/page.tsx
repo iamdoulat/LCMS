@@ -157,31 +157,27 @@ export default function PrintDemoMachineChallanPage() {
                     <p className="text-gray-600 whitespace-pre-line">{challanData.deliveryAddress || 'N/A'}</p>
                 </div>
              </div>
-             <div className="grid grid-cols-2 gap-4 mb-2 text-xs">
-                <div className="border p-2 rounded-md">
-                    <span className="font-semibold text-gray-700">Delivery Person:</span>
-                    <p className="font-medium text-gray-900">{challanData.deliveryPerson || 'N/A'}</p>
-                </div>
-                <div className="border p-2 rounded-md grid grid-cols-2 gap-x-4">
-                    <div>
-                        <span className="font-semibold text-gray-700">Vehicle No:</span>
-                        <p className="font-medium text-gray-900">{challanData.vehicleNo || 'N/A'}</p>
+             <div className="grid grid-cols-4 gap-4 mb-2 text-xs">
+                 <div className="border p-2 rounded-md">
+                     <span className="font-semibold text-gray-700">Delivery Person:</span>
+                     <p className="font-medium text-gray-900">{challanData.deliveryPerson || 'N/A'}</p>
+                 </div>
+                 <div className="border p-2 rounded-md">
+                    <span className="font-semibold text-gray-700">Vehicle No:</span>
+                    <p className="font-medium text-gray-900">{challanData.vehicleNo || 'N/A'}</p>
+                 </div>
+                {applicationData?.deliveryDate && (
+                    <div className="border p-2 rounded-md">
+                        <span className="font-semibold text-gray-700">Delivery Date:</span>
+                        <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.deliveryDate)}</p>
                     </div>
-                    <div>
-                        {applicationData?.deliveryDate && (
-                            <div>
-                                <span className="font-semibold text-gray-700">Delivery Date:</span>
-                                <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.deliveryDate)}</p>
-                            </div>
-                        )}
-                        {applicationData?.estReturnDate && (
-                            <div className="mt-1">
-                                <span className="font-semibold text-gray-700">Est. Return Date:</span>
-                                <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.estReturnDate)}</p>
-                            </div>
-                        )}
+                )}
+                {applicationData?.estReturnDate && (
+                    <div className="border p-2 rounded-md">
+                        <span className="font-semibold text-gray-700">Est. Return Date:</span>
+                        <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.estReturnDate)}</p>
                     </div>
-                </div>
+                )}
              </div>
         </div>
 
