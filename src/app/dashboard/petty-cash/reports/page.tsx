@@ -17,6 +17,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import { Label } from '@/components/ui/label';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
@@ -245,4 +246,3 @@ export default function PettyCashReportsPage() {
     </div>
   );
 }
-
