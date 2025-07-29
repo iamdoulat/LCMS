@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import QRCode from 'react-qr-code';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -105,12 +106,14 @@ export default function PrintDemoMachineChallanPage() {
   const displayCompanyLogo = invoiceLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = address || 'Your Company Address';
 
+  const qrCodeValue = `DEMO M/C CHALLAN\nChallan No: ${challanData.id}\nDate: ${formatDisplayDate(challanData.challanDate)}\nApplication No: ${challanData.linkedApplicationId || 'N/A'}\nCustomer Name: ${challanData.factoryName || 'N/A'}\nAddress: ${challanData.deliveryAddress || 'N/A'}`;
+
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-8">
+            <div className="w-2/3 pr-4">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
@@ -127,16 +130,22 @@ export default function PrintDemoMachineChallanPage() {
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             </div>
+            
+            <div className="p-1 border bg-white">
+                <QRCode
+                    value={qrCodeValue}
+                    size={64}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
 
-            <div className="text-right">
+            <div className="text-right w-1/3">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
                 <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Challan No :</span>
                     <span>{challanData.id}</span>
-                </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
-                    <span className="font-semibold">Date :</span>
-                    <span>{formatDisplayDate(challanData.challanDate)}</span>
                 </div>
                  <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Application No :</span>
@@ -212,19 +221,19 @@ export default function PrintDemoMachineChallanPage() {
       
       <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
-          <div className="w-1/3">
+          <div className="w-1/3 text-left">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Receiver's Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3 px-4">
+          <div className="w-1/3 px-4 text-left">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Store In-Charge Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3">
+          <div className="w-1/3 text-left">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Authorized Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
         </section>
