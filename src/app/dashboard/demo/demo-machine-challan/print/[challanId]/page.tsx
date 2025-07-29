@@ -212,19 +212,20 @@ export default function PrintDemoMachineChallanPage() {
       
       <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
-          <div className="w-1/3 text-center">
+          <div className="w-1/3">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Receiver's Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3 text-center">
+          <div className="w-1/3 px-4">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Store In-Charge Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3 text-center">
+          <div className="w-1/3">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800 text-center">Authorized Signature</p>
+            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
         </section>
       </div>
