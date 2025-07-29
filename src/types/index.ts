@@ -656,7 +656,7 @@ export type AppliedMachineItem = z.infer<typeof AppliedMachineItemSchema>;
 
 export const demoMachineApplicationSchema = z.object({
   factoryId: z.string().min(1, "Customer Name (Factory) is required."),
-  challanNo: z.string().min(1, "Challan No. is required."),
+  challanNo: z.string().optional(),
   deliveryPersonName: z.string().min(1, "Delivery Person Name is required."),
   deliveryDate: z.date({ required_error: "Delivery Date is required." }),
   estReturnDate: z.date({ required_error: "Est. Return Date is required." }),
