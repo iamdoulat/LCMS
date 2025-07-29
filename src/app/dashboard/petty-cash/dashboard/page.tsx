@@ -380,7 +380,7 @@ export default function PettyCashDashboardPage() {
                                         {currentTransactions.map(tx => (
                                             <TableRow key={tx.id}>
                                                 <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
-                                                <TableCell>{tx.accountNames?.join(', ') || 'N/A'}</TableCell>
+                                                <TableCell>{tx.accountName || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-red-600' : 'text-green-600')}>
                                                         {tx.type}

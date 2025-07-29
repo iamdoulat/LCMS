@@ -81,7 +81,7 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     if (initialData && !isLoadingDropdowns) {
         form.reset({
             transactionDate: initialData.transactionDate ? parseISO(initialData.transactionDate) : new Date(),
-            accountIds: Array.isArray(initialData.accountIds) ? initialData.accountIds : [],
+            accountId: initialData.accountId,
             type: initialData.type,
             payeeName: initialData.payeeName,
             categoryIds: Array.isArray(initialData.categoryIds) ? initialData.categoryIds : [],
@@ -109,14 +109,14 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     }
     setIsSubmitting(true);
 
-    const selectedAccounts = accountOptions.filter(opt => data.accountIds?.includes(opt.value));
+    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
 
     const dataToUpdate: Record<string, any> = {
       ...data,
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      accountIds: data.accountIds,
-      accountNames: selectedAccounts.map(a => a.label),
+      accountId: data.accountId,
+      accountName: selectedAccount?.label || 'N/A',
       categoryIds: data.categoryIds,
       categoryNames: selectedCategories.map(c => c.label),
       amount: Number(data.amount),
@@ -159,16 +159,29 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
-                control={form.control} name="accountIds" render={({ field }) => (
-                <FormItem>
+                control={form.control} name="accountId" render={({ field }) => (
+                <FormItem className="space-y-3">
                     <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Source Account*</FormLabel>
-                     <MultiSelect
-                      options={accountOptions}
-                      selected={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Select accounts..."
-                      disabled={isLoadingDropdowns}
-                    />
+                    <FormControl>
+                        <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="flex flex-col space-y-1"
+                            disabled={isLoadingDropdowns}
+                        >
+                            {(accountOptions as ComboboxOption[]).map((account) => (
+                                <FormItem key={account.value} className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                        <RadioGroupItem value={account.value} />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        {account.label}
+                                    </FormLabel>
+                                </FormItem>
+                            ))}
+                        </RadioGroup>
+                    </FormControl>
+                    {isLoadingDropdowns && <p className="text-sm text-muted-foreground">Loading accounts...</p>}
                     <FormMessage />
                 </FormItem>
             )}/>
