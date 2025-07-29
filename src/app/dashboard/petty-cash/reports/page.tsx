@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
