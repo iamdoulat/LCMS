@@ -20,6 +20,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
+import type { ComboboxOption } from '@/components/ui/combobox';
 
 interface EditPettyCashTransactionFormProps {
   initialData: PettyCashTransactionDocument;
@@ -29,7 +30,7 @@ interface EditPettyCashTransactionFormProps {
 export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: EditPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [accountOptions, setAccountOptions] = React.useState<MultiSelectOption[]>([]);
+  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -169,7 +170,7 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
                             className="flex flex-col space-y-1"
                             disabled={isLoadingDropdowns}
                         >
-                            {(accountOptions as ComboboxOption[]).map((account) => (
+                            {accountOptions.map((account) => (
                                 <FormItem key={account.value} className="flex items-center space-x-3 space-y-0">
                                     <FormControl>
                                         <RadioGroupItem value={account.value} />
