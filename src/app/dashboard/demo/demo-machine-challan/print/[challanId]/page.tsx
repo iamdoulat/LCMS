@@ -113,13 +113,13 @@ export default function PrintDemoMachineChallanPage() {
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-4">
+            <div className="w-2/3">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
+                    width={277}
+                    height={41}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -131,19 +131,21 @@ export default function PrintDemoMachineChallanPage() {
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
             </div>
             
-            <div className="p-1 border bg-white">
-                <QRCode
-                    value={qrCodeValue}
-                    size={64}
-                    bgColor={"#ffffff"}
-                    fgColor={"#000000"}
-                    level={"L"}
-                />
+            <div className="flex flex-col items-center justify-center h-full mb-4">
+                 <div className="p-1 border bg-white">
+                    <QRCode
+                        value={qrCodeValue}
+                        size={64}
+                        bgColor={"#ffffff"}
+                        fgColor={"#000000"}
+                        level={"L"}
+                    />
+                </div>
             </div>
 
             <div className="text-right w-1/3">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
-                <div className="flex justify-end items-baseline gap-2 text-xs">
+                <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
+                 <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Challan No :</span>
                     <span>{challanData.id}</span>
                 </div>
