@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { DemoChallanDocument, CompanyProfile } from '@/types';
+import type { DemoChallanDocument, CompanyProfile, DemoMachineApplicationDocument } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export default function PrintDemoMachineChallanPage() {
   const challanId = params.challanId as string;
 
   const [challanData, setChallanData] = useState<DemoChallanDocument | null>(null);
+  const [applicationData, setApplicationData] = useState<DemoMachineApplicationDocument | null>(null);
   const [companySettings, setCompanySettings] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +57,16 @@ export default function PrintDemoMachineChallanPage() {
             }
             
             if (challanSnap.exists()) {
-                setChallanData({ id: challanSnap.id, ...challanSnap.data() } as DemoChallanDocument);
+                const challan = { id: challanSnap.id, ...challanSnap.data() } as DemoChallanDocument;
+                setChallanData(challan);
+                
+                if (challan.linkedApplicationId) {
+                    const appDocRef = doc(firestore, "demo_machine_applications", challan.linkedApplicationId);
+                    const appDocSnap = await getDoc(appDocRef);
+                    if (appDocSnap.exists()) {
+                        setApplicationData(appDocSnap.data() as DemoMachineApplicationDocument);
+                    }
+                }
             } else {
                 setError("Demo Machine Challan not found.");
             }
@@ -132,6 +142,18 @@ export default function PrintDemoMachineChallanPage() {
                     <span className="font-semibold">Application No :</span>
                     <span>{challanData.linkedApplicationId || 'N/A'}</span>
                 </div>
+                {applicationData?.deliveryDate && (
+                  <div className="flex justify-end items-baseline gap-2 text-sm">
+                      <span className="font-semibold">Delivery Date:</span>
+                      <span>{formatDisplayDate(applicationData.deliveryDate)}</span>
+                  </div>
+                )}
+                {applicationData?.estReturnDate && (
+                  <div className="flex justify-end items-baseline gap-2 text-sm">
+                      <span className="font-semibold">Est. Return Date:</span>
+                      <span>{formatDisplayDate(applicationData.estReturnDate)}</span>
+                  </div>
+                )}
             </div>
             </div>
             
@@ -147,14 +169,16 @@ export default function PrintDemoMachineChallanPage() {
                     <p className="text-gray-600 whitespace-pre-line">{challanData.deliveryAddress || 'N/A'}</p>
                 </div>
              </div>
-             <div className="grid grid-cols-2 gap-4 mb-2 text-xs">
-                 <div className="border p-2 rounded-md">
-                     <span className="font-semibold text-gray-700">Delivery Person:</span>
-                     <p className="font-medium text-gray-900">{challanData.deliveryPerson || 'N/A'}</p>
-                 </div>
-                 <div className="border p-2 rounded-md">
-                    <span className="font-semibold text-gray-700">Vehicle No:</span>
-                    <p className="font-medium text-gray-900">{challanData.vehicleNo || 'N/A'}</p>
+             <div className="border p-2 rounded-md text-xs mb-2">
+                 <div className="grid grid-cols-2 gap-4">
+                     <div>
+                         <span className="font-semibold text-gray-700">Delivery Person:</span>
+                         <p className="font-medium text-gray-900">{challanData.deliveryPerson || 'N/A'}</p>
+                     </div>
+                     <div>
+                        <span className="font-semibold text-gray-700">Vehicle No:</span>
+                        <p className="font-medium text-gray-900">{challanData.vehicleNo || 'N/A'}</p>
+                     </div>
                  </div>
              </div>
         </div>
@@ -164,7 +188,8 @@ export default function PrintDemoMachineChallanPage() {
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '70%'}}>Description of Goods</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '50%'}}>Description of Goods</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '20%'}}>Brand</th>
                 <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '20%'}}>Quantity</th>
               </tr>
             </thead>
@@ -175,11 +200,12 @@ export default function PrintDemoMachineChallanPage() {
                   <td className="p-2 border border-gray-300 align-top break-words">
                     <p className="font-medium text-gray-900">{item.description}</p>
                   </td>
+                  <td className="p-2 border border-gray-300 align-top">{applicationData?.appliedMachines.find(m => m.demoMachineId === item.demoMachineId)?.machineBrand || 'N/A'}</td>
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
                 </tr>
               ))}
               {Array.from({ length: Math.max(0, 15 - challanData.lineItems.length) }).map((_, i) => (
-                 <tr key={`empty-${i}`} className="border-b border-gray-200 h-9"><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td></tr>
+                 <tr key={`empty-${i}`} className="border-b border-gray-200 h-9"><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td></tr>
               ))}
             </tbody>
           </table>
