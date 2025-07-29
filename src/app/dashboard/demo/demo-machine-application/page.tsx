@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, setDoc } from 'firebase/firestore';
 import type { DemoMachineApplicationFormValues, DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus, AppliedMachineItem } from '@/types';
 import { demoMachineApplicationSchema } from '@/types';
 
@@ -188,6 +188,33 @@ export default function NewDemoMachineApplicationPage() {
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     setIsSubmitting(true);
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
+    
+    if (!selectedFactory) {
+      Swal.fire("Error", "Selected factory not found.", "error");
+      setIsSubmitting(false);
+      return;
+    }
+    
+    const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
+    const dateStr = format(new Date(), 'yyyyMMdd');
+    const baseId = `${factoryPrefix}-demo-${dateStr}`;
+
+    let finalId = baseId;
+    let counter = 1;
+    let isUnique = false;
+    
+    // Check for ID uniqueness
+    while (!isUnique) {
+      const appDocRef = doc(firestore, "demo_machine_applications", finalId);
+      const docSnap = await getDoc(appDocRef);
+      if (docSnap.exists()) {
+        finalId = `${baseId}-${counter}`;
+        counter++;
+      } else {
+        isUnique = true;
+      }
+    }
+
     const deliveryDateValue = getValues("deliveryDate");
     const estReturnDateValue = getValues("estReturnDate");
 
@@ -226,23 +253,27 @@ export default function NewDemoMachineApplicationPage() {
     });
 
     try {
-      await addDoc(collection(firestore, "demo_machine_applications"), dataToSave);
+      const newAppDocRef = doc(firestore, "demo_machine_applications", finalId);
+      await setDoc(newAppDocRef, dataToSave);
 
       // Update status for all applied machines
+      const batch = writeBatch(firestore);
       for (const appliedMachine of data.appliedMachines) {
         if (appliedMachine.demoMachineId) {
           const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
           try {
-            await updateDoc(machineRef, {
+            batch.update(machineRef, {
               currentStatus: "Allocated" as AppDemoMachineStatus,
               updatedAt: serverTimestamp(),
             });
           } catch (machineError) {
-            console.error(`Error updating status for machine ${appliedMachine.demoMachineId}:`, machineError);
+            console.error(`Error staging update for machine ${appliedMachine.demoMachineId}:`, machineError);
             // Optionally collect these errors to show a partial success message
           }
         }
       }
+      await batch.commit();
+
       // Refetch machine options to reflect updated statuses
        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
         const fetchedMachines = machinesSnapshot.docs.map(docSnap => {
@@ -263,7 +294,7 @@ export default function NewDemoMachineApplicationPage() {
         setAvailableMachineOptions(availableForSelection);
 
 
-      Swal.fire("Success!", "Demo machine application submitted and machine statuses updated.", "success");
+      Swal.fire("Success!", `Demo machine application submitted with ID: ${finalId}. Machine statuses updated.`, "success");
       reset(); // Reset form fields
       setFactoryLocationDisplay('');
       setDemoPeriodDisplay('0 Days');
