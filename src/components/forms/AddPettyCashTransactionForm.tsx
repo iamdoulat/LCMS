@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -31,7 +32,7 @@ interface AddPettyCashTransactionFormProps {
 export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransactionFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [accountOptions, setAccountOptions] = React.useState<MultiSelectOption[]>([]);
+  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
@@ -39,7 +40,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     resolver: zodResolver(PettyCashTransactionSchema),
     defaultValues: {
       transactionDate: new Date(),
-      accountIds: [],
+      accountId: '',
       type: 'Debit',
       payeeName: '',
       categoryIds: [],
@@ -92,12 +93,12 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
 
   React.useEffect(() => {
     if (!isLoadingDropdowns && accountOptions.length > 0) {
-      if (form.getValues('accountIds').length === 0) {
+      if (!form.getValues('accountId')) {
          const pettyCashAccount = accountOptions.find(opt => opt.label.toLowerCase() === 'petty cash');
          if (pettyCashAccount) {
-            form.setValue('accountIds', [pettyCashAccount.value], { shouldValidate: true });
+            form.setValue('accountId', pettyCashAccount.value, { shouldValidate: true });
          } else if (accountOptions.length > 0) {
-            form.setValue('accountIds', [accountOptions[0].value], { shouldValidate: true });
+            form.setValue('accountId', accountOptions[0].value, { shouldValidate: true });
          }
       }
     }
@@ -118,13 +119,13 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     }
     setIsSubmitting(true);
     
-    const selectedAccounts = accountOptions.filter(opt => data.accountIds?.includes(opt.value));
+    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
 
     const dataToSave = {
       ...data,
-      accountIds: data.accountIds,
-      accountNames: selectedAccounts.map(a => a.label),
+      accountId: data.accountId,
+      accountName: selectedAccount?.label || 'N/A',
       categoryIds: data.categoryIds,
       categoryNames: selectedCategories.map(c => c.label),
       transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
@@ -169,16 +170,29 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
-                control={form.control} name="accountIds" render={({ field }) => (
-                <FormItem>
+                control={form.control} name="accountId" render={({ field }) => (
+                <FormItem className="space-y-3">
                     <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Source Account*</FormLabel>
-                     <MultiSelect
-                      options={accountOptions}
-                      selected={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Select accounts..."
-                      disabled={isLoadingDropdowns}
-                    />
+                    <FormControl>
+                        <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="flex flex-col space-y-1"
+                            disabled={isLoadingDropdowns}
+                        >
+                            {accountOptions.map((account) => (
+                                <FormItem key={account.value} className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                        <RadioGroupItem value={account.value} />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        {account.label}
+                                    </FormLabel>
+                                </FormItem>
+                            ))}
+                        </RadioGroup>
+                    </FormControl>
+                    {isLoadingDropdowns && <p className="text-sm text-muted-foreground">Loading accounts...</p>}
                     <FormMessage />
                 </FormItem>
             )}/>

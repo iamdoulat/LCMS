@@ -1097,8 +1097,8 @@ export type ChequeType = typeof chequeTypeOptions[number];
 export interface PettyCashTransaction {
   id?: string;
   transactionDate: string; // ISO string
-  accountIds: string[]; // Changed to array
-  accountNames: string[]; // Denormalized names
+  accountId: string; 
+  accountName: string; // Denormalized name
   type: TransactionType;
   payeeName?: string;
   categoryIds?: string[];
@@ -1130,7 +1130,7 @@ export type PettyCashCategoryFormValues = z.infer<typeof PettyCashCategorySchema
 
 export const PettyCashTransactionSchema = z.object({
   transactionDate: z.date({ required_error: "Transaction date is required." }),
-  accountIds: z.array(z.string()).min(1, "At least one source account is required."),
+  accountId: z.string().min(1, "A source account is required."),
   type: z.enum(transactionTypes, { required_error: "Transaction Type is required." }),
   payeeName: z.string().min(1, "Payee name is required."),
   categoryIds: z.array(z.string()).min(1, "At least one category is required."),
