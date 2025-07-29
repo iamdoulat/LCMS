@@ -16,13 +16,14 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, CreditCard, Users, CalendarDays, DollarSign, FileText, Info, Wallet } from 'lucide-react';
+import { Loader2, CreditCard, Users, CalendarDays, DollarSign, FileText, Info, Wallet, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 
 const invoiceSelectSchema = z.object({
   invoiceId: z.string().min(1, "Invoice selection is required."),
@@ -44,7 +45,7 @@ export default function ApplyPaymentPage() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [invoiceOptions, setInvoiceOptions] = React.useState<InvoiceOption[]>([]);
   const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
-  const [categoryOptions, setCategoryOptions] = React.useState<ComboboxOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = React.useState(true);
 
@@ -163,6 +164,7 @@ export default function ApplyPaymentPage() {
         ),
         paymentDate: z.date({ required_error: "Payment date is required." }),
         sourceAccountId: z.string().min(1, "Source account is required."),
+        categoryIds: z.array(z.string()).min(1, "At least one category is required."),
         paymentMethod: z.enum(paymentMethods, { required_error: "Payment method is required." }),
         notes: z.string().optional(),
     });
@@ -176,20 +178,23 @@ export default function ApplyPaymentPage() {
         paymentAmount: undefined,
         paymentDate: new Date(),
         sourceAccountId: '',
+        categoryIds: [],
         paymentMethod: "Cash",
         notes: '',
     }
   });
-
+  
   React.useEffect(() => {
+    const invoicePaymentCategory = categoryOptions.find(cat => cat.label.toLowerCase() === "invoice payment received");
     paymentDetailsForm.reset({
         paymentAmount: selectedInvoiceDetails?.amountDue ?? undefined,
         paymentDate: new Date(),
         sourceAccountId: '',
+        categoryIds: invoicePaymentCategory ? [invoicePaymentCategory.value] : [],
         paymentMethod: "Cash",
         notes: '',
     });
-  }, [isPaymentDialogOpen, selectedInvoiceDetails, paymentDetailsForm]);
+  }, [isPaymentDialogOpen, selectedInvoiceDetails, paymentDetailsForm, categoryOptions]);
 
 
   async function onProcessPayment(data: PaymentDetailsFormValues) {
@@ -200,10 +205,10 @@ export default function ApplyPaymentPage() {
     setIsSubmitting(true);
     try {
         const selectedAccount = accountOptions.find(opt => opt.value === data.sourceAccountId);
-        const paymentCategory = categoryOptions.find(cat => cat.label.toLowerCase() === "invoice payment received");
+        const selectedCategories = categoryOptions.filter(opt => data.categoryIds.includes(opt.value));
 
-        if (!paymentCategory) {
-            throw new Error("The required category 'Invoice Payment Received' was not found. Please create it in Petty Cash Settings.");
+        if (selectedCategories.length === 0) {
+            throw new Error("A payment category must be selected.");
         }
 
         const invoiceRef = doc(firestore, "sales_invoice", watchedInvoiceId);
@@ -245,8 +250,8 @@ export default function ApplyPaymentPage() {
                 transactionDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                 accountIds: [data.sourceAccountId],
                 accountNames: [selectedAccount?.label || 'N/A'],
-                categoryIds: [paymentCategory.value],
-                categoryNames: [paymentCategory.label],
+                categoryIds: selectedCategories.map(c => c.value),
+                categoryNames: selectedCategories.map(c => c.label),
                 type: 'Credit',
                 payeeName: invoiceData.customerName || 'N/A',
                 amount: data.paymentAmount,
@@ -325,7 +330,7 @@ export default function ApplyPaymentPage() {
                         <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Apply Payment Details</DialogTitle>
                         <DialogDescription>
@@ -333,7 +338,7 @@ export default function ApplyPaymentPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <Form {...paymentDetailsForm}>
-                        <form onSubmit={paymentDetailsForm.handleSubmit(onProcessPayment)} className="space-y-4">
+                        <form onSubmit={paymentDetailsForm.handleSubmit(onProcessPayment)} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
                              <FormField
                                 control={paymentDetailsForm.control}
                                 name="paymentAmount"
@@ -388,6 +393,22 @@ export default function ApplyPaymentPage() {
                                     </FormItem>
                                 )}
                             />
+                            <FormField
+                                control={paymentDetailsForm.control}
+                                name="categoryIds"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Transaction Categories*</FormLabel>
+                                    <MultiSelect
+                                        options={categoryOptions}
+                                        selected={field.value || []}
+                                        onChange={field.onChange}
+                                        placeholder="Select categories..."
+                                        disabled={isLoadingCategories}
+                                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                              <FormField
                                 control={paymentDetailsForm.control}
                                 name="paymentMethod"
@@ -421,7 +442,7 @@ export default function ApplyPaymentPage() {
                                     </FormItem>
                                 )}
                             />
-                            <DialogFooter>
+                            <DialogFooter className="mt-4 pt-4 border-t">
                                 <DialogClose asChild>
                                     <Button type="button" variant="outline">Cancel</Button>
                                 </DialogClose>
