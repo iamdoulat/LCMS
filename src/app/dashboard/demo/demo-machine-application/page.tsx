@@ -187,37 +187,48 @@ export default function NewDemoMachineApplicationPage() {
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     setIsSubmitting(true);
+    const batch = writeBatch(firestore);
+
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
-    
     if (!selectedFactory) {
       Swal.fire("Error", "Selected factory not found.", "error");
       setIsSubmitting(false);
       return;
     }
     
+    // --- Application ID Generation ---
     const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
     const dateStr = format(new Date(), 'yyyyMMdd');
-    const baseId = `${factoryPrefix}-demo-${dateStr}`;
-
-    let finalId = baseId;
+    const baseAppId = `${factoryPrefix}-demo-${dateStr}`;
+    let finalAppId = baseAppId;
     let counter = 1;
     let isUnique = false;
     
-    // Check for ID uniqueness
     while (!isUnique) {
-      const appDocRef = doc(firestore, "demo_machine_applications", finalId);
-      const docSnap = await getDoc(appDocRef);
+      const appDocRefCheck = doc(firestore, "demo_machine_applications", finalAppId);
+      const docSnap = await getDoc(appDocRefCheck);
       if (docSnap.exists()) {
-        finalId = `${baseId}-${counter}`;
+        finalAppId = `${baseAppId}-${counter}`;
         counter++;
       } else {
         isUnique = true;
       }
     }
+    
+    // --- Challan ID Generation ---
+    const challanCounterRef = doc(firestore, "counters", "demoChallanNumberGenerator");
+    const challanCounterSnap = await getDoc(challanCounterRef);
+    const currentYear = new Date().getFullYear();
+    let challanCount = 0;
+    if (challanCounterSnap.exists()) {
+      challanCount = challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0;
+    }
+    const newChallanCount = challanCount + 1;
+    const newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
 
+    // --- Prepare Application Data ---
     const deliveryDateValue = getValues("deliveryDate");
     const estReturnDateValue = getValues("estReturnDate");
-
     const machinesToSave = data.appliedMachines.map(appliedMachine => {
         const machineDetails = allFetchedMachines.find(m => m.id === appliedMachine.demoMachineId);
         return {
@@ -227,13 +238,13 @@ export default function NewDemoMachineApplicationPage() {
             machineBrand: machineDetails?.machineBrand || 'N/A',
         };
     });
-
-    const dataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+    
+    const appDataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
       factoryId: data.factoryId,
       factoryName: selectedFactory?.label || 'N/A',
       factoryLocation: selectedFactory?.location || 'N/A',
       appliedMachines: machinesToSave,
-      challanNo: data.challanNo,
+      challanNo: newChallanId, // Link to the new challan
       deliveryPersonName: data.deliveryPersonName,
       deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
@@ -241,65 +252,57 @@ export default function NewDemoMachineApplicationPage() {
       factoryInchargeName: data.factoryInchargeName || undefined,
       inchargeCell: data.inchargeCell || undefined,
       notes: data.notes || undefined,
-      machineReturned: data.machineReturned ?? false, // Overall status
+      machineReturned: data.machineReturned ?? false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
+    Object.keys(appDataToSave).forEach(key => { if (appDataToSave[key as keyof typeof appDataToSave] === undefined) delete appDataToSave[key as keyof typeof appDataToSave]; });
+    const newAppDocRef = doc(firestore, "demo_machine_applications", finalAppId);
+    batch.set(newAppDocRef, appDataToSave);
 
-    Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-            delete dataToSave[key as keyof typeof dataToSave];
-        }
-    });
+    // --- Prepare Challan Data ---
+    const challanDataToSave = {
+      factoryId: data.factoryId,
+      factoryName: selectedFactory?.label || 'N/A',
+      deliveryAddress: selectedFactory?.location || 'N/A',
+      challanDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      linkedApplicationId: finalAppId,
+      deliveryPerson: data.deliveryPersonName,
+      lineItems: machinesToSave.map(m => ({
+        demoMachineId: m.demoMachineId,
+        description: `${m.machineModel || 'N/A'} (S/N: ${m.machineSerial || 'N/A'})`,
+        qty: 1
+      })),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    const newChallanDocRef = doc(firestore, "demo_machine_challans", newChallanId);
+    batch.set(newChallanDocRef, challanDataToSave);
+    batch.set(challanCounterRef, { yearlyCounts: { ...challanCounterSnap.data()?.yearlyCounts, [currentYear]: newChallanCount }}, { merge: true });
+
+    // --- Update Machine Statuses ---
+    for (const appliedMachine of data.appliedMachines) {
+      if (appliedMachine.demoMachineId) {
+        const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
+        batch.update(machineRef, {
+          currentStatus: "Allocated" as AppDemoMachineStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
 
     try {
-      const newAppDocRef = doc(firestore, "demo_machine_applications", finalId);
-      await setDoc(newAppDocRef, dataToSave);
-
-      // Update status for all applied machines
-      const batch = writeBatch(firestore);
-      for (const appliedMachine of data.appliedMachines) {
-        if (appliedMachine.demoMachineId) {
-          const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
-          try {
-            batch.update(machineRef, {
-              currentStatus: "Allocated" as AppDemoMachineStatus,
-              updatedAt: serverTimestamp(),
-            });
-          } catch (machineError) {
-            console.error(`Error staging update for machine ${appliedMachine.demoMachineId}:`, machineError);
-            // Optionally collect these errors to show a partial success message
-          }
-        }
-      }
       await batch.commit();
-
-      // Refetch machine options to reflect updated statuses
-       const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-        const fetchedMachines = machinesSnapshot.docs.map(docSnap => {
-            const data = docSnap.data();
-            return { ...data, id: docSnap.id } as DemoMachineDocument;
-          });
-        setAllFetchedMachines(fetchedMachines);
-        const currentlySelectedMachineIds = getValues("appliedMachines").map(m => m.demoMachineId).filter(Boolean);
-        const availableForSelection = fetchedMachines
-          .filter(machine => machine.currentStatus === "Available" && !currentlySelectedMachineIds.includes(machine.id))
-          .map(machine => ({
-            id: machine.id,
-            value: machine.id,
-            label: `${machine.machineModel || 'Unnamed Model'} (S/N: ${machine.machineSerial || 'N/A'})`,
-            serial: machine.machineSerial || 'N/A',
-            brand: machine.machineBrand || 'N/A',
-          }));
-        setAvailableMachineOptions(availableForSelection);
-
-
-      Swal.fire("Success!", `Demo machine application submitted with ID: ${finalId}. Machine statuses updated.`, "success");
-      reset(); // Reset form fields
+      Swal.fire("Success!", `Demo application submitted with ID: ${finalAppId} and Challan No: ${newChallanId} has been created. Machine statuses updated.`, "success");
+      reset(); 
       setFactoryLocationDisplay('');
       setDemoPeriodDisplay('0 Days');
+      // Refetch machine options to reflect updated statuses
+      const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
+      const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as DemoMachineDocument));
+      setAllFetchedMachines(fetchedMachines);
     } catch (error) {
-      console.error("Error submitting demo application:", error);
+      console.error("Error submitting demo application and challan:", error);
       Swal.fire("Error", `Failed to submit application: ${(error as Error).message}`, "error");
     } finally {
       setIsSubmitting(false);
@@ -358,19 +361,6 @@ export default function NewDemoMachineApplicationPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                      control={form.control}
-                      name="challanNo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                      <FormField
                       control={form.control}
                       name="deliveryPersonName"
@@ -379,6 +369,19 @@ export default function NewDemoMachineApplicationPage() {
                           <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Delivery Person*</FormLabel>
                           <FormControl>
                             <Input placeholder="Enter Delivery Person Name" {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="challanNo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No.*</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(Auto-generated on submit)" {...field} value={field.value ?? ''} readOnly disabled/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
