@@ -1,3 +1,4 @@
+
 # LCMS: The Ultimate LC Management & Business Operations Platform
 
 **Transform your trade finance and business operations with LCMS, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
@@ -28,15 +29,15 @@ Harness the power of a unified system that brings clarity and efficiency to ever
     *   **Layout Settings**: Customize the look and feel of your printable documents with your company logo and details.
 
 *   **Accounts and Inventory**: Gain full control over your stock and sales records.
-    *   **Account Dashboard**:
+    *   **Account Dashboard**: A centralized view of your petty cash accounts, including current balances, recent transactions, and monthly debit/credit flows.
     *   **Item Management**: Maintain a complete inventory of all your items, with details on pricing, stock levels, and location.
-    *   **Sales Invoices**:  
-    *   **Delivery Challan**:
-    *   **Orders List**:  
+    *   **Sales Invoices**: A complete list of all sales invoices, with powerful filtering and management capabilities.
+    *   **Delivery Challan**: Create, manage, and print delivery challans to track goods dispatched to customers, with options to link to sales invoices.
+    *   **Orders List**: View, search, and manage all purchase orders sent to suppliers.
     *   **Sales Tracking**: Record new sales transactions, which automatically deduct from your inventory for real-time stock management.
     *   **Refunds & Returns**: Process returned items from sales back into your inventory, ensuring accurate stock counts.
-    *   **Apply Payment**:
-    *   **Settings**:
+    *   **Apply Payment**: A dedicated interface to record payments against outstanding invoices and update their status.
+    *   **Settings**: Configure your petty cash source accounts and transaction categories to tailor the module to your financial workflow.
 
 *   **Commission Management**: Simplify your commission tracking with dedicated tools for Proforma Invoices (PI).
     *   **Add & Manage PIs**: Easily create new PIs and connect them to existing L/C entries.
