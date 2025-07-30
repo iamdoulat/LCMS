@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
@@ -22,6 +22,7 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { SalesInvoiceList } from '@/components/dashboard/SalesInvoiceList';
 
 
 interface PettyCashStats {
@@ -581,6 +582,18 @@ export default function PettyCashDashboardPage() {
                 </CardContent>
                 </Card>
             </div>
+             <Card className="shadow-xl">
+                <CardHeader>
+                    <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                        <ListChecks className="h-7 w-7 text-primary" />
+                        Recent Sales Invoices
+                    </CardTitle>
+                    <CardDescription>A view of the latest sales invoices.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SalesInvoiceList showFilters={false} itemsPerPage={5} />
+                </CardContent>
+            </Card>
         </div>
     );
 }
