@@ -90,7 +90,7 @@ We leverage a state-of-the-art technology stack to deliver a seamless and high-p
 1.  **API Key Setup**: To enable AI features, you must first obtain an API key.
     *   Visit [Google AI Studio](https://aistudio.google.com/app/apikey) to create your free API key.
     *   In the project, open the `.env` file.
-    *   Replace `YOUR_API_KEY_HERE` with the key you just created.
+    *   Replace `YOUR_API_KEY_HERE` with the key you just created for the `NEXT_PUBLIC_GEMINI_API_KEY` variable.
 
 2.  **Register Your Account**: Create a secure account using your email or Google. Your role will be automatically assigned based on your email address.
 3.  **Explore the Dashboard**: Get an instant overview of your key business metrics, including L/C values, upcoming shipments, and active tasks.
