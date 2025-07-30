@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -77,11 +76,6 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     name: "lineItems",
   });
 
-  const watchedLineItems = watch("lineItems");
-  const watchedFreightCharges = watch("freightCharges");
-  const watchedOtherCharges = watch("otherCharges");
-  const watchedShipmentMode = watch("shipmentMode");
-
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
       setIsLoadingDropdowns(true);
@@ -150,7 +144,13 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
-  const { subtotal, totalTaxAmount, totalDiscountAmount, grandTotal } = React.useMemo(() => {
+  const watchedBeneficiaryId = watch("beneficiaryId");
+  const watchedLineItems = watch("lineItems");
+  const watchedFreightCharges = watch("freightCharges");
+  const watchedOtherCharges = watch("otherCharges");
+  const watchedShipmentMode = watch("shipmentMode");
+
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -180,13 +180,13 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
         }
       });
     }
-
+    
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
     const additionalCharges = freight + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-
+    
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
@@ -194,8 +194,16 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       grandTotal: currentGrandTotal,
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
-  
-  const grandTotalLabel = `${watchedShipmentMode}+Total (USD):`;
+
+  React.useEffect(() => {
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
+      if (selectedBeneficiary) {
+        setValue("billingAddress", selectedBeneficiary.address || "");
+        setValue("shippingAddress", selectedBeneficiary.address || "");
+      }
+    }
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -258,7 +266,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       });
       return lineItemData;
     });
-
+    
     const dataToUpdate: Record<string, any> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || initialData.beneficiaryName,
@@ -307,6 +315,8 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       setIsSubmitting(false);
     }
   }
+
+  const grandTotalLabel = `${watchedShipmentMode}+Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -490,7 +500,3 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     </Form>
   );
 }
-
-
-
-
