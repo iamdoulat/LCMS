@@ -168,7 +168,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems, allowedRoles: ["Super Admin", "Admin", "Store Manager", "Viewer", "Commercial"] },
   { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Store Manager", "Viewer"] },
   { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
-  { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Store Manager", "DemoManager"] },
+  { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Store Manager"] },
   { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
@@ -211,6 +211,8 @@ export function AppSidebarNav() {
     }
   }, [pathname, filteredNavGroups]);
 
+  const canViewDashboard = userRole && !userRole.includes('DemoManager');
+
   return (
     <>
       <SidebarHeader className="border-b">
@@ -249,24 +251,26 @@ export function AppSidebarNav() {
         </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
-          <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
-                {mainNavItems.map(subLink => (
-                    <SidebarMenuItem key={subLink.href}>
-                        <Link href={subLink.href} passHref>
-                        <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
-                            <span className="flex items-center gap-2">
-                             {subLink.icon && (
-                                <div className={cn("flex h-6 w-6 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
-                                    <subLink.icon className="h-4 w-4" />
-                                </div>
-                             )}
-                            <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
-                            </span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                ))}
+          {canViewDashboard && (
+            <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
+                  {mainNavItems.map(subLink => (
+                      <SidebarMenuItem key={subLink.href}>
+                          <Link href={subLink.href} passHref>
+                          <SidebarMenuButton asChild isActive={isActive(subLink.href)} className={cn(isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")} tooltip={{children: subLink.label!, side: "right", className: "ml-2"}}>
+                              <span className="flex items-center gap-2">
+                              {subLink.icon && (
+                                  <div className={cn("flex h-6 w-6 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
+                                      <subLink.icon className="h-4 w-4" />
+                                  </div>
+                              )}
+                              <span className="group-data-[collapsible=icon]:hidden">{subLink.label}</span>
+                              </span>
+                          </SidebarMenuButton>
+                          </Link>
+                      </SidebarMenuItem>
+                  ))}
             </SidebarMenu>
+          )}
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
             {filteredNavGroups.map((group) => {
               const IconComponent = group.icon;
