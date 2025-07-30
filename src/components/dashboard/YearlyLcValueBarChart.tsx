@@ -4,7 +4,6 @@
 
 import type { FC } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format } from 'date-fns';
 
 interface YearlyLcValue {
   year: string;
@@ -38,7 +37,7 @@ const yAxisTickFormatter = (value: number) => {
   return value.toString();
 };
 
-export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) => {
+export function YearlyLcValueBarChart({ data }: YearlyLcValueBarChartProps) {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground">No yearly L/C value data to display.</p>;
   }
