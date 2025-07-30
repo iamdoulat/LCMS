@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Upload, Crop, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Save, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore, storage } from '@/lib/firebase/config';
@@ -266,8 +266,8 @@ export function CompanySetupForm() {
             <FormItem>
               <Label>Invoice Logo</Label>
                <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                  {invoiceLogoUrl ? <Image src={invoiceLogoUrl} alt="Invoice Logo" width={96} height={96} className="object-contain" data-ai-hint="invoice logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                <div className="w-24 h-auto aspect-[396/58] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                  {invoiceLogoUrl ? <Image src={invoiceLogoUrl} alt="Invoice Logo" width={96} height={14} className="object-contain" data-ai-hint="invoice logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setInvoiceLogoSrc, setInvoiceLogoSelectedFile, setIsInvoiceLogoCropping)} className="flex-1" disabled={isReadOnly} />
               </div>
@@ -301,7 +301,7 @@ export function CompanySetupForm() {
             <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                 <Button onClick={() => handleCropAndSet(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, setCompanyLogoUrl, setIsCompanyLogoCropping)}>
-                    <Crop className="mr-2 h-4 w-4"/>Set Logo
+                    <CropIcon className="mr-2 h-4 w-4"/>Set Logo
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -317,9 +317,9 @@ export function CompanySetupForm() {
                 </ReactCrop>
             )}
             <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
                 <Button onClick={() => handleCropAndSet(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)}>
-                    <Crop className="mr-2 h-4 w-4"/>Set Logo
+                    {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4"/>Set Logo</>}
                 </Button>
             </DialogFooter>
         </DialogContent>

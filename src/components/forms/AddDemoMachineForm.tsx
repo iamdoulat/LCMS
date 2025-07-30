@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, Image as ImageIcon, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { DemoMachine, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
