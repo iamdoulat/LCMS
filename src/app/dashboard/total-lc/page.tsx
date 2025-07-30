@@ -97,7 +97,13 @@ const ITEMS_PER_PAGE = 10;
 export default function TotalLCPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
-  const isReadOnly = userRole?.includes('Viewer');
+  
+  const isReadOnly = useMemo(() => {
+    if (!userRole) return true; // Default to read-only if roles are not yet defined
+    const hasWritePermissions = userRole.some(role => ["Super Admin", "Admin", "Commercial"].includes(role));
+    return !hasWritePermissions;
+  }, [userRole]);
+
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +129,7 @@ export default function TotalLCPage() {
 
   useEffect(() => {
     // Role-based access check before fetching any data
-    const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer'].includes(role));
+    const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(role));
     if (!authLoading && !canView && userRole !== null) {
       setFetchError("You do not have permission to view this data.");
       setIsLoading(false);
@@ -587,7 +593,7 @@ export default function TotalLCPage() {
                                     <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)} disabled={isReadOnly}>
+                                    <DropdownMenuItem onClick={() => lc.id && handleEditLC(lc.id)}>
                                         <FileEdit className="mr-2 h-4 w-4" />
                                         <span>{isReadOnly ? "View" : "Edit"}</span>
                                     </DropdownMenuItem>
@@ -808,6 +814,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
