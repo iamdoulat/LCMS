@@ -113,7 +113,7 @@ export default function TotalLCPage() {
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
-  const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('');
+  const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
 
@@ -814,6 +814,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
