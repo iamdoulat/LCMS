@@ -31,7 +31,7 @@ const SUPER_ADMIN_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SUP
 const ADMIN_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_ADMIN_EMAILS);
 const SERVICE_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SERVICE_EMAILS);
 const DEMO_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_DEMO_MANAGER_EMAILS);
-const STORE_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_STORE_MANAGER_EMAILS);
+const ACCOUNTS_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_ACCOUNTS_EMAILS);
 const VIEWER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_VIEWER_EMAILS);
 const COMMERCIAL_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_COMMERCIAL_EMAILS);
 
@@ -199,7 +199,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
       if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
       if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
-      if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
+      if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
       if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
       if (roles.length === 0) roles.push("User");
 
@@ -248,7 +248,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
           if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
           if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
-          if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
+          if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
           if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
           if (roles.length === 0) roles.push("User");
           

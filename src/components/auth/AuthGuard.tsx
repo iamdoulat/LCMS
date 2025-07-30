@@ -24,7 +24,7 @@ const coreAllowedPaths = [
 const roleAllowedPaths: Record<string, string[]> = {
   "Service": ['/dashboard/warranty-management'],
   "DemoManager": ['/dashboard/demo'],
-  "Store Manager": [
+  "Accounts": [
     '/dashboard/items', 
     '/dashboard/inventory', 
     '/dashboard/quotes', 
@@ -83,7 +83,7 @@ const roleRedirects: Record<string, string> = {
   "User": '/dashboard', // Default for "User" role if they access a disallowed path
   "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
-  "Store Manager": process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list',
+  "Accounts": process.env.NEXT_PUBLIC_REDIRECT_PATH_ACCOUNTS || '/dashboard/items/list',
   "Viewer": '/dashboard', // Viewers land on the main dashboard
   "Commercial": '/dashboard/total-lc',
 };
