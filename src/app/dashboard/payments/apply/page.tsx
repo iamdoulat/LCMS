@@ -434,7 +434,7 @@ export default function ApplyPaymentPage() {
                                 )}
                             />
                              <FormField
-                                control={form.control}
+                                control={paymentDetailsForm.control}
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
@@ -466,4 +466,3 @@ export default function ApplyPaymentPage() {
     </div>
   );
 }
-
