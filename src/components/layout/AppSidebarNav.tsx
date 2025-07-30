@@ -211,7 +211,7 @@ export function AppSidebarNav() {
     }
   }, [pathname, filteredNavGroups]);
 
-  const canViewDashboard = userRole && !userRole.includes('DemoManager') && !userRole.includes('Store Manager');
+  const canViewDashboard = userRole && !userRole.includes('DemoManager') && !userRole.includes('Store Manager') && !userRole.includes('Service');
 
   return (
     <>
