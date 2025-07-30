@@ -96,12 +96,17 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
   }, [initialData, form, isLoadingDropdowns]);
   
   React.useEffect(() => {
-    if (selectedCategoryNames.includes("Cash Received") || selectedCategoryNames.includes("Cheque Received") || selectedCategoryNames.includes("Invoice payment Received")) {
+    const categoryNames = categoryOptions
+      .filter(opt => form.getValues('categoryIds')?.includes(opt.value))
+      .map(opt => opt.label);
+
+    if (categoryNames.includes("Cash Received") || categoryNames.includes("Cheque Received") || categoryNames.includes("Invoice payment Received")) {
       form.setValue('type', 'Credit');
-    } else if (selectedCategoryNames.includes("Cheque Payment")) {
+    } else if (categoryNames.includes("Cheque Payment")) {
       form.setValue('type', 'Debit');
     }
-  }, [selectedCategoryNames, form]);
+  }, [form.watch('categoryIds'), categoryOptions, form]);
+
 
   async function onSubmit(data: PettyCashTransactionFormValues) {
     if (!user) {
