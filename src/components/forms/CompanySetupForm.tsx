@@ -5,13 +5,16 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Upload, Crop, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, storage } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +23,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { getCroppedImg } from '@/lib/image-utils';
+
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
@@ -28,6 +34,7 @@ interface FinancialSettingsProfile {
   companyName?: string;
   address?: string;
   invoiceLogoUrl?: string;
+  companyLogoUrl?: string;
   emailId?: string;
   cellNumber?: string;
   hideCompanyName?: boolean;
@@ -43,14 +50,6 @@ const companySetupSchema = z.object({
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
-  companyLogoUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Company Logo" }).optional()
-  ),
-  invoiceLogoUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
-  ),
   hideCompanyName: z.boolean().optional().default(false),
 });
 
@@ -68,21 +67,34 @@ export function CompanySetupForm() {
   const { user: authUser, loading: authLoading, companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile, userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
   
-  const [currentLogoUrlForPreview, setCurrentLogoUrlForPreview] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
-  const [currentInvoiceLogoUrlForPreview, setCurrentInvoiceLogoUrlForPreview] = React.useState<string | undefined>(undefined);
+  // States for general company logo
+  const [companyLogoSrc, setCompanyLogoSrc] = React.useState('');
+  const [companyLogoCrop, setCompanyLogoCrop] = React.useState<Crop>();
+  const [companyLogoCompletedCrop, setCompanyLogoCompletedCrop] = React.useState<PixelCrop>();
+  const [companyLogoSelectedFile, setCompanyLogoSelectedFile] = React.useState<File | null>(null);
+  const [isCompanyLogoCropping, setIsCompanyLogoCropping] = React.useState(false);
+  const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+  const companyLogoImgRef = React.useRef<HTMLImageElement>(null);
+
+  // States for invoice logo
+  const [invoiceLogoSrc, setInvoiceLogoSrc] = React.useState('');
+  const [invoiceLogoCrop, setInvoiceLogoCrop] = React.useState<Crop>();
+  const [invoiceLogoCompletedCrop, setInvoiceLogoCompletedCrop] = React.useState<PixelCrop>();
+  const [invoiceLogoSelectedFile, setInvoiceLogoSelectedFile] = React.useState<File | null>(null);
+  const [isInvoiceLogoCropping, setIsInvoiceLogoCropping] = React.useState(false);
+  const [invoiceLogoUrl, setInvoiceLogoUrl] = React.useState<string | undefined>(undefined);
+  const invoiceLogoImgRef = React.useRef<HTMLImageElement>(null);
+  
+  const [isUploading, setIsUploading] = React.useState(false);
+
 
   const form = useForm<CompanySetupFormValues>({
     resolver: zodResolver(companySetupSchema),
     defaultValues: {
       companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
       address: DEFAULT_ADDRESS,
-      contactPerson: '',
-      cellNumber: '',
       emailId: DEFAULT_EMAIL,
-      binNumber: '',
-      tinNumber: '',
-      companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-      invoiceLogoUrl: '',
+      contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
       hideCompanyName: false,
     },
   });
@@ -94,7 +106,7 @@ export function CompanySetupForm() {
         const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
         
-        let initialProfileData: CompanySetupFormValues = {
+        let initialProfileData = {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           address: DEFAULT_ADDRESS,
           emailId: DEFAULT_EMAIL,
@@ -107,123 +119,106 @@ export function CompanySetupForm() {
         if (profileDocSnap.exists()) {
           const data = profileDocSnap.data() as CompanyProfile;
           initialProfileData = {
+            ...initialProfileData,
+            ...data,
             companyName: data.companyName || DEFAULT_COMPANY_NAME,
-            address: data.address || DEFAULT_ADDRESS,
-            contactPerson: data.contactPerson || '',
-            cellNumber: data.cellNumber || '',
-            emailId: data.emailId || DEFAULT_EMAIL,
-            binNumber: data.binNumber || '',
-            tinNumber: data.tinNumber || '',
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
             invoiceLogoUrl: data.invoiceLogoUrl || '',
             hideCompanyName: data.hideCompanyName ?? false,
           };
         }
         form.reset(initialProfileData);
-        setCurrentLogoUrlForPreview(initialProfileData.companyLogoUrl);
-        setCurrentInvoiceLogoUrlForPreview(initialProfileData.invoiceLogoUrl);
+        setCompanyLogoUrl(initialProfileData.companyLogoUrl);
+        setInvoiceLogoUrl(initialProfileData.invoiceLogoUrl);
       } catch (error) {
-        console.error("CompanySetupForm: Error fetching company profile:", error);
         Swal.fire("Error", "Could not load company profile. Using defaults.", "error");
-        form.reset({
-          companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
-          address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
-          companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-          invoiceLogoUrl: '',
-          contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
-          hideCompanyName: false,
-        });
-        setCurrentLogoUrlForPreview(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
-        setCurrentInvoiceLogoUrlForPreview(undefined);
       } finally {
         setIsLoadingData(false);
       }
     };
 
-    if (!authLoading) { 
-      if (authUser) { 
-        fetchCompanyData();
-      } else { 
-        setIsLoadingData(false); 
-         form.reset({
-          companyName: DEFAULT_COMPANY_NAME, address: DEFAULT_ADDRESS, emailId: DEFAULT_EMAIL,
-          companyLogoUrl: DEFAULT_COMPANY_LOGO_URL,
-          invoiceLogoUrl: '',
-          contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
-          hideCompanyName: false,
-        });
-        setCurrentLogoUrlForPreview(DEFAULT_COMPANY_LOGO_URL);
-        setCurrentInvoiceLogoUrlForPreview(undefined);
-      }
-    }
+    if (!authLoading && authUser) fetchCompanyData();
+    else if (!authLoading) setIsLoadingData(false);
   }, [form, contextCompanyName, contextCompanyLogoUrl, authLoading, authUser]);
+
+  const onFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setSrc: React.Dispatch<React.SetStateAction<string>>,
+    setFile: React.Dispatch<React.SetStateAction<File | null>>,
+    setCropping: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setSrc(reader.result?.toString() || ''));
+      reader.readAsDataURL(e.target.files[0]);
+      setCropping(true);
+      e.target.value = '';
+    }
+  };
+
+  const handleLogoUpload = async (
+    file: File | null,
+    storagePath: string
+  ): Promise<string | undefined> => {
+    if (!file) return undefined;
+    const storageRef = ref(storage, storagePath);
+    const snapshot = await uploadBytes(storageRef, file);
+    return await getDownloadURL(snapshot.ref);
+  };
 
 
   async function onSubmit(data: CompanySetupFormValues) {
     setIsSubmitting(true);
     
-    const dataToSave: FinancialSettingsProfile = {
-      companyName: data.companyName,
-      address: data.address,
-      invoiceLogoUrl: data.invoiceLogoUrl || undefined,
-      emailId: data.emailId || undefined,
-      cellNumber: data.cellNumber || undefined,
-      hideCompanyName: data.hideCompanyName,
-      updatedAt: serverTimestamp(),
-    };
+    let newCompanyLogoUrl = companyLogoUrl;
+    let newInvoiceLogoUrl = invoiceLogoUrl;
     
-    Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof FinancialSettingsProfile] === undefined) {
-        delete dataToSave[key as keyof FinancialSettingsProfile];
-      }
-    });
-
     try {
-      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
-      await setDoc(profileDocRef, dataToSave, { merge: true });
-      
-      updateCompanyProfile({ 
-        companyName: data.companyName, 
-        companyLogoUrl: data.companyLogoUrl || undefined,
-        invoiceLogoUrl: data.invoiceLogoUrl || undefined 
-      });
-      setCurrentLogoUrlForPreview(data.companyLogoUrl || undefined);
-      setCurrentInvoiceLogoUrlForPreview(data.invoiceLogoUrl || undefined);
+        if(companyLogoSelectedFile){
+            newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
+        }
+        if(invoiceLogoSelectedFile){
+            newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
+        }
+    
+        const dataToSave: FinancialSettingsProfile = {
+            ...data,
+            companyLogoUrl: newCompanyLogoUrl,
+            invoiceLogoUrl: newInvoiceLogoUrl || undefined,
+            updatedAt: serverTimestamp(),
+        };
+        
+        Object.keys(dataToSave).forEach(key => {
+            if (dataToSave[key as keyof FinancialSettingsProfile] === undefined) {
+                delete dataToSave[key as keyof FinancialSettingsProfile];
+            }
+        });
 
-      Swal.fire({
-        title: "Layout Settings Saved!",
-        text: "The settings for financial documents have been successfully updated.",
-        icon: "success",
-        timer: 2500,
-        showConfirmButton: true,
-      });
+        const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
+        await setDoc(profileDocRef, dataToSave, { merge: true });
+        
+        updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl, invoiceLogoUrl: newInvoiceLogoUrl });
+        setCompanyLogoUrl(newCompanyLogoUrl);
+        setInvoiceLogoUrl(newInvoiceLogoUrl);
+        setCompanyLogoSelectedFile(null);
+        setInvoiceLogoSelectedFile(null);
+
+        Swal.fire({
+            title: "Settings Saved!",
+            text: "Company settings have been successfully updated.",
+            icon: "success",
+            timer: 2500,
+            showConfirmButton: true,
+        });
+
     } catch (error) {
-      console.error("Error saving layout settings: ", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      Swal.fire({
-        title: "Save Failed",
-        text: `Failed to save settings: ${errorMessage}`,
-        icon: "error",
-      });
+      console.error("Error saving settings: ", error);
+      Swal.fire("Save Failed", `Failed to save settings: ${(error as Error).message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
   }
-
-  const watchedLogoUrl = form.watch("companyLogoUrl");
-  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
-
-  React.useEffect(() => {
-    if (watchedLogoUrl !== currentLogoUrlForPreview) {
-      setCurrentLogoUrlForPreview(watchedLogoUrl);
-    }
-  }, [watchedLogoUrl, currentLogoUrlForPreview]);
-
-  React.useEffect(() => {
-    if (watchedInvoiceLogoUrl !== currentInvoiceLogoUrlForPreview) {
-      setCurrentInvoiceLogoUrlForPreview(watchedInvoiceLogoUrl);
-    }
-  }, [watchedInvoiceLogoUrl, currentInvoiceLogoUrlForPreview]);
 
 
   if (isLoadingData || authLoading) {
@@ -238,232 +233,170 @@ export function CompanySetupForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="companyName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name*</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter your company's official name" 
-                      {...field}
-                      disabled={isReadOnly}
-                    />
-                  </FormControl>
-                  <FormDescription>This name will appear on all financial documents.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-                control={form.control}
-                name="hideCompanyName"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
-                    <FormControl>
-                        <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        id="hideCompanyName"
-                        disabled={isReadOnly}
-                        />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                        <FormLabel htmlFor="hideCompanyName" className="text-sm font-medium hover:cursor-pointer">
-                        Hide Company Name on Documents
-                        </FormLabel>
-                        <FormDescription className="text-xs">
-                        If checked, the company name will not be printed on quotes, invoices, or orders.
-                        </FormDescription>
-                    </div>
-                    </FormItem>
-                )}
-            />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Address*</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter company address for documents" {...field} rows={3} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="companyName" render={({ field }) => (<FormItem><FormLabel>Company Name*</FormLabel><FormControl><Input placeholder="Your company's name" {...field} disabled={isReadOnly} /></FormControl><FormDescription>This name will appear on all documents.</FormDescription><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address*</FormLabel><FormControl><Textarea placeholder="Company address for documents" {...field} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="hideCompanyName" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyName" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideCompanyName" className="text-sm font-medium hover:cursor-pointer">Hide Company Name</FormLabel><FormDescription className="text-xs">If checked, the name will not be printed on documents.</FormDescription></div></FormItem>)}/>
           </div>
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="emailId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email ID</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cellNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cell Number</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="invoiceLogoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Invoice Logo URL</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="url" 
-                      placeholder="https://example.com/invoice-logo.png" 
-                      {...field} 
-                      value={field.value || ""} 
-                      disabled={isReadOnly}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    A specific logo for invoices. If blank, the main company logo will be used.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {currentInvoiceLogoUrlForPreview && (currentInvoiceLogoUrlForPreview.startsWith('http://') || currentInvoiceLogoUrlForPreview.startsWith('https://')) && (
-              <div className="space-y-2">
-                <Label>Invoice Logo Preview</Label>
-                <Image 
-                  src={currentInvoiceLogoUrlForPreview} 
-                  alt="Invoice Logo Preview" 
-                  width={200} 
-                  height={40} 
-                  className="rounded-sm border object-contain bg-slate-200 p-2"
-                  onError={() => console.warn("Error loading logo preview from URL")}
-                  data-ai-hint="invoice logo"
-                />
+            <FormItem>
+              <Label>Company Logo (for sidebar)</Label>
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                  {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="logo company"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                </div>
+                <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
               </div>
-            )}
+            </FormItem>
+            <FormItem>
+              <Label>Invoice Logo</Label>
+               <div className="flex items-center gap-4">
+                <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                  {invoiceLogoUrl ? <Image src={invoiceLogoUrl} alt="Invoice Logo" width={96} height={96} className="object-contain" data-ai-hint="invoice logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                </div>
+                <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setInvoiceLogoSrc, setInvoiceLogoSelectedFile, setIsInvoiceLogoCropping)} className="flex-1" disabled={isReadOnly} />
+              </div>
+              <FormDescription>Specific logo for quotes, invoices, etc. If blank, the main company logo is used.</FormDescription>
+            </FormItem>
           </div>
         </div>
         
-         <Separator />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="contactPerson"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Contact Person</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter name of the primary contact" {...field} value={field.value || ""} disabled={isReadOnly} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="binNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>BIN No.</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="tinNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>TIN No.</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="companyLogoUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company Logo URL</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="url" 
-                    placeholder="https://example.com/logo.png" 
-                    {...field} 
-                    value={field.value || ""} 
-                    disabled={isReadOnly}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Enter the direct URL to your company logo. This will be used in the sidebar header.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        {currentLogoUrlForPreview && currentLogoUrlForPreview.trim() !== "" && (currentLogoUrlForPreview.startsWith('http://') || currentLogoUrlForPreview.startsWith('https://')) && (
-          <div className="space-y-2">
-            <Label>Company Logo Preview (for Sidebar)</Label>
-            <Image 
-              src={currentLogoUrlForPreview} 
-              alt="Company Logo Preview" 
-              width={32} 
-              height={32} 
-              className="rounded-sm border object-contain"
-              onError={() => {
-                console.warn("Error loading logo preview from URL:", currentLogoUrlForPreview);
-              }}
-              data-ai-hint="company logo"
-            />
-          </div>
-        )}
-
         <Separator />
         
-        <FormDescription>
-          This information will be used to pre-fill relevant fields in other parts of the application and for display purposes.
-        </FormDescription>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField control={form.control} name="contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Primary contact" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="binNumber" render={({ field }) => (<FormItem><FormLabel>BIN No.</FormLabel><FormControl><Input placeholder="Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="tinNumber" render={({ field }) => (<FormItem><FormLabel>TIN No.</FormLabel><FormControl><Input placeholder="Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+        </div>
 
-        <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingData || isReadOnly}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Layout Settings
-            </>
-          )}
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingData || isReadOnly}>
+          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Settings</>}
         </Button>
       </form>
+      
+      {/* Company Logo Cropping Dialog */}
+      <Dialog open={isCompanyLogoCropping} onOpenChange={setIsCompanyLogoCropping}>
+        <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Crop Company Logo (Sidebar)</DialogTitle></DialogHeader>
+            {companyLogoSrc && (
+                <ReactCrop crop={companyLogoCrop} onChange={(_, c) => setCompanyLogoCrop(c)} onComplete={(c) => setCompanyLogoCompletedCrop(c)} aspect={1} minWidth={100}>
+                    <img ref={companyLogoImgRef} src={companyLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setCompanyLogoCrop)} style={{ maxHeight: '70vh' }}/>
+                </ReactCrop>
+            )}
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                <Button onClick={() => handleCropAndSet(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, setCompanyLogoUrl, setIsCompanyLogoCropping)}>
+                    <Crop className="mr-2 h-4 w-4"/>Set Logo
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Invoice Logo Cropping Dialog */}
+       <Dialog open={isInvoiceLogoCropping} onOpenChange={setIsInvoiceLogoCropping}>
+        <DialogContent className="max-w-xl">
+            <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
+            {invoiceLogoSrc && (
+                <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={396 / 58}>
+                    <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 396 / 58, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }}/>
+                </ReactCrop>
+            )}
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                <Button onClick={() => handleCropAndSet(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)}>
+                    <Crop className="mr-2 h-4 w-4"/>Set Logo
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
+
+    function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>, aspect: number, setCropFn: React.Dispatch<React.SetStateAction<Crop | undefined>>) {
+        const { width, height } = e.currentTarget;
+        setCropFn(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height), width, height));
+    }
+
+    async function handleCropAndSet(
+        imgRef: React.RefObject<HTMLImageElement>,
+        completedCrop: PixelCrop | undefined,
+        selectedFile: File | null,
+        setFile: React.Dispatch<React.SetStateAction<File | null>>,
+        setUrl: React.Dispatch<React.SetStateAction<string | undefined>>,
+        setCropping: React.Dispatch<React.SetStateAction<boolean>>
+    ) {
+        if (!completedCrop || !imgRef.current || !selectedFile) {
+            Swal.fire("Error", "Could not process image crop.", "error");
+            return;
+        }
+        const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, selectedFile.name);
+        if (croppedImageBlob) {
+            setUrl(URL.createObjectURL(croppedImageBlob));
+            setFile(croppedImageBlob);
+            setCropping(false);
+        } else {
+            Swal.fire("Error", "Failed to create cropped image.", "error");
+        }
+    }
+}
+
+```
+  <change>
+    <file>src/lib/image-utils.ts</file>
+    <content><![CDATA[
+// src/lib/image-utils.ts
+
+import type { PixelCrop } from 'react-image-crop';
+
+// Helper function to get a cropped image blob
+export async function getCroppedImg(
+  image: HTMLImageElement,
+  crop: PixelCrop,
+  fileName: string,
+  targetWidth?: number,
+  targetHeight?: number
+): Promise<File | null> {
+  const canvas = document.createElement('canvas');
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  
+  // Use target dimensions if provided, otherwise use crop dimensions
+  canvas.width = targetWidth ?? crop.width;
+  canvas.height = targetHeight ?? crop.height;
+  
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return null;
+  }
+
+  // Draw the image onto the canvas with cropping
+  ctx.drawImage(
+    image,
+    crop.x * scaleX,
+    crop.y * scaleY,
+    crop.width * scaleX,
+    crop.height * scaleY,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          console.error('Canvas is empty');
+          reject(new Error('Canvas is empty'));
+          return;
+        }
+        resolve(new File([blob], fileName, { type: 'image/jpeg' }));
+      },
+      'image/jpeg',
+      0.95 // High quality
+    );
+  });
 }
