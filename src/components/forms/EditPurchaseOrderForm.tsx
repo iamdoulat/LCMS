@@ -354,7 +354,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
               name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill To*</FormLabel>
+                  <FormLabel>Supplier:</FormLabel>
                   <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -501,3 +501,4 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     </Form>
   );
 }
+
