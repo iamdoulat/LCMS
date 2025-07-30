@@ -161,16 +161,7 @@ export default function PrintPurchaseOrderPage() {
 
   const qrCodeValue = `PURCHASE ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel =
-    orderData.shipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL (USD):"
-      : orderData.shipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL (USD):"
-      : orderData.shipmentMode === "FOB"
-      ? "FOB TOTAL (USD):"
-      : orderData.shipmentMode === "EXW"
-      ? "EXW TOTAL (USD):"
-      : "TOTAL (USD):";
+  const grandTotalLabel = `${orderData.shipmentMode}+Total (USD):`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -199,18 +190,18 @@ export default function PrintPurchaseOrderPage() {
 
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
-                <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                    <span className="font-semibold text-[12px] font-bold">Order Number :</span>
-                    <span className="text-[12px] font-bold">{orderData.id}</span>
+                <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                    <span className="font-semibold">Order Number :</span>
+                    <span className="">{orderData.id}</span>
                 </div>
-                <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                    <span className="font-semibold text-[12px] font-bold">Date :</span>
-                    <span className="text-[12px] font-bold">{formatDisplayDate(orderData.orderDate)}</span>
+                <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                    <span className="font-semibold">Date :</span>
+                    <span className="">{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                        <span className="font-semibold text-[12px] font-bold">Sales Person :</span>
-                        <span className="text-[12px] font-bold">{orderData.salesperson}</span>
+                    <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                        <span className="font-semibold">Sales Person :</span>
+                        <span className="">{orderData.salesperson}</span>
                     </div>
                 )}
             </div>
@@ -296,21 +287,15 @@ export default function PrintPurchaseOrderPage() {
                         <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount)}</span>
                     </div>
                 )}
-                 {(orderData.freightCharges || 0) > 0 && (
+                {(orderData.freightCharges || 0) > 0 && (
                      <div className="grid grid-cols-2 gap-x-4">
                         <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.freightCharges)}</span>
                     </div>
                 )}
-                {(orderData.otherCharges || 0) > 0 && (
-                     <div className="grid grid-cols-2 gap-x-4">
-                        <span className="text-gray-600 font-medium text-right">Other Charges:</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.otherCharges)}</span>
-                    </div>
-                )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-x-4 text-sm font-bold">
-                    <span className="text-gray-900 text-right">{grandTotalLabel}</span>
+                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                    <span className="text-gray-900 text-right text-[14px]">{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
                 </div>
             </div>
@@ -355,6 +340,7 @@ export default function PrintPurchaseOrderPage() {
     </div>
   );
 }
+
 
 
 
