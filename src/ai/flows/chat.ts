@@ -51,6 +51,7 @@ export const chat = ai.defineFlow(
   },
   async (request) => {
     const { output } = await chatPrompt(request);
+    // Ensure there is always a valid response object to return.
     return { response: output?.response || "I'm sorry, I couldn't generate a response." };
   }
 );
