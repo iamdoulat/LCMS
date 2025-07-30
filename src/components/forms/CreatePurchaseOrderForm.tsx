@@ -60,6 +60,11 @@ export function CreatePurchaseOrderForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedOrderId, setGeneratedOrderId] = React.useState<string | null>(null);
 
+  const [subtotal, setSubtotal] = React.useState(0);
+  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
+  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
+  const [grandTotal, setGrandTotal] = React.useState(0);
+
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
@@ -106,11 +111,10 @@ export function CreatePurchaseOrderForm() {
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
 
-  const { subtotal, totalTaxAmount, totalDiscountAmount, grandTotal } = React.useMemo(() => {
+  const { subtotal: calculatedSubtotal, totalDiscountAmount: calculatedTotalDiscount, totalTaxAmount: calculatedTotalTax, grandTotal: calculatedGrandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-
     if (Array.isArray(watchedLineItems)) {
       watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -138,7 +142,6 @@ export function CreatePurchaseOrderForm() {
         }
       });
     }
-
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
     
     return {
@@ -148,6 +151,13 @@ export function CreatePurchaseOrderForm() {
       grandTotal: currentGrandTotal,
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
+
+   React.useEffect(() => {
+    setSubtotal(calculatedSubtotal);
+    setTotalDiscountAmount(calculatedTotalDiscount);
+    setTotalTaxAmount(calculatedTotalTax);
+    setGrandTotal(calculatedGrandTotal);
+  }, [calculatedSubtotal, calculatedTotalDiscount, calculatedTotalTax, calculatedGrandTotal]);
 
 
   React.useEffect(() => {
@@ -270,11 +280,6 @@ export function CreatePurchaseOrderForm() {
             return lineItemData;
         });
         
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total || 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
         const orderDataToSave: Record<string, any> = {
           beneficiaryId: data.beneficiaryId,
           beneficiaryName: selectedBeneficiary?.label || 'N/A',
@@ -286,10 +291,10 @@ export function CreatePurchaseOrderForm() {
           taxType: data.taxType,
           comments: data.comments,
           privateComments: data.privateComments,
-          subtotal: finalSubtotal,
-          totalDiscountAmount: finalTotalDiscount,
-          totalTaxAmount: finalTotalTax,
-          totalAmount: finalGrandTotal,
+          subtotal: subtotal,
+          totalDiscountAmount: totalDiscountAmount,
+          totalTaxAmount: totalTaxAmount,
+          totalAmount: grandTotal,
           status: "Pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -429,6 +434,7 @@ export function CreatePurchaseOrderForm() {
             />
           </div>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
@@ -438,8 +444,8 @@ export function CreatePurchaseOrderForm() {
           <CalendarDays className="mr-2 h-5 w-5 text-primary" />
           Order Details
         </h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-             <FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
               <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
@@ -483,8 +489,8 @@ export function CreatePurchaseOrderForm() {
           <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="e.g., Shanghai" {...field} /></FormControl><FormMessage /></FormItem>)}/>
           <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="e.g., Chattogram" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
-        <Separator />
+        
+        <Separator className="my-6" />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -518,7 +524,7 @@ export function CreatePurchaseOrderForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -553,6 +559,7 @@ export function CreatePurchaseOrderForm() {
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
+                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
                 setGeneratedOrderId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
@@ -571,3 +578,4 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
