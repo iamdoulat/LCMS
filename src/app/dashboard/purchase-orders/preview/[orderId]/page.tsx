@@ -309,7 +309,7 @@ export default function PrintPurchaseOrderPage() {
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                <div className="grid grid-cols-2 gap-x-4 text-sm font-bold">
                     <span className="text-gray-900 text-right">{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
                 </div>
@@ -355,6 +355,7 @@ export default function PrintPurchaseOrderPage() {
     </div>
   );
 }
+
 
 
 
