@@ -104,6 +104,7 @@ export function CreatePurchaseOrderForm() {
 
   const watchedBeneficiaryId = watch("beneficiaryId");
   const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
 
   const { subtotal, totalTaxAmount, totalDiscountAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -204,10 +205,8 @@ export function CreatePurchaseOrderForm() {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; 
-      if (selectedItem.description) { 
-        autoDescription = selectedItem.description;
-      }
+      let autoDescription = selectedItem.label;
+      if (selectedItem.description) autoDescription = selectedItem.description;
       setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
@@ -224,7 +223,7 @@ export function CreatePurchaseOrderForm() {
     setIsSubmitting(true);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
     const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "purchaseOrderNumberGenerator");
+    const counterRef = doc(firestore, "counters", "inventoryOrderNumberGenerator");
 
     try {
       const newOrderId = await runTransaction(firestore, async (transaction) => {
@@ -392,7 +391,7 @@ export function CreatePurchaseOrderForm() {
         
         <h3 className={cn(sectionHeadingClass)}>
           <Building className="mr-2 h-5 w-5 text-primary" />
-          Beneficiary & Delivery Information
+          Beneficiary & Delivery
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -430,7 +429,6 @@ export function CreatePurchaseOrderForm() {
             />
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>

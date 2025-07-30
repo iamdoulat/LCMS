@@ -216,6 +216,7 @@ export default function PrintPurchaseOrderPage() {
                 <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
             </div>
+
             <div className="grid grid-cols-4 gap-4 mb-2 text-xs">
                 <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Terms:</span><p className="font-medium text-gray-900">{orderData.terms || 'N/A'}</p></div>
                 <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Ship Via:</span><p className="font-medium text-gray-900">{orderData.shipVia || 'N/A'}</p></div>
