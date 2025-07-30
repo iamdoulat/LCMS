@@ -471,6 +471,25 @@ export type ChatResponse = {
 };
 // --- END Chat Types ---
 
+// --- Extract Shipping Data Types ---
+export const ExtractShippingDataInputSchema = z.object({
+  documentDataUri: z
+    .string()
+    .describe(
+      "A shipping document (PI, etc.) as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type ExtractShippingDataInput = z.infer<typeof ExtractShippingDataInputSchema>;
+
+export const ExtractShippingDataOutputSchema = z.object({
+  etd: z.string().describe('The Estimated Time of Departure.'),
+  eta: z.string().describe('The Estimated Time of Arrival.'),
+  itemDescriptions: z.string().describe('A description of the items being shipped.'),
+});
+export type ExtractShippingDataOutput = z.infer<typeof ExtractShippingDataOutputSchema>;
+// --- END Extract Shipping Data Types ---
+
+
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
