@@ -252,8 +252,8 @@ export default function ApplyPaymentPage() {
             // Also create a corresponding credit transaction in petty cash
             transaction.set(transactionRef, {
                 transactionDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                accountIds: [data.sourceAccountId],
-                accountNames: [selectedAccount?.label || 'N/A'],
+                accountId: data.sourceAccountId, // Fixed: Added accountId
+                accountName: selectedAccount?.label || 'N/A',
                 categoryIds: selectedCategories.map(c => c.value),
                 categoryNames: selectedCategories.map(c => c.label),
                 type: 'Credit',
