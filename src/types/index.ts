@@ -457,20 +457,6 @@ export interface LcOption {
   purchaseOrderUrl?: string;
 }
 
-// --- Chat Types ---
-export type ChatRequest = {
-  history: {
-    role: 'user' | 'model';
-    content: string;
-  }[];
-  prompt: string;
-};
-
-export type ChatResponse = {
-  response: string;
-};
-// --- END Chat Types ---
-
 // --- Extract Shipping Data Types ---
 export const ExtractShippingDataInputSchema = z.object({
   documentDataUri: z

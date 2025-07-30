@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { PropsWithChildren } from 'react';
@@ -8,7 +7,6 @@ import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { cn } from '@/lib/utils';
-import { ChatWidget } from '@/components/chat/ChatWidget'; // Import the chat widget
 
 // This is now a server component by default, which is more performant.
 // The client-side logic for checking print pages has been removed and
@@ -28,7 +26,6 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
               {children}
             </main>
             <div className="noprint">
-              <ChatWidget />
               <BottomNavBar />
               <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card hidden md:block">
                 © 2025 - Designed and Developed by{' '}

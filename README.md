@@ -7,10 +7,6 @@ LCMS is not just another management tool; it is a fully-integrated ecosystem tha
 
 ---
 
-### AI-Powered Chat Assistant
-
-LCMS includes an intelligent chat assistant powered by Google's Gemini models. You can ask questions about your data, inquire about application functionality, and get instant help without leaving the page.
-
 ### Core Functionality & Features
 
 Harness the power of a unified system that brings clarity and efficiency to every corner of your business.
