@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -188,17 +189,17 @@ export default function PrintPurchaseOrderPage() {
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
                 <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                    <span className="font-semibold">Order Number :</span>
-                    <span>{orderData.id}</span>
+                    <span className="font-semibold text-[12px] font-bold">Order Number :</span>
+                    <span className="text-[12px] font-bold">{orderData.id}</span>
                 </div>
                 <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                    <span className="font-semibold">Date :</span>
-                    <span>{formatDisplayDate(orderData.orderDate)}</span>
+                    <span className="font-semibold text-[12px] font-bold">Date :</span>
+                    <span className="text-[12px] font-bold">{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
                     <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
-                        <span className="font-semibold">Sales Person :</span>
-                        <span>{orderData.salesperson}</span>
+                        <span className="font-semibold text-[12px] font-bold">Sales Person :</span>
+                        <span className="text-[12px] font-bold">{orderData.salesperson}</span>
                     </div>
                 )}
             </div>
@@ -297,7 +298,7 @@ export default function PrintPurchaseOrderPage() {
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Supplier Signature</p>
           </div>
           
           <div className="flex flex-col items-center gap-1 text-center">
@@ -315,7 +316,7 @@ export default function PrintPurchaseOrderPage() {
           
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
           </div>
         </section>
       </div>
@@ -331,4 +332,5 @@ export default function PrintPurchaseOrderPage() {
     </div>
   );
 }
+
 
