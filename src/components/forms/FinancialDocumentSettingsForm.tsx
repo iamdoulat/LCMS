@@ -41,22 +41,16 @@ interface FinancialSettingsProfile {
 }
 
 
-const companySetupSchema = z.object({
+const financialSettingsSchema = z.object({
   companyName: z.string().optional(),
   address: z.string().optional(),
-  contactPerson: z.string().optional(),
   cellNumber: z.string().regex(/^\+?[0-9\s-()]*$/, "Invalid phone number format").optional().or(z.literal('')),
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
-  binNumber: z.string().optional(),
-  tinNumber: z.string().optional(),
   hideCompanyName: z.boolean().optional().default(false),
-  invoiceLogoUrl: z.preprocess(
-    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
-    z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
-  ),
 });
 
-type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
+type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
+
 
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
 const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
@@ -217,7 +211,6 @@ export function FinancialDocumentSettingsForm() {
       setIsSubmitting(false);
     }
   }
-
 
   if (isLoadingData) {
     return (
