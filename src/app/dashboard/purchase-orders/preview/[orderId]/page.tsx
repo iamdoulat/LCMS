@@ -161,7 +161,7 @@ export default function PrintPurchaseOrderPage() {
 
   const qrCodeValue = `PURCHASE ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = `${orderData.shipmentMode}+Total (USD):`;
+  const grandTotalLabel = `${orderData.shipmentMode} Total (USD):`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -295,7 +295,7 @@ export default function PrintPurchaseOrderPage() {
                 )}
                 <Separator className="my-2 border-gray-300" />
                 <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right text-[14px]">{grandTotalLabel}</span>
+                    <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
                 </div>
             </div>
@@ -306,7 +306,7 @@ export default function PrintPurchaseOrderPage() {
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Supplier Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
           </div>
           
           <div className="flex flex-col items-center gap-1 text-center">
@@ -324,7 +324,7 @@ export default function PrintPurchaseOrderPage() {
           
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
         </section>
       </div>
@@ -340,8 +340,3 @@ export default function PrintPurchaseOrderPage() {
     </div>
   );
 }
-
-
-
-
-

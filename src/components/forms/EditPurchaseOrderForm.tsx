@@ -317,7 +317,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     }
   }
 
-  const grandTotalLabel = `${watchedShipmentMode}+Total (USD):`;
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -501,4 +501,3 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     </Form>
   );
 }
-

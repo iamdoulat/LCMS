@@ -378,7 +378,7 @@ export function CreatePurchaseOrderForm() {
     }
   };
   
-  const grandTotalLabel = `${watchedShipmentMode}+Total (USD):`;
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return (
