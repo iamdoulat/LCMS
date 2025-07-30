@@ -65,7 +65,8 @@ export default function EditUserPage() {
           setUserData(fetchedData);
           form.reset({
             displayName: fetchedData.displayName,
-            role: fetchedData.role || [], 
+            // Ensure role is always treated as an array
+            role: Array.isArray(fetchedData.role) ? fetchedData.role : (fetchedData.role ? [fetchedData.role as unknown as UserRole] : []),
           });
         } else {
           setError("User not found.");
@@ -210,5 +211,3 @@ export default function EditUserPage() {
     </div>
   );
 }
-
-    
