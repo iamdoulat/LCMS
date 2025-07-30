@@ -225,6 +225,13 @@ export function CompanySetupForm() {
     }
   }
 
+  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
+
+  React.useEffect(() => {
+    if (watchedInvoiceLogoUrl !== invoiceLogoUrl) {
+      setInvoiceLogoUrl(watchedInvoiceLogoUrl);
+    }
+  }, [watchedInvoiceLogoUrl, invoiceLogoUrl]);
 
   if (isLoadingData || authLoading) {
     return (
@@ -234,14 +241,6 @@ export function CompanySetupForm() {
       </div>
     );
   }
-
-  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
-
-  React.useEffect(() => {
-    if (watchedInvoiceLogoUrl !== invoiceLogoUrl) {
-      setInvoiceLogoUrl(watchedInvoiceLogoUrl);
-    }
-  }, [watchedInvoiceLogoUrl, invoiceLogoUrl]);
 
   return (
     <Form {...form}>
