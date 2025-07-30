@@ -5,7 +5,9 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import type { ChatRequest, ChatResponse } from '@/types'; // Import types from global types file
 
+// Define Zod schemas for internal validation
 const chatHistorySchema = z.array(
   z.object({
     role: z.enum(['user', 'model']),
@@ -22,9 +24,7 @@ const chatResponseSchema = z.object({
   response: z.string(),
 });
 
-export type ChatRequest = z.infer<typeof chatRequestSchema>;
-export type ChatResponse = z.infer<typeof chatResponseSchema>;
-
+// Define the Genkit prompt, using the internal Zod schemas
 const chatPrompt = ai.definePrompt({
   name: 'chatPrompt',
   input: { schema: chatRequestSchema },
@@ -46,6 +46,7 @@ const chatPrompt = ai.definePrompt({
   `,
 });
 
+// Define the main flow
 const chatFlow = ai.defineFlow(
   {
     name: 'chatFlow',
@@ -59,7 +60,7 @@ const chatFlow = ai.defineFlow(
   }
 );
 
-// This exported wrapper function is the only thing the client-side code will import.
+// This exported async wrapper function is the ONLY thing exported from this file.
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
   return await chatFlow(request);
 }

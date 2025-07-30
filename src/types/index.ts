@@ -457,6 +457,20 @@ export interface LcOption {
   purchaseOrderUrl?: string;
 }
 
+// --- Chat Types ---
+export type ChatRequest = {
+  history: {
+    role: 'user' | 'model';
+    content: string;
+  }[];
+  prompt: string;
+};
+
+export type ChatResponse = {
+  response: string;
+};
+// --- END Chat Types ---
+
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
