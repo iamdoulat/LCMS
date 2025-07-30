@@ -185,16 +185,20 @@ export default function ApplyPaymentPage() {
   });
   
   React.useEffect(() => {
-    const invoicePaymentCategory = categoryOptions.find(cat => cat.label.toLowerCase() === "invoice payment received");
-    paymentDetailsForm.reset({
-        paymentAmount: selectedInvoiceDetails?.amountDue ?? undefined,
-        paymentDate: new Date(),
-        sourceAccountId: '',
-        categoryIds: invoicePaymentCategory ? [invoicePaymentCategory.value] : [],
-        paymentMethod: "Cash",
-        notes: '',
-    });
-  }, [isPaymentDialogOpen, selectedInvoiceDetails, paymentDetailsForm, categoryOptions]);
+    if (isPaymentDialogOpen) {
+      const invoicePaymentCategory = categoryOptions.find(cat => cat.label.toLowerCase() === "invoice payment received");
+      const pettyCashAccount = accountOptions.find(acc => acc.label.toLowerCase() === "petty cash");
+
+      paymentDetailsForm.reset({
+          paymentAmount: selectedInvoiceDetails?.amountDue ?? undefined,
+          paymentDate: new Date(),
+          sourceAccountId: pettyCashAccount ? pettyCashAccount.value : '',
+          categoryIds: invoicePaymentCategory ? [invoicePaymentCategory.value] : [],
+          paymentMethod: "Cash",
+          notes: `Payment for Invoice: ${watchedInvoiceId}`,
+      });
+    }
+  }, [isPaymentDialogOpen, selectedInvoiceDetails, paymentDetailsForm, categoryOptions, accountOptions, watchedInvoiceId]);
 
 
   async function onProcessPayment(data: PaymentDetailsFormValues) {
@@ -430,7 +434,7 @@ export default function ApplyPaymentPage() {
                                 )}
                             />
                              <FormField
-                                control={paymentDetailsForm.control}
+                                control={form.control}
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
@@ -462,3 +466,4 @@ export default function ApplyPaymentPage() {
     </div>
   );
 }
+
