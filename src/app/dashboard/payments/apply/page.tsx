@@ -211,30 +211,51 @@ export default function ApplyPaymentPage() {
         const selectedAccount = accountOptions.find(opt => opt.value === data.sourceAccountId);
         const selectedCategories = categoryOptions.filter(opt => data.categoryIds.includes(opt.value));
 
-        if (selectedCategories.length === 0) {
+        if (!selectedAccount) {
+            throw new Error("Selected source account not found.");
+        }
+         if (selectedCategories.length === 0) {
             throw new Error("A payment category must be selected.");
         }
 
         const invoiceRef = doc(firestore, "sales_invoice", watchedInvoiceId);
+        const accountRef = doc(firestore, "petty_cash_accounts", data.sourceAccountId);
         const paymentRef = doc(collection(firestore, "payments"));
         const transactionRef = doc(collection(firestore, "petty_cash_transactions"));
 
         await runTransaction(firestore, async (transaction) => {
-            const invoiceDoc = await transaction.get(invoiceRef);
+            const [invoiceDoc, accountDoc] = await Promise.all([
+                transaction.get(invoiceRef),
+                transaction.get(accountRef)
+            ]);
+
             if (!invoiceDoc.exists()) {
                 throw new Error("Invoice not found.");
             }
+             if (!accountDoc.exists()) {
+                throw new Error("Petty cash account not found.");
+            }
+
+            // Update Invoice
             const invoiceData = invoiceDoc.data() as InvoiceDocument;
             const currentAmountPaid = invoiceData.amountPaid || 0;
             const newAmountPaid = currentAmountPaid + data.paymentAmount;
             const newStatus: InvoiceStatus = newAmountPaid >= invoiceData.totalAmount ? "Paid" : "Partial";
-
             transaction.update(invoiceRef, {
                 status: newStatus,
                 amountPaid: newAmountPaid,
                 updatedAt: serverTimestamp(),
             });
 
+            // Update Petty Cash Account Balance
+            const currentBalance = accountDoc.data().balance || 0;
+            const newBalance = currentBalance + data.paymentAmount;
+            transaction.update(accountRef, {
+                balance: newBalance,
+                updatedAt: serverTimestamp(),
+            });
+
+            // Create Payment Record
             transaction.set(paymentRef, {
                 invoiceId: watchedInvoiceId,
                 invoiceNumber: invoiceDoc.id,
@@ -249,10 +270,10 @@ export default function ApplyPaymentPage() {
                 createdAt: serverTimestamp(),
             });
             
-            // Also create a corresponding credit transaction in petty cash
+            // Create Petty Cash Transaction
             transaction.set(transactionRef, {
                 transactionDate: format(data.paymentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                accountId: data.sourceAccountId, // Fixed: Added accountId
+                accountId: data.sourceAccountId,
                 accountName: selectedAccount?.label || 'N/A',
                 categoryIds: selectedCategories.map(c => c.value),
                 categoryNames: selectedCategories.map(c => c.label),
@@ -267,7 +288,7 @@ export default function ApplyPaymentPage() {
             });
         });
 
-        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status updated and petty cash credited.`, "success");
+        Swal.fire("Payment Applied!", `Payment for invoice ${watchedInvoiceId} has been recorded. Invoice status and account balance updated.`, "success");
         setIsPaymentDialogOpen(false);
         invoiceSelectForm.reset({ invoiceId: '' });
     } catch (error: any) {
@@ -466,3 +487,4 @@ export default function ApplyPaymentPage() {
     </div>
   );
 }
+
