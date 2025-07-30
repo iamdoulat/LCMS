@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -188,16 +187,16 @@ export default function PrintPurchaseOrderPage() {
 
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
                     <span className="font-semibold">Order Number :</span>
                     <span>{orderData.id}</span>
                 </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <div className="flex justify-end items-baseline gap-2 text-xs font-bold">
                         <span className="font-semibold">Sales Person :</span>
                         <span>{orderData.salesperson}</span>
                     </div>
