@@ -7,6 +7,10 @@ LCMS is not just another management tool; it is a fully-integrated ecosystem tha
 
 ---
 
+### AI-Powered Chat Assistant
+
+LCMS includes an intelligent chat assistant powered by Google's Gemini models. You can ask questions about your data, inquire about application functionality, and get instant help without leaving the page.
+
 ### Core Functionality & Features
 
 Harness the power of a unified system that brings clarity and efficiency to every corner of your business.
@@ -37,7 +41,7 @@ Harness the power of a unified system that brings clarity and efficiency to ever
     *   **Sales Tracking**: Record new sales transactions, which automatically deduct from your inventory for real-time stock management.
     *   **Refunds & Returns**: Process returned items from sales back into your inventory, ensuring accurate stock counts.
     *   **Apply Payment**: A dedicated interface to record payments against outstanding invoices and update their status.
-    *   **Settings**: Configure your petty cash source accounts and transaction categories to tailor the module to your financial workflow.
+    *   **Settings**: Configure your petty cash source accounts and transaction categories to tailor the financial module to your financial workflow.
 
 *   **Commission Management**: Simplify your commission tracking with dedicated tools for Proforma Invoices (PI).
     *   **Add & Manage PIs**: Easily create new PIs and connect them to existing L/C entries.
@@ -83,11 +87,16 @@ We leverage a state-of-the-art technology stack to deliver a seamless and high-p
 
 ### Getting Started: A Step-by-Step Guide
 
-1.  **Register Your Account**: Create a secure account using your email or Google. Your role will be automatically assigned based on your email address.
-2.  **Explore the Dashboard**: Get an instant overview of your key business metrics, including L/C values, upcoming shipments, and active tasks.
-3.  **Configure Your Company**: Navigate to `Settings > Company Setup` to enter your company details and logo, which will be used on all documents.
-4.  **Manage Users**: If you are an Admin, you can view and manage user roles under `Settings > User Management`.
-5.  **Start Managing**: Dive into any module to start creating L/Cs, managing inventory, or generating reports. The intuitive interface makes it easy to get started right away.
+1.  **API Key Setup**: To enable AI features, you must first obtain an API key.
+    *   Visit [Google AI Studio](https://aistudio.google.com/app/apikey) to create your free API key.
+    *   In the project, open the `.env` file.
+    *   Replace `YOUR_API_KEY_HERE` with the key you just created.
+
+2.  **Register Your Account**: Create a secure account using your email or Google. Your role will be automatically assigned based on your email address.
+3.  **Explore the Dashboard**: Get an instant overview of your key business metrics, including L/C values, upcoming shipments, and active tasks.
+4.  **Configure Your Company**: Navigate to `Settings > Company Setup` to enter your company details and logo, which will be used on all documents.
+5.  **Manage Users**: If you are an Admin, you can view and manage user roles under `Settings > User Management`.
+6.  **Start Managing**: Dive into any module to start creating L/Cs, managing inventory, or generating reports. The intuitive interface makes it easy to get started right away.
 
 ---
 
