@@ -262,7 +262,7 @@ export default function PrintPurchaseOrderPage() {
         </div>
 
         <div className="flex justify-between items-start pt-2">
-            <div className="w-1/2 pr-4 text-xs">
+            <div className="w-3/3 pr-4 text-xs">
                 {orderData.comments && (
                 <div className="space-y-1">
                     <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
