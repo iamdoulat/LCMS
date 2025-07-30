@@ -1022,7 +1022,7 @@ export const OrderSchema = z.object({
   orderDate: z.date({ required_error: "Order Date is required." }),
   salesperson: z.string().min(1, "Salesperson is required."),
   lineItems: z.array(OrderLineItemSchema).min(1, "At least one line item is required."),
-  taxType: z.enum(quoteTaxTypes).default("Default"), // Reusing quoteTaxTypes
+  taxType: z.enum(quoteTaxTypes).default("Default"),
   comments: z.string().optional(),
   privateComments: z.string().optional(),
   subtotal: z.number().optional(),
@@ -1032,6 +1032,10 @@ export const OrderSchema = z.object({
   showItemCodeColumn: z.boolean().optional().default(true),
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
+  terms: z.string().optional(),
+  shipVia: z.string().optional(),
+  portOfLoading: z.string().optional(),
+  portOfDischarge: z.string().optional(),
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 
@@ -1069,6 +1073,10 @@ export interface OrderDocument {
   showItemCodeColumn?: boolean;
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
+  terms?: string;
+  shipVia?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
 }
 // --- END Order Types ---
 
