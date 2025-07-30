@@ -112,7 +112,7 @@ export function CreatePurchaseOrderForm() {
   const watchedOtherCharges = watch("otherCharges");
   const watchedShipmentMode = watch("shipmentMode");
 
-  const { subtotal, totalTaxAmount, totalDiscountAmount, grandTotal } = React.useMemo(() => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -148,7 +148,7 @@ export function CreatePurchaseOrderForm() {
     const additionalCharges = freight + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-
+    
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
@@ -428,7 +428,7 @@ export function CreatePurchaseOrderForm() {
               name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill To*</FormLabel>
+                  <FormLabel>Supplier:</FormLabel>
                   <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -603,3 +603,4 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
