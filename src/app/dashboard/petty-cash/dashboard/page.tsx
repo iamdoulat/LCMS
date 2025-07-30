@@ -189,13 +189,19 @@ export default function PettyCashDashboardPage() {
                     }
                 });
 
-                const totalStockItems = itemsSnapshot.size;
+                let totalStockQuantity = 0;
+                itemsSnapshot.forEach(doc => {
+                    const itemData = doc.data() as ItemDocument;
+                    if (itemData.manageStock && typeof itemData.currentQuantity === 'number') {
+                        totalStockQuantity += itemData.currentQuantity;
+                    }
+                });
 
                 setStats(prev => ({ 
                     ...prev, 
                     totalUnpaidInvoices: totalUnpaid, 
                     thisMonthUnpaidInvoices: thisMonthUnpaid,
-                    totalStockItems: totalStockItems,
+                    totalStockItems: totalStockQuantity,
                     thisMonthItemsSold: thisMonthSoldQty
                 }));
             } catch (error) {
@@ -407,7 +413,7 @@ export default function PettyCashDashboardPage() {
                         className="bg-cyan-500"
                     />
                     <StatCard
-                        title="Total Stock Items"
+                        title="Total Items in Stock"
                         value={stats.totalStockItems.toLocaleString()}
                         icon={<Package />}
                         description={`${stats.thisMonthItemsSold} items sold this month`}
