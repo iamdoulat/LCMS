@@ -104,7 +104,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
   }, [isLoadingDropdowns, accountOptions, form]);
   
   React.useEffect(() => {
-    if (selectedCategoryNames.includes("Cheque Received")) {
+    if (selectedCategoryNames.includes("Cash Received") || selectedCategoryNames.includes("Cheque Received") || selectedCategoryNames.includes("Invoice payment Received")) {
       form.setValue('type', 'Credit');
     } else if (selectedCategoryNames.includes("Cheque Payment")) {
       form.setValue('type', 'Debit');
