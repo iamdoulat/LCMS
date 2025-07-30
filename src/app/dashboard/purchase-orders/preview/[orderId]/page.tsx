@@ -160,6 +160,17 @@ export default function PrintPurchaseOrderPage() {
   const showTaxColumn = orderData.showTaxColumn ?? false;
 
   const qrCodeValue = `PURCHASE ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
+  
+  const grandTotalLabel =
+    orderData.shipmentMode === "CFR CHATTOGRAM"
+      ? "CFR CHATTOGRAM TOTAL (USD):"
+      : orderData.shipmentMode === "CPT DHAKA"
+      ? "CPT DHAKA TOTAL (USD):"
+      : orderData.shipmentMode === "FOB"
+      ? "FOB TOTAL (USD):"
+      : orderData.shipmentMode === "EXW"
+      ? "EXW TOTAL (USD):"
+      : "TOTAL (USD):";
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -285,9 +296,21 @@ export default function PrintPurchaseOrderPage() {
                         <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount)}</span>
                     </div>
                 )}
+                 {(orderData.freightCharges || 0) > 0 && (
+                     <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.freightCharges)}</span>
+                    </div>
+                )}
+                {(orderData.otherCharges || 0) > 0 && (
+                     <div className="grid grid-cols-2 gap-x-4">
+                        <span className="text-gray-600 font-medium text-right">Other Charges:</span>
+                        <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.otherCharges)}</span>
+                    </div>
+                )}
                 <Separator className="my-2 border-gray-300" />
                 <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
-                    <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                    <span className="text-gray-900 text-right">{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
                 </div>
             </div>
@@ -332,5 +355,6 @@ export default function PrintPurchaseOrderPage() {
     </div>
   );
 }
+
 
 

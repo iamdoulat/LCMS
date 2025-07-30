@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types';
-import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, PIShipmentMode } from '@/types';
+import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, piShipmentModeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -60,11 +60,6 @@ export function CreatePurchaseOrderForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedOrderId, setGeneratedOrderId] = React.useState<string | null>(null);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
@@ -93,6 +88,9 @@ export function CreatePurchaseOrderForm() {
       shipVia: '',
       portOfLoading: '',
       portOfDischarge: '',
+      shipmentMode: piShipmentModeOptions[0],
+      freightCharges: undefined,
+      otherCharges: undefined,
     },
   });
 
@@ -110,8 +108,11 @@ export function CreatePurchaseOrderForm() {
   const watchedBeneficiaryId = watch("beneficiaryId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
+  const watchedFreightCharges = watch("freightCharges");
+  const watchedOtherCharges = watch("otherCharges");
 
-  const { subtotal: calculatedSubtotal, totalDiscountAmount: calculatedTotalDiscount, totalTaxAmount: calculatedTotalTax, grandTotal: calculatedGrandTotal } = React.useMemo(() => {
+
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -122,9 +123,9 @@ export function CreatePurchaseOrderForm() {
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
@@ -135,30 +136,26 @@ export function CreatePurchaseOrderForm() {
         }
         
         const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-    
+    const freight = Number(watchedFreightCharges || 0);
+    const other = Number(watchedOtherCharges || 0);
+    const additionalCharges = freight + other;
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
+
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
-
-   React.useEffect(() => {
-    setSubtotal(calculatedSubtotal);
-    setTotalDiscountAmount(calculatedTotalDiscount);
-    setTotalTaxAmount(calculatedTotalTax);
-    setGrandTotal(calculatedGrandTotal);
-  }, [calculatedSubtotal, calculatedTotalDiscount, calculatedTotalTax, calculatedGrandTotal]);
-
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
+  
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -305,6 +302,9 @@ export function CreatePurchaseOrderForm() {
           shipVia: data.shipVia,
           portOfLoading: data.portOfLoading,
           portOfDischarge: data.portOfDischarge,
+          shipmentMode: data.shipmentMode,
+          freightCharges: data.freightCharges,
+          otherCharges: data.otherCharges,
         };
 
         const cleanedDataToSave: { [key: string]: any } = {};
@@ -444,8 +444,8 @@ export function CreatePurchaseOrderForm() {
           <CalendarDays className="mr-2 h-5 w-5 text-primary" />
           Order Details
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-            <FormItem>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+             <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
               <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
             </FormItem>
@@ -488,6 +488,30 @@ export function CreatePurchaseOrderForm() {
           <FormField control={control} name="shipVia" render={({ field }) => (<FormItem><FormLabel>Ship Via</FormLabel><FormControl><Input placeholder="e.g., Sea, Air" {...field} /></FormControl><FormMessage /></FormItem>)}/>
           <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="e.g., Shanghai" {...field} /></FormControl><FormMessage /></FormItem>)}/>
           <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="e.g., Chattogram" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        </div>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+           <FormField
+              control={form.control}
+              name="shipmentMode"
+              render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Shipment Mode</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
+                          <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select shipment mode" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+              )}
+          />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <Separator className="my-6" />
@@ -550,6 +574,7 @@ export function CreatePurchaseOrderForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                 <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -559,7 +584,6 @@ export function CreatePurchaseOrderForm() {
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
                 form.reset();
-                setSubtotal(0); setTotalTaxAmount(0); setTotalDiscountAmount(0); setGrandTotal(0);
                 setGeneratedOrderId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
@@ -578,4 +602,5 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
 

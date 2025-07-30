@@ -1036,6 +1036,9 @@ export const OrderSchema = z.object({
   shipVia: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
+  shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 
@@ -1077,6 +1080,9 @@ export interface OrderDocument {
   shipVia?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
+  shipmentMode?: PIShipmentMode;
+  freightCharges?: number;
+  otherCharges?: number;
 }
 // --- END Order Types ---
 
