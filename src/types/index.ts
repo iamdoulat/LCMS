@@ -404,7 +404,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer"] as const;
+export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Store Manager", "Viewer", "Commercial"] as const;
 export type UserRole = typeof userRoles[number];
 
 export interface CompanyProfile {

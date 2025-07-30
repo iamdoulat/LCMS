@@ -83,6 +83,7 @@ interface NavItemGroup {
   groupLabel: string;
   icon: React.ElementType;
   iconColorClass?: string;
+  allowedRoles: UserRole[]; // Added to control group visibility
 }
 
 // Define Navigation Items
@@ -163,20 +164,20 @@ const settingsNavItems: NavItem[] = [
 
 // Define Group Structure
 const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
-  { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems },
-  { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems },
-  { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems },
-  { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems },
-  { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems },
-  { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems },
-  { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems },
-  { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems },
-  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems },
+  { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
+  { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems, allowedRoles: ["Super Admin", "Admin", "Store Manager", "Viewer", "Commercial"] },
+  { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Store Manager", "Viewer"] },
+  { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
+  { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Store Manager", "DemoManager"] },
+  { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
+  { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
+  { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
+  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin"] },
 ];
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
@@ -189,19 +190,26 @@ export function AppSidebarNav() {
 
   const [openAccordions, setOpenAccordions] = React.useState<string[]>([]);
   
+  const filteredNavGroups = React.useMemo(() => {
+    if (!userRole) return [];
+    return allNavGroups.filter(group => 
+      group.allowedRoles.some(allowedRole => userRole.includes(allowedRole))
+    );
+  }, [userRole]);
+
   React.useEffect(() => {
     const isGroupActive = (subLinks: NavItem[]) => subLinks.some(sub => isActive(sub.href));
     
-    const activeGroup = allNavGroups.find(group => isGroupActive(group.subLinks));
+    const activeGroup = filteredNavGroups.find(group => isGroupActive(group.subLinks));
     if (activeGroup) {
       setOpenAccordions([activeGroup.groupLabel]);
-    } else if (allNavGroups.length > 0) {
+    } else if (filteredNavGroups.length > 0) {
       // Default to opening the first group if no route is active
-      setOpenAccordions([allNavGroups[0].groupLabel]);
+      setOpenAccordions([filteredNavGroups[0].groupLabel]);
     } else {
       setOpenAccordions([]);
     }
-  }, [pathname]);
+  }, [pathname, filteredNavGroups]);
 
   return (
     <>
@@ -260,7 +268,7 @@ export function AppSidebarNav() {
                 ))}
             </SidebarMenu>
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
-            {allNavGroups.map((group) => {
+            {filteredNavGroups.map((group) => {
               const IconComponent = group.icon;
               return (
                 <AccordionItem value={group.groupLabel} key={group.groupLabel} className="border-none">

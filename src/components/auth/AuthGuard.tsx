@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +53,22 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/customers',
     '/dashboard/purchase-orders',
   ],
+  "Commercial": [
+    '/dashboard/quotes', 
+    '/dashboard/invoices', 
+    '/dashboard/orders', 
+    '/dashboard/payments', 
+    '/dashboard/financial-management',
+    '/dashboard/commission-management',
+    '/dashboard/total-lc',
+    '/dashboard/reports',
+    '/dashboard/shipments',
+    '/dashboard/demo',
+    '/dashboard/warranty-management',
+    '/dashboard/suppliers',
+    '/dashboard/customers',
+    '/dashboard/purchase-orders',
+  ]
 };
 
 // Define paths that are explicitly disallowed for certain roles.
@@ -68,6 +85,7 @@ const roleRedirects: Record<string, string> = {
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
   "Store Manager": process.env.NEXT_PUBLIC_REDIRECT_PATH_STORE_MANAGER || '/dashboard/items/list',
   "Viewer": '/dashboard', // Viewers land on the main dashboard
+  "Commercial": '/dashboard/total-lc',
 };
 
 

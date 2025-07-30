@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { User } from 'firebase/auth';
@@ -32,6 +33,7 @@ const SERVICE_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_SERVICE
 const DEMO_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_DEMO_MANAGER_EMAILS);
 const STORE_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_STORE_MANAGER_EMAILS);
 const VIEWER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_VIEWER_EMAILS);
+const COMMERCIAL_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_COMMERCIAL_EMAILS);
 
 
 interface AuthContextType {
@@ -194,6 +196,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       const roles: UserRole[] = [];
       if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
       if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
+      if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
       if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
       if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
       if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
@@ -242,6 +245,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           const roles: UserRole[] = [];
           if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
           if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
+          if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
           if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
           if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
           if (STORE_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Store Manager");
@@ -315,5 +319,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
