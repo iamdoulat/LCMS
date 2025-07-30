@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, query, orderBy, updateDoc, runTransaction } from 'firebase/firestore';
 import { format, parseISO, isValid } from 'date-fns';
 import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, PettyCashTransactionDocument, ChequeType } from '@/types';
 import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
@@ -110,44 +110,80 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
     }
     setIsSubmitting(true);
 
-    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
-    const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
-
-    const dataToUpdate: Record<string, any> = {
-      ...data,
-      transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      accountId: data.accountId,
-      accountName: selectedAccount?.label || 'N/A',
-      categoryIds: data.categoryIds,
-      categoryNames: selectedCategories.map(c => c.label),
-      amount: Number(data.amount),
-      chequeType: showChequeFields ? data.chequeType : undefined,
-      chequeNumber: showChequeFields ? data.chequeNumber : undefined,
-      updatedAt: serverTimestamp(),
-      updatedBy: user.displayName || user.email || "Unknown User",
-    };
-    
-    Object.keys(dataToUpdate).forEach(key => {
-        const typedKey = key as keyof typeof dataToUpdate;
-        if (dataToUpdate[typedKey] === undefined || dataToUpdate[typedKey] === '' || (Array.isArray(dataToUpdate[typedKey]) && (dataToUpdate[typedKey] as any[]).length === 0)) {
-            dataToUpdate[key] = null; // Use null to remove field in Firestore update
-        }
-    });
-
     try {
-      const transactionDocRef = doc(firestore, "petty_cash_transactions", initialData.id);
-      await updateDoc(transactionDocRef, dataToUpdate);
-      Swal.fire({
-        title: "Transaction Updated!",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      onFormSubmit();
+        await runTransaction(firestore, async (transaction) => {
+            const txDocRef = doc(firestore, "petty_cash_transactions", initialData.id);
+            const oldAccountDocRef = doc(firestore, "petty_cash_accounts", initialData.accountId);
+            const newAccountDocRef = doc(firestore, "petty_cash_accounts", data.accountId);
+
+            const [oldAccountSnap, newAccountSnap] = await Promise.all([
+                transaction.get(oldAccountDocRef),
+                initialData.accountId === data.accountId ? Promise.resolve(null) : transaction.get(newAccountDocRef)
+            ]);
+
+            if (!oldAccountSnap.exists() || (newAccountSnap && !newAccountSnap.exists())) {
+                throw new Error("One of the transaction accounts could not be found.");
+            }
+            
+            // Revert old transaction amount
+            let oldAccountBalance = oldAccountSnap.data()?.balance || 0;
+            if(initialData.type === 'Credit') {
+                oldAccountBalance -= initialData.amount;
+            } else {
+                oldAccountBalance += initialData.amount;
+            }
+            transaction.update(oldAccountDocRef, { balance: oldAccountBalance, updatedAt: serverTimestamp() });
+
+            // Apply new transaction amount
+            let newAccountBalance = (newAccountSnap?.data()?.balance) ?? oldAccountBalance;
+            const newAmount = Number(data.amount);
+            if(data.type === 'Credit') {
+                newAccountBalance += newAmount;
+            } else {
+                newAccountBalance -= newAmount;
+            }
+            
+            if (initialData.accountId !== data.accountId) {
+                // If account changed, update new account separately
+                transaction.update(newAccountDocRef, { balance: newAccountBalance, updatedAt: serverTimestamp() });
+            } else {
+                // If account is the same, update the already-adjusted balance
+                transaction.update(oldAccountDocRef, { balance: newAccountBalance, updatedAt: serverTimestamp() });
+            }
+
+            const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
+            const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
+            
+            const dataToUpdate: Record<string, any> = {
+                ...data,
+                transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                accountId: data.accountId,
+                accountName: selectedAccount?.label || 'N/A',
+                categoryIds: data.categoryIds,
+                categoryNames: selectedCategories.map(c => c.label),
+                amount: newAmount,
+                chequeType: showChequeFields ? data.chequeType : undefined,
+                chequeNumber: showChequeFields ? data.chequeNumber : undefined,
+                updatedAt: serverTimestamp(),
+                updatedBy: user.displayName || user.email || "Unknown User",
+            };
+
+            Object.keys(dataToUpdate).forEach(key => {
+                const value = dataToUpdate[key];
+                if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+                    dataToUpdate[key] = null;
+                }
+            });
+
+            transaction.update(txDocRef, dataToUpdate);
+        });
+
+        Swal.fire({ title: "Transaction Updated!", icon: "success", timer: 1500, showConfirmButton: false });
+        onFormSubmit();
     } catch (error: any) {
-      Swal.fire("Update Failed", `Failed to update transaction: ${error.message}`, "error");
+        Swal.fire("Update Failed", `Failed to update transaction: ${error.message}`, "error");
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   }
 

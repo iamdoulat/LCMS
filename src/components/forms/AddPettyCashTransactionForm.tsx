@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, runTransaction } from 'firebase/firestore';
 import { format } from 'date-fns';
 import type { PettyCashTransactionFormValues, PettyCashAccountDocument, PettyCashCategoryDocument, ChequeType } from '@/types';
 import { PettyCashTransactionSchema, transactionTypes, chequeTypeOptions } from '@/types';
@@ -119,41 +118,61 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
     }
     setIsSubmitting(true);
     
-    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
-    const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
-
-    const dataToSave = {
-      ...data,
-      accountId: data.accountId,
-      accountName: selectedAccount?.label || 'N/A',
-      categoryIds: data.categoryIds,
-      categoryNames: selectedCategories.map(c => c.label),
-      transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      amount: Number(data.amount),
-      chequeType: showChequeFields ? data.chequeType : undefined,
-      chequeNumber: showChequeFields ? data.chequeNumber : undefined,
-      createdBy: user.displayName || user.email || "Unknown User",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    
-    Object.keys(dataToSave).forEach(key => {
-        const typedKey = key as keyof typeof dataToSave;
-        if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === '' || (Array.isArray(dataToSave[typedKey]) && (dataToSave[typedKey] as any[]).length === 0)) {
-            delete (dataToSave as any)[typedKey];
-        }
-    });
-
     try {
-      await addDoc(collection(firestore, "petty_cash_transactions"), dataToSave);
-      Swal.fire({
-        title: "Transaction Saved!",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      form.reset();
-      onFormSubmit();
+        await runTransaction(firestore, async (transaction) => {
+            const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
+            const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
+
+            const accountDocRef = doc(firestore, "petty_cash_accounts", data.accountId);
+            const accountDocSnap = await transaction.get(accountDocRef);
+
+            if (!accountDocSnap.exists()) {
+                throw new Error("Source account not found. It may have been deleted.");
+            }
+
+            const currentBalance = accountDocSnap.data().balance || 0;
+            const transactionAmount = Number(data.amount);
+            const newBalance = data.type === 'Credit' 
+                ? currentBalance + transactionAmount 
+                : currentBalance - transactionAmount;
+
+            const newTransactionRef = doc(collection(firestore, "petty_cash_transactions"));
+
+            const dataToSave = {
+                ...data,
+                accountName: selectedAccount?.label || 'N/A',
+                categoryNames: selectedCategories.map(c => c.label),
+                transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                amount: transactionAmount,
+                chequeType: showChequeFields ? data.chequeType : undefined,
+                chequeNumber: showChequeFields ? data.chequeNumber : undefined,
+                createdBy: user.displayName || user.email || "Unknown User",
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+             const cleanedDataToSave: { [key: string]: any } = {};
+             for (const key in dataToSave) {
+                 const value = (dataToSave as any)[key];
+                 if (value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+                    cleanedDataToSave[key] = value;
+                 }
+             }
+
+            transaction.set(newTransactionRef, cleanedDataToSave);
+            transaction.update(accountDocRef, { balance: newBalance, updatedAt: serverTimestamp() });
+        });
+
+        Swal.fire({
+            title: "Transaction Saved!",
+            text: "The transaction and account balance have been updated.",
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        form.reset();
+        onFormSubmit();
+
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to save transaction: ${error.message}`, "error");
     } finally {

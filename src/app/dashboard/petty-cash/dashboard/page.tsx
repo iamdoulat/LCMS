@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -130,6 +131,9 @@ export default function PettyCashDashboardPage() {
             const fetchedAccounts = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashAccountDocument));
             setAccounts(fetchedAccounts);
             
+            const totalBalance = fetchedAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+            setStats(prev => ({ ...prev, pettyCashBalance: totalBalance }));
+
             const pieData = fetchedAccounts.map((acc, index) => ({
                 name: acc.name,
                 value: acc.balance,
@@ -240,13 +244,10 @@ export default function PettyCashDashboardPage() {
                 }
             });
             
-            const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-
             setStats(prev => ({
                 ...prev, 
                 thisMonthDebits: currentMonthDebits, 
                 thisMonthCredits: currentMonthCredits,
-                pettyCashBalance: totalBalance,
             }));
             
             setFetchError(null);
@@ -258,7 +259,7 @@ export default function PettyCashDashboardPage() {
         });
 
         return () => unsubTransactions();
-    }, [accounts]);
+    }, []);
     
     React.useEffect(() => {
         const year = parseInt(selectedChartYear);
