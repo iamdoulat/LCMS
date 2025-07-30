@@ -161,7 +161,7 @@ export default function PrintPurchaseOrderPage() {
 
   const qrCodeValue = `PURCHASE ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = `${orderData.shipmentMode} Total (USD):`;
+  const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
 
   return (
     <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -192,16 +192,16 @@ export default function PrintPurchaseOrderPage() {
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
                 <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                     <span className="font-semibold">Order Number :</span>
-                    <span className="">{orderData.id}</span>
+                    <span>{orderData.id}</span>
                 </div>
                 <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                     <span className="font-semibold">Date :</span>
-                    <span className="">{formatDisplayDate(orderData.orderDate)}</span>
+                    <span>{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
                     <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                         <span className="font-semibold">Sales Person :</span>
-                        <span className="">{orderData.salesperson}</span>
+                        <span>{orderData.salesperson}</span>
                     </div>
                 )}
             </div>
@@ -209,18 +209,18 @@ export default function PrintPurchaseOrderPage() {
             
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Supplier:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">SUPPLIER:</h3>
                 <p className="font-medium text-gray-900">{beneficiaryData?.beneficiaryName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase tracking-wide">Deliver To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 mb-2 text-xs">
-                <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Terms:</span><p className="font-medium text-gray-900">{orderData.terms || 'N/A'}</p></div>
+                <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Terms of Shipment:</span><p className="font-medium text-gray-900">{orderData.terms || 'N/A'}</p></div>
                 <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Ship Via:</span><p className="font-medium text-gray-900">{orderData.shipVia || 'N/A'}</p></div>
                 <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Port of Loading:</span><p className="font-medium text-gray-900">{orderData.portOfLoading || 'N/A'}</p></div>
                 <div className="border p-2 rounded-md"><span className="font-semibold text-gray-700">Port of Discharge:</span><p className="font-medium text-gray-900">{orderData.portOfDischarge || 'N/A'}</p></div>
@@ -231,11 +231,11 @@ export default function PrintPurchaseOrderPage() {
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
-                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '4%'}}>#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '48%'}}>Item Description</th>
+                {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>Item Code</th>}
+                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '6%'}}>Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price</th>
                 {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
                 {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
                 <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
@@ -262,39 +262,39 @@ export default function PrintPurchaseOrderPage() {
         </div>
 
         <div className="flex justify-between items-start pt-2">
-            <div className="w-3/3 pr-4 text-xs">
+            <div className="w-3/4 pr-4 text-xs">
                 {orderData.comments && (
                 <div className="space-y-1">
-                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <h4 className="font-bold text-gray-800 underline uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{orderData.comments}</div>
                 </div>
                 )}
             </div>
             <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                <div className="grid grid-cols-2 gap-x-4">
+                <div className="grid grid-cols-2 gap-x-0">
                     <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                     <span className="text-gray-800 text-right">{formatCurrency(orderData.subtotal)}</span>
                 </div>
                 {showDiscountColumn && (
-                    <div className="grid grid-cols-2 gap-x-4">
+                    <div className="grid grid-cols-2 gap-x-0">
                         <span className="text-gray-600 font-medium text-right">Total Discount:</span>
                         <span className="text-gray-800 text-right">(-) {formatCurrency(orderData.totalDiscountAmount)}</span>
                     </div>
                 )}
                 {showTaxColumn && (
-                    <div className="grid grid-cols-2 gap-x-4">
+                    <div className="grid grid-cols-2 gap-x-0">
                         <span className="text-gray-600 font-medium text-right">Total Tax ({orderData.taxType}):</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.totalTaxAmount)}</span>
                     </div>
                 )}
                 {(orderData.freightCharges || 0) > 0 && (
-                     <div className="grid grid-cols-2 gap-x-4">
+                     <div className="grid grid-cols-2 gap-x-0">
                         <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
                         <span className="text-gray-800 text-right">(+) {formatCurrency(orderData.freightCharges)}</span>
                     </div>
                 )}
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
                     <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
                     <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
                 </div>
