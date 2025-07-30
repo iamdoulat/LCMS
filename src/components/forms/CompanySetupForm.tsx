@@ -51,6 +51,10 @@ const companySetupSchema = z.object({
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
   hideCompanyName: z.boolean().optional().default(false),
+  invoiceLogoUrl: z.preprocess(
+    (val) => (String(val).trim() === "" ? undefined : String(val).trim()),
+    z.string().url({ message: "Invalid URL format for Invoice Logo" }).optional()
+  ),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -96,6 +100,7 @@ export function CompanySetupForm() {
       emailId: DEFAULT_EMAIL,
       contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
       hideCompanyName: false,
+      invoiceLogoUrl: '',
     },
   });
 
@@ -184,8 +189,8 @@ export function CompanySetupForm() {
     
         const dataToSave: FinancialSettingsProfile = {
             ...data,
+            invoiceLogoUrl: newInvoiceLogoUrl, // Use the potentially updated URL
             companyLogoUrl: newCompanyLogoUrl,
-            invoiceLogoUrl: newInvoiceLogoUrl || undefined,
             updatedAt: serverTimestamp(),
         };
         
@@ -229,6 +234,14 @@ export function CompanySetupForm() {
       </div>
     );
   }
+
+  const watchedInvoiceLogoUrl = form.watch("invoiceLogoUrl");
+
+  React.useEffect(() => {
+    if (watchedInvoiceLogoUrl !== invoiceLogoUrl) {
+      setInvoiceLogoUrl(watchedInvoiceLogoUrl);
+    }
+  }, [watchedInvoiceLogoUrl, invoiceLogoUrl]);
 
   return (
     <Form {...form}>
@@ -341,62 +354,4 @@ export function CompanySetupForm() {
             Swal.fire("Error", "Failed to create cropped image.", "error");
         }
     }
-}
-
-```
-  <change>
-    <file>src/lib/image-utils.ts</file>
-    <content><![CDATA[
-// src/lib/image-utils.ts
-
-import type { PixelCrop } from 'react-image-crop';
-
-// Helper function to get a cropped image blob
-export async function getCroppedImg(
-  image: HTMLImageElement,
-  crop: PixelCrop,
-  fileName: string,
-  targetWidth?: number,
-  targetHeight?: number
-): Promise<File | null> {
-  const canvas = document.createElement('canvas');
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
-  
-  // Use target dimensions if provided, otherwise use crop dimensions
-  canvas.width = targetWidth ?? crop.width;
-  canvas.height = targetHeight ?? crop.height;
-  
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return null;
-  }
-
-  // Draw the image onto the canvas with cropping
-  ctx.drawImage(
-    image,
-    crop.x * scaleX,
-    crop.y * scaleY,
-    crop.width * scaleX,
-    crop.height * scaleY,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          console.error('Canvas is empty');
-          reject(new Error('Canvas is empty'));
-          return;
-        }
-        resolve(new File([blob], fileName, { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      0.95 // High quality
-    );
-  });
 }
