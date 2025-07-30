@@ -4,12 +4,12 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus } from '@/types';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -19,6 +19,9 @@ import { AddPettyCashTransactionForm } from '@/components/forms/AddPettyCashTran
 import { EditPettyCashTransactionForm } from '@/components/forms/EditPettyCashTransactionForm';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
+import dynamic from 'next/dynamic';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 
 interface PettyCashStats {
@@ -28,6 +31,29 @@ interface PettyCashStats {
     totalUnpaidInvoices: number;
     thisMonthUnpaidInvoices: number;
 }
+
+interface PieChartDataItem {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+interface MonthlyChartData {
+  name: string;
+  debits: number;
+  credits: number;
+}
+
+const PettyCashAccountPieChart = dynamic(() => import('@/components/dashboard/PettyCashAccountPieChart'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+});
+
+const MonthlyTransactionBarChart = dynamic(() => import('@/components/dashboard/MonthlyTransactionBarChart'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+});
+
 
 const ITEMS_PER_PAGE = 20;
 
@@ -65,6 +91,9 @@ const formatCurrencyValue = (amount?: number) => {
   return `BDT ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const currentSystemYear = new Date().getFullYear();
+const chartYearOptions = Array.from({ length: (currentSystemYear - 2020 + 6) }, (_, i) => (2020 + i).toString());
+
 export default function PettyCashDashboardPage() {
     const { userRole } = useAuth();
     const isReadOnly = userRole?.includes('Viewer');
@@ -77,6 +106,7 @@ export default function PettyCashDashboardPage() {
         thisMonthUnpaidInvoices: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
+    const [accounts, setAccounts] = React.useState<PettyCashAccountDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
 
@@ -84,22 +114,32 @@ export default function PettyCashDashboardPage() {
     const [isEditFormOpen, setIsEditFormOpen] = React.useState(false);
     const [editingTransaction, setEditingTransaction] = React.useState<PettyCashTransactionDocument | null>(null);
     const [currentPage, setCurrentPage] = React.useState(1);
+    
+    const [accountPieChartData, setAccountPieChartData] = React.useState<PieChartDataItem[]>([]);
+    const [monthlyBarChartData, setMonthlyBarChartData] = React.useState<MonthlyChartData[]>([]);
+    const [selectedChartYear, setSelectedChartYear] = React.useState<string>(currentSystemYear.toString());
 
 
     React.useEffect(() => {
-        let initialPettyCashBalance = 0;
-        
-        const fetchStatsAndListen = async () => {
-            setIsLoading(true);
-            setFetchError(null);
-            try {
-                const accountsQuery = query(collection(firestore, "petty_cash_accounts"), where("name", "==", "Petty Cash"));
-                const accountsSnapshot = await getDocs(accountsQuery);
-                if (!accountsSnapshot.empty) {
-                    const pettyCashDoc = accountsSnapshot.docs[0];
-                    initialPettyCashBalance = (pettyCashDoc.data() as PettyCashAccountDocument).balance || 0;
-                }
+        const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
+        const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
+            const fetchedAccounts = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashAccountDocument));
+            setAccounts(fetchedAccounts);
+            
+            const pieData = fetchedAccounts.map((acc, index) => ({
+                name: acc.name,
+                value: acc.balance,
+                fill: `hsl(var(--chart-${(index % 5) + 1}))`
+            })).filter(item => item.value > 0);
+            setAccountPieChartData(pieData);
 
+        }, (error) => {
+            console.error("Error fetching accounts:", error);
+            setFetchError("Could not load accounts. Check permissions and console.");
+        });
+
+        const fetchSalesStats = async () => {
+            try {
                 const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
                 const salesQuery = query(collection(firestore, "sales_invoice"), where("status", "in", unpaidStatuses));
                 const salesSnapshot = await getDocs(salesQuery);
@@ -118,82 +158,88 @@ export default function PettyCashDashboardPage() {
                             if (isValid(invoiceDate) && isWithinInterval(invoiceDate, { start, end })) {
                                 thisMonthUnpaidInvoices++;
                             }
-                        } catch(e) {
-                            console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate);
-                        }
+                        } catch(e) { console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate); }
                     }
                 });
-                
-                 setStats(prev => ({ ...prev, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
-
-            } catch (error: any) {
-                console.error("Error fetching initial stats:", error);
-                setFetchError(error.message || "An unknown error occurred while fetching stats.");
-            } finally {
-                setIsLoading(false);
+                setStats(prev => ({ ...prev, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
+            } catch (error) {
+                 console.error("Error fetching sales stats:", error);
             }
         };
+        fetchSalesStats();
 
-        const unsubTransactions = onSnapshot(
-            query(collection(firestore, "petty_cash_transactions"), orderBy("transactionDate", "desc")),
-            (snapshot) => {
-                const fetchedTransactions = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashTransactionDocument));
-                setTransactions(fetchedTransactions);
-
-                let thisMonthDebits = 0;
-                let thisMonthCredits = 0;
-                let totalDebits = 0;
-                let totalCredits = 0;
-                const now = new Date();
-                const start = startOfMonth(now);
-                const end = endOfMonth(now);
-
-                fetchedTransactions.forEach(tx => {
-                    const amount = tx.amount || 0;
-                    if (tx.type === 'Debit') {
-                        totalDebits += amount;
-                    } else if (tx.type === 'Credit') {
-                        totalCredits += amount;
-                    }
-
-                    if (!tx.transactionDate) return;
-                    let txDate: Date;
-                    try {
-                        txDate = parseISO(tx.transactionDate);
-                        if (!isValid(txDate)) return;
-                    } catch(e) { return; }
-                    
-                    if (isWithinInterval(txDate, { start, end })) {
-                        if (tx.type === 'Debit') {
-                            thisMonthDebits += amount;
-                        } else if (tx.type === 'Credit') {
-                            thisMonthCredits += amount;
-                        }
-                    }
-                });
-
-                const dynamicBalance = initialPettyCashBalance + totalCredits - totalDebits;
-
-                setStats(prev => ({
-                    ...prev, 
-                    thisMonthDebits, 
-                    thisMonthCredits,
-                    pettyCashBalance: dynamicBalance,
-                }));
-                setFetchError(null);
-            },
-            (error) => {
-                console.error("Error fetching transactions:", error);
-                setFetchError("Could not load transactions. Check permissions and console.");
-            }
-        );
-
-        fetchStatsAndListen();
-
-        return () => {
-            unsubTransactions();
-        };
+        return () => unsubAccounts();
     }, []);
+
+    React.useEffect(() => {
+        setIsLoading(true);
+        const txQuery = query(collection(firestore, "petty_cash_transactions"), orderBy("transactionDate", "desc"));
+        const unsubTransactions = onSnapshot(txQuery, (snapshot) => {
+            const fetchedTransactions = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashTransactionDocument));
+            setTransactions(fetchedTransactions);
+
+            const now = new Date();
+            const thisMonthStart = startOfMonth(now);
+            const thisMonthEnd = endOfMonth(now);
+
+            let currentMonthDebits = 0;
+            let currentMonthCredits = 0;
+
+            fetchedTransactions.forEach(tx => {
+                if (!tx.transactionDate) return;
+                let txDate: Date;
+                try {
+                    txDate = parseISO(tx.transactionDate);
+                    if (!isValid(txDate)) return;
+                } catch(e) { return; }
+                
+                if (isWithinInterval(txDate, { start: thisMonthStart, end: thisMonthEnd })) {
+                    if (tx.type === 'Debit') currentMonthDebits += tx.amount || 0;
+                    else if (tx.type === 'Credit') currentMonthCredits += tx.amount || 0;
+                }
+            });
+            
+            const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+            setStats(prev => ({
+                ...prev, 
+                thisMonthDebits: currentMonthDebits, 
+                thisMonthCredits: currentMonthCredits,
+                pettyCashBalance: totalBalance,
+            }));
+            
+            setFetchError(null);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching transactions:", error);
+            setFetchError("Could not load transactions. Check permissions and console.");
+            setIsLoading(false);
+        });
+
+        return () => unsubTransactions();
+    }, [accounts]);
+    
+    React.useEffect(() => {
+        const year = parseInt(selectedChartYear);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthlyData = monthNames.map(name => ({ name, debits: 0, credits: 0 }));
+
+        transactions.forEach(tx => {
+            if (tx.transactionDate) {
+                const txDate = parseISO(tx.transactionDate);
+                if (isValid(txDate) && txDate.getFullYear() === year) {
+                    const monthIndex = getMonth(txDate);
+                    if (tx.type === 'Debit') {
+                        monthlyData[monthIndex].debits += tx.amount || 0;
+                    } else if (tx.type === 'Credit') {
+                        monthlyData[monthIndex].credits += tx.amount || 0;
+                    }
+                }
+            }
+        });
+        setMonthlyBarChartData(monthlyData);
+    }, [selectedChartYear, transactions]);
+
 
     const handleEdit = (transaction: PettyCashTransactionDocument) => {
         setEditingTransaction(transaction);
@@ -290,22 +336,22 @@ export default function PettyCashDashboardPage() {
                 </CardHeader>
                  <CardContent className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                      <StatCard
-                        title="Balance"
+                        title="Total Balance"
                         value={formatCurrency(stats.pettyCashBalance)}
                         icon={<Wallet />}
-                        description="Petty Cash Account"
+                        description="Across all accounts"
                         className="bg-blue-500"
                     />
                     <StatCard
-                        title="This Month's Debits"
-                        value={formatCurrency(stats.thisMonthDebits)}
+                        title="This Month's Credits"
+                        value={formatCurrency(stats.thisMonthCredits)}
                         icon={<TrendingUp />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-green-500"
                     />
                     <StatCard
-                        title="This Month's Credits"
-                        value={formatCurrency(stats.thisMonthCredits)}
+                        title="This Month's Debits"
+                        value={formatCurrency(stats.thisMonthDebits)}
                         icon={<TrendingDown />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-orange-500"
@@ -482,7 +528,57 @@ export default function PettyCashDashboardPage() {
                     </DialogContent>
                 </Dialog>
             )}
+
+            <Card className="shadow-xl">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                            <PieChartIcon className="h-6 w-6 text-primary" />
+                            Account Balance Distribution
+                        </CardTitle>
+                        <CardDescription>
+                            Current balance breakdown across all petty cash accounts.
+                        </CardDescription>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="h-[400px] w-full">
+                 <PettyCashAccountPieChart data={accountPieChartData} />
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-xl">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                            <BarChart3 className="h-6 w-6 text-primary" />
+                            Monthly Transaction Flow
+                        </CardTitle>
+                        <CardDescription>
+                            Total debits and credits for each month in the selected year.
+                        </CardDescription>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <Label htmlFor="chart-year-select">Select Year</Label>
+                         <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
+                            <SelectTrigger id="chart-year-select" className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Select Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {chartYearOptions.map((year) => (
+                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="h-[400px] w-full">
+                 <MonthlyTransactionBarChart data={monthlyBarChartData} />
+              </CardContent>
+            </Card>
         </div>
     );
 }
-
