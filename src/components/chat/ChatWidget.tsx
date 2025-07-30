@@ -8,12 +8,15 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { chat, type chatHistorySchema } from '@/ai/flows/chat';
+import { chat, type ChatRequest, type ChatResponse } from '@/ai/flows/chat';
 import type { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
-type Message = z.infer<typeof chatHistorySchema>[number];
+type Message = {
+  role: 'user' | 'model';
+  content: string;
+};
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = React.useState(false);

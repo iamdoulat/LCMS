@@ -6,21 +6,24 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const chatHistorySchema = z.array(
+const chatHistorySchema = z.array(
   z.object({
     role: z.enum(['user', 'model']),
     content: z.string(),
   })
 );
 
-export const chatRequestSchema = z.object({
+const chatRequestSchema = z.object({
   history: chatHistorySchema,
   prompt: z.string(),
 });
 
-export const chatResponseSchema = z.object({
+const chatResponseSchema = z.object({
   response: z.string(),
 });
+
+export type ChatRequest = z.infer<typeof chatRequestSchema>;
+export type ChatResponse = z.infer<typeof chatResponseSchema>;
 
 const chatPrompt = ai.definePrompt({
   name: 'chatPrompt',
@@ -43,7 +46,7 @@ const chatPrompt = ai.definePrompt({
   `,
 });
 
-export const chat = ai.defineFlow(
+const chatFlow = ai.defineFlow(
   {
     name: 'chatFlow',
     inputSchema: chatRequestSchema,
@@ -55,3 +58,8 @@ export const chat = ai.defineFlow(
     return { response: output?.response || "I'm sorry, I couldn't generate a response." };
   }
 );
+
+// This exported wrapper function is the only thing the client-side code will import.
+export async function chat(request: ChatRequest): Promise<ChatResponse> {
+  return await chatFlow(request);
+}
