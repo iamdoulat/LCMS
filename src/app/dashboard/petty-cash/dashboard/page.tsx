@@ -529,56 +529,58 @@ export default function PettyCashDashboardPage() {
                 </Dialog>
             )}
 
-            <Card className="shadow-xl">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                            <PieChartIcon className="h-6 w-6 text-primary" />
-                            Account Balance Distribution
-                        </CardTitle>
-                        <CardDescription>
-                            Current balance breakdown across all petty cash accounts.
-                        </CardDescription>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card className="shadow-xl">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                                <PieChartIcon className="h-6 w-6 text-primary" />
+                                Account Balance Distribution
+                            </CardTitle>
+                            <CardDescription>
+                                Current balance breakdown across all petty cash accounts.
+                            </CardDescription>
+                        </div>
                     </div>
-                 </div>
-              </CardHeader>
-              <CardContent className="h-[400px] w-full">
-                 <PettyCashAccountPieChart data={accountPieChartData} />
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="h-[400px] w-full">
+                    <PettyCashAccountPieChart data={accountPieChartData} />
+                </CardContent>
+                </Card>
 
-            <Card className="shadow-xl">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                            <BarChart3 className="h-6 w-6 text-primary" />
-                            Monthly Transaction Flow
-                        </CardTitle>
-                        <CardDescription>
-                            Total debits and credits for each month in the selected year.
-                        </CardDescription>
+                <Card className="shadow-xl">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                                <BarChart3 className="h-6 w-6 text-primary" />
+                                Monthly Transaction Flow
+                            </CardTitle>
+                            <CardDescription>
+                                Total debits and credits for each month in the selected year.
+                            </CardDescription>
+                        </div>
+                        <div className="w-full sm:w-auto">
+                            <Label htmlFor="chart-year-select">Select Year</Label>
+                            <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
+                                <SelectTrigger id="chart-year-select" className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder="Select Year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {chartYearOptions.map((year) => (
+                                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                    <div className="w-full sm:w-auto">
-                        <Label htmlFor="chart-year-select">Select Year</Label>
-                         <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
-                            <SelectTrigger id="chart-year-select" className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Select Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {chartYearOptions.map((year) => (
-                                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                 </div>
-              </CardHeader>
-              <CardContent className="h-[400px] w-full">
-                 <MonthlyTransactionBarChart data={monthlyBarChartData} />
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="h-[400px] w-full">
+                    <MonthlyTransactionBarChart data={monthlyBarChartData} />
+                </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }
