@@ -4,11 +4,11 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
-import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus } from '@/types';
+import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ interface PettyCashStats {
     thisMonthCredits: number;
     totalUnpaidInvoices: number;
     thisMonthUnpaidInvoices: number;
+    totalStockItems: number;
+    thisMonthItemsSold: number;
 }
 
 interface PieChartDataItem {
@@ -105,6 +107,8 @@ export default function PettyCashDashboardPage() {
         thisMonthCredits: 0,
         totalUnpaidInvoices: 0,
         thisMonthUnpaidInvoices: 0,
+        totalStockItems: 0,
+        thisMonthItemsSold: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
     const [accounts, setAccounts] = React.useState<PettyCashAccountDocument[]>([]);
@@ -139,35 +143,66 @@ export default function PettyCashDashboardPage() {
             setFetchError("Could not load accounts. Check permissions and console.");
         });
 
-        const fetchSalesStats = async () => {
+        const fetchSalesAndItemStats = async () => {
             try {
                 const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
-                const salesQuery = query(collection(firestore, "sales_invoice"), where("status", "in", unpaidStatuses));
-                const salesSnapshot = await getDocs(salesQuery);
+                const salesQuery = query(collection(firestore, "sales_invoice"));
+                const itemsQuery = query(collection(firestore, "items"));
+
+                const [salesSnapshot, itemsSnapshot] = await Promise.all([
+                    getDocs(salesQuery),
+                    getDocs(itemsQuery)
+                ]);
                 
-                const totalUnpaidInvoices = salesSnapshot.size;
-                let thisMonthUnpaidInvoices = 0;
+                let totalUnpaid = 0;
+                let thisMonthUnpaid = 0;
+                let thisMonthSoldQty = 0;
                 const now = new Date();
                 const start = startOfMonth(now);
                 const end = endOfMonth(now);
 
                 salesSnapshot.forEach(doc => {
                     const saleData = doc.data() as SaleDocument;
+                    const saleStatus = saleData.status as SaleStatus;
+                    
+                    if(unpaidStatuses.includes(saleStatus)) {
+                        totalUnpaid++;
+                         if (saleData.invoiceDate) {
+                            try {
+                                const invoiceDate = parseISO(saleData.invoiceDate);
+                                if (isValid(invoiceDate) && isWithinInterval(invoiceDate, { start, end })) {
+                                    thisMonthUnpaid++;
+                                }
+                            } catch(e) { console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate); }
+                        }
+                    }
+
                     if (saleData.invoiceDate) {
                         try {
                             const invoiceDate = parseISO(saleData.invoiceDate);
                             if (isValid(invoiceDate) && isWithinInterval(invoiceDate, { start, end })) {
-                                thisMonthUnpaidInvoices++;
+                                saleData.lineItems.forEach(item => {
+                                    thisMonthSoldQty += item.qty || 0;
+                                });
                             }
-                        } catch(e) { console.warn("Could not parse invoiceDate for stats:", saleData.invoiceDate); }
+                        } catch(e) { /* ignore */ }
                     }
                 });
-                setStats(prev => ({ ...prev, totalUnpaidInvoices, thisMonthUnpaidInvoices }));
+
+                const totalStockItems = itemsSnapshot.size;
+
+                setStats(prev => ({ 
+                    ...prev, 
+                    totalUnpaidInvoices: totalUnpaid, 
+                    thisMonthUnpaidInvoices: thisMonthUnpaid,
+                    totalStockItems: totalStockItems,
+                    thisMonthItemsSold: thisMonthSoldQty
+                }));
             } catch (error) {
-                 console.error("Error fetching sales stats:", error);
+                 console.error("Error fetching sales/item stats:", error);
             }
         };
-        fetchSalesStats();
+        fetchSalesAndItemStats();
 
         return () => unsubAccounts();
     }, []);
@@ -370,6 +405,13 @@ export default function PettyCashDashboardPage() {
                         icon={<Receipt />}
                         description={`${stats.thisMonthUnpaidInvoices} this month (Unpaid)`}
                         className="bg-cyan-500"
+                    />
+                    <StatCard
+                        title="Total Stock Items"
+                        value={stats.totalStockItems.toLocaleString()}
+                        icon={<Package />}
+                        description={`${stats.thisMonthItemsSold} items sold this month`}
+                        className="bg-purple-500"
                     />
                 </CardContent>
             </Card>
