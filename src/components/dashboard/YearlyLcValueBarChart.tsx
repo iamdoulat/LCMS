@@ -1,3 +1,4 @@
+
 // src/components/dashboard/YearlyLcValueBarChart.tsx
 "use client";
 
@@ -78,3 +79,5 @@ export const YearlyLcValueBarChart: FC<YearlyLcValueBarChartProps> = ({ data }) 
     </ResponsiveContainer>
   );
 };
+
+export default YearlyLcValueBarChart;

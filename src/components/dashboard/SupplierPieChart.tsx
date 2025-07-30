@@ -61,3 +61,5 @@ export const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
     </ResponsiveContainer>
   );
 };
+
+export default SupplierPieChart;

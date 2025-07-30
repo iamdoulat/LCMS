@@ -21,21 +21,15 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-const SupplierPieChart = dynamic(() =>
-  import('@/components/dashboard/SupplierPieChart').then(mod => mod.SupplierPieChart),
-  {
-    ssr: false,
-    loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-  }
-);
+const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+});
 
-const YearlyLcValueBarChart = dynamic(() =>
-  import('@/components/dashboard/YearlyLcValueBarChart').then(mod => mod.YearlyLcValueBarChart),
-  {
-    ssr: false,
-    loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
-  }
-);
+const YearlyLcValueBarChart = dynamic(() => import('@/components/dashboard/YearlyLcValueBarChart'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+});
 
 
 const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"];
@@ -229,7 +223,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async (year: string) => {
-    if (!authUser || !userRole?.some(r => ['Super Admin', 'Admin', 'Viewer'].includes(r))) {
+    if (!authUser || !userRole?.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
         setIsLoading(false);
         return;
     }
@@ -478,7 +472,7 @@ export default function DashboardPage() {
 
   const userDisplayName = authUser?.displayName || authUser?.email || 'User';
 
-  if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer'].includes(r))) {
+  if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
     return (
         <div className="flex flex-col gap-8">
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
