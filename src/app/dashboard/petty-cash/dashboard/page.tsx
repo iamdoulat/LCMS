@@ -392,6 +392,7 @@ export default function PettyCashDashboardPage() {
                         icon={<TrendingUp />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-green-500"
+                        valueClassName="text-3xl"
                     />
                     <StatCard
                         title="This Month's Debits"
@@ -399,6 +400,7 @@ export default function PettyCashDashboardPage() {
                         icon={<TrendingDown />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className="bg-orange-500"
+                        valueClassName="text-3xl"
                     />
                     <StatCard
                         title="Net Flow (This Month)"
@@ -406,6 +408,7 @@ export default function PettyCashDashboardPage() {
                         icon={<GitCommitVertical />}
                         description={`In ${format(new Date(), 'MMMM')}`}
                         className={cn(netFlow >= 0 ? "bg-green-600" : "bg-red-600")}
+                        valueClassName="text-3xl"
                     />
                     <StatCard
                         title="Total Unpaid Invoices"
@@ -413,6 +416,7 @@ export default function PettyCashDashboardPage() {
                         icon={<Receipt />}
                         description={`${stats.thisMonthUnpaidInvoices} this month (Unpaid)`}
                         className="bg-cyan-500"
+                        valueClassName="text-3xl"
                     />
                     <StatCard
                         title="Total Items in Stock"
@@ -420,6 +424,7 @@ export default function PettyCashDashboardPage() {
                         icon={<Package />}
                         description={`${stats.thisMonthItemsSold} items sold this month`}
                         className="bg-purple-500"
+                        valueClassName="text-3xl"
                     />
                 </CardContent>
             </Card>
