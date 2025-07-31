@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -36,7 +37,7 @@ export default function EditOrderPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const orderDocRef = doc(firestore, "orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
