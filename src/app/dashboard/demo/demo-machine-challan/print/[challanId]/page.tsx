@@ -277,30 +277,32 @@ export default function PrintDemoMachineChallanPage() {
         </div>
       </div>
       
-      <div className="print-footer pb-4 px-4 mt-auto">
-        <section className="flex justify-between items-end mb-2 pt-16">
-          <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Receiver's Signature</p>
-            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
-          </div>
-          <div className="w-1/3 text-center flex flex-col items-center">
-             <div className="p-1 border bg-white mb-2">
+       <div className="print-footer pb-4 px-4 mt-auto">
+        <div className="flex justify-center mb-2">
+            <div className="p-1 border bg-white">
                 <QRCode
                     value={qrCodeValue}
-                    size={48} // Made smaller
+                    size={40} // Further reduced size
                     bgColor={"#ffffff"}
                     fgColor={"#000000"}
                     level={"L"}
                 />
             </div>
-            <div className="border-t border-dotted border-gray-400 w-full"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
+        </div>
+        <section className="flex justify-between items-end mb-2 pt-2">
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400 pt-1"></div>
+            <p className="pt-1 text-xs font-semibold text-gray-800">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
           <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
+            <div className="border-t border-dotted border-gray-400 pt-1"></div>
+            <p className="pt-1 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
+            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
+          </div>
+          <div className="w-1/3 text-center">
+            <div className="border-t border-dotted border-gray-400 pt-1"></div>
+            <p className="pt-1 text-xs font-semibold text-gray-800">Authorized Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
         </section>
