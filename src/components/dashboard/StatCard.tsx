@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: ReactNode; // Changed to ReactNode to allow for more complex values like JSX
   icon?: ReactNode;
   description?: string;
-  footer?: ReactNode; // This will now be used for the bottom text like "+5 this week"
-  className?: string; // This will be used for the solid background color
+  footer?: ReactNode;
+  className?: string;
   valueClassName?: string;
 }
 

@@ -73,7 +73,7 @@ const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
 
 const formatCurrency = (value: number) => {
     if (isNaN(value)) {
-        return <span className="text-3xl">BDT N/A</span>;
+        return 'BDT N/A';
     }
     const formatter = new Intl.NumberFormat('en-BD', {
         style: 'currency',
@@ -81,18 +81,13 @@ const formatCurrency = (value: number) => {
         currencyDisplay: 'code', 
     });
 
-    const parts = formatter.formatToParts(Math.abs(value));
-    const currencyCode = parts.find(p => p.type === 'currency')?.value;
-    const literal = parts.find(p => p.type === 'literal')?.value;
-    const numberValue = parts.filter(p => p.type === 'integer' || p.type === 'group' || p.type === 'fraction' || p.type === 'decimal').map(p => p.value).join('');
+    if (value < 0) {
+        // Format absolute value and manually insert the minus sign with non-breaking spaces
+        const formatted = formatter.format(Math.abs(value));
+        return formatted.replace(/BDT/, 'BDT\u00A0-\u00A0');
+    }
 
-    return (
-        <span className="flex items-baseline">
-            {value < 0 && <span className="text-3xl mr-1">-</span>}
-            <span className="text-lg mr-1">{currencyCode}</span>
-            <span className="text-3xl">{numberValue}</span>
-        </span>
-    );
+    return formatter.format(value).replace(/BDT/, 'BDT\u00A0');
 };
 
 const formatCurrencyValue = (amount?: number) => {
