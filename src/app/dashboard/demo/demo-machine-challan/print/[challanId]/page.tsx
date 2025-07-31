@@ -163,7 +163,7 @@ export default function PrintDemoMachineChallanPage() {
     );
   }
 
-  const { companyName, address, invoiceLogoUrl, hideCompanyName } = companySettings || {};
+  const { companyName, address, invoiceLogoUrl, hideCompanyName, emailId, cellNumber } = companySettings || {};
   const displayCompanyName = companyName || 'Your Company Name';
   const displayCompanyLogo = invoiceLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = address || 'Your Company Address';
@@ -175,7 +175,7 @@ export default function PrintDemoMachineChallanPage() {
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-center mb-2">
-            <div className="w-1/3">
+            <div className="w-2/3 pr-8">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
@@ -191,6 +191,10 @@ export default function PrintDemoMachineChallanPage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                 <div className="flex gap-4 text-xs text-gray-600">
+                    {emailId && <p>Email: {emailId}</p>}
+                    {cellNumber && <p>Phone: {cellNumber}</p>}
+                </div>
             </div>
             
             <div className="flex-shrink-0 flex flex-col items-center justify-center h-full mb-4">
