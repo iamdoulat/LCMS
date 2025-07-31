@@ -22,7 +22,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 
@@ -34,6 +33,7 @@ interface CompanySetupProfile {
   companyName?: string;
   address?: string;
   companyLogoUrl?: string;
+  invoiceLogoUrl?: string;
   emailId?: string;
   cellNumber?: string;
   contactPerson?: string;
@@ -56,7 +56,7 @@ const companySetupSchema = z.object({
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
 
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
-const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
+const DEFAULT_ADDRESS = 'House#50/A, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
 const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
 const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
@@ -76,6 +76,15 @@ export function CompanySetupForm() {
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
   const companyLogoImgRef = React.useRef<HTMLImageElement>(null);
   
+  // States for invoice logo
+  const [invoiceLogoSrc, setInvoiceLogoSrc] = React.useState('');
+  const [invoiceLogoCrop, setInvoiceLogoCrop] = React.useState<Crop>();
+  const [invoiceLogoCompletedCrop, setInvoiceLogoCompletedCrop] = React.useState<PixelCrop>();
+  const [invoiceLogoSelectedFile, setInvoiceLogoSelectedFile] = React.useState<File | null>(null);
+  const [isInvoiceLogoCropping, setIsInvoiceLogoCropping] = React.useState(false);
+  const [invoiceLogoUrl, setInvoiceLogoUrl] = React.useState<string | undefined>(undefined);
+  const invoiceLogoImgRef = React.useRef<HTMLImageElement>(null);
+
   const [isUploading, setIsUploading] = React.useState(false);
 
 
@@ -101,6 +110,7 @@ export function CompanySetupForm() {
           address: DEFAULT_ADDRESS,
           emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+          invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, // Default invoice logo
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
         };
 
@@ -111,10 +121,12 @@ export function CompanySetupForm() {
             ...data,
             companyName: data.companyName || DEFAULT_COMPANY_NAME,
             companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            invoiceLogoUrl: data.invoiceLogoUrl || data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL, // Fallback chain
           };
         }
         form.reset(initialProfileData);
         setCompanyLogoUrl(initialProfileData.companyLogoUrl);
+        setInvoiceLogoUrl(initialProfileData.invoiceLogoUrl);
       } catch (error) {
         Swal.fire("Error", "Could not load company profile. Using defaults.", "error");
       } finally {
@@ -157,15 +169,20 @@ export function CompanySetupForm() {
     setIsSubmitting(true);
     
     let newCompanyLogoUrl = companyLogoUrl;
-    
+    let newInvoiceLogoUrl = invoiceLogoUrl;
+
     try {
         if(companyLogoSelectedFile){
             newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
+        }
+        if(invoiceLogoSelectedFile){
+            newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
         }
     
         const dataToSave: CompanySetupProfile = {
             ...data,
             companyLogoUrl: newCompanyLogoUrl,
+            invoiceLogoUrl: newInvoiceLogoUrl,
             updatedAt: serverTimestamp(),
         };
         
@@ -178,9 +195,11 @@ export function CompanySetupForm() {
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
         await setDoc(profileDocRef, dataToSave, { merge: true });
         
-        updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl });
+        updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl, invoiceLogoUrl: newInvoiceLogoUrl });
         setCompanyLogoUrl(newCompanyLogoUrl);
+        setInvoiceLogoUrl(newInvoiceLogoUrl);
         setCompanyLogoSelectedFile(null);
+        setInvoiceLogoSelectedFile(null);
 
         Swal.fire({
             title: "Settings Saved!",
@@ -213,7 +232,7 @@ export function CompanySetupForm() {
          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-6">
             <FormField control={form.control} name="companyName" render={({ field }) => (<FormItem><FormLabel>Company Name*</FormLabel><FormControl><Input placeholder="Your company's name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>This name will appear on all documents.</FormDescription><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address*</FormLabel><FormControl><Textarea placeholder="Company address for documents" {...field} value={field.value || ""} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address*</FormLabel><FormControl><Textarea placeholder={DEFAULT_ADDRESS} {...field} value={field.value || ""} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
@@ -229,10 +248,20 @@ export function CompanySetupForm() {
                 <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
               </div>
             </FormItem>
+            <FormItem>
+              <Label>Invoice Logo</Label>
+               <div className="flex items-center gap-4">
+                <div className="w-24 h-auto aspect-[396/58] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                  {invoiceLogoUrl ? <Image src={invoiceLogoUrl} alt="Invoice Logo" width={96} height={14} className="object-contain" data-ai-hint="invoice logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                </div>
+                <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setInvoiceLogoSrc, setInvoiceLogoSelectedFile, setIsInvoiceLogoCropping)} className="flex-1" disabled={isReadOnly} />
+              </div>
+              <FormDescription>Specific logo for quotes, invoices, etc. If blank, the main company logo is used.</FormDescription>
+            </FormItem>
           </div>
         </div>
         
-        <Separator className="my-10" />
+        <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FormField control={form.control} name="contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Primary contact" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
@@ -263,6 +292,23 @@ export function CompanySetupForm() {
         </DialogContent>
       </Dialog>
       
+      {/* Invoice Logo Cropping Dialog */}
+       <Dialog open={isInvoiceLogoCropping} onOpenChange={setIsInvoiceLogoCropping}>
+        <DialogContent className="max-w-xl">
+            <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
+            {invoiceLogoSrc && (
+                <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={396 / 58}>
+                    <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 396/58, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }}/>
+                </ReactCrop>
+            )}
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+                <Button onClick={() => handleCropAndSet(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)}>
+                    {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4"/>Set Logo</>}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 
