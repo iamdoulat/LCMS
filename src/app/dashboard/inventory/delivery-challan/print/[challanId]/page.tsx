@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -48,14 +49,14 @@ export default function PrintDeliveryChallanPage() {
         }
 
         try {
-            const settingsDocRef = doc(firestore, 'financial_settings', 'main_settings');
+            const settingsDocRef = doc(firestore, 'company_profile', 'main_profile');
             const challanDocRef = doc(firestore, "delivery_challans", challanId);
             const [settingsSnap, challanSnap] = await Promise.all([getDoc(settingsDocRef), getDoc(challanDocRef)]);
 
             if(settingsSnap.exists()) {
                 setCompanySettings(settingsSnap.data() as CompanyProfile);
             } else {
-                console.warn("Financial settings not found, using defaults.");
+                console.warn("Company profile not found, using defaults.");
                 setCompanySettings({}); // Use empty object if no settings found
             }
             
@@ -151,9 +152,9 @@ export default function PrintDeliveryChallanPage() {
     );
   }
 
-  const { companyName, address, invoiceLogoUrl, hideCompanyName } = companySettings || {};
+  const { companyName, address, companyLogoUrl, hideCompanyName, emailId, cellNumber } = companySettings || {};
   const displayCompanyName = companyName || 'Your Company Name';
-  const displayCompanyLogo = invoiceLogoUrl || 'https://placehold.co/400x100.png';
+  const displayCompanyLogo = companyLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = address || 'Your Company Address';
 
   return (
@@ -177,6 +178,8 @@ export default function PrintDeliveryChallanPage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
+                {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
+                {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
 
             <div className="text-right">
@@ -281,3 +284,4 @@ export default function PrintDeliveryChallanPage() {
     </div>
   );
 }
+
