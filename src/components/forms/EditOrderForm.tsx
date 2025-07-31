@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -83,7 +82,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -224,7 +223,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -307,7 +306,7 @@ export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
 
 
     try {
-      const orderDocRef = doc(firestore, "purchase_orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {

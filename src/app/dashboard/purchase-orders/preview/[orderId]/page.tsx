@@ -368,7 +368,7 @@ export default function PrintOrderPage() {
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Buyer Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
           </div>
           
           <div className="flex flex-col items-center gap-1 text-center">
@@ -386,7 +386,7 @@ export default function PrintOrderPage() {
           
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
-            <p className="pt-2 text-xs font-semibold text-gray-800">Seller Signature</p>
+            <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
           </div>
         </section>
       </div>
