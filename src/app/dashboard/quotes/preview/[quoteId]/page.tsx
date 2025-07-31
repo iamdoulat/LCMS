@@ -186,16 +186,16 @@ export default function PrintQuotePage() {
 
                 <div className="text-right">
                     <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">QUOTATION</h2>
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                         <span className="font-semibold">Quote Number :</span>
                         <span>{quoteData.id}</span>
                     </div>
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                         <span className="font-semibold">Date :</span>
                         <span>{formatDisplayDate(quoteData.quoteDate)}</span>
                     </div>
                     {quoteData.salesperson && (
-                        <div className="flex justify-end items-baseline gap-2 text-sm">
+                        <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                             <span className="font-semibold">Sales Person :</span>
                             <span>{quoteData.salesperson}</span>
                         </div>
@@ -205,7 +205,7 @@ export default function PrintQuotePage() {
                 
                 <div className="grid grid-cols-2 gap-4 mb-2">
                 <div className="border p-2 rounded-md text-xs">
-                    <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                    <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">Bill To:</h3>
                     <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
                     <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
                     {customerData?.binNo && (
@@ -215,7 +215,7 @@ export default function PrintQuotePage() {
                     )}
                 </div>
                 <div className="border p-2 rounded-md text-xs">
-                    <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
+                    <h3 className="font-semibold text-gray-700 mb-1 uppercase underline tracking-wide">Deliver To:</h3>
                     <p className="text-gray-600 whitespace-pre-line">{quoteData.shippingAddress || quoteData.billingAddress || customerData?.address || 'N/A'}</p>
                 </div>
                 </div>
@@ -231,11 +231,11 @@ export default function PrintQuotePage() {
             <table className="w-full text-sm border-collapse table-fixed">
                 <thead className="bg-gray-100 text-gray-700">
                 <tr>
-                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '5%'}}>#</th>
-                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '45%'}}>Item Description</th>
-                    {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Item Code</th>}
+                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '4%'}}>#</th>
+                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '46%'}}>Item Description</th>
+                    {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>Item Code</th>}
                     <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
-                    <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
+                    <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price</th>
                     {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
                     {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
                     <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
@@ -262,33 +262,33 @@ export default function PrintQuotePage() {
             </div>
 
             <div className="flex justify-between items-start pt-2">
-                <div className="w-1/2 pr-4 text-xs">
+                <div className="w-3/4 pr-4 text-xs">
                     {quoteData.comments && (
                     <div className="space-y-1">
-                        <h4 className="font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                        <h4 className="font-bold text-gray-800 uppercase underline tracking-wide">TERMS AND CONDITIONS:</h4>
                         <div className="text-gray-600 whitespace-pre-line font-bold">{quoteData.comments}</div>
                     </div>
                     )}
                 </div>
                 <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                    <div className="grid grid-cols-2 gap-x-4">
+                    <div className="grid grid-cols-2 gap-x-0">
                         <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                         <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)}</span>
                     </div>
                     {showDiscountColumn && (
-                        <div className="grid grid-cols-2 gap-x-4">
+                        <div className="grid grid-cols-2 gap-x-0">
                             <span className="text-gray-600 font-medium text-right">Total Discount:</span>
                             <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span>
                         </div>
                     )}
                     {showTaxColumn && (
-                        <div className="grid grid-cols-2 gap-x-4">
+                        <div className="grid grid-cols-2 gap-x-0">
                             <span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span>
                             <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)}</span>
                         </div>
                     )}
                     <Separator className="my-2 border-gray-300" />
-                    <div className="grid grid-cols-2 gap-x-4 text-base font-bold">
+                    <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
                         <span className="text-gray-900 text-right">Grand Total (USD):</span>
                         <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount)}</span>
                     </div>
