@@ -2,17 +2,20 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { OrderDocument, SupplierDocument } from '@/types';
-import { Loader2, Printer, AlertTriangle } from 'lucide-react';
+import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
 import QRCode from "react-qr-code";
+import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -49,6 +52,7 @@ export default function PrintPurchaseOrderPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = params.orderId as string;
+  const printContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [orderData, setOrderData] = React.useState<OrderDocument | null>(null);
   const [beneficiaryData, setBeneficiaryData] = React.useState<SupplierDocument | null>(null);
@@ -118,6 +122,62 @@ export default function PrintPurchaseOrderPage() {
     loadAllData();
   }, [fetchFinancialSettings, fetchOrderAndBeneficiaryData]);
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Purchase Order ${orderData?.id}`,
+          text: `Here is the purchase order for ${orderData?.beneficiaryName}.`,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+         Swal.fire({
+            title: "Share Failed",
+            text: "Could not share the document. Please try again or copy the link manually.",
+            icon: "error",
+        });
+      }
+    } else {
+       Swal.fire({
+        title: "Share Not Supported",
+        text: "Your browser does not support the Web Share API. You can copy the URL to share manually.",
+        icon: "info",
+      });
+    }
+  };
+  
+  const handleDownloadPdf = async () => {
+    const input = printContainerRef.current;
+    if (!input) {
+      Swal.fire("Error", "Could not find the content to download.", "error");
+      return;
+    }
+    
+    const utilityButtons = input.querySelector('.print-only-utility-buttons') as HTMLElement;
+    if (utilityButtons) utilityButtons.style.display = 'none';
+
+    try {
+      const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgHeight / imgWidth;
+      const height = pdfWidth * ratio;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
+      pdf.save(`Purchase_Order_${orderId}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      Swal.fire("Error", "An error occurred while generating the PDF.", "error");
+    } finally {
+        if (utilityButtons) utilityButtons.style.display = 'flex';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -164,7 +224,7 @@ export default function PrintPurchaseOrderPage() {
   const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
+    <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-start mb-2">
@@ -214,7 +274,7 @@ export default function PrintPurchaseOrderPage() {
                 <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase tracking-wide">Deliver To:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase tracking-wide">Deliver To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{orderData.shippingAddress || orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
             </div>
@@ -329,7 +389,13 @@ export default function PrintPurchaseOrderPage() {
         </section>
       </div>
 
-      <div className="print-only-utility-buttons mt-8 text-center noprint">
+      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+        <Button onClick={handleShare} variant="outline">
+          <Share2 className="mr-2 h-4 w-4" /> Share
+        </Button>
+        <Button onClick={handleDownloadPdf} variant="outline">
+          <Download className="mr-2 h-4 w-4" /> PDF Download
+        </Button>
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Purchase Order
         </Button>

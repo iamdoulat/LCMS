@@ -1,17 +1,20 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { DeliveryChallanDocument, CompanyProfile } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Printer, AlertTriangle } from 'lucide-react';
+import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -27,6 +30,7 @@ export default function PrintDeliveryChallanPage() {
   const params = useParams();
   const router = useRouter();
   const challanId = params.challanId as string;
+  const printContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [challanData, setChallanData] = useState<DeliveryChallanDocument | null>(null);
   const [companySettings, setCompanySettings] = useState<CompanyProfile | null>(null);
@@ -70,6 +74,63 @@ export default function PrintDeliveryChallanPage() {
     loadAllData();
   }, [challanId]);
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Delivery Challan ${challanData?.id}`,
+          text: `Here is the delivery challan for ${challanData?.customerName}.`,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+         Swal.fire({
+            title: "Share Failed",
+            text: "Could not share the document. Please try again or copy the link manually.",
+            icon: "error",
+        });
+      }
+    } else {
+       Swal.fire({
+        title: "Share Not Supported",
+        text: "Your browser does not support the Web Share API. You can copy the URL to share manually.",
+        icon: "info",
+      });
+    }
+  };
+  
+  const handleDownloadPdf = async () => {
+    const input = printContainerRef.current;
+    if (!input) {
+      Swal.fire("Error", "Could not find the content to download.", "error");
+      return;
+    }
+    
+    const utilityButtons = input.querySelector('.print-only-utility-buttons') as HTMLElement;
+    if (utilityButtons) utilityButtons.style.display = 'none';
+
+    try {
+      const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgHeight / imgWidth;
+      const height = pdfWidth * ratio;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
+      pdf.save(`Delivery_Challan_${challanId}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      Swal.fire("Error", "An error occurred while generating the PDF.", "error");
+    } finally {
+        if (utilityButtons) utilityButtons.style.display = 'flex';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
@@ -96,7 +157,7 @@ export default function PrintDeliveryChallanPage() {
   const displayCompanyAddress = address || 'Your Company Address';
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
+    <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-start mb-2">
@@ -203,7 +264,13 @@ export default function PrintDeliveryChallanPage() {
         </section>
       </div>
 
-      <div className="print-only-utility-buttons mt-8 text-center noprint">
+      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+        <Button onClick={handleShare} variant="outline">
+          <Share2 className="mr-2 h-4 w-4" /> Share
+        </Button>
+        <Button onClick={handleDownloadPdf} variant="outline">
+          <Download className="mr-2 h-4 w-4" /> PDF Download
+        </Button>
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Challan
         </Button>
