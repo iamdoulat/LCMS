@@ -180,8 +180,8 @@ export default function PrintDemoMachineChallanPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={317}
-                    height={46}
+                    width={286}
+                    height={42}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -296,6 +296,17 @@ export default function PrintDemoMachineChallanPage() {
             <p className="pt-1 text-xs font-semibold text-gray-800">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="p-1 border bg-white">
+                <QRCode
+                    value={qrCodeValue}
+                    size={45}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+          </div>
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400 pt-1"></div>
             <p className="pt-1 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
@@ -326,3 +337,5 @@ export default function PrintDemoMachineChallanPage() {
     </div>
   );
 }
+
+    
