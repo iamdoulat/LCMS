@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -263,7 +264,7 @@ export default function PrintSaleInvoicePage() {
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(saleData.invoiceDate)}</span>
                 </div>
-                {saleData.salesperson && (
+                 {saleData.salesperson && (
                     <div className="flex justify-end items-baseline gap-2 text-sm">
                         <span className="font-semibold">Sales Person :</span>
                         <span>{saleData.salesperson}</span>
@@ -290,7 +291,7 @@ export default function PrintSaleInvoicePage() {
             </div>
         </div>
 
-        <div className="flex-grow">
+        <div className="flex-grow-0">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
