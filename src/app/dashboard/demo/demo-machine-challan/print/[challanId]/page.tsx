@@ -175,7 +175,7 @@ export default function PrintDemoMachineChallanPage() {
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-center mb-2">
-            <div className="w-2/3 pr-8">
+            <div className="w-1/2 pr-8">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
@@ -193,6 +193,18 @@ export default function PrintDemoMachineChallanPage() {
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
                 {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
                 {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
+            </div>
+
+            <div className="flex items-center justify-center w-1/4">
+              <div className="p-1 border bg-white">
+                  <QRCode
+                      value={qrCodeValue}
+                      size={60}
+                      bgColor={"#ffffff"}
+                      fgColor={"#000000"}
+                      level={"L"}
+                  />
+              </div>
             </div>
 
             <div className="text-right w-1/3">
@@ -278,17 +290,6 @@ export default function PrintDemoMachineChallanPage() {
       </div>
       
        <div className="print-footer pb-4 px-4 mt-auto">
-        <div className="flex justify-center mb-2">
-            <div className="p-1 border bg-white">
-                <QRCode
-                    value={qrCodeValue}
-                    size={40} // Further reduced size
-                    bgColor={"#ffffff"}
-                    fgColor={"#000000"}
-                    level={"L"}
-                />
-            </div>
-        </div>
         <section className="flex justify-between items-end mb-2 pt-2">
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400 pt-1"></div>
