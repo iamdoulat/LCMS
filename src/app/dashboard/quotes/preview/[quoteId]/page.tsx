@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -6,12 +7,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { QuoteDocument, CustomerDocument } from '@/types';
-import { Loader2, Printer, AlertTriangle } from 'lucide-react';
+import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
 import QRCode from "react-qr-code";
+import Swal from 'sweetalert2';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -116,6 +118,32 @@ export default function PrintQuotePage() {
     }
     loadAllData();
   }, [fetchFinancialSettings, fetchQuoteData]);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Quotation ${quoteData?.id}`,
+          text: `Here is the quotation for ${quoteData?.customerName}.`,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+         Swal.fire({
+            title: "Share Failed",
+            text: "Could not share the document. Please try again or copy the link manually.",
+            icon: "error",
+        });
+      }
+    } else {
+       Swal.fire({
+        title: "Share Not Supported",
+        text: "Your browser does not support the Web Share API. You can copy the URL to share manually.",
+        icon: "info",
+      });
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -323,11 +351,17 @@ export default function PrintQuotePage() {
         </section>
       </div>
 
-      <div className="print-only-utility-buttons mt-8 text-center noprint">
+       <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+        <Button onClick={handleShare} variant="outline">
+          <Share2 className="mr-2 h-4 w-4" /> Share
+        </Button>
+        <Button onClick={() => window.print()} variant="outline">
+          <Download className="mr-2 h-4 w-4" /> PDF Download
+        </Button>
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Quote
         </Button>
-        <Button onClick={() => router.back()} variant="outline" className="ml-2">
+        <Button onClick={() => router.back()} variant="outline">
           Close
         </Button>
       </div>
