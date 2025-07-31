@@ -194,18 +194,6 @@ export default function PrintDemoMachineChallanPage() {
                 {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
                 {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
-            
-            <div className="flex-shrink-0 flex flex-col items-center justify-center h-full mb-4">
-                 <div className="p-1 border bg-white">
-                    <QRCode
-                        value={qrCodeValue}
-                        size={64}
-                        bgColor={"#ffffff"}
-                        fgColor={"#000000"}
-                        level={"L"}
-                    />
-                </div>
-            </div>
 
             <div className="text-right w-1/3">
                 <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
@@ -291,17 +279,26 @@ export default function PrintDemoMachineChallanPage() {
       
       <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
-          <div className="w-1/3 text-left">
+          <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3 px-4 text-left">
-            <div className="border-t border-dotted border-gray-400"></div>
+          <div className="w-1/3 text-center flex flex-col items-center">
+             <div className="p-1 border bg-white mb-2">
+                <QRCode
+                    value={qrCodeValue}
+                    size={48} // Made smaller
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"L"}
+                />
+            </div>
+            <div className="border-t border-dotted border-gray-400 w-full"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="w-1/3 text-left">
+          <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400"></div>
             <p className="pt-2 text-xs font-semibold text-gray-800">Authorized Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
