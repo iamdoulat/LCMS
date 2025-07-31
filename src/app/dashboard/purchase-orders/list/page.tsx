@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -65,7 +64,6 @@ const orderSortOptions = [
   { value: "beneficiaryName", label: "Beneficiary Name" },
   { value: "salesperson", label: "Salesperson" },
   { value: "totalAmount", label: "Grand Total" },
-  { value: "status", label: "Status" },
 ];
 
 const currentSystemYear = new Date().getFullYear();
@@ -73,7 +71,6 @@ const orderYearFilterOptions = ["All Years", ...Array.from({ length: (currentSys
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_PO__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_PO__";
-const ALL_STATUSES_VALUE = "__ALL_STATUSES_PO__";
 const PO_ITEMS_PER_PAGE = 10;
 
 export default function PurchaseOrdersListPage() {
@@ -87,7 +84,6 @@ export default function PurchaseOrdersListPage() {
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterSalesperson, setFilterSalesperson] = useState('');
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
-  const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
 
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
@@ -162,9 +158,6 @@ export default function PurchaseOrdersListPage() {
         return false;
       });
     }
-    if (filterStatus) {
-      filtered = filtered.filter(order => order.status === filterStatus);
-    }
 
     if (sortBy) {
       filtered.sort((a, b) => {
@@ -181,7 +174,7 @@ export default function PurchaseOrdersListPage() {
     }
     setDisplayedOrders(filtered);
     setCurrentPage(1);
-  }, [allOrders, filterOrderNumber, filterBeneficiaryId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
+  }, [allOrders, filterOrderNumber, filterBeneficiaryId, filterSalesperson, filterYear, sortBy, sortOrder]);
 
   const handleEditOrder = (orderId: string) => {
     router.push(`/dashboard/purchase-orders/edit/${orderId}`);
@@ -218,7 +211,6 @@ export default function PurchaseOrdersListPage() {
     setFilterBeneficiaryId('');
     setFilterSalesperson('');
     setFilterYear(ALL_YEARS_VALUE);
-    setFilterStatus('');
     setSortBy('orderDate');
     setSortOrder('desc');
     setCurrentPage(1);
@@ -245,16 +237,6 @@ export default function PurchaseOrdersListPage() {
       if (endPage < totalPages - 1) pageNumbers.push("...");
       pageNumbers.push(totalPages);
     } return pageNumbers;
-  };
-
-  const getOrderStatusBadgeVariant = (status?: OrderStatus): "default" | "secondary" | "outline" | "destructive" => {
-    switch (status) {
-      case "Delivered": case "Completed": return "default";
-      case "Pending": return "outline";
-      case "Processing": case "Shipped": case "On Hold": return "secondary";
-      case "Cancelled": return "destructive";
-      default: return "outline";
-    }
   };
 
   return (
@@ -315,16 +297,7 @@ export default function PurchaseOrdersListPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="statusFilterOrder" className="text-sm font-medium">Status</Label>
-                  <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as OrderStatus)}>
-                    <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                      {orderStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                
                 <div>
                     <Label htmlFor="sortByOrder" className="text-sm font-medium">Sort By</Label>
                     <Select value={sortBy} onValueChange={setSortBy}>
@@ -353,15 +326,14 @@ export default function PurchaseOrdersListPage() {
                   <TableHead className="px-2 sm:px-4">Order Date</TableHead>
                   <TableHead className="px-2 sm:px-4">Items Summary</TableHead>
                   <TableHead className="px-2 sm:px-4">Grand Total</TableHead>
-                  <TableHead className="px-2 sm:px-4">Status</TableHead>
                   <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                  {isLoading ? (
-                   <TableRow><TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Orders...</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={7} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Orders...</TableCell></TableRow>
                 ) : fetchError ? (
-                     <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((order) => (
                     <TableRow key={order.id}>
@@ -371,7 +343,6 @@ export default function PurchaseOrdersListPage() {
                       <TableCell className="p-2 sm:p-4">{formatDisplayDate(order.orderDate)}</TableCell>
                       <TableCell className="p-2 sm:p-4 truncate max-w-xs" title={getFirstItemName(order.lineItems)}>{getFirstItemName(order.lineItems)} ({getTotalQuantity(order.lineItems)} qty)</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatCurrencyValue(order.totalAmount)}</TableCell>
-                      <TableCell className="p-2 sm:p-4"><Badge variant={getOrderStatusBadgeVariant(order.status)}>{order.status || "N/A"}</Badge></TableCell>
                       <TableCell className="text-right p-2 sm:p-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -404,7 +375,7 @@ export default function PurchaseOrdersListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4">No purchase orders found matching your criteria.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center p-2 sm:p-4">No purchase orders found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
