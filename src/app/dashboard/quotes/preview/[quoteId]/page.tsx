@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -301,7 +301,7 @@ export default function PrintQuotePage() {
             </div>
             )}
 
-            <div className="flex-grow">
+            <div className="flex-grow-0">
             <table className="w-full text-sm border-collapse table-fixed">
                 <thead className="bg-gray-100 text-gray-700">
                 <tr>
