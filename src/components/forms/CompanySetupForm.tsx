@@ -214,15 +214,17 @@ export function CompanySetupForm() {
           <div className="space-y-6">
             <FormField control={form.control} name="companyName" render={({ field }) => (<FormItem><FormLabel>Company Name*</FormLabel><FormControl><Input placeholder="Your company's name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>This name will appear on all documents.</FormDescription><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address*</FormLabel><FormControl><Textarea placeholder="Company address for documents" {...field} value={field.value || ""} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+             </div>
           </div>
           <div className="space-y-6">
             <FormItem>
               <Label>Company Logo (for sidebar)</Label>
               <div className="flex items-center gap-4">
                 <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                  {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="logo company"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                  {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="company logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
               </div>
@@ -232,7 +234,7 @@ export function CompanySetupForm() {
         
         <Separator className="my-10" />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FormField control={form.control} name="contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Primary contact" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="binNumber" render={({ field }) => (<FormItem><FormLabel>BIN No.</FormLabel><FormControl><Input placeholder="Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="tinNumber" render={({ field }) => (<FormItem><FormLabel>TIN No.</FormLabel><FormControl><Input placeholder="Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
