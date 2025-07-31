@@ -175,7 +175,7 @@ export default function PrintDemoMachineChallanPage() {
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-center mb-2">
-            <div className="w-1/2 pr-8">
+            <div className="w-1/3 pr-8">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
@@ -195,7 +195,7 @@ export default function PrintDemoMachineChallanPage() {
                 {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
 
-            <div className="flex items-center justify-center w-1/4">
+            <div className="flex items-center justify-center w-1/3">
               <div className="p-1 border bg-white">
                   <QRCode
                       value={qrCodeValue}
