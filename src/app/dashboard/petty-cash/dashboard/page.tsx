@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -383,6 +384,7 @@ export default function PettyCashDashboardPage() {
                         icon={<Wallet />}
                         description="Across all accounts"
                         className="bg-blue-500"
+                        valueClassName="text-3xl"
                     />
                     <StatCard
                         title="This Month's Credits"

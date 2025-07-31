@@ -10,9 +10,10 @@ interface StatCardProps {
   description?: string;
   footer?: ReactNode; // This will now be used for the bottom text like "+5 this week"
   className?: string; // This will be used for the solid background color
+  valueClassName?: string;
 }
 
-export function StatCard({ title, value, icon, description, footer, className }: StatCardProps) {
+export function StatCard({ title, value, icon, description, footer, className, valueClassName }: StatCardProps) {
   return (
     <Card
       className={cn(
@@ -23,7 +24,7 @@ export function StatCard({ title, value, icon, description, footer, className }:
       <CardContent className="relative z-10 p-6 flex justify-between items-center">
         <div className="flex flex-col space-y-1">
           <p className="text-sm font-medium text-primary-foreground/90">{title}</p>
-          <div className="text-4xl font-bold">{value}</div>
+          <div className={cn("text-4xl font-bold", valueClassName)}>{value}</div>
           <p className="text-xs text-primary-foreground/80 pt-1">{description || footer}</p>
         </div>
         {icon && (
