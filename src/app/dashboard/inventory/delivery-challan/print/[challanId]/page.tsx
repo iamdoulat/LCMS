@@ -167,8 +167,8 @@ export default function PrintDeliveryChallanPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
+                    width={297}
+                    height={44}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"

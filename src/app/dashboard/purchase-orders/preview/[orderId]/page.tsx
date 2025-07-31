@@ -48,7 +48,7 @@ const formatCurrency = (amount?: number) => {
   return `${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export default function PrintPurchaseOrderPage() {
+export default function PrintOrderPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = params.orderId as string;
@@ -87,11 +87,11 @@ export default function PrintPurchaseOrderPage() {
 
   const fetchOrderAndBeneficiaryData = useCallback(async () => {
     if (!orderId) {
-      setError("No Purchase Order ID provided.");
+      setError("No Order ID provided.");
       return;
     }
     try {
-      const orderDocRef = doc(firestore, "purchase_orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -106,10 +106,10 @@ export default function PrintPurchaseOrderPage() {
           }
         }
       } else {
-        setError("Purchase Order record not found.");
+        setError("Order record not found.");
       }
     } catch (err: any) {
-      setError(`Failed to fetch purchase order data: ${err.message}`);
+      setError(`Failed to fetch order data: ${err.message}`);
     }
   }, [orderId]);
 
@@ -122,12 +122,13 @@ export default function PrintPurchaseOrderPage() {
     loadAllData();
   }, [fetchFinancialSettings, fetchOrderAndBeneficiaryData]);
 
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Purchase Order ${orderData?.id}`,
-          text: `Here is the purchase order for ${orderData?.beneficiaryName}.`,
+          title: `Order ${orderData?.id}`,
+          text: `Here is the order for ${orderData?.beneficiaryName}.`,
           url: window.location.href,
         });
       } catch (error) {
@@ -169,7 +170,7 @@ export default function PrintPurchaseOrderPage() {
       const height = pdfWidth * ratio;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
-      pdf.save(`Purchase_Order_${orderId}.pdf`);
+      pdf.save(`Order_${orderId}.pdf`);
 
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -183,7 +184,7 @@ export default function PrintPurchaseOrderPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-gray-600">Loading purchase order...</p>
+        <p className="mt-4 text-gray-600">Loading order...</p>
       </div>
     );
   }
@@ -192,7 +193,7 @@ export default function PrintPurchaseOrderPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <p className="text-red-600 font-semibold">Error loading purchase order</p>
+        <p className="text-red-600 font-semibold">Error loading order</p>
         <p className="text-gray-700 text-sm mb-4">{error}</p>
         <Button onClick={() => router.back()}>Go Back</Button>
       </div>
@@ -202,7 +203,7 @@ export default function PrintPurchaseOrderPage() {
   if (!orderData) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4">
-        <p className="text-gray-700">Purchase Order data could not be loaded.</p>
+        <p className="text-gray-700">Order data could not be loaded.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
     );
@@ -219,7 +220,7 @@ export default function PrintPurchaseOrderPage() {
   const showDiscountColumn = orderData.showDiscountColumn ?? false;
   const showTaxColumn = orderData.showTaxColumn ?? false;
 
-  const qrCodeValue = `PURCHASE ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
+  const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
   const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
 
@@ -233,8 +234,8 @@ export default function PrintPurchaseOrderPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
+                    width={297}
+                    height={44}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -244,22 +245,24 @@ export default function PrintPurchaseOrderPage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+                <div className="flex items-center gap-4 text-xs text-gray-600">
+                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
+                    {displayCompanyPhone && <span>Phone: {displayCompanyPhone}</span>}
+                </div>
             </div>
 
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
-                <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Order Number :</span>
                     <span>{orderData.id}</span>
                 </div>
-                <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                <div className="flex justify-end items-baseline gap-2 text-sm">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
+                    <div className="flex justify-end items-baseline gap-2 text-sm">
                         <span className="font-semibold">Sales Person :</span>
                         <span>{orderData.salesperson}</span>
                     </div>
@@ -269,7 +272,7 @@ export default function PrintPurchaseOrderPage() {
             
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">SUPPLIER:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
                 <p className="font-medium text-gray-900">{beneficiaryData?.beneficiaryName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>

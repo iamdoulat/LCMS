@@ -243,8 +243,8 @@ export default function PrintInvoicePage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={317}
-                    height={46}
+                    width={238}
+                    height={35}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
