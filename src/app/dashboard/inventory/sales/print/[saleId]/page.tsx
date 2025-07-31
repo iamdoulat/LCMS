@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -239,8 +238,8 @@ export default function PrintSaleInvoicePage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={337}
-                    height={49}
+                    width={297}
+                    height={44}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -251,7 +250,7 @@ export default function PrintSaleInvoicePage() {
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
                 {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
+                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
             </div>
 
             <div className="text-right">
@@ -405,3 +404,5 @@ export default function PrintSaleInvoicePage() {
   );
 }
 
+
+    
