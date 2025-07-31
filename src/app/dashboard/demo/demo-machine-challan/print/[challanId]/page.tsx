@@ -191,10 +191,8 @@ export default function PrintDemoMachineChallanPage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                 <div className="flex gap-4 text-xs text-gray-600">
-                    {emailId && <p>Email: {emailId}</p>}
-                    {cellNumber && <p>Phone: {cellNumber}</p>}
-                </div>
+                {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
+                {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
             
             <div className="flex-shrink-0 flex flex-col items-center justify-center h-full mb-4">
