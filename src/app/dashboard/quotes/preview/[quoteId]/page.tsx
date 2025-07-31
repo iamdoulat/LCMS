@@ -14,6 +14,8 @@ import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
 import QRCode from "react-qr-code";
 import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -50,6 +52,7 @@ export default function PrintQuotePage() {
   const params = useParams();
   const router = useRouter();
   const quoteId = params.quoteId as string;
+  const printContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [quoteData, setQuoteData] = React.useState<QuoteDocument | null>(null);
   const [customerData, setCustomerData] = React.useState<CustomerDocument | null>(null);
@@ -143,6 +146,49 @@ export default function PrintQuotePage() {
       });
     }
   };
+  
+  const handleDownloadPdf = async () => {
+    const input = printContainerRef.current;
+    if (!input) {
+      Swal.fire("Error", "Could not find the content to download.", "error");
+      return;
+    }
+    
+    // Temporarily hide utility buttons to not include them in the PDF
+    const utilityButtons = input.querySelector('.print-only-utility-buttons') as HTMLElement;
+    if (utilityButtons) utilityButtons.style.display = 'none';
+
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+        logging: true,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgHeight / imgWidth;
+      const height = pdfWidth * ratio;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
+      pdf.save(`Quotation_${quoteId}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      Swal.fire("Error", "An error occurred while generating the PDF.", "error");
+    } finally {
+        // Show the buttons again after capture
+        if (utilityButtons) utilityButtons.style.display = 'flex';
+    }
+  };
 
 
   if (isLoading) {
@@ -188,7 +234,7 @@ export default function PrintQuotePage() {
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount)} (USD)`;
 
   return (
-    <div className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
+    <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
        <div className="p-4 flex flex-col flex-grow">
             <div className="print-header">
                 <div className="flex justify-between items-start mb-2">
@@ -355,7 +401,7 @@ export default function PrintQuotePage() {
         <Button onClick={handleShare} variant="outline">
           <Share2 className="mr-2 h-4 w-4" /> Share
         </Button>
-        <Button onClick={() => window.print()} variant="outline">
+        <Button onClick={handleDownloadPdf} variant="outline">
           <Download className="mr-2 h-4 w-4" /> PDF Download
         </Button>
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
