@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -60,7 +60,7 @@ export default function PrintOrderPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchFinancialSettings = useCallback(async () => {
+  const fetchFinancialSettings = React.useCallback(async () => {
     try {
       const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
       const settingsDocSnap = await getDoc(settingsDocRef);
@@ -85,13 +85,13 @@ export default function PrintOrderPage() {
     }
   }, []);
 
-  const fetchOrderAndBeneficiaryData = useCallback(async () => {
+  const fetchOrderAndBeneficiaryData = React.useCallback(async () => {
     if (!orderId) {
       setError("No Order ID provided.");
       return;
     }
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -290,7 +290,7 @@ export default function PrintOrderPage() {
             </div>
         </div>
 
-        <div className="flex-grow">
+        <div className="flex-grow-0">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -409,3 +409,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+
