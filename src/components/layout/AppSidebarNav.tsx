@@ -109,7 +109,6 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/invoices/list', label: 'Proforma Invoice List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/quotes/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/purchase-orders/list', label: 'Purchase Orders', icon: ShoppingCart, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
 ];
 
 const commissionManagementNavItems: NavItem[] = [
@@ -158,6 +157,7 @@ const settingsNavItems: NavItem[] = [
     { href: '/dashboard/notifications', label: 'Notifications', icon: Bell, iconColorClass: 'bg-icon-notifications' },
     { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
+    { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
     { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
     { href: '/dashboard/settings/logs', label: 'Logs', icon: History, iconColorClass: 'bg-icon-logs' },
 ];
@@ -351,3 +351,4 @@ export function AppSidebarNav() {
     </>
   );
 }
+
