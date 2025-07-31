@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -222,14 +221,14 @@ export default function PrintOrderPage() {
 
   const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
+  const grandTotalLabel = `${orderData.shipmentMode} Total (USD):`;
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
             <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-8">
+            <div className="w-1/2 pr-8">
                 {displayCompanyLogo && (
                 <Image
                     src={displayCompanyLogo}
@@ -245,24 +244,24 @@ export default function PrintOrderPage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-600">
-                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
-                    {displayCompanyPhone && <span>Phone: {displayCompanyPhone}</span>}
+                <div className="text-xs text-gray-600">
+                    {displayCompanyEmail && <p>Email: {displayCompanyEmail}</p>}
+                    {displayCompanyPhone && <p>Phone: {displayCompanyPhone}</p>}
                 </div>
             </div>
 
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PURCHASE ORDER</h2>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Order Number :</span>
                     <span>{orderData.id}</span>
                 </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(orderData.orderDate)}</span>
                 </div>
                 {orderData.salesperson && (
-                    <div className="flex justify-end items-baseline gap-2 text-sm">
+                    <div className="flex justify-end items-baseline gap-2 text-xs">
                         <span className="font-semibold">Sales Person :</span>
                         <span>{orderData.salesperson}</span>
                     </div>
@@ -409,4 +408,3 @@ export default function PrintOrderPage() {
     </div>
   );
 }
-
