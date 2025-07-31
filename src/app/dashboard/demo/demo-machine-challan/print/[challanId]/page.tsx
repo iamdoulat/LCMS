@@ -180,8 +180,8 @@ export default function PrintDemoMachineChallanPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={286}
-                    height={42}
+                    width={328.9}
+                    height={48.3}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -264,9 +264,9 @@ export default function PrintDemoMachineChallanPage() {
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '50%'}}>Description of Goods</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '20%'}}>Brand</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '6%'}}>#</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '60%'}}>Description of Goods</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '12%'}}>Brand</th>
                 <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '20%'}}>Quantity</th>
               </tr>
             </thead>
