@@ -239,8 +239,8 @@ export default function PrintSaleInvoicePage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={396}
-                    height={58}
+                    width={337}
+                    height={49}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -251,7 +251,7 @@ export default function PrintSaleInvoicePage() {
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
                 {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+                {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
 
             <div className="text-right">
@@ -404,3 +404,4 @@ export default function PrintSaleInvoicePage() {
     </div>
   );
 }
+
