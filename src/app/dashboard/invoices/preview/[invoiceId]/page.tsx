@@ -301,7 +301,7 @@ export default function PrintInvoicePage() {
           </div>
         )}
 
-        <div className="flex-grow">
+        <div className="flex-grow-0">
           <table className="w-full text-sm border-collapse table-fixed">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
@@ -427,3 +427,4 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
+
