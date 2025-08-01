@@ -145,7 +145,7 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
     };
 
     (Object.keys(dataToUpdate) as Array<keyof typeof dataToUpdate>).forEach(key => {
-        if (dataToUpdate[key] === undefined || dataToUpdate[key] === '') {
+        if (dataToUpdate[key] === undefined) {
             delete dataToUpdate[key];
         }
     });
