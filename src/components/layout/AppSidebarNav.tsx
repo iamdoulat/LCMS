@@ -93,7 +93,7 @@ const mainNavItems: NavItem[] = [
 
 const inventoryNavItems: NavItem[] = [
     { href: '/dashboard/petty-cash/dashboard', label: 'Account Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
-    { href: '/dashboard/items/list', label: 'Stock Items', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/inventory/items/list', label: 'Stock Items', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/inventory/sales-invoices', label: 'Sales Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale' },
     { href: '/dashboard/inventory/delivery-challan', label: 'Delivery Challan', icon: Truck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/inventory/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },

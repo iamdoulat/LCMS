@@ -12,8 +12,8 @@ export default function DeprecatedRecordSalePage() {
           <CardTitle>Page Not Available</CardTitle>
           <CardDescription>
             This page has been removed. Please use the{' '}
-            <Link href="/dashboard/inventory/sales-list" className="text-primary hover:underline">
-              Sales List page
+            <Link href="/dashboard/inventory/sales-invoices" className="text-primary hover:underline">
+              Sales Invoices page
             </Link>
             {' '}to manage sales.
           </CardDescription>
