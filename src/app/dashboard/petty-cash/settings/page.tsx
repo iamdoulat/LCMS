@@ -135,7 +135,7 @@ export default function PettyCashSettingsPage() {
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Source Accounts</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Source of Accounts</CardTitle>
                                     <CardDescription>Manage accounts for transactions.</CardDescription>
                                 </div>
                                 <DialogTrigger asChild>
