@@ -184,15 +184,15 @@ export default function PrintDeliveryChallanPage() {
 
             <div className="text-right">
                 <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DELIVERY CHALLAN</h2>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Challan No :</span>
                     <span>{challanData.id}</span>
                 </div>
-                <div className="flex justify-end items-baseline gap-2 text-sm">
+                <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Date :</span>
                     <span>{formatDisplayDate(challanData.challanDate)}</span>
                 </div>
-                 <div className="flex justify-end items-baseline gap-2 text-sm">
+                 <div className="flex justify-end items-baseline gap-2 text-xs">
                     <span className="font-semibold">Invoice No :</span>
                     <span>{challanData.linkedInvoiceId || 'N/A'}</span>
                 </div>
