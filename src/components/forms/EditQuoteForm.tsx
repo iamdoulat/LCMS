@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from 'react';
@@ -211,7 +209,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
+    window.open(`/dashboard/quotations/preview/${quoteId}`, '_blank');
   };
 
   const handleConvertToInvoice = async () => {
@@ -480,21 +478,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-            <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
-              <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
-            </FormItem>
-            <FormField
-                control={control}
-                name="quoteDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Quote Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select quote date" />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
+            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
              <FormField
                 control={form.control}
                 name="taxType"
@@ -607,7 +592,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -660,8 +645,3 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
-
-
-
-
-    

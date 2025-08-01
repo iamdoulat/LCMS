@@ -1,24 +1,26 @@
-
-import { CreateQuoteForm } from '@/components/forms/CreateQuoteForm'; // Import the form
+// This page has been moved.
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FilePlus2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
-export default function CreateNewQuotePage() {
+export default function MovedPage() {
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-screen-2xl mx-auto shadow-xl"> {/* Changed max-width for a potentially larger form */}
+      <Card>
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <FilePlus2 className="h-7 w-7 text-primary" />
-            Create New Quote
-          </CardTitle>
+          <CardTitle>Page Moved</CardTitle>
           <CardDescription>
-            Fill in the details below to generate a new sales quotation.
+            This page has been moved to a new location.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateQuoteForm /> {/* Use the imported form component */}
+           <Button asChild>
+                <Link href="/dashboard/quotations/create">
+                    <ArrowLeft className="mr-2 h-4 w-4"/>
+                    Go to the new Create Quote page
+                </Link>
+            </Button>
         </CardContent>
       </Card>
     </div>
