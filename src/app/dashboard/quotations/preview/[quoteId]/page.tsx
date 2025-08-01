@@ -261,8 +261,8 @@ export default function PrintQuotePage() {
                     <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                     )}
                     <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                    {displayCompanyEmail && <p className="text-xs text-gray-600">Email: ${displayCompanyEmail}</p>}
-                    {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: ${displayCompanyPhone}</p>}
+                    {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
+                    {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
                 </div>
 
                 <div className="text-right">
