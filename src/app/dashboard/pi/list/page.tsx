@@ -192,7 +192,7 @@ export default function InvoicesListPage() {
   }, [allInvoices, filterInvoiceNumber, filterCustomerId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditInvoice = (invoiceId: string) => {
-    router.push(`/dashboard/invoices/edit/${invoiceId}`);
+    router.push(`/dashboard/pi/edit/${invoiceId}`);
   };
 
   const handleDeleteInvoice = (invoiceId: string, invoiceIdentifier?: string) => {
@@ -218,7 +218,7 @@ export default function InvoicesListPage() {
   };
 
   const handlePreviewPdf = (invoiceId: string) => {
-    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
+    window.open(`/dashboard/pi/preview/${invoiceId}`, '_blank');
   };
 
   const clearFilters = () => {
@@ -288,7 +288,7 @@ export default function InvoicesListPage() {
                 View, search, filter, and manage all sales invoices.
               </CardDescription>
             </div>
-            <Link href="/dashboard/invoices/create" passHref>
+            <Link href="/dashboard/pi/create" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Create New Proforma Invoice

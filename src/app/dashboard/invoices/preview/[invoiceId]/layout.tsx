@@ -1,10 +1,8 @@
+// This file has been removed to consolidate routes.
+
 import type { PropsWithChildren } from 'react';
 
-// Dedicated layout for print pages. It renders only the children without any dashboard UI.
-export default function PrintLayout({ children }: PropsWithChildren) {
-    return (
-    <div className="print-preview-wrapper bg-gray-200 dark:bg-gray-800 p-8">
-      {children}
-    </div>
-  );
+// This layout is no longer needed.
+export default function DeprecatedPrintLayout({ children }: PropsWithChildren) {
+  return <div className="bg-gray-200 p-8">{children}</div>;
 }
