@@ -16,21 +16,28 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const PI_SETTINGS_COLLECTION = 'pi_layout_settings';
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
-const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
-const DEFAULT_FINANCIAL_COMPANY_NAME = 'Your Company Name';
-const DEFAULT_FINANCIAL_ADDRESS = 'Your Company Address';
-const DEFAULT_FINANCIAL_EMAIL = 'your@email.com';
-const DEFAULT_FINANCIAL_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const MAIN_SETTINGS_DOC_ID = 'main_settings';
 
-interface FinancialSettingsProfile {
-  companyName?: string;
+const DEFAULT_COMPANY_NAME = 'Your Company Name';
+const DEFAULT_ADDRESS = 'Your Company Address';
+const DEFAULT_EMAIL = 'your@email.com';
+const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+
+interface CombinedSettingsProfile {
+  name?: string; // from pi_layout_settings
+  companyName?: string; // from financial_settings
   address?: string;
-  emailId?: string;
-  cellNumber?: string;
+  email?: string; // from pi_layout_settings
+  emailId?: string; // from financial_settings
+  phone?: string; // from pi_layout_settings
+  cellNumber?: string; // from financial_settings
   invoiceLogoUrl?: string;
+  piLogoUrl?: string;
   hideCompanyName?: boolean;
 }
+
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -55,31 +62,35 @@ export default function PrintInvoicePage() {
 
   const [invoiceData, setInvoiceData] = React.useState<InvoiceDocument | null>(null);
   const [customerData, setCustomerData] = React.useState<CustomerDocument | null>(null);
-  const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
+  const [settings, setSettings] = React.useState<CombinedSettingsProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchFinancialSettings = useCallback(async () => {
+  const fetchSettings = useCallback(async () => {
     try {
-      const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
-      const settingsDocSnap = await getDoc(settingsDocRef);
-      if (settingsDocSnap.exists()) {
-        setFinancialSettings(settingsDocSnap.data() as FinancialSettingsProfile);
-      } else {
-        setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
-        });
-      }
+      const financialSettingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+      const piSettingsDocRef = doc(firestore, PI_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+
+      const [financialSnap, piSnap] = await Promise.all([
+        getDoc(financialSettingsDocRef),
+        getDoc(piSettingsDocRef)
+      ]);
+
+      const financialData = financialSnap.exists() ? financialSnap.data() as Partial<CombinedSettingsProfile> : {};
+      const piData = piSnap.exists() ? piSnap.data() as Partial<CombinedSettingsProfile> : {};
+
+      setSettings({
+        ...financialData,
+        ...piData,
+      });
+
     } catch (e) {
-      console.error("Error fetching financial settings for print:", e);
-      setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
+      console.error("Error fetching settings for print:", e);
+      setSettings({
+          companyName: DEFAULT_COMPANY_NAME,
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
+          invoiceLogoUrl: DEFAULT_LOGO_URL,
       });
     }
   }, []);
@@ -112,14 +123,14 @@ export default function PrintInvoicePage() {
     }
   }, [invoiceId]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadAllData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchFinancialSettings(), fetchInvoiceData()]);
+        await Promise.all([fetchSettings(), fetchInvoiceData()]);
         setIsLoading(false);
     }
     loadAllData();
-  }, [fetchFinancialSettings, fetchInvoiceData]);
+  }, [fetchSettings, fetchInvoiceData]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -208,19 +219,19 @@ export default function PrintInvoicePage() {
     );
   }
 
-  const displayCompanyName = financialSettings?.companyName || DEFAULT_FINANCIAL_COMPANY_NAME;
-  const displayCompanyLogo = financialSettings?.invoiceLogoUrl || DEFAULT_FINANCIAL_LOGO_URL;
-  const displayCompanyAddress = financialSettings?.address || DEFAULT_FINANCIAL_ADDRESS;
-  const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
-  const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
-  const hideCompanyName = financialSettings?.hideCompanyName ?? false;
+  const displayCompanyName = settings?.name || settings?.companyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyLogo = settings?.piLogoUrl || settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
+  const displayCompanyAddress = settings?.address || DEFAULT_ADDRESS;
+  const displayCompanyEmail = settings?.email || settings?.emailId || DEFAULT_EMAIL;
+  const displayCompanyPhone = settings?.phone || settings?.cellNumber || 'N/A';
+  const hideCompanyName = settings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = invoiceData.showItemCodeColumn ?? false;
   const showDiscountColumn = invoiceData.showDiscountColumn ?? false;
   const showTaxColumn = invoiceData.showTaxColumn ?? false;
 
   const qrCodeValue = `INVOICE\nInvoice Number: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount)} (USD)`;
-
+  
   const grandTotalLabel =
     invoiceData.shipmentMode === "CFR CHATTOGRAM"
       ? "CFR CHATTOGRAM TOTAL (USD):"
@@ -242,8 +253,8 @@ export default function PrintInvoicePage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={238}
-                    height={35}
+                    width={413}
+                    height={28}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -288,7 +299,7 @@ export default function PrintInvoicePage() {
                 )}
             </div>
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase tracking-wide">Deliver To:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase underline tracking-wide">Deliver To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{invoiceData.shippingAddress || invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
             </div>
             </div>
@@ -305,16 +316,16 @@ export default function PrintInvoicePage() {
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '4%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '46%'}}>Item Description</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '48%'}}>Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
+                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '6%'}}>Qty</th>
                 <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price</th>
                 {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
                 {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
                 <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody >
               {invoiceData.lineItems.map((item, index) => (
                 <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                   <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
@@ -338,7 +349,7 @@ export default function PrintInvoicePage() {
             <div className="w-3/4 pr-4 text-xs">
                 {invoiceData.comments && (
                 <div className="space-y-1">
-                    <h4 className="underline font-bold text-gray-800 underline uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
+                    <h4 className="underline font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
                     <div className="text-gray-600 whitespace-pre-line font-bold">{invoiceData.comments}</div>
                 </div>
                 )}
@@ -409,7 +420,7 @@ export default function PrintInvoicePage() {
         </section>
       </div>
 
-      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+       <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
         <Button onClick={handleShare} variant="outline">
           <Share2 className="mr-2 h-4 w-4" /> Share
         </Button>
@@ -419,7 +430,7 @@ export default function PrintInvoicePage() {
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">
           <Printer className="mr-2 h-4 w-4" /> Print Invoice
         </Button>
-        <Button onClick={() => router.back()} variant="outline" className="ml-2">
+        <Button onClick={() => router.back()} variant="outline">
           Close
         </Button>
       </div>
