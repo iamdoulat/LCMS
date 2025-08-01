@@ -8,6 +8,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { useEffect } from 'react';
 import type { UserRole } from '@/types';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const publicPaths = ['/login', '/register']; // Paths accessible without authentication
 const dashboardPath = '/dashboard';
