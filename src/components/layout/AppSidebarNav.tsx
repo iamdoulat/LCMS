@@ -108,7 +108,7 @@ const financialNavItems: NavItem[] = [
     { href: '/dashboard/pi/list', label: 'Proforma Invoice List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/quotations/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/purchase-orders/list', label: 'Purchase Orders', icon: ShoppingCart, iconColorClass: 'bg-icon-list' },
-    { href: '/dashboard/financial-management/invoicing-sales/pi-settings', label: 'PI Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+    { href: '/dashboard/pi/pi-settings', label: 'PI Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
 const commissionManagementNavItems: NavItem[] = [
