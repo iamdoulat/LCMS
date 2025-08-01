@@ -123,7 +123,7 @@ export default function PrintQuotePage() {
     }
   }, [quoteId]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadAllData = async () => {
         setIsLoading(true);
         await Promise.all([fetchSettings(), fetchQuoteData()]);
@@ -376,7 +376,7 @@ export default function PrintQuotePage() {
 
                     <Separator className="my-2 border-gray-300" />
                     <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
-                        <span className="text-gray-900 text-right">{grandTotalLabel}</span>
+                        <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
                         <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount)}</span>
                     </div>
                 </div>
