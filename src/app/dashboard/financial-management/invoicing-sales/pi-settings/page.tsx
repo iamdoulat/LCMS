@@ -22,14 +22,26 @@ export default function PISettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="pi-name">Name</Label>
-              <Input id="pi-name" placeholder="Enter a name" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="pi-name">Name</Label>
+                <Input id="pi-name" placeholder="Enter a name" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pi-address">Address</Label>
+                <Textarea id="pi-address" placeholder="Enter an address" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="pi-address">Address</Label>
-              <Textarea id="pi-address" placeholder="Enter an address" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="pi-email">Email</Label>
+                <Input id="pi-email" type="email" placeholder="Enter an email" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pi-phone">Phone Number</Label>
+                <Input id="pi-phone" type="tel" placeholder="Enter a phone number" />
+              </div>
             </div>
           </div>
         </CardContent>
