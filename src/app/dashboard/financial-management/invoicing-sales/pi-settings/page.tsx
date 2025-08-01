@@ -106,7 +106,7 @@ export default function PISettingsPage() {
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    const aspect = 297 / 44; // Aspect ratio for the logo
+    const aspect = 413 / 28; // Aspect ratio for the logo
     const crop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
       width, height
@@ -214,13 +214,13 @@ export default function PISettingsPage() {
 
                  <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
                     <DialogContent className="max-w-xl">
-                        <DialogHeader><DialogTitle>Crop PI Logo (297x44px)</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle>Crop PI Logo (413x28px)</DialogTitle></DialogHeader>
                         {imgSrc && (
                             <ReactCrop
                                 crop={crop}
                                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                                 onComplete={(c) => setCompletedCrop(c)}
-                                aspect={297 / 44}
+                                aspect={413 / 28}
                                 minWidth={100}
                             >
                                 <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
@@ -238,13 +238,13 @@ export default function PISettingsPage() {
                 <FormItem>
                   <Label>PI Header Logo</Label>
                   <div className="flex items-center gap-4">
-                      <div className="w-48 h-auto aspect-[297/44] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                      <div className="w-48 h-auto aspect-[413/28] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
                           {piLogoPreviewUrl ? (
                               <Image
                                 src={piLogoPreviewUrl}
                                 alt="PI logo preview"
-                                width={297}
-                                height={44}
+                                width={413}
+                                height={28}
                                 className="object-contain"
                                 data-ai-hint="company logo"
                               />
@@ -254,7 +254,7 @@ export default function PISettingsPage() {
                       </div>
                       <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
                   </div>
-                  <FormDescription>Upload a 297x44 pixels logo for the PI header.</FormDescription>
+                  <FormDescription>Upload a 413x28 pixels logo for the PI header.</FormDescription>
                 </FormItem>
 
 
@@ -276,4 +276,3 @@ export default function PISettingsPage() {
     </div>
   );
 }
-
