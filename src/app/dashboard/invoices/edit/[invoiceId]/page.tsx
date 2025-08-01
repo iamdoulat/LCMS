@@ -29,7 +29,7 @@ export default function EditInvoicePage() {
       setError("No Invoice ID provided.");
       setIsLoading(false);
       Swal.fire("Error", "No Invoice ID specified.", "error").then(() => {
-        router.push('/dashboard/invoices/list');
+        router.push('/dashboard/pi/list');
       });
       return;
     }
@@ -54,7 +54,7 @@ export default function EditInvoicePage() {
       } else {
         setError("Invoice record not found.");
         Swal.fire("Error", `Invoice with ID ${invoiceId} not found.`, "error").then(() => {
-             router.push('/dashboard/invoices/list');
+             router.push('/dashboard/pi/list');
         });
       }
     } catch (err: any) {
@@ -84,7 +84,7 @@ export default function EditInvoicePage() {
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
           <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Invoice</CardTitle></CardHeader>
           <CardContent><p className="text-destructive-foreground">{error}</p>
-            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/invoices/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices List</Link></Button>
+            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/pi/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to PI List</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -95,14 +95,14 @@ export default function EditInvoicePage() {
      return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Invoice data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/invoices/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices List</Link></Button>
+         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/pi/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to PI List</Link></Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6"><Link href="/dashboard/invoices/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices List</Button></Link></div>
+      <div className="mb-6"><Link href="/dashboard/pi/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to PI List</Button></Link></div>
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -115,5 +115,3 @@ export default function EditInvoicePage() {
     </div>
   );
 }
-
-    
