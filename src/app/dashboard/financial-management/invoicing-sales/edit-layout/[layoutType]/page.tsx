@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -49,10 +50,10 @@ export default function EditDocumentLayoutPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Link href="/dashboard/financial-management/invoicing-sales/layout" passHref>
+        <Link href="/dashboard/financial-management/invoicing-sales/setting" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Layout Selection
+            Back to Layout Settings
           </Button>
         </Link>
       </div>

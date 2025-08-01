@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from 'next/link';
@@ -95,7 +96,7 @@ const inventoryNavItems: NavItem[] = [
     { href: '/dashboard/items/list', label: 'Stock Items', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/inventory/sales-invoices', label: 'Sales Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale' },
     { href: '/dashboard/inventory/delivery-challan', label: 'Delivery Challan', icon: Truck, iconColorClass: 'bg-icon-shipment-done' },
-    { href: '/dashboard/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+    { href: '/dashboard/inventory/orders/list', label: 'Orders List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/apply', label: 'Apply Payment', icon: CreditCard, iconColorClass: 'bg-icon-payment' },
     { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
     { href: '/dashboard/payments/refunds', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },

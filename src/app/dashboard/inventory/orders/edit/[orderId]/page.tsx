@@ -8,7 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ShoppingCart, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditOrderForm } from '@/components/forms/EditOrderForm';
+import { EditPurchaseOrderForm } from '@/components/forms/EditPurchaseOrderForm';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { OrderDocument } from '@/types';
@@ -16,7 +16,7 @@ import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 import { parseISO, isValid } from 'date-fns';
 
-export default function EditOrderPage() {
+export default function EditPurchaseOrderPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = params.orderId as string;
@@ -27,17 +27,17 @@ export default function EditOrderPage() {
 
   const fetchOrderData = useCallback(async () => {
     if (!orderId) {
-      setError("No Order ID provided.");
+      setError("No Purchase Order ID provided.");
       setIsLoading(false);
-      Swal.fire("Error", "No Order ID specified.", "error").then(() => {
-        router.push('/dashboard/orders/list');
+      Swal.fire("Error", "No Purchase Order ID specified.", "error").then(() => {
+        router.push('/dashboard/inventory/orders/list');
       });
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -52,14 +52,14 @@ export default function EditOrderPage() {
         };
         setOrderData(processedData);
       } else {
-        setError("Order record not found.");
-        Swal.fire("Error", `Order with ID ${orderId} not found.`, "error").then(() => {
-             router.push('/dashboard/orders/list');
+        setError("Purchase Order record not found.");
+        Swal.fire("Error", `Purchase Order with ID ${orderId} not found.`, "error").then(() => {
+             router.push('/dashboard/inventory/orders/list');
         });
       }
     } catch (err: any) {
-      setError(`Failed to fetch order data: ${err.message}`);
-      Swal.fire("Error", `Failed to fetch order data: ${err.message}`, "error");
+      setError(`Failed to fetch purchase order data: ${err.message}`);
+      Swal.fire("Error", `Failed to fetch purchase order data: ${err.message}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +73,7 @@ export default function EditOrderPage() {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading order details for ID: {orderId}...</p>
+        <p className="text-muted-foreground">Loading purchase order details for ID: ${orderId}...</p>
       </div>
     );
   }
@@ -82,9 +82,9 @@ export default function EditOrderPage() {
     return (
       <div className="container mx-auto py-8">
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Order</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Purchase Order</CardTitle></CardHeader>
           <CardContent><p className="text-destructive-foreground">{error}</p>
-            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Orders List</Link></Button>
+            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -94,23 +94,23 @@ export default function EditOrderPage() {
   if (!orderData) {
      return (
       <div className="container mx-auto py-8 text-center">
-        <p className="text-muted-foreground">Order data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Orders List</Link></Button>
+        <p className="text-muted-foreground">Purchase Order data could not be loaded.</p>
+         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6"><Link href="/dashboard/orders/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Orders List</Button></Link></div>
+      <div className="mb-6"><Link href="/dashboard/inventory/orders/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Button></Link></div>
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <ShoppingCart className="h-7 w-7 text-primary" />Edit Order
+            <ShoppingCart className="h-7 w-7 text-primary" />Edit Purchase Order
           </CardTitle>
-          <CardDescription>Modify the details for Order ID: <span className="font-semibold text-foreground">{orderId}</span>.</CardDescription>
+          <CardDescription>Modify the details for Purchase Order ID: <span className="font-semibold text-foreground">{orderId}</span>.</CardDescription>
         </CardHeader>
-        <CardContent><EditOrderForm initialData={orderData} orderId={orderId} /></CardContent>
+        <CardContent><EditPurchaseOrderForm initialData={orderData} orderId={orderId} /></CardContent>
       </Card>
     </div>
   );

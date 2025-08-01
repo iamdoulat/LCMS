@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import type { User } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile as firebaseUpdateProfile, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 import type { PropsWithChildren} from 'react';
 import React, { useEffect } from 'react';
@@ -27,9 +27,9 @@ const roleAllowedPaths: Record<string, string[]> = {
   "Accounts": [
     '/dashboard/items', 
     '/dashboard/inventory', 
-    '/dashboard/quotes', 
+    '/dashboard/quotations', 
     '/dashboard/invoices', 
-    '/dashboard/orders', 
+    '/dashboard/inventory/orders', 
     '/dashboard/payments', 
     '/dashboard/financial-management',
     '/dashboard/purchase-orders'
@@ -37,9 +37,9 @@ const roleAllowedPaths: Record<string, string[]> = {
   "Viewer": [
     '/dashboard/items',
     '/dashboard/inventory',
-    '/dashboard/quotes',
+    '/dashboard/quotations',
     '/dashboard/invoices',
-    '/dashboard/orders',
+    '/dashboard/inventory/orders',
     '/dashboard/purchase-orders',
     '/dashboard/payments',
     '/dashboard/financial-management',
@@ -54,9 +54,9 @@ const roleAllowedPaths: Record<string, string[]> = {
     '/dashboard/purchase-orders',
   ],
   "Commercial": [
-    '/dashboard/quotes', 
+    '/dashboard/quotations', 
     '/dashboard/invoices', 
-    '/dashboard/orders', 
+    '/dashboard/inventory/orders', 
     '/dashboard/payments', 
     '/dashboard/financial-management',
     '/dashboard/commission-management',

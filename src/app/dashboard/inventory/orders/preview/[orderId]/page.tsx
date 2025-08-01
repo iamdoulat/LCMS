@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -17,19 +17,24 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const PI_SETTINGS_COLLECTION = 'pi_layout_settings';
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
-const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
-const DEFAULT_FINANCIAL_COMPANY_NAME = 'Your Company Name';
-const DEFAULT_FINANCIAL_ADDRESS = 'Your Company Address';
-const DEFAULT_FINANCIAL_EMAIL = 'your@email.com';
-const DEFAULT_FINANCIAL_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const MAIN_SETTINGS_DOC_ID = 'main_settings';
+const DEFAULT_COMPANY_NAME = 'Your Company Name';
+const DEFAULT_ADDRESS = 'Your Company Address';
+const DEFAULT_EMAIL = 'your@email.com';
+const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
-interface FinancialSettingsProfile {
-  companyName?: string;
+interface CombinedSettingsProfile {
+  name?: string; // from pi_layout_settings
+  companyName?: string; // from financial_settings
   address?: string;
-  emailId?: string;
-  cellNumber?: string;
+  email?: string; // from pi_layout_settings
+  emailId?: string; // from financial_settings
+  phone?: string; // from pi_layout_settings
+  cellNumber?: string; // from financial_settings
   invoiceLogoUrl?: string;
+  piLogoUrl?: string;
   hideCompanyName?: boolean;
 }
 
@@ -56,42 +61,46 @@ export default function PrintOrderPage() {
 
   const [orderData, setOrderData] = React.useState<OrderDocument | null>(null);
   const [beneficiaryData, setBeneficiaryData] = React.useState<SupplierDocument | null>(null);
-  const [financialSettings, setFinancialSettings] = React.useState<FinancialSettingsProfile | null>(null);
+  const [settings, setSettings] = React.useState<CombinedSettingsProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchFinancialSettings = useCallback(async () => {
+  const fetchSettings = React.useCallback(async () => {
     try {
-      const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
-      const settingsDocSnap = await getDoc(settingsDocRef);
-      if (settingsDocSnap.exists()) {
-        setFinancialSettings(settingsDocSnap.data() as FinancialSettingsProfile);
-      } else {
-        setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
-        });
-      }
+      const financialSettingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+      const piSettingsDocRef = doc(firestore, PI_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+
+      const [financialSnap, piSnap] = await Promise.all([
+        getDoc(financialSettingsDocRef),
+        getDoc(piSettingsDocRef)
+      ]);
+
+      const financialData = financialSnap.exists() ? financialSnap.data() as Partial<CombinedSettingsProfile> : {};
+      const piData = piSnap.exists() ? piSnap.data() as Partial<CombinedSettingsProfile> : {};
+
+      setSettings({
+        ...financialData,
+        ...piData,
+      });
+
     } catch (e) {
-      console.error("Error fetching financial settings for print:", e);
-      setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
+      console.error("Error fetching settings for print:", e);
+      setSettings({
+          companyName: DEFAULT_COMPANY_NAME,
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
+          invoiceLogoUrl: DEFAULT_LOGO_URL,
       });
     }
   }, []);
 
-  const fetchOrderAndBeneficiaryData = useCallback(async () => {
+  const fetchOrderAndBeneficiaryData = React.useCallback(async () => {
     if (!orderId) {
       setError("No Order ID provided.");
       return;
     }
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -116,11 +125,11 @@ export default function PrintOrderPage() {
   React.useEffect(() => {
      const loadAllData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchFinancialSettings(), fetchOrderAndBeneficiaryData()]);
+        await Promise.all([fetchSettings(), fetchOrderAndBeneficiaryData()]);
         setIsLoading(false);
     }
     loadAllData();
-  }, [fetchFinancialSettings, fetchOrderAndBeneficiaryData]);
+  }, [fetchSettings, fetchOrderAndBeneficiaryData]);
 
 
   const handleShare = async () => {
@@ -209,12 +218,12 @@ export default function PrintOrderPage() {
     );
   }
 
-  const displayCompanyName = financialSettings?.companyName || DEFAULT_FINANCIAL_COMPANY_NAME;
-  const displayCompanyLogo = financialSettings?.invoiceLogoUrl || DEFAULT_FINANCIAL_LOGO_URL;
-  const displayCompanyAddress = financialSettings?.address || DEFAULT_FINANCIAL_ADDRESS;
-  const displayCompanyEmail = financialSettings?.emailId || DEFAULT_FINANCIAL_EMAIL;
-  const displayCompanyPhone = financialSettings?.cellNumber || 'N/A';
-  const hideCompanyName = financialSettings?.hideCompanyName ?? false;
+  const displayCompanyName = settings?.name || settings?.companyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyLogo = settings?.piLogoUrl || settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
+  const displayCompanyAddress = settings?.address || DEFAULT_ADDRESS;
+  const displayCompanyEmail = settings?.email || settings?.emailId || DEFAULT_EMAIL;
+  const displayCompanyPhone = settings?.phone || settings?.cellNumber || 'N/A';
+  const hideCompanyName = settings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = orderData.showItemCodeColumn ?? false;
   const showDiscountColumn = orderData.showDiscountColumn ?? false;
@@ -222,7 +231,7 @@ export default function PrintOrderPage() {
 
   const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
+  const grandTotalLabel = `${orderData.shipmentMode} Total (USD):`;
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -234,8 +243,8 @@ export default function PrintOrderPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={297}
-                    height={44}
+                    width={413}
+                    height={28}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -359,7 +368,7 @@ export default function PrintOrderPage() {
                 <Separator className="my-2 border-gray-300" />
                 <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
                     <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
-                    <span className="text-blue-600 text-right">{formatCurrency(orderData.totalAmount)}</span>
+                    <span className="text-blue-600 text-right" style={{fontSize: '14px'}}>{formatCurrency(orderData.totalAmount)}</span>
                 </div>
             </div>
         </div>

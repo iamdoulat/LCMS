@@ -1,3 +1,4 @@
+
 import type { PropsWithChildren } from 'react';
 
 // Dedicated layout for print pages. It renders only the children without any dashboard UI.

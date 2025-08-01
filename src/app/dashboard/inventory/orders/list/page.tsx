@@ -184,7 +184,7 @@ export default function OrdersListPage() {
   }, [allOrders, filterOrderNumber, filterBeneficiaryId, filterSalesperson, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditOrder = (orderId: string) => {
-    router.push(`/dashboard/orders/edit/${orderId}`);
+    router.push(`/dashboard/inventory/orders/edit/${orderId}`);
   };
 
   const handleDeleteOrder = (orderId: string, orderIdentifier?: string) => {
@@ -210,7 +210,7 @@ export default function OrdersListPage() {
   };
 
   const handlePreviewPdf = (orderId: string) => {
-    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/inventory/orders/preview/${orderId}`, '_blank');
   };
 
   const clearFilters = () => {
@@ -271,7 +271,7 @@ export default function OrdersListPage() {
                 View, search, filter, and manage all sales orders.
               </CardDescription>
             </div>
-            <Link href="/dashboard/orders/create" passHref>
+            <Link href="/dashboard/inventory/orders/create" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Create New Order
