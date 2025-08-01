@@ -100,7 +100,7 @@ export default function PrintOrderPage() {
       return;
     }
     try {
-      const orderDocRef = doc(firestore, "purchase_orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       const orderDocSnap = await getDoc(orderDocRef);
 
       if (orderDocSnap.exists()) {
@@ -418,3 +418,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+

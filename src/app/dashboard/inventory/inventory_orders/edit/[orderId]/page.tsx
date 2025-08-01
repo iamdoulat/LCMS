@@ -30,7 +30,7 @@ export default function EditPurchaseOrderPage() {
       setError("No Purchase Order ID provided.");
       setIsLoading(false);
       Swal.fire("Error", "No Purchase Order ID specified.", "error").then(() => {
-        router.push('/dashboard/inventory/orders/list');
+        router.push('/dashboard/inventory/inventory_orders/list');
       });
       return;
     }
@@ -54,7 +54,7 @@ export default function EditPurchaseOrderPage() {
       } else {
         setError("Purchase Order record not found.");
         Swal.fire("Error", `Purchase Order with ID ${orderId} not found.`, "error").then(() => {
-             router.push('/dashboard/inventory/orders/list');
+             router.push('/dashboard/inventory/inventory_orders/list');
         });
       }
     } catch (err: any) {
@@ -84,7 +84,7 @@ export default function EditPurchaseOrderPage() {
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
           <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Purchase Order</CardTitle></CardHeader>
           <CardContent><p className="text-destructive-foreground">{error}</p>
-            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
+            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/inventory_orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -95,14 +95,14 @@ export default function EditPurchaseOrderPage() {
      return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Purchase Order data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
+         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/inventory/inventory_orders/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Link></Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6"><Link href="/dashboard/inventory/orders/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Button></Link></div>
+      <div className="mb-6"><Link href="/dashboard/inventory/inventory_orders/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to Purchase Orders List</Button></Link></div>
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
