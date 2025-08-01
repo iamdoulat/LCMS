@@ -29,7 +29,7 @@ export default function EditQuotePage() {
       setError("No Quote ID provided.");
       setIsLoading(false);
       Swal.fire("Error", "No Quote ID specified.", "error").then(() => {
-        router.push('/dashboard/quotes/list');
+        router.push('/dashboard/quotations/list');
       });
       return;
     }
@@ -57,7 +57,7 @@ export default function EditQuotePage() {
       } else {
         setError("Quote not found.");
         Swal.fire("Error", `Quote with ID ${quoteId} not found.`, "error").then(() => {
-             router.push('/dashboard/quotes/list');
+             router.push('/dashboard/quotations/list');
         });
       }
     } catch (err: any) {
@@ -95,7 +95,7 @@ export default function EditQuotePage() {
           <CardContent>
             <p className="text-destructive-foreground">{error}</p>
             <Button variant="outline" asChild className="mt-4">
-              <Link href="/dashboard/quotes/list">
+              <Link href="/dashboard/quotations/list">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Quotes List
               </Link>
@@ -111,7 +111,7 @@ export default function EditQuotePage() {
       <div className="container mx-auto py-8 text-center">
         <p className="text-muted-foreground">Quote data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4">
-            <Link href="/dashboard/quotes/list">
+            <Link href="/dashboard/quotations/list">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Quotes List
             </Link>
@@ -123,7 +123,7 @@ export default function EditQuotePage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Link href="/dashboard/quotes/list" passHref>
+        <Link href="/dashboard/quotations/list" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Quotes List
