@@ -269,7 +269,7 @@ export default function QuotesListPage() {
                 View, search, filter, and manage all sales quotations.
               </CardDescription>
             </div>
-            <Link href="/dashboard/quotes/create" passHref>
+            <Link href="/dashboard/quotations/create" passHref>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Create New Quote
@@ -415,7 +415,7 @@ export default function QuotesListPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your sales quotations from Firestore.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -425,9 +425,8 @@ export default function QuotesListPage() {
                 <ChevronLeft className="h-4 w-4" /> Previous
               </Button>
               {getPageNumbers().map((page, index) =>
-                typeof page === 'number' ? (
-                  <Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)} className="w-9 h-9 p-0">{page}</Button>
-                ) : (<span key={`ellipsis-quote-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                typeof page === 'number' ? (<Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)} className="w-9 h-9 p-0">{page}</Button>)
+                : (<span key={`ellipsis-quote-${index}`} className="px-2 py-1 text-sm">{page}</span>)
               )}
               <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
                 Next <ChevronRight className="h-4 w-4" />
