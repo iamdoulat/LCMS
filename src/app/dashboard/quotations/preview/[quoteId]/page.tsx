@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { QuoteDocument, CustomerDocument } from '@/types';
+import type { QuoteDocument, CustomerDocument, PIShipmentMode } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -26,12 +26,15 @@ const DEFAULT_EMAIL = 'your@email.com';
 const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
 interface CombinedSettingsProfile {
-  companyName?: string;
+  name?: string; // from pi_layout_settings
+  companyName?: string; // from financial_settings
   address?: string;
-  emailId?: string;
-  cellNumber?: string;
-  invoiceLogoUrl?: string; // from financial_settings
-  piLogoUrl?: string; // from pi_layout_settings
+  email?: string; // from pi_layout_settings
+  emailId?: string; // from financial_settings
+  phone?: string; // from pi_layout_settings
+  cellNumber?: string; // from financial_settings
+  invoiceLogoUrl?: string;
+  piLogoUrl?: string;
   hideCompanyName?: boolean;
 }
 
@@ -227,11 +230,11 @@ export default function PrintQuotePage() {
     );
   }
 
-  const displayCompanyName = settings?.companyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyName = settings?.name || settings?.companyName || DEFAULT_COMPANY_NAME;
   const displayCompanyLogo = settings?.piLogoUrl || settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
   const displayCompanyAddress = settings?.address || DEFAULT_ADDRESS;
-  const displayCompanyEmail = settings?.emailId || DEFAULT_EMAIL;
-  const displayCompanyPhone = settings?.cellNumber || 'N/A';
+  const displayCompanyEmail = settings?.email || settings?.emailId || DEFAULT_EMAIL;
+  const displayCompanyPhone = settings?.phone || settings?.cellNumber || 'N/A';
   const hideCompanyName = settings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = quoteData.showItemCodeColumn ?? false;
@@ -239,6 +242,8 @@ export default function PrintQuotePage() {
   const showTaxColumn = quoteData.showTaxColumn ?? false;
 
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount)} (USD)`;
+
+  const grandTotalLabel = "TOTAL (USD):";
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -346,7 +351,7 @@ export default function PrintQuotePage() {
                 <div className="w-3/4 pr-4 text-xs">
                     {quoteData.comments && (
                     <div className="space-y-1">
-                        <h4 className="font-bold text-gray-800 uppercase underline tracking-wide">TERMS AND CONDITIONS:</h4>
+                        <h4 className="underline font-bold text-gray-800 uppercase tracking-wide">TERMS AND CONDITIONS:</h4>
                         <div className="text-gray-600 whitespace-pre-line font-bold">{quoteData.comments}</div>
                     </div>
                     )}
@@ -356,7 +361,7 @@ export default function PrintQuotePage() {
                         <span className="text-gray-600 font-medium text-right">Subtotal:</span>
                         <span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)}</span>
                     </div>
-                    {showDiscountColumn && (
+                     {showDiscountColumn && (
                         <div className="grid grid-cols-2 gap-x-0">
                             <span className="text-gray-600 font-medium text-right">Total Discount:</span>
                             <span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span>
@@ -368,15 +373,16 @@ export default function PrintQuotePage() {
                             <span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)}</span>
                         </div>
                     )}
+
                     <Separator className="my-2 border-gray-300" />
                     <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
-                        <span className="text-gray-900 text-right">Grand Total (USD):</span>
+                        <span className="text-gray-900 text-right">{grandTotalLabel}</span>
                         <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount)}</span>
                     </div>
                 </div>
             </div>
         </div>
-
+      
       <div className="print-footer pb-4 px-4 mt-auto">
         <section className="flex justify-between items-end mb-2 pt-16">
           <div className="w-1/3 text-center">
@@ -421,4 +427,3 @@ export default function PrintQuotePage() {
     </div>
   );
 }
-
