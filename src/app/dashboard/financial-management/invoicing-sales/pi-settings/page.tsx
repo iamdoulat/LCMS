@@ -6,6 +6,7 @@ import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function PISettingsPage() {
   return (
@@ -21,9 +22,15 @@ export default function PISettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="pi-name">Name</Label>
-            <Input id="pi-name" placeholder="Enter a name" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="pi-name">Name</Label>
+              <Input id="pi-name" placeholder="Enter a name" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pi-address">Address</Label>
+              <Textarea id="pi-address" placeholder="Enter an address" />
+            </div>
           </div>
         </CardContent>
       </Card>
