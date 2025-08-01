@@ -4,6 +4,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function PISettingsPage() {
   return (
@@ -19,7 +21,10 @@ export default function PISettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>This is a placeholder page for PI Settings.</p>
+          <div className="space-y-2">
+            <Label htmlFor="pi-name">Name</Label>
+            <Input id="pi-name" placeholder="Enter a name" />
+          </div>
         </CardContent>
       </Card>
     </div>
