@@ -377,7 +377,7 @@ export default function PrintQuotePage() {
                     <Separator className="my-2 border-gray-300" />
                     <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
                         <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
-                        <span className="text-blue-600 text-right">{formatCurrency(quoteData.totalAmount)}</span>
+                        <span className="text-blue-600 text-right" style={{fontSize: '14px'}}>{formatCurrency(quoteData.totalAmount)}</span>
                     </div>
                 </div>
             </div>
