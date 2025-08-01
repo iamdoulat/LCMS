@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal, Printer } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Hash, ChevronLeft, ChevronRight, ShoppingBag, DollarSign, MoreHorizontal, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -192,7 +192,7 @@ export default function QuotesListPage() {
   }, [allQuotes, filterQuoteNumber, filterCustomerId, filterSalesperson, filterYear, sortBy, sortOrder]);
 
   const handleEditQuote = (quoteId: string) => {
-    router.push(`/dashboard/quotes/edit/${quoteId}`);
+    router.push(`/dashboard/quotations/edit/${quoteId}`);
   };
 
   const handleDeleteQuote = (quoteId: string, quoteIdentifier?: string) => {
@@ -219,7 +219,7 @@ export default function QuotesListPage() {
   };
 
   const handlePreviewPdf = (quoteId: string) => {
-    window.open(`/dashboard/quotes/preview/${quoteId}`, '_blank');
+    window.open(`/dashboard/quotations/preview/${quoteId}`, '_blank');
   };
 
   const clearFilters = () => {
