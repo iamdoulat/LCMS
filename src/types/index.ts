@@ -1086,12 +1086,33 @@ export interface OrderDocument {
 }
 // --- END Order Types ---
 
-// --- Sale Types (Duplicate for sales_invoice collection) ---
+// --- Sale Types (for sales_invoice collection) ---
 export const saleStatusOptions = ["Draft", "Cancelled", "Refunded", "Sent", "Partial", "Paid", "Overdue", "Void"] as const;
 export type SaleStatus = (typeof saleStatusOptions)[number];
 
-export const SaleLineItemSchema = InvoiceLineItemSchema;
-export type SaleLineItemFormValues = InvoiceLineItemFormValues;
+export const SaleLineItemSchema = z.object({
+  itemId: z.string().min(1, "Item selection is required."),
+  itemCode: z.string().optional(),
+  description: z.string().optional(),
+  qty: z.preprocess(
+    (val) => (String(val).trim() === "" ? 0 : Number(String(val).trim())),
+    z.number().positive("Qty must be > 0")
+  ),
+  unitPrice: z.preprocess(
+    (val) => (String(val).trim() === "" ? 0 : Number(String(val).trim())),
+    z.number().nonnegative("Unit Price must be non-negative")
+  ),
+  discountPercentage: z.preprocess(
+    (val) => (String(val).trim() === "" ? 0 : Number(String(val).trim())),
+    z.number().min(0).max(100, "Discount must be between 0-100").optional()
+  ),
+  taxPercentage: z.preprocess(
+    (val) => (String(val).trim() === "" ? 0 : Number(String(val).trim())),
+    z.number().min(0).max(100, "Tax must be between 0-100").optional()
+  ),
+  total: z.string(), // This is for display and will be recalculated.
+});
+export type SaleLineItemFormValues = z.infer<typeof SaleLineItemSchema>;
 
 export const SaleSchema = InvoiceSchema.extend({
     status: z.enum(saleStatusOptions).optional(),
