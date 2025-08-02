@@ -322,8 +322,7 @@ export default function QuoteItemsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your quote items from Firestore.
-                Showing ${displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedItems.length)} of ${displayedItems.length} entries.
+                A list of your quote items from Database. Showing {displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedItems.length)} of {displayedItems.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -347,11 +346,11 @@ export default function QuoteItemsListPage() {
                     onClick={() => handlePageChange(page)}
                     className="w-9 h-9 p-0"
                   >
-                    ${page}
+                    {page}
                   </Button>
                 ) : (
                   <span key={`ellipsis-item-${index}`} className="px-2 py-1 text-sm">
-                    ${page}
+                    {page}
                   </span>
                 )
               )}
