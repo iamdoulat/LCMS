@@ -421,7 +421,7 @@ export default function QuotesListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your quotations from Database. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
+                A list of your quotations from Database. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -444,5 +444,3 @@ export default function QuotesListPage() {
     </div>
   );
 }
-
-    
