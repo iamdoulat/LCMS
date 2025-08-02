@@ -49,22 +49,17 @@ interface BeneficiaryOption extends ComboboxOption {
   address?: string;
 }
 
-interface EditOrderFormProps {
+interface EditPurchaseOrderFormProps {
   initialData: OrderDocument;
   orderId: string;
 }
 
-export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormProps) {
+export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrderFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
@@ -155,7 +150,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
   const watchedOtherCharges = watch("otherCharges");
   const watchedShipmentMode = watch("shipmentMode");
 
-  React.useEffect(() => {
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -192,10 +187,12 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
-    setSubtotal(currentSubtotal);
-    setTotalDiscountAmount(currentTotalDiscount);
-    setTotalTaxAmount(currentTotalTax);
-    setGrandTotal(currentGrandTotal);
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
 
   React.useEffect(() => {
@@ -226,7 +223,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/inventory/inventory-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -309,7 +306,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
 
 
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
