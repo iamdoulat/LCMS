@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, Image as ImageIcon, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { DemoMachine, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
@@ -116,7 +116,7 @@ export function AddDemoMachineForm() {
     setIsSubmitting(true);
 
     try {
-      // 1. Create the document first to get an ID
+      // 1. Create the document reference first to get an ID
       const docRef = doc(collection(firestore, "demo_machines"));
       const machineId = docRef.id;
 
@@ -149,8 +149,8 @@ export function AddDemoMachineForm() {
         }
       }
       
-      // 4. Update the document with all the data
-      await updateDoc(docRef, cleanedDataToSave);
+      // 4. Use setDoc to create the document with all the data
+      await setDoc(docRef, cleanedDataToSave);
 
       Swal.fire({
         title: "Demo Machine Saved!",
