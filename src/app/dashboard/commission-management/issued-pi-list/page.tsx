@@ -474,7 +474,7 @@ export default function IssuedPIListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Proforma Invoices from Firestore.
+                A list of your Proforma Invoices from Database.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedProformaInvoices.length)} of {displayedProformaInvoices.length} entries.
               </TableCaption>
             </Table>
