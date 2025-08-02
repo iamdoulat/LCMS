@@ -338,7 +338,7 @@ export default function ApplicantsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your applicants from Firestore.
+                A list of your Applicants from Database.
                 Showing {displayedApplicants.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplicants.length)} of {displayedApplicants.length} entries.
               </TableCaption>
             </Table>
