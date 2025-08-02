@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -8,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Undo2, Loader2, Filter, XCircle, Users, CalendarDays, ChevronLeft, ChevronRight, FileText, AlertTriangle } from 'lucide-react';
+import { Undo2, Loader2, Filter, XCircle, Users, CalendarDays, ChevronLeft, ChevronRight, FileText, AlertTriangle, Wallet, List, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { SaleDocument, CustomerDocument, SaleStatus, ItemDocument } from '@/types';
-import { saleStatusOptions } from '@/types';
+import type { SaleDocument, CustomerDocument, SaleStatus, ItemDocument, PettyCashAccountDocument, PettyCashCategoryDocument, PettyCashTransactionFormValues } from '@/types';
+import { saleStatusOptions, PettyCashTransactionSchema } from '@/types';
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import { collection, getDocs, doc, query, orderBy as firestoreOrderBy, writeBatch, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -22,6 +20,16 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { DatePickerField } from '@/components/forms/DatePickerField';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
+import { useAuth } from '@/context/AuthContext';
+
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -60,8 +68,11 @@ const ALL_YEARS_VALUE = "__ALL_YEARS_REFUND__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_REFUND__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES_REFUND__";
 const SALE_ITEMS_PER_PAGE = 10;
+const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
+
 
 export default function InventoryRefundsReturnsPage() {
+  const { user } = useAuth();
   const router = useRouter();
   const [allSales, setAllSales] = useState<SaleDocument[]>([]);
   const [displayedSales, setDisplayedSales] = useState<SaleDocument[]>([]);
@@ -74,8 +85,14 @@ export default function InventoryRefundsReturnsPage() {
   const [filterStatus, setFilterStatus] = useState<SaleStatus | ''>('');
 
   const [customerOptions, setCustomerOptions] = useState<ComboboxOption[]>([]);
+  const [accountOptions, setAccountOptions] = React.useState<ComboboxOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = React.useState<MultiSelectOption[]>([]);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  const [isLoadingPettyCashOptions, setIsLoadingPettyCashOptions] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [selectedSaleForRefund, setSelectedSaleForRefund] = useState<SaleDocument | null>(null);
 
   const fetchSalesData = React.useCallback(async () => {
     setIsLoading(true);
@@ -99,21 +116,56 @@ export default function InventoryRefundsReturnsPage() {
 
   useEffect(() => {
     fetchSalesData();
-    const fetchCustomerOptions = async () => {
+    const fetchDropdownOptions = async () => {
       setIsLoadingCustomers(true);
+      setIsLoadingPettyCashOptions(true);
       try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        const [customersSnapshot, accountsSnapshot, categoriesSnapshot] = await Promise.all([
+            getDocs(collection(firestore, "customers")),
+            getDocs(query(collection(firestore, "petty_cash_accounts"))),
+            getDocs(query(collection(firestore, "petty_cash_categories"))),
+        ]);
         setCustomerOptions(
           customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Customer' }))
         );
+         setAccountOptions(
+            accountsSnapshot.docs.map(d => ({ value: d.id, label: (d.data() as PettyCashAccountDocument).name || 'Unnamed Account' }))
+        );
+        setCategoryOptions(
+            categoriesSnapshot.docs.map(d => ({ value: d.id, label: (d.data() as PettyCashCategoryDocument).name || 'Unnamed Category' }))
+        );
       } catch (error: any) {
-        Swal.fire("Error", `Could not load customer options. Error: ${(error as Error).message}`, "error");
+        Swal.fire("Error", `Could not load dropdown options. Error: ${(error as Error).message}`, "error");
       } finally {
         setIsLoadingCustomers(false);
+        setIsLoadingPettyCashOptions(false);
       }
     };
-    fetchCustomerOptions();
+    fetchDropdownOptions();
   }, [fetchSalesData]);
+
+  const refundForm = useForm<PettyCashTransactionFormValues & { returnReason: string }>({
+    resolver: zodResolver(PettyCashTransactionSchema.extend({
+        returnReason: z.string().optional()
+    })),
+  });
+
+  const openRefundDialog = (sale: SaleDocument) => {
+    setSelectedSaleForRefund(sale);
+    const refundCategory = categoryOptions.find(c => c.label.toLowerCase().includes("refund"));
+    refundForm.reset({
+        transactionDate: new Date(),
+        accountId: accountOptions.find(a => a.label.toLowerCase() === "petty cash")?.value || accountOptions[0]?.value || '',
+        type: 'Debit',
+        payeeName: sale.customerName,
+        amount: sale.amountPaid || sale.totalAmount, // Default to amount paid or total amount
+        purpose: `Refund for Invoice #${sale.id.substring(0,8)}...`,
+        categoryIds: refundCategory ? [refundCategory.value] : [],
+        returnReason: '',
+    });
+    setIsRefundDialogOpen(true);
+  };
+
 
   useEffect(() => {
     let filtered = [...allSales];
@@ -128,38 +180,31 @@ export default function InventoryRefundsReturnsPage() {
     setCurrentPage(1);
   }, [allSales, filterSaleId, filterCustomerId, filterYear, filterStatus]);
 
-  const handleProcessRefund = async (sale: SaleDocument) => {
-    const { value: reason } = await Swal.fire({
-      title: `Process Refund/Return for Sale ID: ${sale.id.substring(0, 8)}...`,
-      input: 'textarea',
-      inputLabel: 'Reason for Refund/Return (Optional)',
-      inputPlaceholder: 'Enter reason here...',
-      showCancelButton: true,
-      confirmButtonText: 'Confirm Refund/Return',
-      cancelButtonText: 'Cancel',
-      inputValidator: (value) => {
-        // Optional, so no validation needed unless you want max length etc.
-        return null;
-      }
-    });
+  const handleProcessRefund = async (data: PettyCashTransactionFormValues & { returnReason: string }) => {
+    if (!selectedSaleForRefund) return;
+    if (!user) {
+      Swal.fire("Authentication Error", "You must be logged in to process a refund.", "error");
+      return;
+    }
 
-    if (reason !== undefined) { // User clicked "Confirm" (reason can be empty string)
-      setIsLoading(true);
-      const batch = writeBatch(firestore);
-      const saleDocRef = doc(firestore, "sales_invoice", sale.id);
-      
-      batch.update(saleDocRef, {
+    setIsSubmitting(true);
+    const batch = writeBatch(firestore);
+    const saleDocRef = doc(firestore, "sales_invoice", selectedSaleForRefund.id);
+    const accountDocRef = doc(firestore, "petty_cash_accounts", data.accountId);
+    const transactionRef = doc(collection(firestore, "petty_cash_transactions"));
+    
+    // 1. Update invoice status
+    batch.update(saleDocRef, {
         status: "Refunded" as SaleStatus,
-        returnReason: reason || "",
+        refundReason: data.returnReason || "",
         refundDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         updatedAt: serverTimestamp()
-      });
-
-      let stockUpdateSuccessful = true;
-      for (const lineItem of sale.lineItems) {
+    });
+    
+    // 2. Restock items
+    for (const lineItem of selectedSaleForRefund.lineItems) {
         if (lineItem.itemId) {
-          const itemDocRef = doc(firestore, "items", lineItem.itemId);
-          try {
+            const itemDocRef = doc(firestore, "items", lineItem.itemId);
             const itemDocSnap = await getDoc(itemDocRef);
             if (itemDocSnap.exists()) {
               const itemData = itemDocSnap.data() as ItemDocument;
@@ -167,25 +212,50 @@ export default function InventoryRefundsReturnsPage() {
                 const newQuantity = (itemData.currentQuantity || 0) + lineItem.qty;
                 batch.update(itemDocRef, { currentQuantity: newQuantity, updatedAt: serverTimestamp() });
               }
-            } else {
-              console.warn(`Item ${lineItem.itemId} not found for stock update during refund.`);
             }
-          } catch (error) {
-            console.error(`Error updating stock for item ${lineItem.itemId}:`, error);
-            stockUpdateSuccessful = false; 
-          }
         }
-      }
+    }
 
-      try {
+    // 3. Create Petty Cash Debit Transaction
+    const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
+    const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
+    
+    const debitTxData = {
+        transactionDate: format(data.transactionDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        accountId: data.accountId,
+        accountName: selectedAccount?.label || 'N/A',
+        categoryIds: data.categoryIds,
+        categoryNames: selectedCategories.map(c => c.label),
+        type: 'Debit',
+        payeeName: data.payeeName,
+        amount: data.amount,
+        purpose: data.purpose,
+        description: data.returnReason || `Refund for Invoice #${selectedSaleForRefund.id.substring(0,8)}`,
+        connectedSaleId: selectedSaleForRefund.id,
+        createdBy: user.displayName || user.email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    };
+    batch.set(transactionRef, debitTxData);
+
+    // 4. Update Account Balance
+    const accountDocSnap = await getDoc(accountDocRef);
+    if (!accountDocSnap.exists()) {
+        throw new Error("Selected petty cash account not found.");
+    }
+    const currentBalance = accountDocSnap.data().balance || 0;
+    const newBalance = currentBalance - Number(data.amount);
+    batch.update(accountDocRef, { balance: newBalance, updatedAt: serverTimestamp() });
+
+    try {
         await batch.commit();
-        Swal.fire('Refund Processed!', `Sale ${sale.id.substring(0,8)} has been marked as Refunded. Item stock (if managed) has been updated.`, 'success');
+        Swal.fire('Refund Processed!', `Sale ${selectedSaleForRefund.id.substring(0,8)} has been refunded and a debit transaction was created.`, 'success');
         fetchSalesData(); // Refresh the list
-      } catch (error: any) {
+        setIsRefundDialogOpen(false);
+    } catch (error: any) {
         Swal.fire("Error", `Could not process refund: ${error.message}`, "error");
-      } finally {
-        setIsLoading(false);
-      }
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -301,8 +371,8 @@ export default function InventoryRefundsReturnsPage() {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => handleProcessRefund(sale)}
-                                  disabled={sale.status === "Refunded" || sale.status === "Cancelled"}
+                                  onClick={() => openRefundDialog(sale)}
+                                  disabled={sale.status === "Refunded" || sale.status === "Cancelled" || sale.status === "Draft"}
                                 >
                                   <Undo2 className="mr-1.5 h-4 w-4" /> Process Refund/Return
                                 </Button>
@@ -334,6 +404,57 @@ export default function InventoryRefundsReturnsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
+         <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Process Refund & Debit Transaction</DialogTitle>
+                <DialogDescription>
+                    Confirm details for the refund of Invoice <strong>#{selectedSaleForRefund?.id.substring(0,8)}...</strong>. This will create a corresponding debit transaction.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...refundForm}>
+                <form onSubmit={refundForm.handleSubmit(handleProcessRefund)} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
+                    <FormField control={refundForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Refund Amount</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={refundForm.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Debit Transaction Date</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
+                    <FormField
+                        control={refundForm.control} name="accountId" render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Debit From Account*</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-1" disabled={isLoadingPettyCashOptions}>
+                                    {accountOptions.map((account) => (
+                                        <FormItem key={account.value} className="flex items-center space-x-3 space-y-0">
+                                            <FormControl><RadioGroupItem value={account.value} /></FormControl>
+                                            <FormLabel className="font-normal">{account.label}</FormLabel>
+                                        </FormItem>
+                                    ))}
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                     <FormField
+                        control={refundForm.control} name="categoryIds" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
+                            <MultiSelect options={categoryOptions} selected={field.value || []} onChange={field.onChange} placeholder="Select categories..." disabled={isLoadingPettyCashOptions}/>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                    <FormField control={refundForm.control} name="returnReason" render={({ field }) => (<FormItem><FormLabel>Reason for Refund/Return (Optional)</FormLabel><FormControl><Textarea placeholder="Enter reason for the return..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+                    <DialogFooter className="mt-4 pt-4 border-t">
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" variant="destructive" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Refund & Debit
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+         </DialogContent>
+      </Dialog>
     </div>
   );
 }
