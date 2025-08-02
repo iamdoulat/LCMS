@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -92,6 +93,7 @@ export default function InventoryRefundsReturnsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedSaleForRefund, setSelectedSaleForRefund] = useState<SaleDocument | null>(null);
 
   const fetchSalesData = React.useCallback(async () => {
@@ -388,7 +390,7 @@ export default function InventoryRefundsReturnsPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                List of sales eligible for refunds/returns. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedSales.length)} of {displayedSales.length} entries.
+                List of sales eligible for refunds/returns. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedSales.length)} of {displayedSales.length} entries.
               </TableCaption>
             </Table>
           </div>
