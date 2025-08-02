@@ -596,5 +596,3 @@ export function CreateInventoryOrderForm() {
     </Form>
   );
 }
-
-    
