@@ -67,7 +67,7 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 
 LCMS is built for teams, with a robust and flexible role-based access control (RBAC) system.
 
-*   **Granular Roles**: Assign users specific roles like `Super Admin`, `Admin`, `Store Manager`, `Service`, `DemoManager`, or `Viewer`, each with precisely defined permissions.
+*   **Granular Roles**: Assign users specific roles like `Super Admin`, `Admin`, `Accounts`, `Commercial`, `Service`, `DemoManager`, or `Viewer`, each with precisely defined permissions.
 *   **Secure Access**: Users only see and interact with the modules and data relevant to their role, ensuring data integrity and security.
 *   **Centralized User Control**: Super Admins can easily manage all users, assign roles, and maintain the security of the entire platform from a single, intuitive interface.
 
