@@ -239,6 +239,7 @@ export default function DeliveryChallanListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
+                A list of your delivery challans from Database. 
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedChallans.length)} of {displayedChallans.length} entries.
               </TableCaption>
             </Table>
