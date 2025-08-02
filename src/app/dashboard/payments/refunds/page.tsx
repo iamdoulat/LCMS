@@ -32,7 +32,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => {
+const formatCurrencyValue = (amount?: number, currencySymbol: string = 'BDT') => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
   return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -331,7 +331,7 @@ export default function InvoiceRefundsPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                List of invoices eligible for refunds. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedInvoices.length)} of {displayedInvoices.length} entries.
+                List of invoices eligible for refunds. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedInvoices.length)} of {displayedInvoices.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -350,4 +350,3 @@ export default function InvoiceRefundsPage() {
     </div>
   );
 }
-
