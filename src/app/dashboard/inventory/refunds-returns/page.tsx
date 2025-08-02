@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 import { useAuth } from '@/context/AuthContext';
+import { z } from 'zod';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -70,6 +71,11 @@ const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_REFUND__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES_REFUND__";
 const SALE_ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
+
+const refundFormSchema = PettyCashTransactionSchema.extend({
+    returnReason: z.string().optional()
+});
+type RefundFormValues = z.infer<typeof refundFormSchema>;
 
 
 export default function InventoryRefundsReturnsPage() {
@@ -146,10 +152,8 @@ export default function InventoryRefundsReturnsPage() {
     fetchDropdownOptions();
   }, [fetchSalesData]);
 
-  const refundForm = useForm<PettyCashTransactionFormValues & { returnReason: string }>({
-    resolver: zodResolver(PettyCashTransactionSchema.extend({
-        returnReason: z.string().optional()
-    })),
+  const refundForm = useForm<RefundFormValues>({
+    resolver: zodResolver(refundFormSchema),
   });
 
   const openRefundDialog = (sale: SaleDocument) => {
@@ -182,7 +186,7 @@ export default function InventoryRefundsReturnsPage() {
     setCurrentPage(1);
   }, [allSales, filterSaleId, filterCustomerId, filterYear, filterStatus]);
 
-  const handleProcessRefund = async (data: PettyCashTransactionFormValues & { returnReason: string }) => {
+  const handleProcessRefund = async (data: RefundFormValues) => {
     if (!selectedSaleForRefund) return;
     if (!user) {
       Swal.fire("Authentication Error", "You must be logged in to process a refund.", "error");
@@ -410,7 +414,7 @@ export default function InventoryRefundsReturnsPage() {
       <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-                <DialogTitle>Process Refund & Debit Transaction</DialogTitle>
+                <DialogTitle>Process Refund &amp; Debit Transaction</DialogTitle>
                 <DialogDescription>
                     Confirm details for the refund of Invoice <strong>#{selectedSaleForRefund?.id.substring(0,8)}...</strong>. This will create a corresponding debit transaction.
                 </DialogDescription>
@@ -450,7 +454,7 @@ export default function InventoryRefundsReturnsPage() {
                         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirm Refund & Debit
+                            Confirm Refund &amp; Debit
                         </Button>
                     </DialogFooter>
                 </form>
