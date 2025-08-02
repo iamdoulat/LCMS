@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { OrderDocument, SupplierDocument } from '@/types';
+import type { OrderDocument, SupplierDocument, CompanyProfile } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -17,7 +17,6 @@ import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const PI_SETTINGS_COLLECTION = 'pi_layout_settings';
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const MAIN_SETTINGS_DOC_ID = 'main_settings';
 const DEFAULT_COMPANY_NAME = 'Your Company Name';
@@ -25,18 +24,6 @@ const DEFAULT_ADDRESS = 'Your Company Address';
 const DEFAULT_EMAIL = 'your@email.com';
 const DEFAULT_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
-interface CombinedSettingsProfile {
-  name?: string; // from pi_layout_settings
-  companyName?: string; // from financial_settings
-  address?: string;
-  email?: string; // from pi_layout_settings
-  emailId?: string; // from financial_settings
-  phone?: string; // from pi_layout_settings
-  cellNumber?: string; // from financial_settings
-  invoiceLogoUrl?: string;
-  piLogoUrl?: string;
-  hideCompanyName?: boolean;
-}
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -61,28 +48,24 @@ export default function PrintOrderPage() {
 
   const [orderData, setOrderData] = React.useState<OrderDocument | null>(null);
   const [beneficiaryData, setBeneficiaryData] = React.useState<SupplierDocument | null>(null);
-  const [settings, setSettings] = React.useState<CombinedSettingsProfile | null>(null);
+  const [settings, setSettings] = React.useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const fetchSettings = React.useCallback(async () => {
     try {
-      const financialSettingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
-      const piSettingsDocRef = doc(firestore, PI_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
-
-      const [financialSnap, piSnap] = await Promise.all([
-        getDoc(financialSettingsDocRef),
-        getDoc(piSettingsDocRef)
-      ]);
-
-      const financialData = financialSnap.exists() ? financialSnap.data() as Partial<CombinedSettingsProfile> : {};
-      const piData = piSnap.exists() ? piSnap.data() as Partial<CombinedSettingsProfile> : {};
-
-      setSettings({
-        ...financialData,
-        ...piData,
-      });
-
+      const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+      const settingsSnap = await getDoc(settingsDocRef);
+      if (settingsSnap.exists()) {
+        setSettings(settingsSnap.data() as CompanyProfile);
+      } else {
+         setSettings({
+          companyName: DEFAULT_COMPANY_NAME,
+          address: DEFAULT_ADDRESS,
+          emailId: DEFAULT_EMAIL,
+          invoiceLogoUrl: DEFAULT_LOGO_URL,
+        });
+      }
     } catch (e) {
       console.error("Error fetching settings for print:", e);
       setSettings({
@@ -218,11 +201,11 @@ export default function PrintOrderPage() {
     );
   }
 
-  const displayCompanyName = settings?.name || settings?.companyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = settings?.piLogoUrl || settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
+  const displayCompanyName = settings?.companyName || DEFAULT_COMPANY_NAME;
+  const displayCompanyLogo = settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
   const displayCompanyAddress = settings?.address || DEFAULT_ADDRESS;
-  const displayCompanyEmail = settings?.email || settings?.emailId || DEFAULT_EMAIL;
-  const displayCompanyPhone = settings?.phone || settings?.cellNumber || 'N/A';
+  const displayCompanyEmail = settings?.emailId || DEFAULT_EMAIL;
+  const displayCompanyPhone = settings?.cellNumber || 'N/A';
   const hideCompanyName = settings?.hideCompanyName ?? false;
   
   const showItemCodeColumn = orderData.showItemCodeColumn ?? false;
