@@ -437,7 +437,7 @@ export default function InvoicesListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your sales invoices. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedInvoices.length)} of {displayedInvoices.length} entries.
+                A list of your Proforma invoices. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedInvoices.length)} of {displayedInvoices.length} entries.
               </TableCaption>
             </Table>
           </div>
