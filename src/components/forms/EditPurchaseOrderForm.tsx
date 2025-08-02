@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -224,7 +223,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/inventory/inventory_orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -261,7 +260,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       // Clean up undefined/empty fields within the line item
       Object.keys(lineItemData).forEach(key => {
         const value = lineItemData[key];
-        if (value === undefined || value === null || value === '') {
+        if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
           delete lineItemData[key];
         }
       });
@@ -307,7 +306,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
 
 
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
