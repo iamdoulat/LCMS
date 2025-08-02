@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -88,7 +87,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -149,7 +148,8 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-
+  
+  const watchedBeneficiaryId = watch("beneficiaryId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
   const watchedOtherCharges = watch("otherCharges");
@@ -185,7 +185,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
         }
       });
     }
-
+    
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
     const additionalCharges = freight + other;
@@ -196,8 +196,18 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
     setTotalDiscountAmount(currentTotalDiscount);
     setTotalTaxAmount(currentTotalTax);
     setGrandTotal(currentGrandTotal);
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues, watchedFreightCharges, watchedOtherCharges]);
-  
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
+
+  React.useEffect(() => {
+    if (watchedBeneficiaryId) {
+      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
+      if (selectedBeneficiary) {
+        setValue("billingAddress", selectedBeneficiary.address || "");
+        setValue("shippingAddress", selectedBeneficiary.address || "");
+      }
+    }
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
+
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -429,7 +439,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditOrderFormPr
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
