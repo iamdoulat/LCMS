@@ -408,8 +408,8 @@ export default function OrdersListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your sales orders from Firestore.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedOrders.length)} of {displayedOrders.length} entries.
+                A list of your Inventory orders from Database.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedOrders.length)} of {displayedOrders.length} entries.
               </TableCaption>
             </Table>
           </div>
