@@ -325,7 +325,7 @@ export default function BeneficiariesListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your beneficiaries from Firestore. 
+                A list of your Beneficiaries from Database. 
                 Showing {displayedBeneficiaries.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedBeneficiaries.length)} of {displayedBeneficiaries.length} entries.
               </TableCaption>
             </Table>
