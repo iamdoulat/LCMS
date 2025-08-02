@@ -763,7 +763,7 @@ export default function TotalLCPage() {
                     )}
                   </TableBody>
                   <TableCaption className="py-4">
-                    A list of your Letters of Credit from Firestore.
+                    A list of your Letters of Credit from Database.
                     Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allLcEntries.length)} of {allLcEntries.length} entries.
                   </TableCaption>
                 </Table>
@@ -814,14 +814,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
