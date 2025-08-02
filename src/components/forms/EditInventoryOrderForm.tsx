@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -8,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
-import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, PIShipmentMode } from '@/types';
-import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, piShipmentModeOptions } from '@/types';
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues } from '@/types';
+import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns, Ship } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Building, FileText, CalendarDays, DollarSign, Percent, Info, Save, Printer, Mail, X, Edit, Tag, ShoppingCart, Hash, Columns } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
 
-
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_EDIT_BENEFICIARY__";
@@ -50,17 +50,22 @@ interface BeneficiaryOption extends ComboboxOption {
   address?: string;
 }
 
-interface EditInventoryOrderFormProps {
+interface EditOrderFormProps {
   initialData: OrderDocument;
   orderId: string;
 }
 
-export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOrderFormProps) {
+export function EditOrderForm({ initialData, orderId }: EditOrderFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
+
+  const [subtotal, setSubtotal] = React.useState(0);
+  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
+  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
+  const [grandTotal, setGrandTotal] = React.useState(0);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
@@ -83,7 +88,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -127,13 +132,6 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
-            terms: initialData.terms || '',
-            shipVia: initialData.shipVia || '',
-            portOfLoading: initialData.portOfLoading || '',
-            portOfDischarge: initialData.portOfDischarge || '',
-            shipmentMode: initialData.shipmentMode,
-            freightCharges: initialData.freightCharges,
-            otherCharges: initialData.otherCharges,
           });
         }
       } catch (error) {
@@ -144,14 +142,11 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-  
-  const watchedBeneficiaryId = watch("beneficiaryId");
-  const watchedLineItems = watch("lineItems");
-  const watchedFreightCharges = watch("freightCharges");
-  const watchedOtherCharges = watch("otherCharges");
-  const watchedShipmentMode = watch("shipmentMode");
 
-  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
+  const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+
+  React.useEffect(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
@@ -181,31 +176,13 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
         }
       });
     }
-    
-    const freight = Number(watchedFreightCharges || 0);
-    const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = freight + other;
-
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-    
-    return {
-      subtotal: currentSubtotal,
-      totalDiscountAmount: currentTotalDiscount,
-      totalTaxAmount: currentTotalTax,
-      grandTotal: currentGrandTotal,
-    };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
-
-  React.useEffect(() => {
-    if (watchedBeneficiaryId) {
-      const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
-      if (selectedBeneficiary) {
-        setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", selectedBeneficiary.address || "");
-      }
-    }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
-
+    setSubtotal(currentSubtotal);
+    setTotalDiscountAmount(currentTotalDiscount);
+    setTotalTaxAmount(currentTotalTax);
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+    setGrandTotal(currentGrandTotal);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, setValue, getValues]);
+  
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -224,7 +201,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/inventory/inventory-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -268,6 +245,11 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
       return lineItemData;
     });
     
+    const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total || 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+
     const dataToUpdate: Record<string, any> = {
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || initialData.beneficiaryName,
@@ -279,21 +261,14 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
       taxType: data.taxType,
       comments: data.comments,
       privateComments: data.privateComments,
-      subtotal: subtotal,
-      totalDiscountAmount: totalDiscountAmount,
-      totalTaxAmount: totalTaxAmount,
-      totalAmount: grandTotal,
+      subtotal: finalSubtotal,
+      totalDiscountAmount: finalTotalDiscount,
+      totalTaxAmount: finalTotalTax,
+      totalAmount: finalGrandTotal,
       status: initialData.status,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
-      terms: data.terms,
-      shipVia: data.shipVia,
-      portOfLoading: data.portOfLoading,
-      portOfDischarge: data.portOfDischarge,
-      shipmentMode: data.shipmentMode,
-      freightCharges: data.freightCharges,
-      otherCharges: data.otherCharges,
       updatedAt: serverTimestamp(),
     };
 
@@ -316,8 +291,6 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
       setIsSubmitting(false);
     }
   }
-
-  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -354,7 +327,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
               name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Supplier:</FormLabel>
+                  <FormLabel>Bill To*</FormLabel>
                   <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -373,35 +346,6 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
             <FormField control={control} name="orderDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Order Date*</FormLabel><DatePickerField field={field} placeholder="Select order date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <FormField control={control} name="terms" render={({ field }) => (<FormItem><FormLabel>Terms</FormLabel><FormControl><Input placeholder="e.g., FOB, CIF" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="shipVia" render={({ field }) => (<FormItem><FormLabel>Ship Via</FormLabel><FormControl><Input placeholder="e.g., Sea, Air" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="e.g., Shanghai" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="e.g., Chattogram" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-        </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-           <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
-          />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-        </div>
         
         <Separator className="my-6" />
         <div className="flex justify-between items-center">
@@ -409,9 +353,9 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotes/items/add" target="_blank">
+                <Link href="/dashboard/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
                     </Button>
                 </Link>
                 <DropdownMenu>
@@ -437,8 +381,8 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
-                  <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>
@@ -463,9 +407,8 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -60,11 +59,6 @@ export function CreateInventoryOrderForm() {
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [generatedOrderId, setGeneratedOrderId] = React.useState<string | null>(null);
 
-  const [subtotal, setSubtotal] = React.useState(0);
-  const [totalTaxAmount, setTotalTaxAmount] = React.useState(0);
-  const [totalDiscountAmount, setTotalDiscountAmount] = React.useState(0);
-  const [grandTotal, setGrandTotal] = React.useState(0);
-
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
@@ -89,6 +83,13 @@ export function CreateInventoryOrderForm() {
       showItemCodeColumn: true,
       showDiscountColumn: true,
       showTaxColumn: true,
+      terms: '',
+      shipVia: '',
+      portOfLoading: '',
+      portOfDischarge: '',
+      shipmentMode: piShipmentModeOptions[0],
+      freightCharges: undefined,
+      otherCharges: undefined,
     },
   });
 
@@ -140,7 +141,7 @@ export function CreateInventoryOrderForm() {
         }
       });
     }
-    
+
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
     const additionalCharges = freight + other;
@@ -161,7 +162,7 @@ export function CreateInventoryOrderForm() {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         setBeneficiaryOptions(
@@ -185,7 +186,7 @@ export function CreateInventoryOrderForm() {
         );
 
       } catch (error) {
-        console.error("Error fetching dropdown options for Order form: ", error);
+        console.error("Error fetching dropdown options for Purchase Order form: ", error);
         Swal.fire("Error", "Could not load beneficiary or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
@@ -210,10 +211,8 @@ export function CreateInventoryOrderForm() {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; 
-      if (selectedItem.description) { 
-        autoDescription = selectedItem.description;
-      }
+      let autoDescription = selectedItem.label;
+      if (selectedItem.description) autoDescription = selectedItem.description;
       setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
@@ -241,7 +240,7 @@ export function CreateInventoryOrderForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(3, '0')}`;
+        const formattedOrderId = `PO${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
             const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -277,11 +276,6 @@ export function CreateInventoryOrderForm() {
             return lineItemData;
         });
         
-        const finalSubtotal = processedLineItems.reduce((sum, item) => sum + (item.total || 0), 0);
-        const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total || 0) * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-        const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + (((item.total || 0) * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
-
         const orderDataToSave: Record<string, any> = {
           beneficiaryId: data.beneficiaryId,
           beneficiaryName: selectedBeneficiary?.label || 'N/A',
@@ -293,10 +287,10 @@ export function CreateInventoryOrderForm() {
           taxType: data.taxType,
           comments: data.comments,
           privateComments: data.privateComments,
-          subtotal: finalSubtotal,
-          totalDiscountAmount: finalTotalDiscount,
-          totalTaxAmount: finalTotalTax,
-          totalAmount: finalGrandTotal,
+          subtotal: subtotal,
+          totalDiscountAmount: totalDiscountAmount,
+          totalTaxAmount: totalTaxAmount,
+          totalAmount: grandTotal,
           status: "Pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -320,7 +314,7 @@ export function CreateInventoryOrderForm() {
           }
         }
         
-        const newOrderRef = doc(firestore, "inventory-orders", formattedOrderId);
+        const newOrderRef = doc(firestore, "inventory_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
 
         const newCounters = {
@@ -338,7 +332,7 @@ export function CreateInventoryOrderForm() {
       console.error("Error in saveOrderLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save order: ${error.message}`,
+        text: `Failed to save purchase order: ${error.message}`,
         icon: "error",
       });
       return null;
@@ -352,8 +346,8 @@ export function CreateInventoryOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Order Saved!",
-        text: `Order successfully saved with ID: ${newId}.`,
+        title: "Purchase Order Saved!",
+        text: `Purchase Order successfully saved with ID: ${newId}.`,
         icon: "success",
       });
     }
@@ -364,8 +358,8 @@ export function CreateInventoryOrderForm() {
     if (newId) {
       setGeneratedOrderId(newId);
       Swal.fire({
-        title: "Order Saved!",
-        text: `Order successfully saved with ID: ${newId}. Navigating to preview...`,
+        title: "Purchase Order Saved!",
+        text: `Purchase Order successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
@@ -379,7 +373,7 @@ export function CreateInventoryOrderForm() {
     if (generatedOrderId) {
       router.push(`/dashboard/inventory/inventory-orders/preview/${generatedOrderId}`);
     } else {
-      Swal.fire("No Order Saved", "Please save an order first to preview it.", "info");
+      Swal.fire("No Order Saved", "Please save a purchase order first to preview it.", "info");
     }
   };
   
@@ -403,7 +397,7 @@ export function CreateInventoryOrderForm() {
         
         <h3 className={cn(sectionHeadingClass)}>
           <Building className="mr-2 h-5 w-5 text-primary" />
-          Beneficiary & Delivery Information
+          Beneficiary & Delivery
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -419,7 +413,6 @@ export function CreateInventoryOrderForm() {
                     onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                     placeholder="Search Beneficiary..."
                     selectPlaceholder="Select Beneficiary"
-                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -526,9 +519,9 @@ export function CreateInventoryOrderForm() {
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/items/add" target="_blank">
+                <Link href="/dashboard/quotes/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
                     </Button>
                 </Link>
                 <DropdownMenu>
@@ -554,7 +547,7 @@ export function CreateInventoryOrderForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
