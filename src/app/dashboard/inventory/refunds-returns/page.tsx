@@ -72,11 +72,10 @@ const ALL_STATUSES_VALUE = "__ALL_STATUSES_REFUND__";
 const SALE_ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_ACCOUNT_VALUE = "__PETTY_CASH_ACCOUNT_PLACEHOLDER__";
 
-const refundFormSchema = PettyCashTransactionSchema.extend({
+const returnReasonSchema = z.object({
     returnReason: z.string().optional()
 });
-type RefundFormValues = z.infer<typeof refundFormSchema>;
-
+type ReturnReasonFormValues = z.infer<typeof returnReasonSchema>;
 
 export default function InventoryRefundsReturnsPage() {
   const { user } = useAuth();
@@ -98,9 +97,11 @@ export default function InventoryRefundsReturnsPage() {
   const [isLoadingPettyCashOptions, setIsLoadingPettyCashOptions] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   
-  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isRefundReasonDialogOpen, setIsRefundReasonDialogOpen] = useState(false);
+  const [isDebitTxDialogOpen, setIsDebitTxDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedSaleForRefund, setSelectedSaleForRefund] = useState<SaleDocument | null>(null);
+  const [refundReason, setRefundReason] = useState<string>('');
 
   const fetchSalesData = React.useCallback(async () => {
     setIsLoading(true);
@@ -152,24 +153,39 @@ export default function InventoryRefundsReturnsPage() {
     fetchDropdownOptions();
   }, [fetchSalesData]);
 
-  const refundForm = useForm<RefundFormValues>({
-    resolver: zodResolver(refundFormSchema),
+  const returnReasonForm = useForm<ReturnReasonFormValues>({
+    resolver: zodResolver(returnReasonSchema),
+    defaultValues: { returnReason: '' },
   });
 
-  const openRefundDialog = (sale: SaleDocument) => {
+  const debitTxForm = useForm<PettyCashTransactionFormValues>({
+    resolver: zodResolver(PettyCashTransactionSchema),
+  });
+
+  const openRefundReasonDialog = (sale: SaleDocument) => {
     setSelectedSaleForRefund(sale);
-    const refundCategory = categoryOptions.find(c => c.label.toLowerCase().includes("refund"));
-    refundForm.reset({
-        transactionDate: new Date(),
-        accountId: accountOptions.find(a => a.label.toLowerCase() === "petty cash")?.value || accountOptions[0]?.value || '',
-        type: 'Debit',
-        payeeName: sale.customerName,
-        amount: sale.amountPaid || sale.totalAmount, // Default to amount paid or total amount
-        purpose: `Refund for Invoice #${sale.id.substring(0,8)}...`,
-        categoryIds: refundCategory ? [refundCategory.value] : [],
-        returnReason: '',
-    });
-    setIsRefundDialogOpen(true);
+    returnReasonForm.reset({ returnReason: sale.refundReason || '' });
+    setIsRefundReasonDialogOpen(true);
+  };
+  
+  const handleConfirmRefundAndOpenTxDialog = (data: ReturnReasonFormValues) => {
+    setRefundReason(data.returnReason || '');
+    setIsRefundReasonDialogOpen(false);
+    
+    if (selectedSaleForRefund) {
+        const refundCategory = categoryOptions.find(c => c.label.toLowerCase().includes("refund"));
+        debitTxForm.reset({
+            transactionDate: new Date(),
+            accountId: accountOptions.find(a => a.label.toLowerCase() === "petty cash")?.value || accountOptions[0]?.value || '',
+            type: 'Debit',
+            payeeName: selectedSaleForRefund.customerName,
+            amount: selectedSaleForRefund.amountPaid || selectedSaleForRefund.totalAmount,
+            purpose: `Refund for Invoice #${selectedSaleForRefund.id.substring(0,8)}...`,
+            categoryIds: refundCategory ? [refundCategory.value] : [],
+            description: data.returnReason || `Refund processed for Invoice #${selectedSaleForRefund.id.substring(0,8)}...`,
+        });
+        setIsDebitTxDialogOpen(true);
+    }
   };
 
 
@@ -186,7 +202,7 @@ export default function InventoryRefundsReturnsPage() {
     setCurrentPage(1);
   }, [allSales, filterSaleId, filterCustomerId, filterYear, filterStatus]);
 
-  const handleProcessRefund = async (data: RefundFormValues) => {
+  const handleProcessRefundAndDebit = async (data: PettyCashTransactionFormValues) => {
     if (!selectedSaleForRefund) return;
     if (!user) {
       Swal.fire("Authentication Error", "You must be logged in to process a refund.", "error");
@@ -199,10 +215,10 @@ export default function InventoryRefundsReturnsPage() {
     const accountDocRef = doc(firestore, "petty_cash_accounts", data.accountId);
     const transactionRef = doc(collection(firestore, "petty_cash_transactions"));
     
-    // 1. Update invoice status
+    // 1. Update invoice status with reason from first dialog
     batch.update(saleDocRef, {
         status: "Refunded" as SaleStatus,
-        refundReason: data.returnReason || "",
+        refundReason: refundReason, // Use the stored reason
         refundDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         updatedAt: serverTimestamp()
     });
@@ -222,7 +238,7 @@ export default function InventoryRefundsReturnsPage() {
         }
     }
 
-    // 3. Create Petty Cash Debit Transaction
+    // 3. Create Petty Cash Debit Transaction from the second form
     const selectedAccount = accountOptions.find(opt => opt.value === data.accountId);
     const selectedCategories = categoryOptions.filter(opt => data.categoryIds?.includes(opt.value));
     
@@ -232,11 +248,11 @@ export default function InventoryRefundsReturnsPage() {
         accountName: selectedAccount?.label || 'N/A',
         categoryIds: data.categoryIds,
         categoryNames: selectedCategories.map(c => c.label),
-        type: 'Debit',
+        type: 'Debit', // Hardcoded as debit for refund
         payeeName: data.payeeName,
         amount: data.amount,
         purpose: data.purpose,
-        description: data.returnReason || `Refund for Invoice #${selectedSaleForRefund.id.substring(0,8)}`,
+        description: data.description || `Refund for Invoice #${selectedSaleForRefund.id.substring(0,8)}`,
         connectedSaleId: selectedSaleForRefund.id,
         createdBy: user.displayName || user.email,
         createdAt: serverTimestamp(),
@@ -257,7 +273,9 @@ export default function InventoryRefundsReturnsPage() {
         await batch.commit();
         Swal.fire('Refund Processed!', `Sale ${selectedSaleForRefund.id.substring(0,8)} has been refunded and a debit transaction was created.`, 'success');
         fetchSalesData(); // Refresh the list
-        setIsRefundDialogOpen(false);
+        setIsDebitTxDialogOpen(false);
+        setRefundReason(''); // Clear stored reason
+        setSelectedSaleForRefund(null);
     } catch (error: any) {
         Swal.fire("Error", `Could not process refund: ${error.message}`, "error");
     } finally {
@@ -377,7 +395,7 @@ export default function InventoryRefundsReturnsPage() {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => openRefundDialog(sale)}
+                                  onClick={() => openRefundReasonDialog(sale)}
                                   disabled={sale.status === "Refunded" || sale.status === "Cancelled" || sale.status === "Draft"}
                                 >
                                   <Undo2 className="mr-1.5 h-4 w-4" /> Process Refund/Return
@@ -411,20 +429,54 @@ export default function InventoryRefundsReturnsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
-         <DialogContent className="sm:max-w-lg">
+      <Dialog open={isRefundReasonDialogOpen} onOpenChange={setIsRefundReasonDialogOpen}>
+         <DialogContent className="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Process Refund &amp; Debit Transaction</DialogTitle>
+                <DialogTitle>Process Refund/Return for Invoice ID: {selectedSaleForRefund?.id.substring(0, 8)}...</DialogTitle>
                 <DialogDescription>
-                    Confirm details for the refund of Invoice <strong>#{selectedSaleForRefund?.id.substring(0,8)}...</strong>. This will create a corresponding debit transaction.
+                    Enter a reason for this return. This is optional but recommended for record-keeping.
                 </DialogDescription>
             </DialogHeader>
-            <Form {...refundForm}>
-                <form onSubmit={refundForm.handleSubmit(handleProcessRefund)} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
-                    <FormField control={refundForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Refund Amount</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={refundForm.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Debit Transaction Date</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
+            <Form {...returnReasonForm}>
+                <form onSubmit={returnReasonForm.handleSubmit(handleConfirmRefundAndOpenTxDialog)} className="space-y-4">
                     <FormField
-                        control={refundForm.control} name="accountId" render={({ field }) => (
+                        control={returnReasonForm.control}
+                        name="returnReason"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Reason for Refund/Return (Optional)</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="e.g., Customer returned damaged goods..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter className="mt-4 pt-4 border-t">
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" variant="destructive">
+                            Confirm Refund/Return
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+         </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isDebitTxDialogOpen} onOpenChange={setIsDebitTxDialogOpen}>
+         <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Create Debit Transaction</DialogTitle>
+                <DialogDescription>
+                    Confirm details for the refund debit from your petty cash account for Invoice <strong>#{selectedSaleForRefund?.id.substring(0,8)}...</strong>
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...debitTxForm}>
+                <form onSubmit={debitTxForm.handleSubmit(handleProcessRefundAndDebit)} className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
+                    <FormField control={debitTxForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Refund Amount</FormLabel><FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={debitTxForm.control} name="transactionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Debit Transaction Date</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)} />
+                    <FormField
+                        control={debitTxForm.control} name="accountId" render={({ field }) => (
                         <FormItem className="space-y-3">
                             <FormLabel className="flex items-center"><Wallet className="mr-1.5 h-4 w-4 text-muted-foreground"/>Debit From Account*</FormLabel>
                             <FormControl>
@@ -441,20 +493,18 @@ export default function InventoryRefundsReturnsPage() {
                         </FormItem>
                     )}/>
                      <FormField
-                        control={refundForm.control} name="categoryIds" render={({ field }) => (
+                        control={debitTxForm.control} name="categoryIds" render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center"><List className="mr-1.5 h-4 w-4 text-muted-foreground"/>Category*</FormLabel>
                             <MultiSelect options={categoryOptions} selected={field.value || []} onChange={field.onChange} placeholder="Select categories..." disabled={isLoadingPettyCashOptions}/>
                             <FormMessage />
                         </FormItem>
                     )}/>
-                    <FormField control={refundForm.control} name="returnReason" render={({ field }) => (<FormItem><FormLabel>Reason for Refund/Return (Optional)</FormLabel><FormControl><Textarea placeholder="Enter reason for the return..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-
                     <DialogFooter className="mt-4 pt-4 border-t">
                         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                         <Button type="submit" variant="destructive" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirm Refund &amp; Debit
+                            Confirm & Process
                         </Button>
                     </DialogFooter>
                 </form>
@@ -464,3 +514,4 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
+
