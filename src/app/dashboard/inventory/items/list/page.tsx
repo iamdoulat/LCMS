@@ -343,8 +343,8 @@ export default function ItemsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your items from Firestore.
-                Showing {displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedItems.length)} of {displayedItems.length} entries.
+                A list of your items from Database.
+                Showing {displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedItems.length)} of {displayedItems.length} entries.
               </TableCaption>
             </Table>
           </div>
