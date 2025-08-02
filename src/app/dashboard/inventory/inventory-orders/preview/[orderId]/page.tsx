@@ -225,8 +225,8 @@ export default function PrintOrderPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={351}
-                    height={24}
+                    width={297 * 0.85}
+                    height={44 * 0.85}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -263,7 +263,7 @@ export default function PrintOrderPage() {
             
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase">SUPPLIER:</h3>
                 <p className="font-medium text-gray-900">{beneficiaryData?.beneficiaryName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{orderData.billingAddress || beneficiaryData?.headOfficeAddress || 'N/A'}</p>
             </div>
@@ -401,3 +401,4 @@ export default function PrintOrderPage() {
   );
 }
 
+    
