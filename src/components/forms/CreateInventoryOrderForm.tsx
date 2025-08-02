@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -180,7 +179,7 @@ export function CreateInventoryOrderForm() {
               value: doc.id,
               label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
               description: data.description,
-              salesPrice: data.salesPrice,
+              salesPrice: data.purchasePrice, // Use purchase price for purchase orders
               itemCode: data.itemCode,
             };
           })
@@ -241,7 +240,7 @@ export function CreateInventoryOrderForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(2, '0')}`;
+        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
             const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -388,7 +387,7 @@ export function CreateInventoryOrderForm() {
       </div>
     );
   }
-  
+
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedOrderId || isSubmitting;
 
@@ -396,10 +395,7 @@ export function CreateInventoryOrderForm() {
     <Form {...form}>
       <form className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <Building className="mr-2 h-5 w-5 text-primary" />
-          Beneficiary & Delivery
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><Building className="mr-2 h-5 w-5 text-primary" />Beneficiary & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -414,6 +410,7 @@ export function CreateInventoryOrderForm() {
                     onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
                     placeholder="Search Beneficiary..."
                     selectPlaceholder="Select Beneficiary"
+                    emptyStateMessage="No beneficiary found."
                     disabled={isLoadingDropdowns}
                   />
                   <FormMessage />
@@ -441,10 +438,7 @@ export function CreateInventoryOrderForm() {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-          Order Details
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Order Details</h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
@@ -603,3 +597,4 @@ export function CreateInventoryOrderForm() {
   );
 }
 
+    
