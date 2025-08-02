@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -202,7 +201,7 @@ export default function PrintOrderPage() {
   }
 
   const displayCompanyName = settings?.companyName || DEFAULT_COMPANY_NAME;
-  const displayCompanyLogo = settings?.invoiceLogoUrl || DEFAULT_LOGO_URL;
+  const displayCompanyLogo = settings?.invoiceLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = settings?.address || DEFAULT_ADDRESS;
   const displayCompanyEmail = settings?.emailId || DEFAULT_EMAIL;
   const displayCompanyPhone = settings?.cellNumber || 'N/A';
@@ -226,8 +225,8 @@ export default function PrintOrderPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={413}
-                    height={28}
+                    width={351}
+                    height={24}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
@@ -401,3 +400,4 @@ export default function PrintOrderPage() {
     </div>
   );
 }
+
