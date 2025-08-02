@@ -234,7 +234,7 @@ export default function InstallationReportsViewPage() {
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ClipboardList className="h-7 w-7 text-primary" />
-                Installation Reports View
+                Installation Reports list
               </CardTitle>
               <CardDescription>
                 Browse, filter, and manage existing installation reports. 
@@ -431,5 +431,6 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+    
 
     
