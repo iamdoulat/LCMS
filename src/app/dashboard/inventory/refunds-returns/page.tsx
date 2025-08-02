@@ -170,7 +170,6 @@ export default function InventoryRefundsReturnsPage() {
   
   const handleConfirmRefundAndOpenTxDialog = (data: ReturnReasonFormValues) => {
     setRefundReason(data.returnReason || '');
-    setIsRefundReasonDialogOpen(false);
     
     if (selectedSaleForRefund) {
         const refundCategory = categoryOptions.find(c => c.label.toLowerCase().includes("refund"));
@@ -184,8 +183,9 @@ export default function InventoryRefundsReturnsPage() {
             categoryIds: refundCategory ? [refundCategory.value] : [],
             description: data.returnReason || `Refund processed for Invoice #${selectedSaleForRefund.id.substring(0,8)}...`,
         });
-        setIsDebitTxDialogOpen(true);
+        setIsDebitTxDialogOpen(true); // This will now open the second dialog
     }
+     setIsRefundReasonDialogOpen(false); // Close the first dialog
   };
 
 
@@ -515,3 +515,5 @@ export default function InventoryRefundsReturnsPage() {
   );
 }
 
+
+    
