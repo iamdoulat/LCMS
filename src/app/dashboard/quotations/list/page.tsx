@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Swal from 'sweetalert2';
 import type { QuoteDocument, CustomerDocument } from '@/types';
 import { format, parseISO, isValid, getYear } from 'date-fns';
-import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, where, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
@@ -110,9 +110,16 @@ export default function QuotesListPage() {
         setAllQuotes(fetchedQuotes);
       } catch (error: any) {
         console.error("Error fetching quotes: ", error);
-        const errorMsg = `Could not fetch quote data from Firestore. Ensure Firestore rules allow reads. Error: ${error.message}`;
-        setFetchError(errorMsg);
-        Swal.fire("Fetch Error", errorMsg, "error");
+        let errorMessage = `Could not fetch quote data from Firestore. Please ensure Firestore rules allow reads.`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+           errorMessage = `Could not fetch quote data: Missing or insufficient permissions. Please check Firestore security rules for the 'quotes' collection.`;
+        } else if (error.message && error.message.toLowerCase().includes("index")) {
+           errorMessage = `Could not fetch quote data: A Firestore index might be required for this query. Please check the browser's developer console for a link to create it automatically.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
+        }
+        setFetchError(errorMessage);
+        Swal.fire("Fetch Error", errorMessage, "error");
       } finally {
         setIsLoading(false);
       }
@@ -414,7 +421,7 @@ export default function QuotesListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your sales quotations from Firestore.
+                A list of your quotations from Database.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
               </TableCaption>
             </Table>
