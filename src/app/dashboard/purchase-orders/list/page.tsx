@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -379,7 +380,7 @@ export default function PurchaseOrdersListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your purchase orders from Firestore.
+                A list of your purchase orders from Database.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedOrders.length)} of {displayedOrders.length} entries.
               </TableCaption>
             </Table>
