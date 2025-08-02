@@ -282,7 +282,7 @@ export default function InvoicesListPage() {
             <div>
               <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
-                Invoices List
+                Proforma Invoices List
               </CardTitle>
               <CardDescription>
                 View, search, filter, and manage all sales invoices.
