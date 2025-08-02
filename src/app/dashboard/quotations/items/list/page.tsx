@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -194,7 +195,7 @@ export default function QuoteItemsListPage() {
             <div>
               <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <PackageIcon className="h-7 w-7 text-primary" />
-                Manage Quote Items
+                Manage Products Items
               </CardTitle>
               <CardDescription>
                 Browse, filter, and manage all your quote items.
@@ -321,8 +322,7 @@ export default function QuoteItemsListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your quote items from Firestore.
-                Showing ${displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedItems.length)} of ${displayedItems.length} entries.
+                A list of your Products items from Database. Showing {displayedItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedItems.length)} of {displayedItems.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -346,11 +346,11 @@ export default function QuoteItemsListPage() {
                     onClick={() => handlePageChange(page)}
                     className="w-9 h-9 p-0"
                   >
-                    ${page}
+                    {page}
                   </Button>
                 ) : (
                   <span key={`ellipsis-item-${index}`} className="px-2 py-1 text-sm">
-                    ${page}
+                    {page}
                   </span>
                 )
               )}
