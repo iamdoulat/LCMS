@@ -148,7 +148,7 @@ const demoNavItems: NavItem[] = [
 const serviceNavItems: NavItem[] = [
     { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, iconColorClass: 'bg-icon-search' },
     { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
-    { href: '/dashboard/warranty-management/installation-reports-view', label: 'Installation Reports View', icon: ClipboardList, iconColorClass: 'bg-icon-reports' },
+    { href: '/dashboard/warranty-management/installation-reports-view', label: 'View Installation Reports', icon: ClipboardList, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, iconColorClass: 'bg-icon-archive' },
     { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty' },
     { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, iconColorClass: 'bg-icon-no-warranty' },
