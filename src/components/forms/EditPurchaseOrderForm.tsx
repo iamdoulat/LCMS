@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
 
+
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_EDIT_BENEFICIARY__";
@@ -97,7 +98,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
             value: docSnap.id,
             label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
             description: data.description,
-            salesPrice: data.salesPrice,
+            salesPrice: data.purchasePrice,
             itemCode: data.itemCode,
           };
         });
@@ -316,7 +317,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     }
   }
 
-  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
+  const grandTotalLabel = `${watchedShipmentMode} TOTAL (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
