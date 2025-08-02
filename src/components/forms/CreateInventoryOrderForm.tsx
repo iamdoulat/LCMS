@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -162,7 +163,7 @@ export function CreateInventoryOrderForm() {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
 
         setBeneficiaryOptions(
@@ -601,3 +602,4 @@ export function CreateInventoryOrderForm() {
     </Form>
   );
 }
+
