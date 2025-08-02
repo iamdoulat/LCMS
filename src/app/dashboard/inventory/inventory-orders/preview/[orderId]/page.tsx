@@ -213,7 +213,7 @@ export default function PrintOrderPage() {
 
   const qrCodeValue = `ORDER\nOrder Number: ${orderData.id}\nDate: ${formatDisplayDate(orderData.orderDate)}\nSales Person: ${orderData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(orderData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = `${orderData.shipmentMode} Total (USD):`;
+  const grandTotalLabel = `${orderData.shipmentMode} TOTAL (USD):`;
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -401,4 +401,3 @@ export default function PrintOrderPage() {
   );
 }
 
-    
