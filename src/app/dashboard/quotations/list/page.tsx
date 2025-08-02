@@ -270,7 +270,7 @@ export default function QuotesListPage() {
             <div>
               <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                 <ListChecks className="h-7 w-7 text-primary" />
-                Quotes List
+                Quotations List
               </CardTitle>
               <CardDescription>
                 View, search, filter, and manage all sales quotations.
@@ -421,8 +421,7 @@ export default function QuotesListPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your quotations from Database.
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
+                A list of your quotations from Database. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedQuotes.length)} of {displayedQuotes.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -445,3 +444,5 @@ export default function QuotesListPage() {
     </div>
   );
 }
+
+    
