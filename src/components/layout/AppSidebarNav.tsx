@@ -166,7 +166,7 @@ const settingsNavItems: NavItem[] = [
 // Define Group Structure
 const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
-  { groupLabel: "Quotes and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
+  { groupLabel: "Quotations and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Accounts", "Viewer"] },
   { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
