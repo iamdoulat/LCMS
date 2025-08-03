@@ -82,9 +82,9 @@ export function CreateInvoiceForm() {
       taxType: 'Default',
       comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment: Allowed\nPI Expiry Date : 30 days from above date",
       privateComments: '',
-      showItemCodeColumn: true,
-      showDiscountColumn: true,
-      showTaxColumn: true,
+      showItemCodeColumn: false,
+      showDiscountColumn: false,
+      showTaxColumn: false,
       shipmentMode: piShipmentModeOptions[0],
       freightCharges: undefined,
       otherCharges: undefined,
@@ -334,6 +334,40 @@ export function CreateInvoiceForm() {
     } else {
       Swal.fire("No Invoice Saved", "Please save an invoice first to preview it.", "info");
     }
+  };
+  
+  // Custom reset function that maintains the new default values
+  const handleReset = () => {
+    reset({
+      customerId: '',
+      billingAddress: '',
+      shippingAddress: '',
+      invoiceDate: new Date(),
+      paymentTerms: '',
+      salesperson: '',
+      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
+      lineItems: [{
+        itemId: '',
+        itemCode: '',
+        description: '',
+        qty: '1',
+        unitPrice: '0',
+        discountPercentage: '0',
+        taxPercentage: '0',
+        total: '0.00'
+      }],
+      taxType: 'Default',
+      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment: Allowed\nPI Expiry Date : 30 days from above date",
+      privateComments: '',
+      // Ensure these remain false on reset
+      showItemCodeColumn: false,
+      showDiscountColumn: false,
+      showTaxColumn: false,
+      shipmentMode: piShipmentModeOptions[0],
+      freightCharges: undefined,
+      otherCharges: undefined,
+    });
+    setGeneratedInvoiceId(null);
   };
 
   const grandTotalLabel =
