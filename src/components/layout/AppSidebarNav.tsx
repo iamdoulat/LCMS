@@ -170,7 +170,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Accounts", "Viewer"] },
   { groupLabel: "Comm. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
-  { groupLabel: 'Shipment Management', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
+  { groupLabel: 'View Shipment Status', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
   { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin"] },
