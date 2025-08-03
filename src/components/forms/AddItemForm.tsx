@@ -40,7 +40,7 @@ export function AddItemForm() {
       unit: 'pcs',
       salesPrice: undefined,
       purchasePrice: undefined,
-      manageStock: false,
+      manageStock: true,
       currentQuantity: 0,
       location: '',
       idealQuantity: undefined,
