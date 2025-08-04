@@ -202,12 +202,12 @@ export default function PrintDeliveryChallanPage() {
              <div className="grid grid-cols-2 gap-4 mb-2">
                 <div className="border p-2 rounded-md text-xs">
                     <h3 className="font-semibold text-gray-700 mb-1 uppercase">M/S:</h3>
-                    <p className="font-medium text-gray-900">{challanData.customerName || 'N/A'}</p>
+                    
                     <p className="text-gray-600 whitespace-pre-line">{challanData.billingAddress || 'N/A'}</p>
                 </div>
                 <div className="border p-2 rounded-md text-xs">
                     <h3 className="font-semibold text-gray-700 mb-1 uppercase">DELIVER TO:</h3>
-                    <p className="font-medium text-gray-900">{challanData.customerName || 'N/A'}</p>
+                    
                     <p className="text-gray-600 whitespace-pre-line">{challanData.shippingAddress || 'N/A'}</p>
                 </div>
              </div>
