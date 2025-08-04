@@ -124,7 +124,7 @@ export default function PrintInvoicePage() {
   }, [invoiceId]);
 
   React.useEffect(() => {
-    const loadAllData = async () => {
+     const loadAllData = async () => {
         setIsLoading(true);
         await Promise.all([fetchSettings(), fetchInvoiceData()]);
         setIsLoading(false);
@@ -232,16 +232,7 @@ export default function PrintInvoicePage() {
 
   const qrCodeValue = `INVOICE\nInvoice Number: ${invoiceData.id}\nDate: ${formatDisplayDate(invoiceData.invoiceDate)}\nSales Person: ${invoiceData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(invoiceData.totalAmount)} (USD)`;
   
-  const grandTotalLabel =
-    invoiceData.shipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL (USD):"
-      : invoiceData.shipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL (USD):"
-      : invoiceData.shipmentMode === "FOB"
-      ? "FOB TOTAL (USD):"
-      : invoiceData.shipmentMode === "EXW"
-      ? "EXW TOTAL (USD):"
-      : "TOTAL (USD):";
+  const grandTotalLabel = `${invoiceData.shipmentMode} TOTAL (USD):`;
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -290,7 +281,6 @@ export default function PrintInvoicePage() {
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">Bill To:</h3>
-                <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
                 <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
                 {customerData?.binNo && (
                     <p className="text-gray-600">
@@ -437,3 +427,4 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
+
