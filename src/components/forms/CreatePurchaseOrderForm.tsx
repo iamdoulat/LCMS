@@ -241,7 +241,7 @@ export function CreatePurchaseOrderForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `PO${currentYear}-${String(newCount).padStart(3, '0')}`;
+        const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems = data.lineItems.map(item => {
             const qty = parseFloat(String(item.qty || '0')) || 0;
@@ -315,7 +315,7 @@ export function CreatePurchaseOrderForm() {
           }
         }
         
-        const newOrderRef = doc(firestore, "purchase_orders", formattedOrderId);
+        const newOrderRef = doc(firestore, "inventory_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
 
         const newCounters = {
@@ -346,11 +346,7 @@ export function CreatePurchaseOrderForm() {
     const newId = await saveOrderLogic(data);
     if (newId) {
       setGeneratedOrderId(newId);
-      Swal.fire({
-        title: "Purchase Order Saved!",
-        text: `Purchase Order successfully saved with ID: ${newId}.`,
-        icon: "success",
-      });
+      Swal.fire("Purchase Order Saved!", `Purchase Order successfully saved with ID: ${newId}.`, "success");
     }
   };
 
@@ -365,14 +361,14 @@ export function CreatePurchaseOrderForm() {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(`/dashboard/purchase-orders/preview/${newId}`);
+        router.push(`/dashboard/inventory/inventory-orders/preview/${newId}`);
       });
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedOrderId) {
-      router.push(`/dashboard/purchase-orders/preview/${generatedOrderId}`);
+      router.push(`/dashboard/inventory/inventory-orders/preview/${generatedOrderId}`);
     } else {
       Swal.fire("No Order Saved", "Please save a purchase order first to preview it.", "info");
     }
@@ -521,7 +517,7 @@ export function CreatePurchaseOrderForm() {
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotes/items/add" target="_blank">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
                     </Button>
@@ -603,4 +599,3 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
-
