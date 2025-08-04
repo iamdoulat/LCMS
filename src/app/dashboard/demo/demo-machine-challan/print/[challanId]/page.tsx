@@ -195,18 +195,6 @@ export default function PrintDemoMachineChallanPage() {
                 {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
             </div>
 
-            <div className="flex items-center w-1/3">
-              <div className="p-1 border bg-white">
-                  <QRCode
-                      value={qrCodeValue}
-                      size={60}
-                      bgColor={"#ffffff"}
-                      fgColor={"#000000"}
-                      level={"L"}
-                  />
-              </div>
-            </div>
-
             <div className="text-right w-1/3">
                 <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
                  <div className="flex justify-end items-baseline gap-2 text-xs">
@@ -296,17 +284,6 @@ export default function PrintDemoMachineChallanPage() {
             <p className="pt-1 text-xs font-semibold text-gray-800">Receiver's Signature</p>
             <p className="pt-1 text-xs text-gray-800">Mobile:</p>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <div className="p-1 border bg-white">
-                <QRCode
-                    value={qrCodeValue}
-                    size={45}
-                    bgColor={"#ffffff"}
-                    fgColor={"#000000"}
-                    level={"L"}
-                />
-            </div>
-          </div>
           <div className="w-1/3 text-center">
             <div className="border-t border-dotted border-gray-400 pt-1"></div>
             <p className="pt-1 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
@@ -337,5 +314,3 @@ export default function PrintDemoMachineChallanPage() {
     </div>
   );
 }
-
-    
