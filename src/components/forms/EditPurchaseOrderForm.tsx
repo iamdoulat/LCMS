@@ -201,10 +201,10 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
         setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", selectedBeneficiary.address || "");
+        setValue("shippingAddress", initialData.shippingAddress || selectedBeneficiary.address || "");
       }
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, initialData.shippingAddress]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -317,7 +317,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     }
   }
 
-  const grandTotalLabel = `${watchedShipmentMode} TOTAL (USD):`;
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -501,3 +501,4 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     </Form>
   );
 }
+
