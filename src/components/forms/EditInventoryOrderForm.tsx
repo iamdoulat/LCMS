@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
 
+
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ORDER_EDIT_BENEFICIARY__";
@@ -82,7 +83,7 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         const fetchedBeneficiaries = suppliersSnap.docs.map(docSnap => {
@@ -199,11 +200,14 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
     if (watchedBeneficiaryId) {
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
+        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", selectedBeneficiary.address || "");
+        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+          setValue("shippingAddress", selectedBeneficiary.address || "");
+        }
       }
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
