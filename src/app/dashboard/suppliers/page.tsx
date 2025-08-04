@@ -18,13 +18,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
-import type { SupplierDocument } from '@/types';
+import type { SupplierDocument, ProformaInvoiceDocument } from '@/types';
 import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
+
+const formatCurrency = (value?: number) => {
+  if (typeof value !== 'number' || isNaN(value)) return 'USD N/A';
+  return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function BeneficiariesListPage() {
   const router = useRouter();
@@ -35,6 +40,7 @@ export default function BeneficiariesListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [supplierCommissionVals, setSupplierCommissionVals] = useState<{ [key: string]: number }>({});
 
   // Filter states
   const [filterBeneficiaryName, setFilterBeneficiaryName] = useState('');
@@ -43,19 +49,35 @@ export default function BeneficiariesListPage() {
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
   useEffect(() => {
-    const fetchBeneficiaries = async () => {
+    const fetchSuppliersAndCommissions = async () => {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const q = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
-        const querySnapshot = await getDocs(q);
-        const fetchedBeneficiaries = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
+        const suppliersQuery = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
+        const piQuery = query(collection(firestore, "proforma_invoices"));
+
+        const [suppliersSnapshot, piSnapshot] = await Promise.all([
+          getDocs(suppliersQuery),
+          getDocs(piQuery)
+        ]);
+
+        const fetchedBeneficiaries = suppliersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
         setAllBeneficiaries(fetchedBeneficiaries);
+
+        const commissionsBySupplier: { [key: string]: number } = {};
+        piSnapshot.forEach(docSnap => {
+          const pi = docSnap.data() as ProformaInvoiceDocument;
+          if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
+            commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
+          }
+        });
+        setSupplierCommissionVals(commissionsBySupplier);
+
       } catch (error: any) {
-        console.error("Error fetching beneficiaries: ", error);
-        let errorMessage = `Could not fetch beneficiary data from Firestore. Please ensure Firestore rules allow reads.`;
+        console.error("Error fetching data: ", error);
+        let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch beneficiary data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -65,7 +87,7 @@ export default function BeneficiariesListPage() {
         setIsLoading(false);
       }
     };
-    fetchBeneficiaries();
+    fetchSuppliersAndCommissions();
   }, []);
 
   useEffect(() => {
@@ -264,13 +286,14 @@ export default function BeneficiariesListPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Contact Person</TableHead>
+                  <TableHead>Total Commissions</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                    <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading beneficiaries...
                       </div>
@@ -278,7 +301,7 @@ export default function BeneficiariesListPage() {
                   </TableRow>
                 ) : fetchError ? (
                    <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                    <TableCell colSpan={6} className="h-24 text-center text-destructive">
                       {fetchError}
                     </TableCell>
                   </TableRow>
@@ -289,6 +312,7 @@ export default function BeneficiariesListPage() {
                       <TableCell>{beneficiary.emailId || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.cellNumber || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.contactPersonName || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(supplierCommissionVals[beneficiary.id] || 0)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -318,7 +342,7 @@ export default function BeneficiariesListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                        No beneficiaries found matching your criteria.
                     </TableCell>
                   </TableRow>
@@ -374,4 +398,3 @@ export default function BeneficiariesListPage() {
     </div>
   );
 }
-    
