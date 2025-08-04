@@ -292,7 +292,7 @@ export default function PrintQuotePage() {
                 <div className="grid grid-cols-2 gap-4 mb-2">
                 <div className="border p-2 rounded-md text-xs">
                     <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">Bill To:</h3>
-                    <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
+                    
                     <p className="text-gray-600 whitespace-pre-line">{quoteData.billingAddress || customerData?.address || 'N/A'}</p>
                     {customerData?.binNo && (
                         <p className="text-gray-600">
@@ -427,3 +427,4 @@ export default function PrintQuotePage() {
     </div>
   );
 }
+
