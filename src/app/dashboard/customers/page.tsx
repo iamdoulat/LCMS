@@ -18,13 +18,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
-import type { CustomerDocument } from '@/types';
+import type { CustomerDocument, LCEntryDocument } from '@/types';
 import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
+
+const formatCurrency = (value?: number) => {
+  if (typeof value !== 'number' || isNaN(value)) return 'USD N/A';
+  return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function ApplicantsListPage() {
   const router = useRouter();
@@ -35,6 +40,8 @@ export default function ApplicantsListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [applicantLcVals, setApplicantLcVals] = useState<{ [key: string]: number }>({});
+
 
   // Filter states
   const [filterApplicantName, setFilterApplicantName] = useState('');
@@ -43,19 +50,35 @@ export default function ApplicantsListPage() {
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
   useEffect(() => {
-    const fetchApplicants = async () => {
+    const fetchApplicantsAndLcData = async () => {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const q = query(collection(firestore, "customers"), orderBy("applicantName", "asc"));
-        const querySnapshot = await getDocs(q);
-        const fetchedApplicants = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomerDocument));
+        const applicantsQuery = query(collection(firestore, "customers"), orderBy("applicantName", "asc"));
+        const lcEntriesQuery = query(collection(firestore, "lc_entries"));
+
+        const [applicantsSnapshot, lcEntriesSnapshot] = await Promise.all([
+          getDocs(applicantsQuery),
+          getDocs(lcEntriesQuery)
+        ]);
+
+        const fetchedApplicants = applicantsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomerDocument));
         setAllApplicants(fetchedApplicants);
+
+        const lcValuesByApplicant: { [key: string]: number } = {};
+        lcEntriesSnapshot.forEach(docSnap => {
+          const lc = docSnap.data() as LCEntryDocument;
+          if (lc.applicantId && typeof lc.amount === 'number') {
+            lcValuesByApplicant[lc.applicantId] = (lcValuesByApplicant[lc.applicantId] || 0) + lc.amount;
+          }
+        });
+        setApplicantLcVals(lcValuesByApplicant);
+
       } catch (error: any) {
-        console.error("Error fetching applicants: ", error);
-        let errorMessage = `Could not fetch applicant data from Firestore. Please ensure Firestore rules allow reads.`;
+        console.error("Error fetching data: ", error);
+        let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
          if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch applicant data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -66,7 +89,7 @@ export default function ApplicantsListPage() {
       }
     };
 
-    fetchApplicants();
+    fetchApplicantsAndLcData();
   }, []);
 
   useEffect(() => {
@@ -277,13 +300,14 @@ export default function ApplicantsListPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Contact Person</TableHead>
+                  <TableHead>Total L/C Value</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading applicants...
                       </div>
@@ -291,7 +315,7 @@ export default function ApplicantsListPage() {
                   </TableRow>
                 ) : fetchError ? (
                    <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                    <TableCell colSpan={6} className="h-24 text-center text-destructive">
                       {fetchError}
                     </TableCell>
                   </TableRow>
@@ -302,6 +326,7 @@ export default function ApplicantsListPage() {
                       <TableCell>{applicant.email || 'N/A'}</TableCell>
                       <TableCell>{applicant.phone || 'N/A'}</TableCell>
                       <TableCell>{applicant.contactPerson || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(applicantLcVals[applicant.id] || 0)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -331,7 +356,7 @@ export default function ApplicantsListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                        No applicants found matching your criteria.
                     </TableCell>
                   </TableRow>
