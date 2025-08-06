@@ -16,22 +16,23 @@ const NOTICE_DISMISSED_KEY = 'noticeDismissedTimestamp';
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  const noticeTimestamp = notice.updatedAt?.seconds || 0;
-
   React.useEffect(() => {
-    if (noticeTimestamp > 0) { 
+    if (notice && notice.isEnabled && notice.updatedAt) {
+      const noticeTimestamp = notice.updatedAt.seconds;
       const dismissedTimestampString = localStorage.getItem(NOTICE_DISMISSED_KEY);
       const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
       
+      // Show the dialog if the notice's timestamp is newer than the last dismissal timestamp.
       if (noticeTimestamp > lastDismissedTimestamp) {
         setIsOpen(true);
       }
     }
-  }, [noticeTimestamp]);
+  }, [notice]); // This effect depends only on the notice prop.
 
   const handleDismiss = () => {
-    if (noticeTimestamp > 0) {
-        localStorage.setItem(NOTICE_DISMISSED_KEY, noticeTimestamp.toString());
+    if (notice && notice.updatedAt) {
+        // Store the timestamp of the notice being dismissed.
+        localStorage.setItem(NOTICE_DISMISSED_KEY, notice.updatedAt.seconds.toString());
     }
     setIsOpen(false);
   };
