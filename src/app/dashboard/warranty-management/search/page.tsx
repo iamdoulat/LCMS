@@ -329,8 +329,8 @@ export default function WarrantySearchPage() {
     const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
     if (totalSearchPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalSearchPages; i++) pageNumbers.push(i); }
     else {
-      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentPage + halfPagesToShow);
-      if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalSearchPages - 1, maxPagesToShow);
+      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
+      if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
       if (currentSearchPage >= totalSearchPages - halfPagesToShow) startPage = Math.max(2, totalSearchPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
@@ -549,4 +549,5 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
+
 
