@@ -155,7 +155,7 @@ const serviceNavItems: NavItem[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-    { href: '/dashboard/notifications', label: 'Notifications', icon: Bell, iconColorClass: 'bg-icon-notifications' },
+    { href: '/dashboard/notice', label: 'Notices', icon: Bell, iconColorClass: 'bg-icon-notifications' },
     { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
