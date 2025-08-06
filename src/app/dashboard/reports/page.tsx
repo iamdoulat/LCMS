@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -98,6 +100,42 @@ async function getInitialReportData() {
 
     return { allLcEntries, applicantOptions, beneficiaryOptions };
 }
+
+const ReportSkeleton = () => (
+    <div className="space-y-4">
+        <Card className="shadow-md p-4 noprint">
+            <CardHeader className="p-2 pb-4"><Skeleton className="h-6 w-1/3" /></CardHeader>
+            <CardContent className="p-2 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+                    {Array.from({ length: 8 }).map((_, i) => <div key={i} className="space-y-1"><Skeleton className="h-5 w-24" /><Skeleton className="h-10 w-full" /></div>)}
+                </div>
+            </CardContent>
+        </Card>
+        <div className="my-4 text-center noprint flex flex-wrap justify-center items-center gap-4">
+            <Skeleton className="h-10 w-48" />
+            <div className="flex items-center gap-2"><Skeleton className="h-10 w-32" /><Skeleton className="h-10 w-36" /></div>
+        </div>
+        <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="shadow-md hover:shadow-lg transition-shadow duration-300">
+                    <CardHeader className="bg-blue-500/10 p-3"><div className="grid grid-cols-3 gap-x-4">
+                        <div className="text-left"><Skeleton className="h-4 w-20 mb-1" /><Skeleton className="h-5 w-32" /></div>
+                        <div className="text-left"><Skeleton className="h-4 w-24 mb-1" /><Skeleton className="h-5 w-40" /></div>
+                        <div className="text-left"><Skeleton className="h-4 w-28 mb-1" /><Skeleton className="h-5 w-36" /></div>
+                    </div></CardHeader>
+                    <CardContent className="p-3"><table className="w-full"><tbody>
+                        <tr className="align-top"><td className="py-2 pr-2 w-1/3"><Skeleton className="h-4 w-20 mb-1" /><Skeleton className="h-4 w-full" /></td>
+                        <td className="py-2 px-2 w-1/3"><Skeleton className="h-4 w-12 mb-1" /><Skeleton className="h-4 w-full" /></td>
+                        <td className="py-2 pl-2 w-1/3"><Skeleton className="h-4 w-24 mb-1" /><Skeleton className="h-4 w-full" /></td></tr>
+                        <tr className="align-top"><td className="py-2 pr-2"><Skeleton className="h-4 w-24 mb-1" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-full mt-1" /></td>
+                        <td className="py-2 px-2"><Skeleton className="h-4 w-28 mb-1" /><Skeleton className="h-4 w-full" /></td>
+                        <td className="py-2 pl-2"><Skeleton className="h-4 w-24 mb-1" /><Skeleton className="h-4 w-full mt-1" /><Skeleton className="h-4 w-full mt-1" /><Skeleton className="h-4 w-full mt-1" /></td></tr>
+                    </tbody></table></CardContent>
+                </Card>
+            ))}
+        </div>
+    </div>
+);
 
 
 export default function ReportsPage() {
@@ -262,153 +300,156 @@ export default function ReportsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Card className="mb-6 shadow-md p-4 noprint">
-            <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
-                <div className="space-y-1">
-                  <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
-                  <Input id="lcNumberFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Combobox options={initialData?.applicantOptions || []} value={filterApplicantId} onValueChange={setFilterApplicantId} placeholder="Search Applicant..." selectPlaceholder={isLoading ? "Loading..." : "All Applicants"} emptyStateMessage="No applicant found." disabled={isLoading} />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Combobox options={initialData?.beneficiaryOptions || []} value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} placeholder="Search Beneficiary..." selectPlaceholder={isLoading ? "Loading..." : "All Beneficiaries"} emptyStateMessage="No beneficiary found." disabled={isLoading} />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
-                  <Select value={filterYear === '' ? ALL_YEARS_VALUE : filterYear} onValueChange={(v) => setFilterYear(v === ALL_YEARS_VALUE ? '' : v)}>
-                    <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
-                    <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                  <DatePickerField field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }} placeholder="Select Date" />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
-                  <Select value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus} onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as LCStatus | '')}>
-                    <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
-                    <SelectContent><SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>{lcStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="pt-6">
-                  <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort</Button>
+          {isLoading ? <ReportSkeleton /> : fetchError ? (
+            <div className="text-center text-destructive p-8">{fetchError}</div>
+          ) : (
+            <>
+              <Card className="mb-6 shadow-md p-4 noprint">
+                <CardHeader className="p-2 pb-4">
+                  <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-1">
+                      <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
+                      <Input id="lcNumberFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
+                      <Combobox options={initialData?.applicantOptions || []} value={filterApplicantId} onValueChange={setFilterApplicantId} placeholder="Search Applicant..." selectPlaceholder={isLoading ? "Loading..." : "All Applicants"} emptyStateMessage="No applicant found." disabled={isLoading} />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
+                      <Combobox options={initialData?.beneficiaryOptions || []} value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} placeholder="Search Beneficiary..." selectPlaceholder={isLoading ? "Loading..." : "All Beneficiaries"} emptyStateMessage="No beneficiary found." disabled={isLoading} />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
+                      <Select value={filterYear === '' ? ALL_YEARS_VALUE : filterYear} onValueChange={(v) => setFilterYear(v === ALL_YEARS_VALUE ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
+                        <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
+                      <DatePickerField field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }} placeholder="Select Date" />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
+                      <Select value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus} onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as LCStatus | '')}>
+                        <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                        <SelectContent><SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>{lcStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="pt-6">
+                      <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <div className="my-4 text-center noprint flex flex-wrap justify-center items-center gap-4">
+                <Button variant="outline" className="text-lg font-semibold border-2 border-primary text-primary cursor-default">
+                    Report of : {filterStatus || 'All'}
+                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handlePrint} variant="default" className="bg-primary hover:bg-primary/90">
+                        <Printer className="mr-2 h-4 w-4" /> PDF Report
+                    </Button>
+                    <Button onClick={handleExport} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                        <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
+                    </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <div className="my-4 text-center noprint flex flex-wrap justify-center items-center gap-4">
-            <Button variant="outline" className="text-lg font-semibold border-2 border-primary text-primary cursor-default">
-                Report of : {filterStatus || 'All'}
-            </Button>
-            <div className="flex items-center gap-2">
-                <Button onClick={handlePrint} variant="default" className="bg-primary hover:bg-primary/90">
-                    <Printer className="mr-2 h-4 w-4" /> PDF Report
-                </Button>
-                <Button onClick={handleExport} variant="default" className="bg-green-600 hover:bg-green-700 text-white">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
-                </Button>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-            ) : fetchError ? (
-              <div className="text-center text-destructive p-8">{fetchError}</div>
-            ) : currentItems.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 gap-6">
-                  {currentItems.map(lc => (
-                    <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
-                      <CardHeader className="bg-blue-500/10 p-3">
-                          <div className="grid grid-cols-3 gap-x-4">
-                              <div className="text-left">
-                                  <p className="font-semibold text-foreground">L/C or TT No.</p>
-                                  <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+              
+              <div className="space-y-4">
+                {currentItems.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 gap-6">
+                      {currentItems.map(lc => (
+                        <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
+                          <CardHeader className="bg-blue-500/10 p-3">
+                              <div className="grid grid-cols-3 gap-x-4">
+                                  <div className="text-left">
+                                      <p className="font-semibold text-foreground">L/C or TT No.</p>
+                                      <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                                  </div>
+                                  <div className="text-left">
+                                      <p className="font-semibold text-foreground">Beneficiary</p>
+                                      <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                                  </div>
+                                  <div className="text-left">
+                                      <p className="font-semibold text-foreground">Terms of Pay* :</p>
+                                      <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                                  </div>
                               </div>
-                              <div className="text-left">
-                                  <p className="font-semibold text-foreground">Beneficiary</p>
-                                  <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
-                              </div>
-                              <div className="text-left">
-                                  <p className="font-semibold text-foreground">Terms of Pay* :</p>
-                                  <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
-                              </div>
-                          </div>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <table className="w-full text-sm">
-                          <tbody>
-                            <tr className="align-top">
-                              <td className="py-2 pr-2 w-1/3">
-                                <p className="font-semibold">Customer Name</p>
-                                <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
-                              </td>
-                              <td className="py-2 px-2 w-1/3">
-                                  <p className="font-semibold">Value</p>
-                                  <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
-                              </td>
-                              <td className="py-2 pl-2 w-1/3">
-                                  <p className="font-semibold">Invoice No:</p>
-                                  <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
-                              </td>
-                            </tr>
-                            <tr className="align-top">
-                              <td className="py-2 pr-2">
-                                <p className="font-semibold">Shipment Date</p>
-                                <p className="text-gray-600">ETD: {formatDisplayDate(lc.etd)}</p>
-                                <p className="text-gray-600">ETA: {formatDisplayDate(lc.eta)}</p>
-                              </td>
-                              <td className="py-2 px-2">
-                                  <p className="font-semibold">Machine Qty:</p>
-                                  <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
-                              </td>
-                              <td className="py-2 pl-2">
-                                  <p className="font-semibold">Shipment Note</p>
-                                  <p className="text-xs text-gray-600"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
-                                  <p className="text-xs text-gray-600"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
-                                  <p className="text-xs text-gray-600"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center space-x-2 py-4 mt-4 noprint">
-                    <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
-                    <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-                    <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
-                  </div>
+                          </CardHeader>
+                          <CardContent className="p-3">
+                            <table className="w-full text-sm">
+                              <tbody>
+                                <tr className="align-top">
+                                  <td className="py-2 pr-2 w-1/3">
+                                    <p className="font-semibold">Customer Name</p>
+                                    <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
+                                  </td>
+                                  <td className="py-2 px-2 w-1/3">
+                                      <p className="font-semibold">Value</p>
+                                      <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                                  </td>
+                                  <td className="py-2 pl-2 w-1/3">
+                                      <p className="font-semibold">Invoice No:</p>
+                                      <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                                  </td>
+                                </tr>
+                                <tr className="align-top">
+                                  <td className="py-2 pr-2">
+                                    <p className="font-semibold">Shipment Date</p>
+                                    <p className="text-gray-600">ETD: {formatDisplayDate(lc.etd)}</p>
+                                    <p className="text-gray-600">ETA: {formatDisplayDate(lc.eta)}</p>
+                                  </td>
+                                  <td className="py-2 px-2">
+                                      <p className="font-semibold">Machine Qty:</p>
+                                      <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
+                                  </td>
+                                  <td className="py-2 pl-2">
+                                      <p className="font-semibold">Shipment Note</p>
+                                      <p className="text-xs text-gray-600"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
+                                      <p className="text-xs text-gray-600"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
+                                      <p className="text-xs text-gray-600"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center space-x-2 py-4 mt-4 noprint">
+                        <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
+                        <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                        <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center p-8 text-muted-foreground">No L/C entries found matching your criteria.</div>
                 )}
-              </>
-            ) : (
-              <div className="text-center p-8 text-muted-foreground">No L/C entries found matching your criteria.</div>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
 
