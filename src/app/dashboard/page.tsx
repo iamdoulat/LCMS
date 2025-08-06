@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, documentId, orderBy, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, documentId, orderBy, doc, getDoc } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument, NoticeBoardSettings } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc, getYear } from 'date-fns';
 import Link from 'next/link';
