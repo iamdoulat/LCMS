@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
@@ -506,6 +507,35 @@ export default function DashboardPage() {
         </div>
     );
   }
+  
+  const DashboardSkeleton = () => (
+    <>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="shadow-lg">
+            <CardContent className="p-6 flex justify-between items-center">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <Skeleton className="h-12 w-12 rounded-lg" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-lg"><CardContent className="p-6 h-[400px] md:h-[350px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+        <Card className="shadow-lg"><CardContent className="p-6 h-[400px] md:h-[350px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+      </div>
+      <Card className="shadow-lg"><CardContent className="p-6 h-[350px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-lg"><CardContent className="p-6 h-[350px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+        <Card className="shadow-lg"><CardContent className="p-6 h-[350px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+      </div>
+    </>
+  );
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -542,10 +572,7 @@ export default function DashboardPage() {
         </div>
       </div>
       { isLoading ? (
-         <div className="flex min-h-[calc(100vh-12rem)] w-full items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-3 text-muted-foreground">Loading dashboard data for {selectedYear}...</p>
-          </div>
+         <DashboardSkeleton />
       ) : (
         <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
