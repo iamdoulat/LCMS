@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,33 +12,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StatCard } from '@/components/dashboard/StatCard';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image'; // Keep for GIF
+import Image from 'next/image';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
-import type { DemoMachineDocument, DemoMachineStatusOption } from '@/types'; // Import DemoMachineDocument
+import type { DemoMachineDocument, DemoMachineStatusOption } from '@/types';
 import { format, parseISO, isValid, getYear } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 const ITEMS_PER_PAGE = 10;
 
-// Interface for search result items displayed in the table
 interface DemoMachineSearchResultItem extends DemoMachineDocument {}
 
 const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case 'Available':
-      return 'default'; // Greenish or primary
+      return 'default';
     case 'Allocated':
-      return 'secondary'; // Yellowish or secondary
+      return 'secondary';
     case 'Maintenance Mode':
-      return 'destructive'; // Reddish
+      return 'destructive';
     default:
       return 'outline';
   }
 };
+
+const DemoSearchSkeleton = () => (
+    <div className="space-y-8">
+        <Card className="shadow-xl max-w-6xl mx-auto"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+        <Card className="shadow-xl max-w-6xl mx-auto">
+            <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <Card key={index} className="shadow-lg"><CardContent className="p-6 flex justify-between items-center"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-lg" /></CardContent></Card>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+);
 
 
 export default function DemoMachineSearchPage() {
@@ -47,8 +64,7 @@ export default function DemoMachineSearchPage() {
 
   const [allDemoMachines, setAllDemoMachines] = useState<DemoMachineDocument[]>([]);
   const [searchResults, setSearchResults] = useState<DemoMachineSearchResultItem[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(false); // For stats card loading
-  const [isFetchingAllMachines, setIsFetchingAllMachines] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [currentSearchPage, setCurrentSearchPage] = useState(1);
@@ -56,13 +72,12 @@ export default function DemoMachineSearchPage() {
   const [demoMachineStats, setDemoMachineStats] = useState({
     totalDemoMachines: 0,
     availableDemoMachines: 0,
-    machinesInUse: 0, // For 'Allocated' status
+    machinesInUse: 0,
     machinesUnderMaintenance: 0,
   });
 
   const fetchAllDemoMachinesAndStats = useCallback(async (yearToFilter: string) => {
-    setIsLoadingStats(true);
-    setIsFetchingAllMachines(true);
+    setIsLoading(true);
     setSearchError(null);
 
     let fetchedMachines: DemoMachineDocument[] = [];
@@ -79,12 +94,8 @@ export default function DemoMachineSearchPage() {
         } as DemoMachineDocument;
       });
       setAllDemoMachines(fetchedMachines);
-      setIsFetchingAllMachines(false);
 
-      // Calculate Stats based on all fetched machines (or filtered by year if needed later for stats)
-      let machinesForStats = fetchedMachines; // For now, stats are global, not year-filtered like dashboard
-      // if (yearToFilter !== "All Years") { /* Add year filtering for stats if needed */ }
-
+      let machinesForStats = fetchedMachines;
       let total = machinesForStats.length;
       let available = 0;
       let allocated = 0;
@@ -109,12 +120,11 @@ export default function DemoMachineSearchPage() {
       Swal.fire("Fetch Error", errorMsg, "error");
       setSearchError(errorMsg);
       setAllDemoMachines([]);
-      setIsFetchingAllMachines(false);
       setDemoMachineStats({ totalDemoMachines: 0, availableDemoMachines: 0, machinesInUse: 0, machinesUnderMaintenance: 0 });
     } finally {
-      setIsLoadingStats(false);
+      setIsLoading(false);
     }
-  }, []); // Empty dependency array because state setters are stable
+  }, []);
 
   useEffect(() => {
     fetchAllDemoMachinesAndStats(selectedYear);
@@ -125,10 +135,10 @@ export default function DemoMachineSearchPage() {
     const trimmedSearchTerm = searchTerm.trim();
     setDisplayedSearchTerm(trimmedSearchTerm);
     setIsSearching(true);
-    setCurrentSearchPage(1); // Reset to first page on new search
+    setCurrentSearchPage(1);
 
     if (!trimmedSearchTerm) {
-      setSearchResults(allDemoMachines); // Show all if search term is empty
+      setSearchResults(allDemoMachines);
       setIsSearching(false);
       return;
     }
@@ -147,7 +157,7 @@ export default function DemoMachineSearchPage() {
       return modelMatch || serialMatch || brandMatch || ownerMatch || statusMatch || ctlBoxModelMatch || ctlBoxSerialMatch;
     });
 
-    setSearchResults(foundMachines.map(m => ({ ...m }))); // Map to satisfy DemoMachineSearchResultItem if needed
+    setSearchResults(foundMachines.map(m => ({ ...m })));
     setIsSearching(false);
   };
 
@@ -164,7 +174,7 @@ export default function DemoMachineSearchPage() {
     const pageNumbers = []; const maxPagesToShow = 5; const halfPagesToShow = Math.floor(maxPagesToShow / 2);
     if (totalSearchPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalSearchPages; i++) pageNumbers.push(i); }
     else {
-      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
+      pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentPage + halfPagesToShow);
       if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalSearchPages - 1, maxPagesToShow);
       if (currentSearchPage >= totalSearchPages - halfPagesToShow) startPage = Math.max(2, totalSearchPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
@@ -173,6 +183,10 @@ export default function DemoMachineSearchPage() {
       pageNumbers.push(totalSearchPages); 
     } return pageNumbers;
   };
+  
+  if (isLoading) {
+    return <DemoSearchSkeleton />;
+  }
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -199,32 +213,32 @@ export default function DemoMachineSearchPage() {
                   className="flex-1"
                   aria-label="Demo Machine Search Input"
                 />
-                <Button type="submit" variant="default" disabled={isSearching || isFetchingAllMachines}>
+                <Button type="submit" variant="default" disabled={isSearching || isLoading}>
                   {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
                   Search
                 </Button>
             </form>
 
-            {isFetchingAllMachines && (
+            {isSearching && (
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-                <p className="text-card-foreground/80">Loading demo machines...</p>
+                <p className="text-card-foreground/80">Searching demo machines...</p>
               </div>
             )}
 
-            {!isFetchingAllMachines && displayedSearchTerm && searchResults.length === 0 && !searchError && (
+            {!isSearching && displayedSearchTerm && searchResults.length === 0 && !searchError && (
                 <div className="text-center text-card-foreground/70 py-10">
                     <Info className="mx-auto h-12 w-12 mb-4" />
                     <p className="text-lg">No demo machines found matching &quot;{displayedSearchTerm}&quot;.</p>
                 </div>
             )}
-            {searchError && !isFetchingAllMachines && (
+            {searchError && !isSearching && (
                 <div className="text-center text-destructive py-10">
                     <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                     <p className="text-lg">{searchError}</p>
                 </div>
             )}
-            {!displayedSearchTerm && !isFetchingAllMachines && !searchError && (
+            {!displayedSearchTerm && !isSearching && !searchError && (
                  <div className="text-center text-card-foreground/70 py-10">
                      <Image
                         src="https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/search_ani.gif?alt=media&token=cce7e0dd-9ff9-4af9-8e75-254699bd8283"
@@ -240,7 +254,7 @@ export default function DemoMachineSearchPage() {
                 </div>
             )}
 
-            {currentSearchItems.length > 0 && !isFetchingAllMachines && !searchError && (
+            {currentSearchItems.length > 0 && !isSearching && !searchError && (
                 <div className="space-y-6 mt-8">
                     <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
                         Search Results for &quot;{displayedSearchTerm || 'All Demo Machines'}&quot; (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
@@ -323,12 +337,6 @@ export default function DemoMachineSearchPage() {
            </div>
         </CardHeader>
         <CardContent>
-          {isLoadingStats ? (
-            <div className="flex items-center justify-center h-24">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-              <span className="text-card-foreground/80">Calculating statistics...</span>
-            </div>
-          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Demo Machines"
@@ -359,7 +367,6 @@ export default function DemoMachineSearchPage() {
                     className="bg-[#BD10E0]"
                 />
             </div>
-          )}
         </CardContent>
       </Card>
     </div>

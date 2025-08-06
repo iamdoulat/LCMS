@@ -24,6 +24,7 @@ import dynamic from 'next/dynamic';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { SalesInvoiceList } from '@/components/dashboard/SalesInvoiceList';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface PettyCashStats {
@@ -97,6 +98,34 @@ const formatCurrencyValue = (amount?: number) => {
 
 const currentSystemYear = new Date().getFullYear();
 const chartYearOptions = Array.from({ length: (currentSystemYear - 2020 + 6) }, (_, i) => (2020 + i).toString());
+
+const PettyCashDashboardSkeleton = () => (
+    <div className="space-y-8">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index} className="shadow-lg">
+                    <CardContent className="p-6 flex justify-between items-center">
+                    <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-9 w-24" />
+                        <Skeleton className="h-4 w-40" />
+                    </div>
+                    <Skeleton className="h-12 w-12 rounded-lg" />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+        <Card className="shadow-xl">
+            <CardHeader><Skeleton className="h-8 w-1/2" /><Skeleton className="h-4 w-3/4 mt-2" /></CardHeader>
+            <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="shadow-xl"><CardContent className="p-6 h-[400px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+            <Card className="shadow-xl"><CardContent className="p-6 h-[400px]"><Skeleton className="h-full w-full rounded-md" /></CardContent></Card>
+        </div>
+    </div>
+);
+
 
 export default function PettyCashDashboardPage() {
     const { userRole } = useAuth();
@@ -346,11 +375,7 @@ export default function PettyCashDashboardPage() {
 
 
     if (isLoading) {
-        return (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-        );
+        return <PettyCashDashboardSkeleton />;
     }
 
     if (fetchError) {
