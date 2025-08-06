@@ -1,7 +1,7 @@
 
-# LCMS: The Ultimate LC Management & Business Operations Platform
+# LCMS: The Ultimate LC Management & Indentor Business Operations Platform
 
-**Transform your trade finance and business operations with LCMS, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
+**Transform your trade finance and indentor business operations with LCMS, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
 
 LCMS is not just another management tool; it is a fully-integrated ecosystem that streamlines everything from Letter of Credit (L/C) and Telegraphic Transfer (T/T) management to sales, inventory, and warranty tracking. Built on cutting-edge technology, our platform offers unparalleled speed, robust security, and an intuitive user experience to empower your team and accelerate your business growth.
 
