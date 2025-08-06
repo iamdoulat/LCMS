@@ -46,26 +46,27 @@ export default function LogsPage() {
   const [allLogs, setAllLogs] = useState<AppLog[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const isReadOnly = userRole?.includes('Viewer');
+  const isSuperAdmin = userRole?.includes('Super Admin');
 
   useEffect(() => {
-    if (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly) {
+    // Redirect non-super admins and non-viewers
+    if (!authLoading && !isSuperAdmin && !isReadOnly) {
       Swal.fire({
         title: 'Access Denied',
-        text: 'You are not permitted to view this page.',
+        text: 'You do not have permission to view this page.',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,
       }).then(() => {
         router.push('/dashboard');
       });
-    } else if (!authLoading && (userRole?.includes("Super Admin") || isReadOnly)) {
-      // Only generate logs if they haven't been cleared previously in this session
-      // or if the component mounts for the first time.
+    } else if (!authLoading && (isSuperAdmin || isReadOnly)) {
+      // Generate logs only for authorized roles
       if (allLogs.length === 0) {
         setAllLogs(generatePlaceholderLogs(100));
       }
     }
-  }, [userRole, authLoading, router, allLogs.length, isReadOnly]); 
+  }, [userRole, authLoading, router, allLogs.length, isReadOnly, isSuperAdmin]); 
 
   const handleClearCache = () => {
     Swal.fire({
@@ -136,7 +137,7 @@ export default function LogsPage() {
   };
 
 
-  if (authLoading || (!authLoading && !userRole?.includes("Super Admin") && !isReadOnly)) {
+  if (authLoading || (!isSuperAdmin && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -159,7 +160,7 @@ export default function LogsPage() {
                 View the latest 100 placeholder activity logs, sorted newest first. Actual logging requires backend integration.
               </CardDescription>
             </div>
-            <Button onClick={handleClearCache} variant="outline" disabled={isReadOnly}>
+            <Button onClick={handleClearCache} variant="outline" disabled={!isSuperAdmin}>
               <Trash2 className="mr-2 h-4 w-4" />
               Clear App Cache & Displayed Logs
             </Button>

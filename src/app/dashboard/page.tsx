@@ -205,7 +205,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
-  const [notice, setNotice] = React.useState<(NoticeBoardSettings & { updatedAt?: Timestamp }) | null>(null);
+  const [notice, setNotice] = React.useState<NoticeBoardSettings | null>(null);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -444,12 +444,10 @@ export default function DashboardPage() {
         const noticeDocRef = doc(firestore, 'site_settings', 'notice_board');
         const docSnap = await getDoc(noticeDocRef);
         if (docSnap.exists()) {
-          const noticeData = docSnap.data() as NoticeBoardSettings & {updatedAt?: Timestamp};
-          if (noticeData.isEnabled && Array.isArray(noticeData.targetRoles) && userRole?.some(role => noticeData.targetRoles.includes(role))) {
-            setNotice(noticeData);
-          } else {
-            setNotice(null);
-          }
+          const noticeData = docSnap.data() as NoticeBoardSettings;
+          setNotice(noticeData);
+        } else {
+          setNotice(null);
         }
       } catch (error) {
         console.error("Error fetching notice:", error);

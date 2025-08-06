@@ -411,6 +411,7 @@ export const NoticeBoardSettingsSchema = z.object({
   title: z.string().min(1, "Notice title cannot be empty."),
   content: z.string().min(1, "Notice content cannot be empty."),
   isEnabled: z.boolean().default(false),
+  isPopupEnabled: z.boolean().default(true),
   targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
 });
 
@@ -628,8 +629,6 @@ export interface InstallationReportDocument {
   updatedAt: any;
 }
 
-
-// --- END Installation Report Types ---
 
 // --- Demo Machine Factory Types ---
 export interface DemoMachineFactory {

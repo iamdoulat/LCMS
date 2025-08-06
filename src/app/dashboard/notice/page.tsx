@@ -38,6 +38,7 @@ export default function NoticeSettingsPage() {
       title: '',
       content: '',
       isEnabled: false,
+      isPopupEnabled: true, // Default to pop-up being enabled
       targetRoles: [],
     },
   });
@@ -66,6 +67,7 @@ export default function NoticeSettingsPage() {
             title: data.title || '',
             content: data.content || '',
             isEnabled: data.isEnabled || false,
+            isPopupEnabled: data.isPopupEnabled ?? true, // Default to true if not set
             targetRoles: Array.isArray(data.targetRoles) ? data.targetRoles : [],
           });
         }
@@ -147,21 +149,39 @@ export default function NoticeSettingsPage() {
                 )}
               />
               <Separator />
-              <FormField
-                control={form.control}
-                name="isEnabled"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Enable Notice Board</FormLabel>
-                      <FormDescription>Toggle to show or hide the notice pop-up for all selected users.</FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+               <div className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="isEnabled"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                        <FormLabel className="text-base">Enable Notice Board</FormLabel>
+                        <FormDescription>Master switch to show or hide the notice entirely.</FormDescription>
+                        </div>
+                        <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="isPopupEnabled"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                        <FormLabel className="text-base">Show as Pop-up</FormLabel>
+                        <FormDescription>If enabled, the notice will appear as a pop-up dialog.</FormDescription>
+                        </div>
+                        <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                    </FormItem>
+                    )}
+                />
+              </div>
+
               <Separator />
                <FormField
                   control={form.control}
