@@ -374,19 +374,19 @@ export default function ReportsPage() {
                     <div className="grid grid-cols-1 gap-6">
                       {currentItems.map(lc => (
                         <Card key={lc.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 print:shadow-none print:border print:break-inside-avoid">
-                          <CardHeader className="bg-blue-500/10 p-3">
+                          <CardHeader className="bg-primary text-primary-foreground p-3">
                               <div className="grid grid-cols-3 gap-x-4">
                                   <div className="text-left">
-                                      <p className="font-semibold text-foreground">L/C or TT No.</p>
-                                      <p className="text-foreground text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
+                                      <p className="font-semibold">L/C or TT No.</p>
+                                      <p className="text-lg">{lc.documentaryCreditNumber || 'N/A'}</p>
                                   </div>
                                   <div className="text-left">
-                                      <p className="font-semibold text-foreground">Beneficiary</p>
-                                      <p className="text-muted-foreground truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
+                                      <p className="font-semibold">Beneficiary</p>
+                                      <p className="truncate" title={lc.beneficiaryName || 'N/A'}>{lc.beneficiaryName || 'N/A'}</p>
                                   </div>
                                   <div className="text-left">
-                                      <p className="font-semibold text-foreground">Terms of Pay* :</p>
-                                      <p className="text-muted-foreground">{lc.termsOfPay || 'N/A'}</p>
+                                      <p className="font-semibold">Terms of Pay* :</p>
+                                      <p>{lc.termsOfPay || 'N/A'}</p>
                                   </div>
                               </div>
                           </CardHeader>
@@ -450,6 +450,7 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 
 
 
