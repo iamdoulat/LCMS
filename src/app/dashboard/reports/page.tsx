@@ -81,11 +81,34 @@ const escapeCsvCell = (cellData: any): string => {
   return stringData;
 };
 
+async function getInitialReportData() {
+    const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
+    const customersQuery = query(collection(firestore, "customers"));
+    const suppliersQuery = query(collection(firestore, "suppliers"));
+
+    const [lcSnapshot, customersSnapshot, suppliersSnapshot] = await Promise.all([
+        getDocs(lcQuery),
+        getDocs(customersQuery),
+        getDocs(suppliersQuery)
+    ]);
+
+    const allLcEntries = lcSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument));
+    const applicantOptions = customersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }));
+    const beneficiaryOptions = suppliersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }));
+
+    return { allLcEntries, applicantOptions, beneficiaryOptions };
+}
+
+
 export default function ReportsPage() {
   const router = useRouter();
   const { userRole } = useAuth();
-  const isReadOnly = userRole?.includes('Viewer');
-  const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
+  const [initialData, setInitialData] = React.useState<{
+    allLcEntries: LCEntryDocument[];
+    applicantOptions: DropdownOption[];
+    beneficiaryOptions: DropdownOption[];
+  } | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -96,59 +119,27 @@ export default function ReportsPage() {
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
-  const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
-  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
-  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
-
   const [sortBy, setSortBy] = useState<string>('lcIssueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [currentPage, setCurrentPage] = useState(1);
+  const isReadOnly = userRole?.includes('Viewer');
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(lcQuery);
-        const fetchedLCs = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return { id: doc.id, ...data } as LCEntryDocument;
-        });
-        setAllLcEntries(fetchedLCs);
-      } catch (error: any) {
+    getInitialReportData().then(data => {
+        setInitialData(data);
+    }).catch(error => {
         const errorMsg = `Could not fetch L/C data. Error: ${error.message}`;
         setFetchError(errorMsg);
         Swal.fire("Error", errorMsg, "error");
-      } finally {
+    }).finally(() => {
         setIsLoading(false);
-      }
-    };
-
-    const fetchFilterOptions = async () => {
-      setIsLoadingApplicants(true);
-      setIsLoadingBeneficiaries(true);
-      try {
-        const customersSnapshot = await getDocs(collection(firestore, "customers"));
-        setApplicantOptions(customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' })));
-        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-        setBeneficiaryOptions(suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' })));
-      } catch (error: any) {
-        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
-      } finally {
-        setIsLoadingApplicants(false);
-        setIsLoadingBeneficiaries(false);
-      }
-    };
-
-    fetchInitialData();
-    fetchFilterOptions();
+    });
   }, []);
 
   const displayedLcEntries = useMemo(() => {
-    let filtered = [...allLcEntries];
+    if (!initialData) return [];
+    let filtered = [...initialData.allLcEntries];
 
     if (filterLcNumber) filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     if (filterApplicantId) filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
@@ -187,7 +178,7 @@ export default function ReportsPage() {
       });
     }
     return filtered;
-  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
+  }, [initialData, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
   
   useEffect(() => {
     setCurrentPage(1);
@@ -283,11 +274,11 @@ export default function ReportsPage() {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
-                  <Combobox options={applicantOptions} value={filterApplicantId} onValueChange={setFilterApplicantId} placeholder="Search Applicant..." selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"} emptyStateMessage="No applicant found." disabled={isLoadingApplicants} />
+                  <Combobox options={initialData?.applicantOptions || []} value={filterApplicantId} onValueChange={setFilterApplicantId} placeholder="Search Applicant..." selectPlaceholder={isLoading ? "Loading..." : "All Applicants"} emptyStateMessage="No applicant found." disabled={isLoading} />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
-                  <Combobox options={beneficiaryOptions} value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} placeholder="Search Beneficiary..." selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"} emptyStateMessage="No beneficiary found." disabled={isLoadingBeneficiaries} />
+                  <Combobox options={initialData?.beneficiaryOptions || []} value={filterBeneficiaryId} onValueChange={setFilterBeneficiaryId} placeholder="Search Beneficiary..." selectPlaceholder={isLoading ? "Loading..." : "All Beneficiaries"} emptyStateMessage="No beneficiary found." disabled={isLoading} />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
@@ -419,3 +410,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+
