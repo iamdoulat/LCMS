@@ -118,7 +118,7 @@ const ReportSkeleton = () => (
         <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i} className="shadow-md hover:shadow-lg transition-shadow duration-300">
-                    <CardHeader className="bg-blue-500/10 p-3"><div className="grid grid-cols-3 gap-x-4">
+                    <CardHeader className="bg-primary/10 p-3"><div className="grid grid-cols-3 gap-x-4">
                         <div className="text-left"><Skeleton className="h-4 w-20 mb-1" /><Skeleton className="h-5 w-32" /></div>
                         <div className="text-left"><Skeleton className="h-4 w-24 mb-1" /><Skeleton className="h-5 w-40" /></div>
                         <div className="text-left"><Skeleton className="h-4 w-28 mb-1" /><Skeleton className="h-5 w-36" /></div>
@@ -390,38 +390,38 @@ export default function ReportsPage() {
                                   </div>
                               </div>
                           </CardHeader>
-                          <CardContent className="p-3">
+                          <CardContent className="p-3 bg-green-50 dark:bg-green-900/20">
                             <table className="w-full text-sm">
                               <tbody>
                                 <tr className="align-top">
-                                  <td className="py-2 pr-2 w-1/3">
+                                  <td className="py-1 pr-2 w-1/3">
                                     <p className="font-semibold">Customer Name</p>
-                                    <p className="text-gray-600">{lc.applicantName || 'N/A'}</p>
+                                    <p className="text-gray-600 dark:text-gray-300">{lc.applicantName || 'N/A'}</p>
                                   </td>
-                                  <td className="py-2 px-2 w-1/3">
+                                  <td className="py-1 px-2 w-1/3">
                                       <p className="font-semibold">Value</p>
-                                      <p className="text-gray-600">{formatCurrencyValue(lc.currency, lc.amount)}</p>
+                                      <p className="text-gray-600 dark:text-gray-300">{formatCurrencyValue(lc.currency, lc.amount)}</p>
                                   </td>
-                                  <td className="py-2 pl-2 w-1/3">
+                                  <td className="py-1 pl-2 w-1/3">
                                       <p className="font-semibold">Invoice No:</p>
-                                      <p className="text-gray-600">{lc.proformaInvoiceNumber || 'N/A'}</p>
+                                      <p className="text-gray-600 dark:text-gray-300">{lc.proformaInvoiceNumber || 'N/A'}</p>
                                   </td>
                                 </tr>
                                 <tr className="align-top">
-                                  <td className="py-2 pr-2">
+                                  <td className="py-1 pr-2">
                                     <p className="font-semibold">Shipment Date</p>
-                                    <p className="text-gray-600">ETD: {formatDisplayDate(lc.etd)}</p>
-                                    <p className="text-gray-600">ETA: {formatDisplayDate(lc.eta)}</p>
+                                    <p className="text-gray-600 dark:text-gray-300">ETD: {formatDisplayDate(lc.etd)}</p>
+                                    <p className="text-gray-600 dark:text-gray-300">ETA: {formatDisplayDate(lc.eta)}</p>
                                   </td>
-                                  <td className="py-2 px-2">
+                                  <td className="py-1 px-2">
                                       <p className="font-semibold">Machine Qty:</p>
-                                      <p className="text-gray-600">{lc.totalMachineQty || 'N/A'}</p>
+                                      <p className="text-gray-600 dark:text-gray-300">{lc.totalMachineQty || 'N/A'}</p>
                                   </td>
-                                  <td className="py-2 pl-2">
+                                  <td className="py-1 pl-2">
                                       <p className="font-semibold">Shipment Note</p>
-                                      <p className="text-xs text-gray-600"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
-                                      <p className="text-xs text-gray-600"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
-                                      <p className="text-xs text-gray-600"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400"><span className="font-semibold">1st:</span> {lc.firstShipmentNote || 'N/A'}</p>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400"><span className="font-semibold">2nd:</span> {lc.secondShipmentNote || 'N/A'}</p>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400"><span className="font-semibold">3rd:</span> {lc.thirdShipmentNote || 'N/A'}</p>
                                   </td>
                                 </tr>
                               </tbody>
@@ -450,6 +450,7 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 
 
 
