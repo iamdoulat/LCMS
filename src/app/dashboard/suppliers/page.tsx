@@ -31,6 +31,30 @@ const formatCurrency = (value?: number) => {
   return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+
+async function getInitialData() {
+    const suppliersQuery = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
+    const piQuery = query(collection(firestore, "proforma_invoices"));
+
+    const [suppliersSnapshot, piSnapshot] = await Promise.all([
+      getDocs(suppliersQuery),
+      getDocs(piQuery)
+    ]);
+
+    const beneficiaries = suppliersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
+    
+    const commissionsBySupplier: { [key: string]: number } = {};
+    piSnapshot.forEach(docSnap => {
+      const pi = docSnap.data() as ProformaInvoiceDocument;
+      if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
+        commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
+      }
+    });
+
+    return { beneficiaries, commissionsBySupplier };
+}
+
+
 export default function BeneficiariesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
@@ -49,45 +73,26 @@ export default function BeneficiariesListPage() {
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
   useEffect(() => {
-    const fetchSuppliersAndCommissions = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const suppliersQuery = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
-        const piQuery = query(collection(firestore, "proforma_invoices"));
-
-        const [suppliersSnapshot, piSnapshot] = await Promise.all([
-          getDocs(suppliersQuery),
-          getDocs(piQuery)
-        ]);
-
-        const fetchedBeneficiaries = suppliersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
-        setAllBeneficiaries(fetchedBeneficiaries);
-
-        const commissionsBySupplier: { [key: string]: number } = {};
-        piSnapshot.forEach(docSnap => {
-          const pi = docSnap.data() as ProformaInvoiceDocument;
-          if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
-            commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
-          }
-        });
-        setSupplierCommissionVals(commissionsBySupplier);
-
-      } catch (error: any) {
-        console.error("Error fetching data: ", error);
-        let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
-        if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
-        } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+    async function fetchData() {
+        try {
+            const { beneficiaries, commissionsBySupplier } = await getInitialData();
+            setAllBeneficiaries(beneficiaries);
+            setSupplierCommissionVals(commissionsBySupplier);
+        } catch (error: any) {
+            console.error("Error fetching data: ", error);
+            let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
+            if (error.message && error.message.toLowerCase().includes("index")) {
+                errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
+            } else if (error.message) {
+                errorMessage += ` Error: ${error.message}`;
+            }
+            setFetchError(errorMessage);
+            Swal.fire("Fetch Error", errorMessage, "error");
+        } finally {
+            setIsLoading(false);
         }
-        setFetchError(errorMessage);
-        Swal.fire("Fetch Error", errorMessage, "error");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSuppliersAndCommissions();
+    }
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -398,3 +403,4 @@ export default function BeneficiariesListPage() {
     </div>
   );
 }
+
