@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, Timestamp, documentId, orderBy } from 'firebase/firestore';
-import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument } from '@/types';
+import { collection, query, where, getDocs, Timestamp, documentId, orderBy, doc } from 'firebase/firestore';
+import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument, NoticeBoardSettings } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc, getYear } from 'date-fns';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from '@/components/ui/skeleton';
+import { NoticeBoardDialog } from '@/components/dashboard/NoticeBoardDialog';
 
 
 const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
@@ -204,6 +205,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
+  const [notice, setNotice] = React.useState<NoticeBoardSettings | null>(null);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -437,8 +439,26 @@ export default function DashboardPage() {
   }, [authUser, userRole]);
 
   useEffect(() => {
-    if (!authLoading && authUser) {
+    const fetchNotice = async () => {
+      try {
+        const noticeDocRef = doc(firestore, 'site_settings', 'notice_board');
+        const docSnap = await getDoc(noticeDocRef);
+        if (docSnap.exists()) {
+          const noticeData = docSnap.data() as NoticeBoardSettings;
+          if (noticeData.isEnabled && Array.isArray(noticeData.targetRoles) && userRole?.some(role => noticeData.targetRoles.includes(role))) {
+            setNotice(noticeData);
+          } else {
+            setNotice(null);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching notice:", error);
+      }
+    };
+
+    if (!authLoading && authUser && userRole) {
       fetchDashboardData(selectedYear);
+      fetchNotice();
     } else if (!authLoading && !authUser) {
       // Clear data if user logs out
       setDashboardStats({ totalLCs: 0, totalLCValue: 0, activeSuppliers: 0, activeApplicants: 0, thisMonthLCQty: 0, totalLinkedPIs: 0 });
@@ -449,7 +469,7 @@ export default function DashboardPage() {
       setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
       setIsLoading(false);
     }
-  }, [selectedYear, authUser, authLoading, fetchDashboardData]);
+  }, [selectedYear, authUser, authLoading, userRole, fetchDashboardData]);
 
   useEffect(() => {
     const cleanupEtdScroll = setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef);
@@ -476,6 +496,7 @@ export default function DashboardPage() {
   if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
     return (
         <div className="flex flex-col gap-8">
+             {notice && <NoticeBoardDialog notice={notice} />}
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
                 <div>
                     {greeting && authUser && (
@@ -539,6 +560,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {notice && <NoticeBoardDialog notice={notice} />}
       <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>
            {greeting && authUser && (

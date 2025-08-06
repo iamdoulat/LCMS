@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 
 export const termsOfPayOptions = [
@@ -406,6 +405,14 @@ export interface AppNotification {
 
 export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Accounts", "Viewer", "Commercial"] as const;
 export type UserRole = typeof userRoles[number];
+
+export const NoticeBoardSettingsSchema = z.object({
+  content: z.string().min(1, "Notice content cannot be empty."),
+  isEnabled: z.boolean().default(false),
+  targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
+});
+
+export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema>;
 
 export interface CompanyProfile {
   companyName?: string;
