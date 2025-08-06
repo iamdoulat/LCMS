@@ -5,29 +5,40 @@ import * as React from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { NoticeBoardSettings } from '@/types';
 import { X } from 'lucide-react';
+import type { Timestamp } from 'firebase/firestore';
 
 interface NoticeBoardDialogProps {
-  notice: NoticeBoardSettings;
+  notice: NoticeBoardSettings & {updatedAt?: Timestamp | null};
 }
 
 const NOTICE_DISMISSED_KEY = 'noticeDismissedTimestamp';
 
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const noticeTimestamp = notice.updatedAt?.seconds || 0; // Assuming `updatedAt` is a Firestore Timestamp
+
+  // Extract the timestamp in seconds. Fallback to 0 if it doesn't exist.
+  const noticeTimestamp = notice.updatedAt?.seconds || 0;
 
   React.useEffect(() => {
-    const dismissedTimestamp = localStorage.getItem(NOTICE_DISMISSED_KEY);
-    // Show the dialog if there's no dismissal timestamp,
-    // or if the notice has been updated since it was last dismissed.
-    if (!dismissedTimestamp || noticeTimestamp > parseInt(dismissedTimestamp, 10)) {
-      setIsOpen(true);
+    // This effect runs when the component mounts or the notice data changes.
+    // It decides whether to show the dialog.
+    if (noticeTimestamp > 0) { // Only proceed if we have a valid notice timestamp
+      const dismissedTimestampString = localStorage.getItem(NOTICE_DISMISSED_KEY);
+      const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
+      
+      // Show the dialog if the current notice is newer than the last one the user dismissed.
+      if (noticeTimestamp > lastDismissedTimestamp) {
+        setIsOpen(true);
+      }
     }
   }, [noticeTimestamp]);
 
   const handleDismiss = () => {
-    // Store the timestamp of the notice being dismissed
-    localStorage.setItem(NOTICE_DISMISSED_KEY, noticeTimestamp.toString());
+    // When dismissing, store the timestamp of the *current* notice.
+    // This marks this specific version of the notice as "seen".
+    if (noticeTimestamp > 0) {
+        localStorage.setItem(NOTICE_DISMISSED_KEY, noticeTimestamp.toString());
+    }
     setIsOpen(false);
   };
 
