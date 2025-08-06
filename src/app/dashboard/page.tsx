@@ -444,7 +444,7 @@ export default function DashboardPage() {
         const noticeDocRef = doc(firestore, 'site_settings', 'notice_board');
         const docSnap = await getDoc(noticeDocRef);
         if (docSnap.exists()) {
-          const noticeData = docSnap.data() as NoticeBoardSettings & { updatedAt?: Timestamp };
+          const noticeData = docSnap.data() as NoticeBoardSettings & {updatedAt?: Timestamp};
           if (noticeData.isEnabled && Array.isArray(noticeData.targetRoles) && userRole?.some(role => noticeData.targetRoles.includes(role))) {
             setNotice(noticeData);
           } else {

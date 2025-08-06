@@ -414,7 +414,7 @@ export const NoticeBoardSettingsSchema = z.object({
 });
 
 export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema> & {
-  updatedAt?: Timestamp; // Add this to handle the Firestore Timestamp
+  updatedAt?: Timestamp;
 };
 
 
