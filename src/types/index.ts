@@ -1,5 +1,6 @@
 
 import { z } from 'zod';
+import type { Timestamp } from 'firebase/firestore';
 
 export const termsOfPayOptions = [
   "T/T In Advance",
@@ -412,7 +413,10 @@ export const NoticeBoardSettingsSchema = z.object({
   targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
 });
 
-export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema>;
+export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema> & {
+  updatedAt?: Timestamp; // Add this to handle the Firestore Timestamp
+};
+
 
 export interface CompanyProfile {
   companyName?: string;
