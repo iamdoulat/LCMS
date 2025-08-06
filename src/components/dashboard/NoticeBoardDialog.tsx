@@ -6,6 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import type { NoticeBoardSettings } from '@/types';
 import { X } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 
 interface NoticeBoardDialogProps {
   notice: NoticeBoardSettings & {updatedAt?: Timestamp | null};
@@ -15,23 +16,32 @@ const NOTICE_DISMISSED_KEY = 'noticeDismissedTimestamp';
 
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { userRole } = useAuth(); // We need to wait for this to be populated.
 
   React.useEffect(() => {
-    if (notice && notice.isEnabled && notice.updatedAt) {
+    // Only proceed if we have a valid notice, its timestamp, and the user's roles have been loaded.
+    if (notice && notice.isEnabled && notice.updatedAt && userRole) {
+      
+      const userHasTargetRole = userRole.some(role => notice.targetRoles?.includes(role));
+      
+      // If the user does not have a role targeted by the notice, do nothing.
+      if (!userHasTargetRole) {
+        return;
+      }
+
       const noticeTimestamp = notice.updatedAt.seconds;
       const dismissedTimestampString = localStorage.getItem(NOTICE_DISMISSED_KEY);
       const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
       
-      // Show the dialog if the notice's timestamp is newer than the last dismissal timestamp.
+      // Show the dialog only if the notice's timestamp is newer than the last dismissal.
       if (noticeTimestamp > lastDismissedTimestamp) {
         setIsOpen(true);
       }
     }
-  }, [notice]); // This effect depends only on the notice prop.
+  }, [notice, userRole]); // Rerun this effect when the userRole is finally loaded.
 
   const handleDismiss = () => {
     if (notice && notice.updatedAt) {
-        // Store the timestamp of the notice being dismissed.
         localStorage.setItem(NOTICE_DISMISSED_KEY, notice.updatedAt.seconds.toString());
     }
     setIsOpen(false);
