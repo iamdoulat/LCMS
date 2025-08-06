@@ -330,7 +330,7 @@ export default function WarrantySearchPage() {
     if (totalSearchPages <= maxPagesToShow + 2) { for (let i = 1; i <= totalSearchPages; i++) pageNumbers.push(i); }
     else {
       pageNumbers.push(1); let startPage = Math.max(2, currentSearchPage - halfPagesToShow); let endPage = Math.min(totalSearchPages - 1, currentSearchPage + halfPagesToShow);
-      if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
+      if (currentSearchPage <= halfPagesToShow + 1) endPage = Math.min(totalSearchPages - 1, maxPagesToShow);
       if (currentSearchPage >= totalSearchPages - halfPagesToShow) startPage = Math.max(2, totalSearchPages - maxPagesToShow + 1);
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
@@ -511,35 +511,35 @@ export default function WarrantySearchPage() {
               <StatCard
                 title="Total L/C Machineries"
                 value={warrantyStats.totalLcMachineries.toLocaleString()}
-                icon={<Layers className="h-6 w-6 text-primary" />}
+                icon={<Layers className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
                 className="bg-[#4A90E2]"
               />
               <StatCard
                 title="Total Installed Machines"
                 value={warrantyStats.totalInstalledMachines.toLocaleString()}
-                icon={<Wrench className="h-6 w-6 text-primary" />}
+                icon={<Wrench className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
                 className="bg-[#50E3C2]"
               />
               <StatCard
                 title="Total Pending Machines"
                 value={warrantyStats.totalPendingMachines.toLocaleString()}
-                icon={<Hourglass className="h-6 w-6 text-primary" />}
+                icon={<Hourglass className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
                 className="bg-[#F5A623]"
               />
               <StatCard
                 title="Machines Under Warranty"
                 value={warrantyStats.machinesUnderWarranty.toLocaleString()}
-                icon={<ShieldCheck className="h-6 w-6 text-primary" />}
+                icon={<ShieldCheck className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
                 className="bg-[#7ED321]"
               />
               <StatCard
                 title="Machines Out Of Warranty"
                 value={warrantyStats.machinesOutOfWarranty.toLocaleString()}
-                icon={<ShieldOff className="h-6 w-6 text-primary" />}
+                icon={<ShieldOff className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
                 className="bg-[#BD10E0]"
               />
@@ -549,5 +549,4 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
 
