@@ -33,6 +33,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -384,6 +385,37 @@ export default function TotalLCPage() {
     return pageNumbers;
   };
 
+  const TableSkeleton = () => (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <React.Fragment key={i}>
+            <TableRow className="border-b-0">
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+            </TableRow>
+             <TableRow key={`${i}-actions`} className="bg-muted/20">
+                <TableCell colSpan={9} className="py-2 px-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Skeleton className="h-7 w-7 rounded-full" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                    </div>
+                </TableCell>
+            </TableRow>
+        </React.Fragment>
+      ))}
+    </>
+  );
+
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
@@ -528,13 +560,7 @@ export default function TotalLCPage() {
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
-                          <div className="flex justify-center items-center">
-                            <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading L/C entries...
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                       <TableSkeleton />
                     ) : currentItems.length > 0 ? (
                       currentItems.map((lc) => (
                         <React.Fragment key={lc.id}>
@@ -814,3 +840,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
