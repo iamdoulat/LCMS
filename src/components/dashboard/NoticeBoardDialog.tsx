@@ -16,17 +16,13 @@ const NOTICE_DISMISSED_KEY = 'noticeDismissedTimestamp';
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Extract the timestamp in seconds. Fallback to 0 if it doesn't exist.
   const noticeTimestamp = notice.updatedAt?.seconds || 0;
 
   React.useEffect(() => {
-    // This effect runs when the component mounts or the notice data changes.
-    // It decides whether to show the dialog.
-    if (noticeTimestamp > 0) { // Only proceed if we have a valid notice timestamp
+    if (noticeTimestamp > 0) { 
       const dismissedTimestampString = localStorage.getItem(NOTICE_DISMISSED_KEY);
       const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
       
-      // Show the dialog if the current notice is newer than the last one the user dismissed.
       if (noticeTimestamp > lastDismissedTimestamp) {
         setIsOpen(true);
       }
@@ -34,8 +30,6 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   }, [noticeTimestamp]);
 
   const handleDismiss = () => {
-    // When dismissing, store the timestamp of the *current* notice.
-    // This marks this specific version of the notice as "seen".
     if (noticeTimestamp > 0) {
         localStorage.setItem(NOTICE_DISMISSED_KEY, noticeTimestamp.toString());
     }
@@ -47,14 +41,13 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            Important Notice
+            {notice.title || "Important Notice"}
           </AlertDialogTitle>
           <AlertDialogDescription>
             Please review the following information.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1">
-          {/* We will use a library to render markdown safely later */}
           {notice.content}
         </div>
         <AlertDialogFooter>

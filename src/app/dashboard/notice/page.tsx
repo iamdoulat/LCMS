@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +35,7 @@ export default function NoticeSettingsPage() {
   const form = useForm<NoticeBoardSettings>({
     resolver: zodResolver(NoticeBoardSettingsSchema),
     defaultValues: {
+      title: '',
       content: '',
       isEnabled: false,
       targetRoles: [],
@@ -61,6 +63,7 @@ export default function NoticeSettingsPage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as NoticeBoardSettings;
           form.reset({
+            title: data.title || '',
             content: data.content || '',
             isEnabled: data.isEnabled || false,
             targetRoles: Array.isArray(data.targetRoles) ? data.targetRoles : [],
@@ -115,12 +118,26 @@ export default function NoticeSettingsPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+               <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-lg">Notice Title*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter the notice title" {...field} />
+                    </FormControl>
+                    <FormDescription>This will be the title of the pop-up dialog.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-lg">Notice Content</FormLabel>
+                    <FormLabel className="text-lg">Notice Content*</FormLabel>
                     <FormControl>
                       <Textarea placeholder="Enter the notice content here... You can use markdown for formatting." {...field} rows={8} />
                     </FormControl>
@@ -152,7 +169,7 @@ export default function NoticeSettingsPage() {
                   render={() => (
                       <FormItem>
                           <div className="mb-4">
-                              <FormLabel className="text-lg">Target Audience</FormLabel>
+                              <FormLabel className="text-lg">Target Audience*</FormLabel>
                               <FormDescription>Select which user roles will see this notice.</FormDescription>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

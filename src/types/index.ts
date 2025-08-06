@@ -408,6 +408,7 @@ export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManage
 export type UserRole = typeof userRoles[number];
 
 export const NoticeBoardSettingsSchema = z.object({
+  title: z.string().min(1, "Notice title cannot be empty."),
   content: z.string().min(1, "Notice content cannot be empty."),
   isEnabled: z.boolean().default(false),
   targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
