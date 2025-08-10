@@ -6,15 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Laptop as LaptopIcon, ListChecks, FileEdit, Trash2, Loader2, AlertTriangle, Info, CalendarDays, User, Phone, FileText as NoteIcon, Cog, Hash, Activity, FileBadge, Image as ImageIcon } from 'lucide-react';
+import { Laptop as LaptopIcon, ListChecks, FileEdit, Trash2, Loader2, AlertTriangle, Info, CalendarDays, User, Phone, FileText as NoteIcon, Cog, Hash, Activity, FileBadge, Image as ImageIcon, Filter, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { DemoMachineDocument, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
+import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const formatDisplayDate = (dateInput?: string | null | Timestamp): string => {
   if (!dateInput) return 'N/A';
@@ -58,9 +62,16 @@ const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "de
 export default function DemoMachineListPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
-  const [demoMachines, setDemoMachines] = useState<DemoMachineDocument[]>([]);
+  const [allDemoMachines, setAllDemoMachines] = useState<DemoMachineDocument[]>([]);
+  const [displayedMachines, setDisplayedMachines] = useState<DemoMachineDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Filter states
+  const [filterModel, setFilterModel] = useState('');
+  const [filterBrand, setFilterBrand] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterOwner, setFilterOwner] = useState<string>('All');
 
   useEffect(() => {
     const fetchDemoMachines = async () => {
@@ -79,13 +90,14 @@ export default function DemoMachineListPage() {
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
           } as DemoMachineDocument;
         });
-        setDemoMachines(fetchedMachines);
+        setAllDemoMachines(fetchedMachines);
+        setDisplayedMachines(fetchedMachines);
       } catch (error: any) {
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
         if (error.message?.toLowerCase().includes("index")) {
             errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it automatically.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'demo_machines' collection.`;
+           errorMessage = `Could not fetch data: Missing or insufficient permissions for the 'demo_machines' collection. Please check Firestore security rules.`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -97,6 +109,25 @@ export default function DemoMachineListPage() {
     };
     fetchDemoMachines();
   }, []);
+
+  useEffect(() => {
+    let filtered = allDemoMachines;
+
+    if (filterModel) {
+      filtered = filtered.filter(m => m.machineModel?.toLowerCase().includes(filterModel.toLowerCase()));
+    }
+    if (filterBrand) {
+      filtered = filtered.filter(m => m.machineBrand?.toLowerCase().includes(filterBrand.toLowerCase()));
+    }
+    if (filterStatus && filterStatus !== 'All') {
+      filtered = filtered.filter(m => m.currentStatus === filterStatus);
+    }
+    if (filterOwner && filterOwner !== 'All') {
+      filtered = filtered.filter(m => m.machineOwner === filterOwner);
+    }
+
+    setDisplayedMachines(filtered);
+  }, [filterModel, filterBrand, filterStatus, filterOwner, allDemoMachines]);
 
   const handleDeleteMachine = (machineId: string, machineModel?: string) => {
     Swal.fire({
@@ -112,7 +143,7 @@ export default function DemoMachineListPage() {
         if (result.isConfirmed) {
             try {
                 await deleteDoc(doc(firestore, "demo_machines", machineId));
-                setDemoMachines(prev => prev.filter(app => app.id !== machineId));
+                setAllDemoMachines(prev => prev.filter(app => app.id !== machineId));
                 Swal.fire(
                     'Deleted!',
                     `Demo machine "${machineModel || machineId}" has been removed.`,
@@ -130,6 +161,13 @@ export default function DemoMachineListPage() {
     });
   };
 
+  const clearFilters = () => {
+    setFilterModel('');
+    setFilterBrand('');
+    setFilterStatus('All');
+    setFilterOwner('All');
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
@@ -141,7 +179,7 @@ export default function DemoMachineListPage() {
                 Demo Machine List
               </CardTitle>
               <CardDescription>
-                View and manage all registered demo machines. The list is scrollable if it exceeds the display area.
+                View and manage all registered demo machines.
               </CardDescription>
             </div>
             <Link href="/dashboard/demo/add-demo-machine" passHref>
@@ -153,6 +191,49 @@ export default function DemoMachineListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+                <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="space-y-1">
+                        <Label htmlFor="modelFilter">Model</Label>
+                        <Input id="modelFilter" placeholder="Search by Model..." value={filterModel} onChange={e => setFilterModel(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="brandFilter">Brand</Label>
+                        <Input id="brandFilter" placeholder="Search by Brand..." value={filterBrand} onChange={e => setFilterBrand(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="statusFilter">Status</Label>
+                        <Select value={filterStatus} onValueChange={setFilterStatus}>
+                            <SelectTrigger id="statusFilter"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">All Statuses</SelectItem>
+                                {demoMachineStatusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="ownerFilter">Owner</Label>
+                        <Select value={filterOwner} onValueChange={setFilterOwner}>
+                            <SelectTrigger id="ownerFilter"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All">All Owners</SelectItem>
+                                {demoMachineOwnerOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Button onClick={clearFilters} variant="outline" className="w-full">
+                            <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                        </Button>
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -164,17 +245,17 @@ export default function DemoMachineListPage() {
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
               <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
             </div>
-          ) : demoMachines.length === 0 ? (
+          ) : displayedMachines.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-xl font-semibold text-muted-foreground">No Demo Machines Found</p>
               <p className="text-sm text-muted-foreground text-center">
-                There are no demo machines in the database. Click "Add Demo Machine" to add one.
+                {allDemoMachines.length > 0 ? "No machines match your current filters." : 'There are no demo machines in the database. Click "Add Demo Machine" to add one.'}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {demoMachines.map((machine) => (
+              {displayedMachines.map((machine) => (
                 <Card key={machine.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col relative">
                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                         <div className="flex gap-1">
