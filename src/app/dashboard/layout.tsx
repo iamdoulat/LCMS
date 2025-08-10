@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { PropsWithChildren } from 'react';
@@ -8,9 +9,7 @@ import AuthGuard from '@/components/auth/AuthGuard';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { cn } from '@/lib/utils';
 
-// This is now a server component by default, which is more performant.
-// The client-side logic for checking print pages has been removed and
-// is now handled by Next.js routing with dedicated layout files.
+
 export default function DashboardLayout({ children }: PropsWithChildren) {
   return (
     <AuthGuard>
@@ -22,13 +21,13 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
             <div className="noprint">
               <AppHeader />
             </div>
-            <main className="flex-1 overflow-y-auto pt-4 px-6 pb-20 bg-gradient-to-br from-background to-muted">
+            <main className="flex-1 overflow-y-auto pt-4 px-6 pb-20 bg-gradient-to-br from-background to-muted/50">
               {children}
             </main>
             <div className="noprint">
               <BottomNavBar />
               <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card hidden md:block">
-                © 2025 - Designed and Developed by{' '}
+                © {new Date().getFullYear()} - Designed and Developed by{' '}
                 <a
                   href="https://vcard.mddoulat.com/iamdoulat"
                   target="_blank"

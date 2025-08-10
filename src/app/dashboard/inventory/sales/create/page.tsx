@@ -1,8 +1,8 @@
 
-import { CreateSaleInvoiceForm } from '@/components/forms/CreateSaleInvoiceForm'; // Import the new form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CreateSaleInvoiceForm } from '@/components/forms/CreateSaleInvoiceForm';
 
 export default function CreateNewSaleInvoicePage() {
   return (
