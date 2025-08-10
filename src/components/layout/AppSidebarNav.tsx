@@ -155,7 +155,7 @@ const serviceNavItems: NavItem[] = [
 ];
 
 const settingsNavItems: NavItem[] = [
-    { href: '/dashboard/notice', label: 'Add Notice', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
+    { href: '/dashboard/notice', label: 'Add New Notice', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/settings/manage-notices', label: 'Manage Notices', icon: Bell, iconColorClass: 'bg-icon-notifications' },
     { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
@@ -174,7 +174,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: 'View Shipment Status', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
-  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin"] },
+  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer"] },
 ];
 
 export function AppSidebarNav() {

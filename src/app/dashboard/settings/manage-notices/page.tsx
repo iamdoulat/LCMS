@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -173,11 +174,11 @@ export default function ManageNoticesPage() {
                                 <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
                                 <TableCell className="text-right">
                                     <Button asChild variant="outline" size="sm" className="mr-2">
-                                        <Link href={`/dashboard/notice`}> {/* All notices currently edit on one page */}
+                                        <Link href={`/dashboard/notice/edit/${notice.id}`}>
                                             <FileEdit className="h-4 w-4"/>
                                         </Link>
                                     </Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteNotice(notice.id, notice.title)} disabled={!isSuperAdmin}>
+                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteNotice(notice.id, notice.title)} disabled={isReadOnly || !isSuperAdmin}>
                                         <Trash2 className="h-4 w-4"/>
                                     </Button>
                                 </TableCell>

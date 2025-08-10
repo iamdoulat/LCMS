@@ -6,11 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { NoticeBoardSettings, UserRole } from '@/types';
 import { NoticeBoardSettingsSchema, userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,11 +23,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, BellRing, Save, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
 
-export default function AddNoticePage() {
+export default function EditNoticePage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
+  const params = useParams();
+  const noticeId = params.noticeId as string;
+
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<NoticeBoardSettings>({
@@ -34,7 +38,7 @@ export default function AddNoticePage() {
     defaultValues: {
       title: '',
       content: '',
-      isEnabled: true,
+      isEnabled: false,
       isPopupEnabled: true,
       targetRoles: [],
     },
@@ -44,7 +48,7 @@ export default function AddNoticePage() {
     if (!authLoading && !userRole?.includes("Super Admin") && !userRole?.includes("Admin")) {
       Swal.fire({
         title: 'Access Denied',
-        text: 'You do not have permission to add notices.',
+        text: 'You do not have permission to manage notices.',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,
@@ -52,26 +56,58 @@ export default function AddNoticePage() {
     }
   }, [userRole, authLoading, router]);
 
+  React.useEffect(() => {
+    if (!noticeId) {
+      Swal.fire("Error", "No notice ID provided.", "error").then(() => router.push('/dashboard/settings/manage-notices'));
+      return;
+    }
+
+    const fetchNotice = async () => {
+      setIsLoadingData(true);
+      try {
+        const noticeDocRef = doc(firestore, 'site_settings', noticeId);
+        const docSnap = await getDoc(noticeDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as NoticeBoardSettings;
+          form.reset({
+            title: data.title || '',
+            content: data.content || '',
+            isEnabled: data.isEnabled || false,
+            isPopupEnabled: data.isPopupEnabled ?? true,
+            targetRoles: Array.isArray(data.targetRoles) ? data.targetRoles : [],
+          });
+        } else {
+          Swal.fire("Error", "Notice not found.", "error");
+          router.push('/dashboard/settings/manage-notices');
+        }
+      } catch (error) {
+        console.error("Error fetching notice settings:", error);
+        Swal.fire("Error", "Could not load notice settings.", "error");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    if (userRole?.includes("Super Admin") || userRole?.includes("Admin")) {
+        fetchNotice();
+    }
+  }, [noticeId, form, userRole, router]);
+
   async function onSubmit(data: NoticeBoardSettings) {
     setIsSubmitting(true);
     try {
-      await addDoc(collection(firestore, 'site_settings'), {
-        ...data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      Swal.fire("Success", "New notice has been created successfully.", "success");
-      form.reset(); // Reset form after successful submission
-      router.push('/dashboard/settings/manage-notices'); // Redirect to the list
+      const noticeDocRef = doc(firestore, 'site_settings', noticeId);
+      await updateDoc(noticeDocRef, { ...data, updatedAt: serverTimestamp() });
+      Swal.fire("Success", "Notice settings have been updated.", "success");
+      router.push('/dashboard/settings/manage-notices');
     } catch (error) {
-      console.error("Error creating notice:", error);
-      Swal.fire("Error", "Failed to create notice.", "error");
+      console.error("Error saving notice settings:", error);
+      Swal.fire("Error", "Failed to save settings.", "error");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (authLoading) {
+  if (authLoading || isLoadingData) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -93,10 +129,10 @@ export default function AddNoticePage() {
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <BellRing className="h-7 w-7 text-primary" />
-            Add New Notice
+            Edit Notice
           </CardTitle>
           <CardDescription>
-            Create a new sitewide notice that can appear as a pop-up on user dashboards.
+            Modify the notice that will appear as a pop-up on user dashboards.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -206,7 +242,7 @@ export default function AddNoticePage() {
                   )}
               />
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Notice...</> : <><Save className="mr-2 h-4 w-4" />Create Notice</>}
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
               </Button>
             </form>
           </Form>
