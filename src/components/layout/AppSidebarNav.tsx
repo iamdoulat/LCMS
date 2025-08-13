@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from 'next/link';
@@ -158,6 +157,7 @@ const settingsNavItems: NavItem[] = [
     { href: '/dashboard/settings/manage-notices', label: 'Manage Notices', icon: Bell, iconColorClass: 'bg-icon-notifications' },
     { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
+    { href: '/dashboard/settings/user-activities', label: 'User Activities', icon: History, iconColorClass: 'bg-icon-logs' },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
     { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
     { href: '/dashboard/settings/logs', label: 'Logs', icon: History, iconColorClass: 'bg-icon-logs' },
