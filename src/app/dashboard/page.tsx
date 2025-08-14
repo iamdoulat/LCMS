@@ -205,7 +205,7 @@ export default function DashboardPage() {
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
   const [greeting, setGreeting] = useState('');
-  const [notice, setNotice] = React.useState<NoticeBoardSettings | null>(null);
+  const [notice, setNotice] = React.useState<(NoticeBoardSettings & { id: string }) | null>(null);
 
   const upcomingEtdScrollRef = useRef<HTMLDivElement>(null);
   const draftLcScrollRef = useRef<HTMLDivElement>(null);
@@ -442,12 +442,13 @@ export default function DashboardPage() {
     const fetchNotice = async () => {
       try {
         const noticesSnapshot = await getDocs(query(collection(firestore, 'site_settings'), orderBy('updatedAt', 'desc')));
-        const allNotices = noticesSnapshot.docs.map(d => ({ ...d.data(), id: d.id })) as (NoticeBoardSettings & {id: string})[];
-        
-        const mostRecentActiveNotice = allNotices.find(n => 
-            n.isEnabled &&
-            n.isPopupEnabled &&
-            n.targetRoles?.some(role => userRole?.includes(role))
+        const allNotices = noticesSnapshot.docs.map(d => ({ ...d.data(), id: d.id })) as (NoticeBoardSettings & { id: string })[];
+
+        const mostRecentActiveNotice = allNotices.find(n =>
+          n.isEnabled &&
+          n.isPopupEnabled &&
+          Array.isArray(n.targetRoles) &&
+          n.targetRoles.some(role => userRole?.includes(role))
         );
 
         setNotice(mostRecentActiveNotice || null);
