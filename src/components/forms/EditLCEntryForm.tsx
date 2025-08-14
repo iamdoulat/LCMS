@@ -430,7 +430,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       vesselOrFlightName: finalData.vesselOrFlightName,
       vesselImoNumber: finalData.vesselImoNumber,
       flightNumber: finalData.flightNumber,
-      trackingNumber: finalData.trackingNumber,
+      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       certificateOfOrigin: finalData.certificateOfOrigin,
