@@ -10,14 +10,9 @@ import { NewInstallationReportForm } from '@/components/forms/NewInstallationRep
 export default function NewInstallationReportPage() {
   return (
     <div className="container mx-auto py-8">
-        <Card className="max-w-6xl mx-auto shadow-xl">
-            <CardHeader>
-            
-            </CardHeader>
             <CardContent>
                 <NewInstallationReportForm />
             </CardContent>
-        </Card>
     </div>
   );
 }
