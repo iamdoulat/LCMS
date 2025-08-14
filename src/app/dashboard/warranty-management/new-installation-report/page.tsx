@@ -12,9 +12,11 @@ export default function NewInstallationReportPage() {
     <div className="container mx-auto py-8">
         <Card className="max-w-6xl mx-auto shadow-xl">
             <CardHeader>
-            <CardDescription>
-                Fill in the details below. Select a Commercial Invoice Number to auto-fill L/C details.
-            </CardDescription>
+            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Wrench className="mr-2 h-7 w-7 text-primary" />
+                New Installation Report
+            </CardTitle>
+            
             </CardHeader>
             <CardContent>
                 <NewInstallationReportForm />
@@ -23,4 +25,5 @@ export default function NewInstallationReportPage() {
     </div>
   );
 }
+
 
