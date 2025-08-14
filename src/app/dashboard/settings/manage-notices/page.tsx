@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Bell, Info, AlertTriangle, FileEdit, Trash2, PlusCircle, MoreHorizontal } from 'lucide-react';
+import { Loader2, Bell, Info, AlertTriangle, FileEdit, Trash2, PlusCircle, MoreHorizontal, Eye } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -24,6 +24,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 interface Notice extends NoticeBoardSettings {
   id: string;
@@ -51,6 +60,7 @@ export default function ManageNoticesPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isSuperAdmin = userRole?.includes('Super Admin');
   const isReadOnly = userRole?.includes('Viewer');
+  const [viewingNotice, setViewingNotice] = React.useState<Notice | null>(null);
 
   useEffect(() => {
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer'].includes(role));
@@ -190,17 +200,21 @@ export default function ManageNoticesPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onSelect={() => setViewingNotice(notice)}>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                <span>View</span>
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem asChild>
                                                 <Link href={`/dashboard/notice/edit/${notice.id}`}>
                                                     <FileEdit className="mr-2 h-4 w-4" />
-                                                    <span>{isReadOnly ? 'View' : 'Edit'}</span>
+                                                    <span>{isReadOnly ? 'View Details' : 'Edit'}</span>
                                                 </Link>
                                             </DropdownMenuItem>
                                             {isSuperAdmin && (
                                                 <>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
-                                                    onClick={() => handleDeleteNotice(notice.id, notice.title)}
+                                                    onSelect={() => handleDeleteNotice(notice.id, notice.title)}
                                                     className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                                                     disabled={isReadOnly}
                                                 >
@@ -221,6 +235,29 @@ export default function ManageNoticesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!viewingNotice} onOpenChange={(isOpen) => !isOpen && setViewingNotice(null)}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>{viewingNotice?.title || "Notice Preview"}</DialogTitle>
+                <DialogDescription>
+                    This is a preview of how the notice will appear to users.
+                </DialogDescription>
+            </DialogHeader>
+            {viewingNotice?.content && (
+                 <div 
+                    className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1 mt-2 border-t pt-4"
+                    dangerouslySetInnerHTML={{ __html: viewingNotice.content }}
+                 />
+            )}
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="secondary">Close</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
