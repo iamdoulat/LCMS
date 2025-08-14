@@ -67,16 +67,16 @@ const defaultFormValues: LCEditFormValues = {
   secondPartialAmount: 0,
   thirdPartialAmount: 0,
   firstPartialPkgs: 0,
-  secondPartialPkgs: 0,
-  thirdPartialPkgs: 0,
   firstPartialNetWeight: 0,
-  secondPartialNetWeight: 0,
-  thirdPartialNetWeight: 0,
   firstPartialGrossWeight: 0,
-  secondPartialGrossWeight: 0,
-  thirdPartialGrossWeight: 0,
   firstPartialCbm: 0,
+  secondPartialPkgs: 0,
+  secondPartialNetWeight: 0,
+  secondPartialGrossWeight: 0,
   secondPartialCbm: 0,
+  thirdPartialPkgs: 0,
+  thirdPartialNetWeight: 0,
+  thirdPartialGrossWeight: 0,
   thirdPartialCbm: 0,
   totalPackageQty: 0,
   totalNetWeight: 0,
@@ -1403,7 +1403,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
               <FormLabel>Consignee Bank Name and Address</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter bank name and full address" {...field} rows={3} value={field.value ?? ''} />
+                <RichTextEditor
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Enter bank name and full address"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1423,7 +1427,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
               <FormLabel>Notify Party Name and Address</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter notify party's full name and address" {...field} rows={3} value={field.value ?? ''} />
+                 <RichTextEditor
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Enter notify party's full name and address"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1515,7 +1523,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           47A: Additional Conditions
         </h3>
          <FormField
-          control={control}
+          control={form.control}
           name="certificateOfOrigin"
           render={() => (
             <FormItem>
@@ -1566,7 +1574,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
               <FormLabel>Shipping Marks</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter shipping marks as specified in additional conditions" {...field} rows={3} value={field.value ?? ''} />
+                <RichTextEditor
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Enter shipping marks as specified in additional conditions"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
