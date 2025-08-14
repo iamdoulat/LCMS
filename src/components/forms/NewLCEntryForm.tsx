@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -25,6 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { RichTextEditor } from '../ui/RichTextEditor';
 
 export type NewLCFormValues = z.infer<typeof lcEntrySchema>;
 
@@ -806,17 +806,21 @@ export function NewLCEntryForm() {
             />
         </div>
          <FormField
-            control={control}
-            name="itemDescriptions"
-            render={({ field }) => (
+          control={control}
+          name="itemDescriptions"
+          render={({ field }) => (
             <FormItem>
-                <FormLabel>Item Descriptions</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
+              <FormLabel>Item Descriptions</FormLabel>
+              <FormControl>
+                <RichTextEditor
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Describe the items being shipped..."
+                />
+              </FormControl>
+              <FormMessage />
             </FormItem>
-            )}
+          )}
         />
         <Separator />
         

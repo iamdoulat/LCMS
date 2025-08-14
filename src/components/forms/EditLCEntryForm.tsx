@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -25,6 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { RichTextEditor } from '../ui/RichTextEditor';
 
 export type LCEditFormValues = z.infer<typeof lcEntrySchema>;
 
@@ -222,12 +222,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             secondPartialAmount: initialData.secondPartialAmount ?? defaultFormValues.secondPartialAmount,
             thirdPartialAmount: initialData.thirdPartialAmount ?? defaultFormValues.thirdPartialAmount,
             firstPartialPkgs: initialData.firstPartialPkgs ?? defaultFormValues.firstPartialPkgs,
-            secondPartialNetWeight: initialData.secondPartialNetWeight ?? defaultFormValues.secondPartialNetWeight,
-            secondPartialGrossWeight: initialData.secondPartialGrossWeight ?? defaultFormValues.secondPartialGrossWeight,
-            secondPartialCbm: initialData.secondPartialCbm ?? defaultFormValues.secondPartialCbm,
+            secondPartialPkgs: initialData.secondPartialPkgs ?? defaultFormValues.secondPartialPkgs,
             thirdPartialPkgs: initialData.thirdPartialPkgs ?? defaultFormValues.thirdPartialPkgs,
+            firstPartialNetWeight: initialData.firstPartialNetWeight ?? defaultFormValues.firstPartialNetWeight,
+            secondPartialNetWeight: initialData.secondPartialNetWeight ?? defaultFormValues.secondPartialNetWeight,
             thirdPartialNetWeight: initialData.thirdPartialNetWeight ?? defaultFormValues.thirdPartialNetWeight,
+            firstPartialGrossWeight: initialData.firstPartialGrossWeight ?? defaultFormValues.firstPartialGrossWeight,
+            secondPartialGrossWeight: initialData.secondPartialGrossWeight ?? defaultFormValues.secondPartialGrossWeight,
             thirdPartialGrossWeight: initialData.thirdPartialGrossWeight ?? defaultFormValues.thirdPartialGrossWeight,
+            firstPartialCbm: initialData.firstPartialCbm ?? defaultFormValues.firstPartialCbm,
+            secondPartialCbm: initialData.secondPartialCbm ?? defaultFormValues.secondPartialCbm,
             thirdPartialCbm: initialData.thirdPartialCbm ?? defaultFormValues.thirdPartialCbm,
             totalPackageQty: initialData.totalPackageQty ?? defaultFormValues.totalPackageQty,
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
@@ -892,18 +896,22 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 )}
             />
         </div>
-         <FormField
-            control={control}
-            name="itemDescriptions"
-            render={({ field }) => (
+        <FormField
+          control={form.control}
+          name="itemDescriptions"
+          render={({ field }) => (
             <FormItem>
-                <FormLabel>Item Descriptions</FormLabel>
-                <FormControl>
-                <Textarea placeholder="Describe the items being shipped." {...field} rows={4} value={field.value ?? ''}/>
-                </FormControl>
-                <FormMessage />
+              <FormLabel>Item Descriptions</FormLabel>
+              <FormControl>
+                <RichTextEditor
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder="Describe the items being shipped..."
+                />
+              </FormControl>
+              <FormMessage />
             </FormItem>
-            )}
+          )}
         />
         <Separator />
         
