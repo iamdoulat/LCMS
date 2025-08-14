@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus, PlusCircle, Trash2, Save } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -324,8 +324,11 @@ export function NewLCEntryForm() {
       beneficiaryId: finalData.beneficiaryId,
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : 'N/A',
       currency: finalData.currency,
-      amount: finalData.amount,
       termsOfPay: finalData.termsOfPay,
+      status: finalData.status,
+      shipmentMode: finalData.shipmentMode,
+      trackingCourier: finalData.trackingCourier,
+      amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
       proformaInvoiceNumber: finalData.proformaInvoiceNumber || undefined,
       invoiceDate: finalData.invoiceDate ? format(new Date(finalData.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -333,25 +336,14 @@ export function NewLCEntryForm() {
       commercialInvoiceDate: finalData.commercialInvoiceDate ? format(new Date(finalData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       totalMachineQty: finalData.totalMachineQty,
       numberOfAmendments: toNumberOrUndefined(finalData.numberOfAmendments),
-      status: finalData.status,
       itemDescriptions: finalData.itemDescriptions || undefined,
       partialShipments: finalData.partialShipments || undefined,
       portOfLoading: finalData.portOfLoading || undefined,
       portOfDischarge: finalData.portOfDischarge || undefined,
       consigneeBankNameAddress: finalData.consigneeBankNameAddress || undefined,
-      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
-      notifyPartyName: finalData.notifyPartyName || undefined,
-      notifyPartyCell: finalData.notifyPartyCell || undefined,
-      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
-      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? undefined : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? undefined : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      partialShipmentAllowed: finalData.partialShipmentAllowed,
-      shipmentMode: finalData.shipmentMode,
       vesselOrFlightName: finalData.vesselOrFlightName || undefined,
       vesselImoNumber: finalData.vesselImoNumber || undefined,
       flightNumber: finalData.flightNumber || undefined,
-      trackingCourier: finalData.trackingCourier || undefined,
       trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -362,9 +354,14 @@ export function NewLCEntryForm() {
       finalLcUrl: finalData.finalLcUrl || undefined,
       shippingDocumentsUrl: finalData.shippingDocumentsUrl || undefined,
       packingListUrl: finalData.packingListUrl || undefined,
-      year: extractedYear,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      notifyPartyNameAndAddress: finalData.notifyPartyNameAndAddress || undefined,
+      notifyPartyName: finalData.notifyPartyName || undefined,
+      notifyPartyCell: finalData.notifyPartyCell || undefined,
+      notifyPartyEmail: finalData.notifyPartyEmail || undefined,
+      lcIssueDate: finalData.lcIssueDate ? format(new Date(finalData.lcIssueDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      expireDate: finalData.termsOfPay === "T/T In Advance" || !finalData.expireDate ? undefined : format(new Date(finalData.expireDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      latestShipmentDate: finalData.termsOfPay === "T/T In Advance" || !finalData.latestShipmentDate ? undefined : format(new Date(finalData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      partialShipmentAllowed: finalData.partialShipmentAllowed,
       firstPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.firstPartialQty) : undefined,
       secondPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.secondPartialQty) : undefined,
       thirdPartialQty: finalData.partialShipmentAllowed === "Yes" ? toNumberOrUndefined(finalData.thirdPartialQty) : undefined,
@@ -413,6 +410,9 @@ export function NewLCEntryForm() {
       firstShipmentNote: finalData.firstShipmentNote || undefined,
       secondShipmentNote: finalData.secondShipmentNote || undefined,
       thirdShipmentNote: finalData.thirdShipmentNote || undefined,
+      year: extractedYear,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     const cleanedDataToSave = Object.fromEntries(

@@ -6,10 +6,10 @@ export const termsOfPayOptions = [
   "T/T In Advance",
   "L/C AT SIGHT",
   "UPAS",
-  "Deffered 60days",
-  "Deffered 120days",
-  "Deffered 180days",
-  "Deffered 360days",
+  "Deferred 60days",
+  "Deferred 120days",
+  "Deferred 180days",
+  "Deferred 360days",
 ] as const;
 export type TermsOfPay = typeof termsOfPayOptions[number];
 
