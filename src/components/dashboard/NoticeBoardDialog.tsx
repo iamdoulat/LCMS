@@ -12,7 +12,7 @@ interface NoticeBoardDialogProps {
   notice: NoticeBoardSettings | null;
 }
 
-const NOTICE_DISMISSED_KEY = 'noticeDismissedTimestamp';
+const NOTICE_DISMISSED_KEY_PREFIX = 'noticeDismissed_';
 
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -21,7 +21,9 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   React.useEffect(() => {
     // Only proceed if we have a valid notice, its timestamp, and the user's roles have been loaded.
     if (notice && notice.isEnabled && notice.isPopupEnabled && notice.updatedAt && userRole) {
-      
+      const noticeId = (notice as any).id; // Assuming notice object has an ID
+      if (!noticeId) return; // Cannot track dismissal without a unique ID
+
       const userHasTargetRole = userRole.some(role => notice.targetRoles?.includes(role));
       
       // If the user does not have a role targeted by the notice, do nothing.
@@ -31,10 +33,10 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
       }
 
       const noticeTimestamp = (notice.updatedAt as Timestamp).seconds;
-      const dismissedTimestampString = localStorage.getItem(NOTICE_DISMISSED_KEY);
+      const dismissedTimestampString = localStorage.getItem(`${NOTICE_DISMISSED_KEY_PREFIX}${noticeId}`);
       const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
       
-      // Show the dialog only if the notice's timestamp is newer than the last dismissal.
+      // Show the dialog only if the notice's timestamp is newer than the last dismissal for this specific notice.
       if (noticeTimestamp > lastDismissedTimestamp) {
         setIsOpen(true);
       } else {
@@ -47,7 +49,10 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
 
   const handleDismiss = () => {
     if (notice && notice.updatedAt) {
-        localStorage.setItem(NOTICE_DISMISSED_KEY, (notice.updatedAt as Timestamp).seconds.toString());
+        const noticeId = (notice as any).id;
+        if (noticeId) {
+            localStorage.setItem(`${NOTICE_DISMISSED_KEY_PREFIX}${noticeId}`, (notice.updatedAt as Timestamp).seconds.toString());
+        }
     }
     setIsOpen(false);
   };

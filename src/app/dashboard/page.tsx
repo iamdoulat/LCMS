@@ -441,16 +441,19 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const noticeDocRef = doc(firestore, 'site_settings', 'notice_board');
-        const docSnap = await getDoc(noticeDocRef);
-        if (docSnap.exists()) {
-          const noticeData = docSnap.data() as NoticeBoardSettings;
-          setNotice(noticeData);
-        } else {
-          setNotice(null);
-        }
+        const noticesSnapshot = await getDocs(query(collection(firestore, 'site_settings'), orderBy('updatedAt', 'desc')));
+        const allNotices = noticesSnapshot.docs.map(d => ({ ...d.data(), id: d.id })) as (NoticeBoardSettings & {id: string})[];
+        
+        const mostRecentActiveNotice = allNotices.find(n => 
+            n.isEnabled &&
+            n.isPopupEnabled &&
+            n.targetRoles?.some(role => userRole?.includes(role))
+        );
+
+        setNotice(mostRecentActiveNotice || null);
+
       } catch (error) {
-        console.error("Error fetching notice:", error);
+        console.error("Error fetching notices:", error);
       }
     };
 
