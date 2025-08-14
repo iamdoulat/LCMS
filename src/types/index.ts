@@ -6,6 +6,7 @@ export const termsOfPayOptions = [
   "T/T In Advance",
   "L/C AT SIGHT",
   "UPAS",
+  "Deffered 60days",
   "Deffered 120days",
   "Deffered 180days",
   "Deffered 360days",
