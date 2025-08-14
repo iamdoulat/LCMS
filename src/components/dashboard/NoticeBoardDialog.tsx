@@ -72,9 +72,10 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
             Please review the following information.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1">
-          {notice.content}
-        </div>
+        <div 
+          className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1"
+          dangerouslySetInnerHTML={{ __html: notice.content }}
+        />
         <AlertDialogFooter>
           <AlertDialogAction onClick={handleDismiss}>
             <X className="mr-2 h-4 w-4" />

@@ -17,12 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, BellRing, Save, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 export default function EditNoticePage() {
   const { userRole, loading: authLoading } = useAuth();
@@ -159,9 +159,13 @@ export default function EditNoticePage() {
                   <FormItem>
                     <FormLabel className="text-lg">Notice Content*</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Enter the notice content here... You can use markdown for formatting." {...field} rows={8} />
+                      <RichTextEditor
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Enter the notice content here..."
+                      />
                     </FormControl>
-                    <FormDescription>This content will be displayed in the pop-up. Markdown is supported.</FormDescription>
+                    <FormDescription>This content will be displayed in the pop-up.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
