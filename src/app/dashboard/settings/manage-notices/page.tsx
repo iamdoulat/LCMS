@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Bell, Info, AlertTriangle, FileEdit, Trash2, PlusCircle } from 'lucide-react';
+import { Loader2, Bell, Info, AlertTriangle, FileEdit, Trash2, PlusCircle, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -16,6 +16,14 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Notice extends NoticeBoardSettings {
   id: string;
@@ -173,14 +181,36 @@ export default function ManageNoticesPage() {
                                 </TableCell>
                                 <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
                                 <TableCell className="text-right">
-                                    <Button asChild variant="outline" size="sm" className="mr-2">
-                                        <Link href={`/dashboard/notice/edit/${notice.id}`}>
-                                            <FileEdit className="h-4 w-4"/>
-                                        </Link>
-                                    </Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteNotice(notice.id, notice.title)} disabled={isReadOnly || !isSuperAdmin}>
-                                        <Trash2 className="h-4 w-4"/>
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={!isSuperAdmin && !isReadOnly}>
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/dashboard/notice/edit/${notice.id}`}>
+                                                    <FileEdit className="mr-2 h-4 w-4" />
+                                                    <span>{isReadOnly ? 'View' : 'Edit'}</span>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            {isSuperAdmin && (
+                                                <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDeleteNotice(notice.id, notice.title)}
+                                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                                    disabled={isReadOnly}
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    <span>Delete</span>
+                                                </DropdownMenuItem>
+                                                </>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </TableCell>
                             </TableRow>
                         ))
