@@ -109,39 +109,60 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchInitialCompanyProfile();
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
-      if (currentUser) {
-        setUser(currentUser);
-        try {
-          const userDocRef = doc(firestore, "users", currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+  const handleUserAuth = useCallback(async (currentUser: User | null) => {
+    if (currentUser) {
+      try {
+        const userDocRef = doc(firestore, "users", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-          if (userDocSnap.exists()) {
-            const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
-            setFirestoreUser(userProfileData);
-            setUserRole(Array.isArray(userProfileData.role) ? userProfileData.role : (userProfileData.role ? [userProfileData.role] : ["User"]));
-          } else {
-            console.warn(`Firestore document for user ${currentUser.uid} not found. This might happen briefly after registration or if doc creation failed.`);
+        if (userDocSnap.exists()) {
+          const userProfileData = { id: userDocSnap.id, ...userDocSnap.data() } as UserDocumentForAdmin;
+
+          if (userProfileData.disabled) {
+            await firebaseSignOut(auth);
+            setUser(null);
             setFirestoreUser(null);
             setUserRole(null);
+            Swal.fire({
+              title: "Account Disabled",
+              text: "Your account has been disabled. Please contact an administrator.",
+              icon: "error",
+            });
+            router.push('/login');
+            return;
           }
-        } catch (error) {
-           console.error("AuthContext: Error fetching user document:", error);
-           setFirestoreUser(null);
-           setUserRole(null);
+
+          setUser(currentUser);
+          setFirestoreUser(userProfileData);
+          setUserRole(Array.isArray(userProfileData.role) ? userProfileData.role : (userProfileData.role ? [userProfileData.role] : ["User"]));
+        } else {
+          console.warn(`Firestore document for user ${currentUser.uid} not found. Forcing logout.`);
+          await firebaseSignOut(auth);
+          setUser(null);
+          setFirestoreUser(null);
+          setUserRole(null);
+          Swal.fire("Error", "User profile not found in database.", "error");
         }
-      } else {
+      } catch (error) {
+        console.error("AuthContext: Error fetching user document:", error);
+        await firebaseSignOut(auth);
         setUser(null);
         setFirestoreUser(null);
         setUserRole(null);
       }
-      setLoading(false);
-    });
+    } else {
+      setUser(null);
+      setFirestoreUser(null);
+      setUserRole(null);
+    }
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => {
+    fetchInitialCompanyProfile();
+    const unsubscribe = onAuthStateChanged(auth, handleUserAuth);
     return () => unsubscribe();
-  }, [fetchInitialCompanyProfile]);
+  }, [fetchInitialCompanyProfile, handleUserAuth]);
 
   const login = useCallback(async (email: string, pass: string) => {
     try {
@@ -209,6 +230,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           email: user.email,
           photoURL: user.photoURL || null,
           role: roles,
+          disabled: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
       };
@@ -258,10 +280,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
               email: user.email,
               photoURL: user.photoURL,
               role: roles,
+              disabled: false,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
           };
           await setDoc(userDocRef, newProfileData);
+      } else {
+        const userData = userDocSnap.data() as UserDocumentForAdmin;
+        if(userData.disabled) {
+            await firebaseSignOut(auth);
+            Swal.fire({
+              title: "Account Disabled",
+              text: "Your account has been disabled. Please contact an administrator.",
+              icon: "error",
+            });
+            throw new Error("Account disabled");
+        }
       }
       Swal.fire({
         title: "Sign-in Successful",
@@ -272,12 +306,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      console.error("Error signing in with Google: ", error);
-      let errorMessage = "Failed to sign in with Google.";
-      if (error.code === 'auth/account-exists-with-different-credential') errorMessage = "An account with this email already exists.";
-      else if (error.code === 'auth/popup-closed-by-user') errorMessage = "Google Sign-In was cancelled.";
-      else errorMessage = error.message || errorMessage;
-      Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
+      if (error.message !== "Account disabled") {
+          console.error("Error signing in with Google: ", error);
+          let errorMessage = "Failed to sign in with Google.";
+          if (error.code === 'auth/account-exists-with-different-credential') errorMessage = "An account with this email already exists.";
+          else if (error.code === 'auth/popup-closed-by-user') errorMessage = "Google Sign-In was cancelled.";
+          else errorMessage = error.message || errorMessage;
+          Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
+      }
       throw error;
     }
   }, [router]);

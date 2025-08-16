@@ -5,12 +5,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal } from 'lucide-react';
+import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,23 @@ export default function UserListPage() {
   const isSuperAdmin = userRole?.includes('Super Admin');
   const isReadOnly = userRole?.includes('Viewer');
 
+  const fetchUsers = React.useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const usersRef = collection(firestore, "users");
+      const q = query(usersRef, orderBy("displayName", "asc"));
+      const querySnapshot = await getDocs(q);
+      const fetchedUsers = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UserDocumentForAdmin));
+      setUsers(fetchedUsers);
+    } catch (error: any) {
+      setFetchError(`Failed to fetch users: ${error.message}`);
+      Swal.fire("Error", `Failed to fetch user data. Check console and Firestore rules.`, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading && !isAdminOrSuperAdmin && !isReadOnly) {
       Swal.fire({
@@ -51,25 +68,37 @@ export default function UserListPage() {
     }
 
     if (isAdminOrSuperAdmin || isReadOnly) {
-      const fetchUsers = async () => {
-        setIsLoading(true);
-        setFetchError(null);
-        try {
-          const usersRef = collection(firestore, "users");
-          const q = query(usersRef, orderBy("displayName", "asc"));
-          const querySnapshot = await getDocs(q);
-          const fetchedUsers = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UserDocumentForAdmin));
-          setUsers(fetchedUsers);
-        } catch (error: any) {
-          setFetchError(`Failed to fetch users: ${error.message}`);
-          Swal.fire("Error", `Failed to fetch user data. Check console and Firestore rules.`, "error");
-        } finally {
-          setIsLoading(false);
-        }
-      };
       fetchUsers();
     }
-  }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly]);
+  }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly, fetchUsers]);
+
+  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    const actionText = currentStatus ? 'enable' : 'disable';
+    const newStatus = !currentStatus;
+
+    Swal.fire({
+      title: `Are you sure you want to ${actionText} this user?`,
+      text: `${newStatus ? 'Enabling' : 'Disabling'} this user will ${newStatus ? 'allow them to log in' : 'prevent them from logging in'}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Yes, ${actionText} user`,
+      cancelButtonText: 'Cancel',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const userDocRef = doc(firestore, "users", userId);
+          await updateDoc(userDocRef, {
+            disabled: newStatus,
+            updatedAt: serverTimestamp(),
+          });
+          Swal.fire('Success', `User has been successfully ${actionText}d.`, 'success');
+          fetchUsers(); // Re-fetch users to update the UI
+        } catch (error: any) {
+          Swal.fire('Error', `Failed to ${actionText} user: ${error.message}`, 'error');
+        }
+      }
+    });
+  };
 
   const handleDeleteUser = async (userId: string, userDisplayName: string) => {
     if (userId === user?.uid) {
@@ -140,19 +169,21 @@ export default function UserListPage() {
                         <TableHead>User</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Role(s)</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {isLoading ? (
-                        <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading users...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading users...</TableCell></TableRow>
                     ) : users.length === 0 ? (
-                        <TableRow><TableCell colSpan={4} className="h-24 text-center">No users found.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No users found.</TableCell></TableRow>
                     ) : (
                         users.map(u => {
                             const rolesToDisplay = Array.isArray(u.role) ? u.role : (u.role ? [u.role as UserRole] : []);
+                            const isDisabled = u.disabled === true;
                             return (
-                                <TableRow key={u.id}>
+                                <TableRow key={u.id} className={cn(isDisabled && 'bg-muted/50 text-muted-foreground')}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9">
@@ -167,6 +198,11 @@ export default function UserListPage() {
                                         <div className="flex flex-wrap gap-1">
                                             {rolesToDisplay.map(r => <Badge key={r} variant={r === "Super Admin" || r === "Admin" ? "default" : "secondary"}>{r}</Badge>)}
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={isDisabled ? 'destructive' : 'default'} className={cn(!isDisabled && 'bg-green-600 hover:bg-green-700')}>
+                                            {isDisabled ? 'Disabled' : 'Active'}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                     {(rolesToDisplay.includes("Super Admin") && u.uid !== user?.uid) ? (
@@ -183,6 +219,12 @@ export default function UserListPage() {
                                                         <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
                                                     </Link>
                                                 </DropdownMenuItem>
+                                                 {(isAdminOrSuperAdmin && !isReadOnly && u.uid !== user?.uid) && (
+                                                    <DropdownMenuItem onClick={() => handleToggleUserStatus(u.id, !!u.disabled)}>
+                                                        {u.disabled ? <UserCheck className="mr-2 h-4 w-4"/> : <UserX className="mr-2 h-4 w-4"/>}
+                                                        <span>{u.disabled ? 'Enable User' : 'Disable User'}</span>
+                                                    </DropdownMenuItem>
+                                                )}
                                                 {isSuperAdmin && (
                                                     <>
                                                         <DropdownMenuSeparator/>

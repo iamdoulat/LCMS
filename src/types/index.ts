@@ -443,6 +443,7 @@ export interface UserDocumentForAdmin {
   contactNumber?: string;
   role: UserRole[]; // Changed to an array of roles
   photoURL?: string;
+  disabled?: boolean;
   createdAt?: any;
   updatedAt?: any;
 }
