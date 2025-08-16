@@ -8,7 +8,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where, runTransaction, serverTimestamp } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
