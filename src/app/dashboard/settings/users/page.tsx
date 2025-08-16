@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 
+const ITEMS_PER_PAGE = 10;
 
 export default function UserListPage() {
   const { user, userRole, loading: authLoading } = useAuth();
@@ -32,6 +33,7 @@ export default function UserListPage() {
   const [users, setUsers] = useState<UserDocumentForAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const isAdminOrSuperAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
   const isSuperAdmin = userRole?.includes('Super Admin');
   const isReadOnly = userRole?.includes('Viewer');
@@ -133,6 +135,42 @@ export default function UserListPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
   
+  // Pagination Logic
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return users.slice(startIndex, endIndex);
+  }, [users, currentPage]);
+
+  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+  
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
+
+    if (totalPages <= maxPagesToShow + 2) { 
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      pageNumbers.push(1); 
+      let startPage = Math.max(2, currentPage - halfPagesToShow);
+      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
+      if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
+      if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
+      if (startPage > 2) pageNumbers.push("...");
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages - 1) pageNumbers.push("...");
+      pageNumbers.push(totalPages); 
+    }
+    return pageNumbers;
+  };
+
   if (authLoading || (!isAdminOrSuperAdmin && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -176,10 +214,10 @@ export default function UserListPage() {
                 <TableBody>
                     {isLoading ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading users...</TableCell></TableRow>
-                    ) : users.length === 0 ? (
+                    ) : paginatedUsers.length === 0 ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center">No users found.</TableCell></TableRow>
                     ) : (
-                        users.map(u => {
+                        paginatedUsers.map(u => {
                             const rolesToDisplay = Array.isArray(u.role) ? u.role : (u.role ? [u.role as UserRole] : []);
                             const isDisabled = u.disabled === true;
                             return (
@@ -246,8 +284,45 @@ export default function UserListPage() {
                         })
                     )}
                 </TableBody>
+                <TableCaption>
+                    Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
+                    {Math.min(currentPage * ITEMS_PER_PAGE, users.length)} of {users.length} users.
+                </TableCaption>
             </Table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                </Button>
+                {getPageNumbers().map((page, index) =>
+                    typeof page === 'number' ? (
+                    <Button
+                        key={`user-page-${page}`}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="w-9 h-9 p-0"
+                    >
+                        {page}
+                    </Button>
+                    ) : (<span key={`ellipsis-user-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                )}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
+                    Next <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
