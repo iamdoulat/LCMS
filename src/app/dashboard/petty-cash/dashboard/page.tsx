@@ -8,7 +8,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, deleteDoc, doc, where, runTransaction } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -322,7 +322,7 @@ export default function PettyCashDashboardPage() {
         if (isReadOnly) return;
         Swal.fire({
             title: 'Are you sure?',
-            text: `This will permanently delete the transaction. This action cannot be undone.`,
+            text: `This will delete the transaction and update the account balance. This action cannot be undone.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: 'hsl(var(--destructive))',
@@ -330,8 +330,30 @@ export default function PettyCashDashboardPage() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await deleteDoc(doc(firestore, "petty_cash_transactions", transactionId));
-                    Swal.fire('Deleted!', 'The transaction has been removed.', 'success');
+                    await runTransaction(firestore, async (transaction) => {
+                        const txDocRef = doc(firestore, "petty_cash_transactions", transactionId);
+                        const txDocSnap = await transaction.get(txDocRef);
+                        
+                        if (!txDocSnap.exists()) {
+                            throw new Error("Transaction not found.");
+                        }
+
+                        const txData = txDocSnap.data() as PettyCashTransactionDocument;
+                        const accountDocRef = doc(firestore, "petty_cash_accounts", txData.accountId);
+                        const accountDocSnap = await transaction.get(accountDocRef);
+
+                        if (accountDocSnap.exists()) {
+                            const accountData = accountDocSnap.data();
+                            const currentBalance = accountData.balance || 0;
+                            const newBalance = txData.type === 'Credit' 
+                                ? currentBalance - txData.amount 
+                                : currentBalance + txData.amount;
+                            transaction.update(accountDocRef, { balance: newBalance, updatedAt: serverTimestamp() });
+                        }
+                        
+                        transaction.delete(txDocRef);
+                    });
+                    Swal.fire('Deleted!', 'The transaction has been removed and account balance updated.', 'success');
                 } catch (error: any) {
                     Swal.fire('Error!', `Could not delete transaction: ${error.message}`, 'error');
                 }
@@ -677,3 +699,4 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
+
