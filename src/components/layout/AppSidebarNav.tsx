@@ -172,7 +172,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: 'View Shipment Status', icon: Ship, iconColorClass: 'bg-icon-shipment-done', subLinks: shipmentNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
-  { groupLabel: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer"] },
+  { groupLabel: 'General Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer"] },
 ];
 
 export function AppSidebarNav() {
