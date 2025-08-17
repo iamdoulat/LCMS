@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -19,10 +19,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
 import type { CustomerDocument, LCEntryDocument } from '@/types';
-import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, orderBy, query as firestoreQuery } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -31,68 +33,57 @@ const formatCurrency = (value?: number) => {
   return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const ApplicantListSkeleton = () => (
+    <>
+    {Array.from({ length: 5 }).map((_, i) => (
+        <TableRow key={i}>
+            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+        </TableRow>
+    ))}
+    </>
+);
+
+
 export default function ApplicantsListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
-  const [allApplicants, setAllApplicants] = useState<CustomerDocument[]>([]);
-  const [displayedApplicants, setDisplayedApplicants] = useState<CustomerDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  
   const [currentPage, setCurrentPage] = useState(1);
-  const [applicantLcVals, setApplicantLcVals] = useState<{ [key: string]: number }>({});
-
-
-  // Filter states
   const [filterApplicantName, setFilterApplicantName] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
   const [filterPhone, setFilterPhone] = useState('');
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
-  useEffect(() => {
-    const fetchApplicantsAndLcData = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const applicantsQuery = query(collection(firestore, "customers"), orderBy("applicantName", "asc"));
-        const lcEntriesQuery = query(collection(firestore, "lc_entries"));
-
-        const [applicantsSnapshot, lcEntriesSnapshot] = await Promise.all([
-          getDocs(applicantsQuery),
-          getDocs(lcEntriesQuery)
-        ]);
-
-        const fetchedApplicants = applicantsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomerDocument));
-        setAllApplicants(fetchedApplicants);
-
-        const lcValuesByApplicant: { [key: string]: number } = {};
-        lcEntriesSnapshot.forEach(docSnap => {
-          const lc = docSnap.data() as LCEntryDocument;
-          if (lc.applicantId && typeof lc.amount === 'number') {
-            lcValuesByApplicant[lc.applicantId] = (lcValuesByApplicant[lc.applicantId] || 0) + lc.amount;
-          }
+  // Use the custom hook for data fetching
+  const { data: allApplicants, isLoading: isLoadingApplicants, error: fetchError } = useFirestoreQuery<CustomerDocument>(
+    collection(firestore, "customers")
+  );
+  
+  const { data: applicantLcVals, isLoading: isLoadingLcVals } = useFirestoreQuery<{ [key: string]: number }>(
+    collection(firestore, "lc_entries"),
+    (snapshot) => {
+        const lcValues: { [key: string]: number } = {};
+        snapshot.forEach(docSnap => {
+            const lc = docSnap.data() as LCEntryDocument;
+            if (lc.applicantId && typeof lc.amount === 'number') {
+                lcValues[lc.applicantId] = (lcValues[lc.applicantId] || 0) + lc.amount;
+            }
         });
-        setApplicantLcVals(lcValuesByApplicant);
+        return lcValues;
+    },
+    ['lc_values'] // unique query key
+  );
+  
+  const isLoading = isLoadingApplicants || isLoadingLcVals;
 
-      } catch (error: any) {
-        console.error("Error fetching data: ", error);
-        let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
-         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
-        } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
-        }
-        setFetchError(errorMessage);
-        Swal.fire("Fetch Error", errorMessage, "error");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchApplicantsAndLcData();
-  }, []);
-
-  useEffect(() => {
+  const displayedApplicants = useMemo(() => {
+    if (!allApplicants) return [];
     let filtered = [...allApplicants];
 
     if (filterApplicantName) {
@@ -115,11 +106,12 @@ export default function ApplicantsListPage() {
         app.contactPerson?.toLowerCase().includes(filterContactPerson.toLowerCase())
       );
     }
+    
+    // Sort after filtering
+    filtered.sort((a, b) => a.applicantName.localeCompare(b.applicantName));
 
-    setDisplayedApplicants(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    return filtered;
   }, [allApplicants, filterApplicantName, filterEmail, filterPhone, filterContactPerson]);
-
 
   const handleEditApplicant = (applicantId: string) => {
     router.push(`/dashboard/customers/${applicantId}/edit`);
@@ -139,7 +131,7 @@ export default function ApplicantsListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "customers", applicantId));
-          setAllApplicants(prevApplicants => prevApplicants.filter(applicant => applicant.id !== applicantId));
+          // React Query will automatically refetch and update the UI.
           Swal.fire(
             'Deleted!',
             `Applicant ${applicantName || applicantId} has been removed.`,
@@ -238,7 +230,6 @@ export default function ApplicantsListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Filter Section */}
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
@@ -306,17 +297,11 @@ export default function ApplicantsListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading applicants...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <ApplicantListSkeleton />
                 ) : fetchError ? (
                    <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-destructive">
-                      {fetchError}
+                      {fetchError.message}
                     </TableCell>
                   </TableRow>
                 ) : currentItems.length > 0 ? (
@@ -326,7 +311,7 @@ export default function ApplicantsListPage() {
                       <TableCell>{applicant.email || 'N/A'}</TableCell>
                       <TableCell>{applicant.phone || 'N/A'}</TableCell>
                       <TableCell>{applicant.contactPerson || 'N/A'}</TableCell>
-                      <TableCell>{formatCurrency(applicantLcVals[applicant.id] || 0)}</TableCell>
+                      <TableCell>{formatCurrency(applicantLcVals?.[applicant.id] || 0)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -368,7 +353,6 @@ export default function ApplicantsListPage() {
               </TableCaption>
             </Table>
           </div>
-           {/* Pagination controls will only show if there is more than one page */}
            {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
