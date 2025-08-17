@@ -159,7 +159,6 @@ const settingsNavItems: NavItem[] = [
     { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
     { href: '/dashboard/settings/user-activities', label: 'User Activities', icon: History, iconColorClass: 'bg-icon-logs' },
     { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
-    { href: '/dashboard/settings/smtp', label: 'SMTP Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
 // Define Group Structure
