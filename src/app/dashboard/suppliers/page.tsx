@@ -23,6 +23,8 @@ import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/fi
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,6 +32,21 @@ const formatCurrency = (value?: number) => {
   if (typeof value !== 'number' || isNaN(value)) return 'USD N/A';
   return `USD ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+
+const SupplierListSkeleton = () => (
+    <>
+        {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+            </TableRow>
+        ))}
+    </>
+);
 
 
 async function getInitialData() {
@@ -297,13 +314,7 @@ export default function BeneficiariesListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <div className="flex justify-center items-center">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading beneficiaries...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                   <SupplierListSkeleton />
                 ) : fetchError ? (
                    <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-destructive">
@@ -403,4 +414,3 @@ export default function BeneficiariesListPage() {
     </div>
   );
 }
-

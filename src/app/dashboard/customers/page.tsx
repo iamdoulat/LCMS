@@ -61,7 +61,7 @@ export default function ApplicantsListPage() {
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
   // Use the custom hook for data fetching
-  const { data: allApplicants, isLoading: isLoadingApplicants, error: fetchError } = useFirestoreQuery<CustomerDocument>(
+  const { data: allApplicants, isLoading: isLoadingApplicants, error: fetchError } = useFirestoreQuery<CustomerDocument[]>(
     collection(firestore, "customers")
   );
   
