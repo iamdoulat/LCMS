@@ -11,21 +11,25 @@ const defaultTransformer = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
 
 /**
  * A custom hook to fetch Firestore data using TanStack Query.
- * @param queryKey A unique key for the query.
  * @param firestoreQuery The Firestore query to execute.
  * @param transformer An optional function to transform the snapshot data.
+ * @param queryKey A unique key for the query, required for caching and refetching.
  * @returns The state of the query including data, error, and loading status.
  */
 export const useFirestoreQuery = <T>(
     firestoreQuery: Query<DocumentData>,
-    transformer: (snapshot: QuerySnapshot<DocumentData>) => T = defaultTransformer as any,
+    transformer?: (snapshot: QuerySnapshot<DocumentData>) => T,
     queryKey?: any[],
 ) => {
-    const key = queryKey || [firestoreQuery.path];
+    // A query key is required for TanStack Query to work correctly.
+    // We use a combination of the query's path and any additional keys.
+    const key = queryKey || [(firestoreQuery as any)._query.path.segments.join('/')];
 
     const queryFn = async () => {
         const snapshot = await getDocs(firestoreQuery);
-        return transformer(snapshot);
+        // Use the provided transformer or the default one.
+        const transformFn = transformer || (defaultTransformer as (snapshot: QuerySnapshot<DocumentData>) => T);
+        return transformFn(snapshot);
     };
 
     return useQuery<T, Error>({

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
 import type { SupplierDocument, ProformaInvoiceDocument } from '@/types';
-import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, orderBy, query as firestoreQuery } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -48,71 +48,44 @@ const SupplierListSkeleton = () => (
     </>
 );
 
-
-async function getInitialData() {
-    const suppliersQuery = query(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc"));
-    const piQuery = query(collection(firestore, "proforma_invoices"));
-
-    const [suppliersSnapshot, piSnapshot] = await Promise.all([
-      getDocs(suppliersQuery),
-      getDocs(piQuery)
-    ]);
-
-    const beneficiaries = suppliersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SupplierDocument));
-    
-    const commissionsBySupplier: { [key: string]: number } = {};
-    piSnapshot.forEach(docSnap => {
-      const pi = docSnap.data() as ProformaInvoiceDocument;
-      if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
-        commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
-      }
-    });
-
-    return { beneficiaries, commissionsBySupplier };
-}
-
-
 export default function BeneficiariesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
-  const [allBeneficiaries, setAllBeneficiaries] = useState<SupplierDocument[]>([]);
-  const [displayedBeneficiaries, setDisplayedBeneficiaries] = useState<SupplierDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [supplierCommissionVals, setSupplierCommissionVals] = useState<{ [key: string]: number }>({});
-
+  
   // Filter states
   const [filterBeneficiaryName, setFilterBeneficiaryName] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
   const [filterPhone, setFilterPhone] = useState('');
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
-  useEffect(() => {
-    async function fetchData() {
-        try {
-            const { beneficiaries, commissionsBySupplier } = await getInitialData();
-            setAllBeneficiaries(beneficiaries);
-            setSupplierCommissionVals(commissionsBySupplier);
-        } catch (error: any) {
-            console.error("Error fetching data: ", error);
-            let errorMessage = `Could not fetch data from Firestore. Please ensure Firestore rules allow reads.`;
-            if (error.message && error.message.toLowerCase().includes("index")) {
-                errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for a link to create it.`;
-            } else if (error.message) {
-                errorMessage += ` Error: ${error.message}`;
-            }
-            setFetchError(errorMessage);
-            Swal.fire("Fetch Error", errorMessage, "error");
-        } finally {
-            setIsLoading(false);
-        }
-    }
-    fetchData();
-  }, []);
+  // Data fetching using the custom hook
+  const { data: allBeneficiaries, isLoading: isLoadingBeneficiaries, error: fetchError } = useFirestoreQuery<SupplierDocument[]>(
+    firestoreQuery(collection(firestore, "suppliers"), orderBy("beneficiaryName", "asc")),
+    undefined, // Use default transformer
+    ['suppliers'] // Query key
+  );
 
-  useEffect(() => {
+  const { data: supplierCommissionVals, isLoading: isLoadingCommissions } = useFirestoreQuery<{ [key: string]: number }>(
+    collection(firestore, "proforma_invoices"),
+    (snapshot) => {
+        const commissionsBySupplier: { [key: string]: number } = {};
+        snapshot.forEach(docSnap => {
+            const pi = docSnap.data() as ProformaInvoiceDocument;
+            if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
+                commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
+            }
+        });
+        return commissionsBySupplier;
+    },
+    ['commissions_by_supplier'] // Query key
+  );
+  
+  const isLoading = isLoadingBeneficiaries || isLoadingCommissions;
+
+  const displayedBeneficiaries = useMemo(() => {
+    if (!allBeneficiaries) return [];
     let filtered = [...allBeneficiaries];
 
     if (filterBeneficiaryName) {
@@ -136,8 +109,7 @@ export default function BeneficiariesListPage() {
       );
     }
 
-    setDisplayedBeneficiaries(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    return filtered;
   }, [allBeneficiaries, filterBeneficiaryName, filterEmail, filterPhone, filterContactPerson]);
 
   const handleEditBeneficiary = (beneficiaryId: string) => {
@@ -147,7 +119,7 @@ export default function BeneficiariesListPage() {
   const handleDeleteBeneficiary = (beneficiaryId: string, beneficiaryName?: string) => {
     Swal.fire({
       title: 'Are you absolutely sure?',
-      text: `This action cannot be undone. This will permanently delete the beneficiary profile for "${beneficiaryName || beneficiaryId}" from Firestore.`,
+      text: `This will permanently delete the beneficiary profile for "${beneficiaryName || beneficiaryId}" from Firestore.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: 'hsl(var(--destructive))',
@@ -158,8 +130,7 @@ export default function BeneficiariesListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "suppliers", beneficiaryId));
-          // Update both allBeneficiaries and displayedBeneficiaries to reflect deletion
-          setAllBeneficiaries(prev => prev.filter(b => b.id !== beneficiaryId));
+          // React Query will automatically refetch and update the UI.
           Swal.fire(
             'Deleted!',
             `Beneficiary ${beneficiaryName || beneficiaryId} has been removed.`,
@@ -246,7 +217,6 @@ export default function BeneficiariesListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Filter Section */}
           <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
@@ -318,7 +288,7 @@ export default function BeneficiariesListPage() {
                 ) : fetchError ? (
                    <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-destructive">
-                      {fetchError}
+                      {fetchError.message}
                     </TableCell>
                   </TableRow>
                 ): currentItems.length > 0 ? (
@@ -328,7 +298,7 @@ export default function BeneficiariesListPage() {
                       <TableCell>{beneficiary.emailId || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.cellNumber || 'N/A'}</TableCell>
                       <TableCell>{beneficiary.contactPersonName || 'N/A'}</TableCell>
-                      <TableCell>{formatCurrency(supplierCommissionVals[beneficiary.id] || 0)}</TableCell>
+                      <TableCell>{formatCurrency(supplierCommissionVals?.[beneficiary.id] || 0)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

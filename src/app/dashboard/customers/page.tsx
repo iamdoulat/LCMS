@@ -60,9 +60,11 @@ export default function ApplicantsListPage() {
   const [filterPhone, setFilterPhone] = useState('');
   const [filterContactPerson, setFilterContactPerson] = useState('');
 
-  // Use the custom hook for data fetching
+  // Use the custom hook for data fetching, providing a unique query key.
   const { data: allApplicants, isLoading: isLoadingApplicants, error: fetchError } = useFirestoreQuery<CustomerDocument[]>(
-    collection(firestore, "customers")
+    firestoreQuery(collection(firestore, "customers")), // The actual Firestore query
+    undefined, // Use default transformer
+    ['customers'] // The unique key for this query
   );
   
   const { data: applicantLcVals, isLoading: isLoadingLcVals } = useFirestoreQuery<{ [key: string]: number }>(
@@ -77,7 +79,7 @@ export default function ApplicantsListPage() {
         });
         return lcValues;
     },
-    ['lc_values'] // unique query key
+    ['lc_values_by_applicant'] // unique query key
   );
   
   const isLoading = isLoadingApplicants || isLoadingLcVals;
