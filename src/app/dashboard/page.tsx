@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound } from 'lucide-react';
+import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound, ListChecks } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId, orderBy, doc, getDoc } from 'firebase/firestore';
 import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument, NoticeBoardSettings } from '@/types';
@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from '@/components/ui/skeleton';
 import { NoticeBoardDialog } from '@/components/dashboard/NoticeBoardDialog';
+import { SalesInvoiceList } from '@/components/dashboard/SalesInvoiceList';
 
 
 const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
@@ -917,8 +918,22 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <ListChecks className="h-7 w-7 text-primary" />
+                Recent Sales Invoices
+            </CardTitle>
+            <CardDescription>A view of the latest sales invoices.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SalesInvoiceList showFilters={false} itemsPerPage={5} />
+          </CardContent>
+      </Card>
       </>
       )}
     </div>
   );
 }
+

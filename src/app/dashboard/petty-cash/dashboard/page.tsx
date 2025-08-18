@@ -684,18 +684,6 @@ export default function PettyCashDashboardPage() {
                 </CardContent>
                 </Card>
             </div>
-             <Card className="shadow-xl">
-                <CardHeader>
-                    <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                        <ListChecks className="h-7 w-7 text-primary" />
-                        Recent Sales Invoices
-                    </CardTitle>
-                    <CardDescription>A view of the latest sales invoices.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <SalesInvoiceList showFilters={false} itemsPerPage={5} />
-                </CardContent>
-            </Card>
         </div>
     );
 }
