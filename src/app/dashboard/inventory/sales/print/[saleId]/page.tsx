@@ -61,74 +61,58 @@ export default function PrintSaleInvoicePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFinancialSettings = useCallback(async () => {
-    try {
-      const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
-      const settingsDocSnap = await getDoc(settingsDocRef);
-      if (settingsDocSnap.exists()) {
-        setFinancialSettings(settingsDocSnap.data() as FinancialSettingsProfile);
-      } else {
-        setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
-        });
-      }
-    } catch (e) {
-      console.error("Error fetching financial settings for print:", e);
-      setFinancialSettings({
-          companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
-          address: DEFAULT_FINANCIAL_ADDRESS,
-          emailId: DEFAULT_FINANCIAL_EMAIL,
-          invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
-      });
-    }
-  }, []);
-
-  const fetchSaleAndCustomerData = useCallback(async () => {
-    if (!saleId) {
-      setError("No Sale ID provided.");
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const saleDocRef = doc(firestore, "sales_invoice", saleId);
-      const saleDocSnap = await getDoc(saleDocRef);
-
-      if (saleDocSnap.exists()) {
-        const sale = { id: saleDocSnap.id, ...saleDocSnap.data() } as SaleDocument;
-        setSaleData(sale);
-
-        if (sale.customerId) {
-          const customerDocRef = doc(firestore, "customers", sale.customerId);
-          const customerDocSnap = await getDoc(customerDocRef);
-          if (customerDocSnap.exists()) {
-            setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
-          } else {
-            console.warn(`Customer with ID ${sale.customerId} not found.`);
-          }
-        }
-      } else {
-        setError("Sale record not found.");
-      }
-    } catch (err: any) {
-      setError(`Failed to fetch sale data: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [saleId]);
-
   useEffect(() => {
     const loadAllData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchFinancialSettings(), fetchSaleAndCustomerData()]);
-        setIsLoading(false);
-    }
+        setError(null);
+        if (!saleId) {
+            setError("No Sale ID provided.");
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const settingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, FINANCIAL_SETTINGS_DOC_ID);
+            const saleDocRef = doc(firestore, "sales_invoice", saleId);
+            const [settingsSnap, saleSnap] = await Promise.all([getDoc(settingsDocRef), getDoc(saleDocRef)]);
+
+            if(settingsSnap.exists()) {
+                setFinancialSettings(settingsSnap.data() as FinancialSettingsProfile);
+            } else {
+                console.warn("Financial settings not found, using defaults.");
+                setFinancialSettings({
+                  companyName: DEFAULT_FINANCIAL_COMPANY_NAME,
+                  address: DEFAULT_FINANCIAL_ADDRESS,
+                  emailId: DEFAULT_FINANCIAL_EMAIL,
+                  invoiceLogoUrl: DEFAULT_FINANCIAL_LOGO_URL,
+                });
+            }
+            
+            if (saleSnap.exists()) {
+                const sale = { id: saleSnap.id, ...saleSnap.data() } as SaleDocument;
+                setSaleData(sale);
+
+                if (sale.customerId) {
+                    const customerDocRef = doc(firestore, "customers", sale.customerId);
+                    const customerDocSnap = await getDoc(customerDocRef);
+                    if (customerDocSnap.exists()) {
+                        setCustomerData({ id: customerDocSnap.id, ...customerDocSnap.data() } as CustomerDocument);
+                    } else {
+                        console.warn(`Customer with ID ${sale.customerId} not found.`);
+                    }
+                }
+            } else {
+                setError("Sale record not found.");
+            }
+
+        } catch (err: any) {
+            setError(`Failed to fetch data: ${err.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
     loadAllData();
-  }, [fetchFinancialSettings, fetchSaleAndCustomerData]);
+  }, [saleId]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -196,22 +180,13 @@ export default function PrintSaleInvoicePage() {
     );
   }
 
-  if (error) {
+  if (error || !saleData) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <p className="text-red-600 font-semibold">Error loading invoice</p>
-        <p className="text-gray-700 text-sm mb-4">{error}</p>
+        <p className="text-red-600 font-semibold">Error Loading Invoice</p>
+        <p className="text-gray-700 text-sm mb-4">{error || "Sale data could not be loaded."}</p>
         <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
-    );
-  }
-
-  if (!saleData) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white">
-        <p className="text-gray-700">Sale data could not be loaded.</p>
-        <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
     );
   }
@@ -276,7 +251,7 @@ export default function PrintSaleInvoicePage() {
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
                 <h3 className="font-semibold text-gray-700 mb-1 uppercase">Bill To:</h3>
-                <p className="font-medium text-gray-900">{customerData?.applicantName || 'N/A'}</p>
+                
                 <p className="text-gray-600 whitespace-pre-line">{saleData.billingAddress || customerData?.address || 'N/A'}</p>
                 {customerData?.binNo && (
                     <p className="text-gray-600">
@@ -407,4 +382,5 @@ export default function PrintSaleInvoicePage() {
 
 
     
+
 
