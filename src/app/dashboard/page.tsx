@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Package, DollarSign, Layers, PieChart as PieChartIcon, TrendingUp, CalendarDays as CalendarIconLucide, Users as UsersIcon, Loader2, CheckCircle2, Ship, FileEdit, ExternalLink, Truck, Factory, BarChart3, UsersRound, ListChecks } from 'lucide-react';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, documentId, orderBy, doc, getDoc } from 'firebase/firestore';
-import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument, NoticeBoardSettings } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc, getYear } from 'date-fns';
+import type { LCEntryDocument, LCStatus, Currency, ProformaInvoiceDocument, SupplierDocument, NoticeBoardSettings, PettyCashTransactionDocument } from '@/types';
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isValid, isToday, isFuture, compareAsc, getYear, getMonth } from 'date-fns';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { NoticeBoardDialog } from '@/components/dashboard/NoticeBoardDialog';
 import { SalesInvoiceList } from '@/components/dashboard/SalesInvoiceList';
+import { Label } from '@/components/ui/label';
 
 
 const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
@@ -30,6 +31,11 @@ const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPi
 });
 
 const YearlyLcValueBarChart = dynamic(() => import('@/components/dashboard/YearlyLcValueBarChart'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
+});
+
+const MonthlyTransactionBarChart = dynamic(() => import('@/components/dashboard/MonthlyTransactionBarChart'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading chart...</p></div>,
 });
@@ -56,6 +62,13 @@ interface YearlyLcValue {
   year: string;
   totalValue: number | null;
 }
+
+interface MonthlyChartData {
+  name: string;
+  debits: number;
+  credits: number;
+}
+
 
 interface UpcomingEtdShipment {
   id: string;
@@ -191,6 +204,7 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 export default function DashboardPage() {
   const { user: authUser, loading: authLoading, userRole } = useAuth();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedChartYear, setSelectedChartYear] = React.useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalLCs: 0,
@@ -202,6 +216,7 @@ export default function DashboardPage() {
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
   const [yearlyLcValueData, setYearlyLcValueData] = useState<YearlyLcValue[]>(years.map(y => ({ year: y, totalValue: null })));
+  const [monthlyTxData, setMonthlyTxData] = useState<MonthlyChartData[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
   const [upcomingEtdShipments, setUpcomingEtdShipments] = useState<UpcomingEtdShipment[]>([]);
@@ -439,6 +454,31 @@ export default function DashboardPage() {
     }
   }, [authUser, userRole]);
 
+  const fetchMonthlyTxData = React.useCallback(async (year: number) => {
+    const txQuery = query(
+      collection(firestore, "petty_cash_transactions")
+    );
+    const snapshot = await getDocs(txQuery);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyData: MonthlyChartData[] = monthNames.map(name => ({ name, debits: 0, credits: 0 }));
+
+    snapshot.docs.forEach(docSnap => {
+        const tx = docSnap.data() as PettyCashTransactionDocument;
+        if (tx.transactionDate) {
+            const txDate = parseISO(tx.transactionDate);
+            if (isValid(txDate) && txDate.getFullYear() === year) {
+                const monthIndex = getMonth(txDate);
+                if (tx.type === 'Debit') {
+                    monthlyData[monthIndex].debits += tx.amount || 0;
+                } else if (tx.type === 'Credit') {
+                    monthlyData[monthIndex].credits += tx.amount || 0;
+                }
+            }
+        }
+    });
+    setMonthlyTxData(monthlyData);
+  }, []);
+
   useEffect(() => {
     const fetchNotice = async () => {
       try {
@@ -461,6 +501,7 @@ export default function DashboardPage() {
 
     if (!authLoading && authUser && userRole) {
       fetchDashboardData(selectedYear);
+      fetchMonthlyTxData(parseInt(selectedChartYear));
       fetchNotice();
     } else if (!authLoading && !authUser) {
       // Clear data if user logs out
@@ -470,9 +511,15 @@ export default function DashboardPage() {
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
       setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
+      setMonthlyTxData([]);
       setIsLoading(false);
     }
-  }, [selectedYear, authUser, authLoading, userRole, fetchDashboardData]);
+  }, [selectedYear, authUser, authLoading, userRole, fetchDashboardData, fetchMonthlyTxData, selectedChartYear]);
+
+  useEffect(() => {
+    fetchMonthlyTxData(parseInt(selectedChartYear));
+  }, [selectedChartYear, fetchMonthlyTxData]);
+
 
   useEffect(() => {
     const cleanupEtdScroll = setupAutoScroll(upcomingEtdScrollRef, upcomingEtdIntervalRef);
@@ -752,31 +799,64 @@ export default function DashboardPage() {
           </Card>
       </div>
 
-      <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
-        <CardHeader>
-            <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <BarChart3 className="h-6 w-6 text-primary" />
-                Total L/C Values by Year
-            </CardTitle>
-            <CardDescription>
-                Overview of total T/T and L/C values for each year.
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="h-[350px] w-full">
-             {isLoading ? (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
+            <CardHeader>
+                <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                    Total L/C Values by Year
+                </CardTitle>
+                <CardDescription>
+                    Overview of total T/T and L/C values for each year.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[350px] w-full">
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="ml-2 text-muted-foreground">Loading yearly chart data...</p>
+                    </div>
+                ) : yearlyLcValueData.some(d => d.totalValue !== null && d.totalValue > 0) ? (
+                <YearlyLcValueBarChart data={yearlyLcValueData} />
+                ) : (
                 <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading yearly chart data...</p>
+                    <p className="text-muted-foreground">No data available to display yearly L/C values chart.</p>
                 </div>
-            ) : yearlyLcValueData.some(d => d.totalValue !== null && d.totalValue > 0) ? (
-              <YearlyLcValueBarChart data={yearlyLcValueData} />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No data available to display yearly L/C values chart.</p>
-              </div>
-            )}
-        </CardContent>
-      </Card>
+                )}
+            </CardContent>
+        </Card>
+        <Card className="shadow-xl">
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                            <BarChart3 className="h-6 w-6 text-primary" />
+                            Monthly Transaction Flow
+                        </CardTitle>
+                        <CardDescription>
+                            Total debits and credits for each month in the selected year.
+                        </CardDescription>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <Label htmlFor="chart-year-select-main" className="sr-only">Select Year</Label>
+                        <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
+                            <SelectTrigger id="chart-year-select-main" className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Select Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map((year) => (
+                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="h-[350px] w-full">
+                <MonthlyTransactionBarChart data={monthlyTxData} />
+            </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
@@ -936,4 +1016,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
