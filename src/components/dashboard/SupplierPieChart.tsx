@@ -1,4 +1,3 @@
-
 // src/components/dashboard/SupplierPieChart.tsx
 "use client";
 
@@ -26,10 +25,18 @@ const CustomTooltip: FC<any> = ({ active, payload }) => {
   return null;
 };
 
-export const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
+const SupplierPieChartComponent: FC<SupplierPieChartProps> = ({ data }) => {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground">No data to display.</p>;
   }
+
+  const PIE_CHART_COLORS = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+  ];
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -62,4 +69,6 @@ export const SupplierPieChart: FC<SupplierPieChartProps> = ({ data }) => {
   );
 };
 
-export default SupplierPieChart;
+export default SupplierPieChartComponent;
+
+    
