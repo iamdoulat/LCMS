@@ -753,6 +753,7 @@ export default function DashboardPage() {
                                 {[
                                     { flag: shipment.isFirstShipment, label: "1st", note: shipment.firstShipmentNote },
                                     { flag: shipment.isSecondShipment, label: "2nd", note: shipment.secondShipmentNote },
+                                    { flag: shipment.secondShipmentNote },
                                     { flag: shipment.isThirdShipment, label: "3rd", note: shipment.thirdShipmentNote }
                                 ].map((s, idx) => (
                                   <TooltipProvider key={idx} delayDuration={100}>
@@ -1007,7 +1008,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardDescription>A view of the latest sales invoices.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <SalesInvoiceList showFilters={false} itemsPerPage={5} />
           </CardContent>
       </Card>
@@ -1021,3 +1022,6 @@ export default function DashboardPage() {
 
 
 
+
+
+    
