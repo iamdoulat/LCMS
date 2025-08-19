@@ -840,7 +840,7 @@ export default function DashboardPage() {
                     <div className="w-full sm:w-auto">
                         <Label htmlFor="chart-year-select-main" className="sr-only">Select Year</Label>
                         <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
-                            <SelectTrigger id="chart-year-select-main" className="w-full sm:w-[180px]">
+                            <SelectTrigger id="chart-year-select-main" className="w-full sm:w-[140px]">
                                 <SelectValue placeholder="Select Year" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1016,5 +1016,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
 
