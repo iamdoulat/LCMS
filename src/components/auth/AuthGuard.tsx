@@ -23,68 +23,37 @@ const coreAllowedPaths = [
 ];
 
 // Define allowed path prefixes for restricted roles
-const roleAllowedPaths: Record<string, string[]> = {
-  "Service": ['/dashboard/warranty-management'],
-  "DemoManager": ['/dashboard/demo'],
-  "Accounts": [
-    '/dashboard/inventory', 
-    '/dashboard/quotations', 
-    '/dashboard/invoices', 
-    '/dashboard/inventory/orders', 
-    '/dashboard/payments', 
-    '/dashboard/financial-management',
-    '/dashboard/purchase-orders'
-  ],
-  "Viewer": [
-    '/dashboard/inventory',
-    '/dashboard/quotations',
-    '/dashboard/invoices',
-    '/dashboard/inventory/orders',
-    '/dashboard/purchase-orders',
-    '/dashboard/payments',
-    '/dashboard/financial-management',
-    '/dashboard/commission-management',
-    '/dashboard/total-lc',
-    '/dashboard/reports',
-    '/dashboard/shipments',
-    '/dashboard/demo',
-    '/dashboard/warranty-management',
-    '/dashboard/suppliers',
-    '/dashboard/customers',
-    '/dashboard/purchase-orders',
-  ],
-  "Commercial": [
-    '/dashboard/quotations', 
-    '/dashboard/invoices', 
-    '/dashboard/inventory/orders', 
-    '/dashboard/payments', 
-    '/dashboard/financial-management',
-    '/dashboard/commission-management',
-    '/dashboard/total-lc',
-    '/dashboard/reports',
-    '/dashboard/shipments',
-    '/dashboard/demo',
-    '/dashboard/warranty-management',
-    '/dashboard/suppliers',
-    '/dashboard/customers',
-    '/dashboard/purchase-orders',
-  ]
+// This now acts as a whitelist. If a role is not in this list for a given path, access is denied.
+const roleAllowedPaths: Record<string, UserRole[]> = {
+  "/dashboard/inventory": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/quotations": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/invoices": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/pi": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/purchase-orders": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/inventory/orders": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/payments": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/financial-management": ["Super Admin", "Admin", "Accounts", "Viewer", "Commercial"],
+  "/dashboard/commission-management": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/total-lc": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/reports": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/shipments": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/demo": ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"],
+  "/dashboard/warranty-management": ["Super Admin", "Admin", "Service", "Viewer", "Commercial"],
+  "/dashboard/suppliers": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/customers": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/petty-cash": ["Super Admin", "Admin", "Accounts", "Viewer"],
+  "/dashboard/google-sheets": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/google-drive": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/settings": ["Super Admin", "Admin", "Viewer"],
 };
-
-// Define paths that are explicitly disallowed for certain roles.
-const roleDisallowedPaths: Partial<Record<UserRole, string[]>> = {
-  "User": ['/dashboard/total-lc'],
-};
-
 
 // Define default redirect paths for restricted roles
-// Fallback values are provided in case the environment variables are not set.
 const roleRedirects: Record<string, string> = {
-  "User": '/dashboard', // Default for "User" role if they access a disallowed path
+  "User": '/dashboard', 
   "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
-  "Accounts": process.env.NEXT_PUBLIC_REDIRECT_PATH_ACCOUNTS || '/dashboard/inventory/items/list',
-  "Viewer": '/dashboard', // Viewers land on the main dashboard
+  "Accounts": process.env.NEXT_PUBLIC_REDIRECT_PATH_ACCOUNTS || '/dashboard/petty-cash/dashboard',
+  "Viewer": '/dashboard',
   "Commercial": '/dashboard/total-lc',
 };
 
@@ -99,7 +68,6 @@ export default function AuthGuard({ children }: PropsWithChildren) {
       return; // Wait until auth state and role are fully loaded
     }
 
-    // If not authenticated, redirect to login unless on a public page
     if (!user) {
       if (!publicPaths.includes(pathname)) {
         router.replace('/login');
@@ -107,51 +75,37 @@ export default function AuthGuard({ children }: PropsWithChildren) {
       return;
     }
 
-    // If authenticated, handle redirection and access control
-    if (user && userRole) {
-      // Redirect away from public pages if logged in
-      if (publicPaths.includes(pathname)) {
-        router.replace(dashboardPath);
-        return;
-      }
-      
+    if (publicPaths.includes(pathname)) {
+      router.replace(dashboardPath);
+      return;
+    }
+    
+    if (userRole) {
       const userRoles = Array.isArray(userRole) ? userRole : [userRole];
 
-      // Super Admins and Admins have full access
       if (userRoles.includes("Super Admin") || userRoles.includes("Admin")) {
-        return;
+        return; // Admins have full access
       }
 
-      // Check if the current path is one of the core paths allowed for all users.
       if (coreAllowedPaths.some(corePath => pathname.startsWith(corePath))) {
-        return;
+        return; // Core paths are accessible to all authenticated users
       }
       
-      // Check for explicitly disallowed paths for any of the user's roles
-      for (const role of userRoles) {
-        const disallowed = roleDisallowedPaths[role as UserRole];
-        if (disallowed && disallowed.some(prefix => pathname.startsWith(prefix))) {
-          const redirectPath = roleRedirects[role] || dashboardPath;
-          router.replace(redirectPath);
-          return;
-        }
-      }
-      
-      // For users with specific roles, check if the current path is allowed for AT LEAST ONE of their roles.
-      let isPathAllowed = false;
-      for (const role of userRoles) {
-        const allowed = roleAllowedPaths[role];
-        // If a role has no specific restrictions (allowed is undefined), it doesn't grant access on its own here.
-        // We must find an explicit match in the roleAllowedPaths for one of the user's roles.
-        if (allowed && allowed.some(prefix => pathname.startsWith(prefix))) {
-          isPathAllowed = true;
-          break; // Found a role that allows access, no need to check further.
-        }
-      }
+      const matchedPathPrefix = Object.keys(roleAllowedPaths).find(prefix => pathname.startsWith(prefix));
 
-      if (!isPathAllowed) {
-        // If no role grants access, redirect. Use the first role for a deterministic redirect path.
-        const primaryRole = userRoles[0]; 
+      if (matchedPathPrefix) {
+        const allowedRolesForPath = roleAllowedPaths[matchedPathPrefix];
+        // Check if ALL of the user's roles are included in the allowed list for the path
+        const hasAccess = userRoles.every(role => allowedRolesForPath.includes(role));
+        
+        if (!hasAccess) {
+          // If any role is not permitted, redirect
+          const primaryRole = userRoles[0]; 
+          router.replace(roleRedirects[primaryRole] || dashboardPath);
+        }
+      } else {
+        // If the path doesn't match any defined prefix, it's considered restricted.
+        const primaryRole = userRoles[0];
         router.replace(roleRedirects[primaryRole] || dashboardPath);
       }
     }

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -133,9 +134,11 @@ export default function ManageNoticesPage() {
   }
 
   const createMarkup = (htmlContent: string | undefined) => {
+    // Ensure this only runs on the client where DOMPurify is available
     if (typeof window === 'undefined' || !htmlContent) {
         return { __html: '' };
     }
+    // Sanitize the HTML content before rendering
     return { __html: DOMPurify.sanitize(htmlContent) };
   };
 
