@@ -1,12 +1,11 @@
 
-
 "use client";
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { OrderDocument, SupplierDocument } from '@/types';
+import type { OrderDocument, SupplierDocument, CompanyProfile } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -417,6 +416,3 @@ export default function PrintOrderPage() {
     </div>
   );
 }
-
-
-

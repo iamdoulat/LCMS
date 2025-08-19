@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,6 +131,13 @@ export default function ManageNoticesPage() {
       </div>
     );
   }
+
+  const createMarkup = (htmlContent: string | undefined) => {
+    if (typeof window === 'undefined' || !htmlContent) {
+        return { __html: '' };
+    }
+    return { __html: DOMPurify.sanitize(htmlContent) };
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -247,7 +255,7 @@ export default function ManageNoticesPage() {
             {viewingNotice?.content && (
                  <div 
                     className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1 mt-2 border-t pt-4"
-                    dangerouslySetInnerHTML={{ __html: viewingNotice.content }}
+                    dangerouslySetInnerHTML={createMarkup(viewingNotice.content)}
                  />
             )}
             <DialogFooter>
@@ -260,4 +268,3 @@ export default function ManageNoticesPage() {
     </div>
   );
 }
-
