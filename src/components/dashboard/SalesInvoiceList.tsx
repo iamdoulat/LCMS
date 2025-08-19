@@ -356,7 +356,6 @@ export function SalesInvoiceList({ showFilters = true, itemsPerPage = DEFAULT_IT
             </Card>
         )}
 
-        <div className="rounded-md border overflow-x-auto">
         <Table>
             <TableHeader>
             <TableRow>
@@ -426,7 +425,6 @@ export function SalesInvoiceList({ showFilters = true, itemsPerPage = DEFAULT_IT
             A list of your Sales Invoices from Database. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedInvoices.length)} of {displayedInvoices.length} entries.
             </TableCaption>
         </Table>
-        </div>
         {totalPages > 1 && (
         <div className="flex items-center justify-center space-x-2 py-4">
             <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
