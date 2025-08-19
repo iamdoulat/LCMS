@@ -356,7 +356,7 @@ export function SalesInvoiceList({ showFilters = true, itemsPerPage = DEFAULT_IT
             </Card>
         )}
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
         <Table>
             <TableHeader>
             <TableRow>
