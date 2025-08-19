@@ -1,2 +1,1 @@
-// This file is deprecated. SweetAlert2 is used for notifications.
-// You can safely delete this file.
+// This file is deprecated and has been removed. SweetAlert2 is used for all notifications globally.

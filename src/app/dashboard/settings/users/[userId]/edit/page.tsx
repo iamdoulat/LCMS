@@ -84,10 +84,16 @@ export default function EditUserPage() {
   }, [userId, form]);
   
   const onSubmit = async (data: EditUserFormValues) => {
+    if (isReadOnly) {
+        Swal.fire("Permission Denied", "You have read-only access and cannot save changes.", "error");
+        return;
+    }
+
     if (userData?.role?.includes("Super Admin") && currentUser?.uid !== userId) {
         Swal.fire("Permission Denied", "You cannot change the role of another Super Admin.", "error");
         return;
     }
+
     setIsSubmitting(true);
     try {
         const userDocRef = doc(firestore, "users", userId);
@@ -132,10 +138,10 @@ export default function EditUserPage() {
       <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold">
-            <UserCog className="h-7 w-7 text-primary" />Edit User
+            <UserCog className="h-7 w-7 text-primary" />{isReadOnly ? 'View User' : 'Edit User'}
           </CardTitle>
           <CardDescription>
-            Modify details for user: <span className="font-semibold text-foreground">{userData?.email}</span>
+            {isReadOnly ? 'Viewing details for user:' : 'Modify details for user:'} <span className="font-semibold text-foreground">{userData?.email}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -201,9 +207,11 @@ export default function EditUserPage() {
                         </FormItem>
                     )}
                 />
-                 <Button type="submit" disabled={isSubmitting || isReadOnly}>
-                    {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
-                </Button>
+                 {!isReadOnly && (
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
+                    </Button>
+                 )}
             </form>
           </Form>
         </CardContent>

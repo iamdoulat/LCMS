@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,14 +35,19 @@ export default function UserListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const isAdminOrSuperAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
-  const isSuperAdmin = userRole?.includes('Super Admin');
-  const isReadOnly = userRole?.includes('Viewer');
+  const isAdminOrSuperAdmin = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin'].includes(role)), [userRole]);
+  const isSuperAdmin = useMemo(() => userRole?.includes('Super Admin'), [userRole]);
+  const isReadOnly = useMemo(() => userRole?.includes('Viewer'), [userRole]);
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
     try {
+      // Security: This fetch is only triggered if the user has the correct role.
+      // Firestore rules should also be in place as a backup.
+      if (!isAdminOrSuperAdmin && !isReadOnly) {
+          throw new Error("You do not have permission to view user data.");
+      }
       const usersRef = collection(firestore, "users");
       const q = query(usersRef, orderBy("displayName", "asc"));
       const querySnapshot = await getDocs(q);
@@ -53,34 +59,37 @@ export default function UserListPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isAdminOrSuperAdmin, isReadOnly]);
 
   useEffect(() => {
-    if (!authLoading && !isAdminOrSuperAdmin && !isReadOnly) {
-      Swal.fire({
-        title: 'Access Denied',
-        text: 'You are not permitted to view this page.',
-        icon: 'error',
-        timer: 2000,
-        showConfirmButton: false,
-      }).then(() => {
-        router.push('/dashboard');
-      });
-      return;
-    }
-
-    if (isAdminOrSuperAdmin || isReadOnly) {
-      fetchUsers();
+    if (!authLoading) {
+      if (isAdminOrSuperAdmin || isReadOnly) {
+        fetchUsers();
+      } else {
+        Swal.fire({
+          title: 'Access Denied',
+          text: 'You are not permitted to view this page.',
+          icon: 'error',
+          timer: 2000,
+          showConfirmButton: false,
+        }).then(() => {
+          router.push('/dashboard');
+        });
+      }
     }
   }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly, fetchUsers]);
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
-    const actionText = currentStatus ? 'enable' : 'disable';
+    if (!isSuperAdmin) {
+      Swal.fire("Permission Denied", "Only Super Admins can enable or disable users.", "error");
+      return;
+    }
+    const actionText = !currentStatus ? 'enable' : 'disable'; // Note: `disabled: true` means status is disabled
     const newStatus = !currentStatus;
 
     Swal.fire({
       title: `Are you sure you want to ${actionText} this user?`,
-      text: `${newStatus ? 'Enabling' : 'Disabling'} this user will ${newStatus ? 'allow them to log in' : 'prevent them from logging in'}.`,
+      text: `${newStatus ? 'Disabling' : 'Enabling'} this user will ${newStatus ? 'prevent them from logging in' : 'allow them to log in'}.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: `Yes, ${actionText} user`,
@@ -103,6 +112,10 @@ export default function UserListPage() {
   };
 
   const handleDeleteUser = async (userId: string, userDisplayName: string) => {
+    if (!isSuperAdmin) {
+      Swal.fire("Permission Denied", "Only Super Admins can delete users.", "error");
+      return;
+    }
     if (userId === user?.uid) {
         Swal.fire("Action Forbidden", "You cannot delete your own account.", "error");
         return;
@@ -117,8 +130,6 @@ export default function UserListPage() {
         confirmButtonText: 'Yes, delete it!'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            // Note: In a production app, you would call an API route to delete the user
-            // from Firebase Auth using the Admin SDK. Here, we only delete from Firestore for the demo.
             try {
                 await deleteDoc(doc(firestore, "users", userId));
                 setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
@@ -171,6 +182,7 @@ export default function UserListPage() {
     return pageNumbers;
   };
 
+
   if (authLoading || (!isAdminOrSuperAdmin && !isReadOnly)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -191,14 +203,23 @@ export default function UserListPage() {
                     User Management
                 </CardTitle>
                 <CardDescription>
-                    View and manage user accounts and roles. User registration is public.
+                    View and manage user accounts and roles.
                 </CardDescription>
               </div>
+              <Button asChild disabled={!isAdminOrSuperAdmin || isReadOnly}>
+                <Link href="/register">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+                </Link>
+              </Button>
            </div>
         </CardHeader>
         <CardContent>
           {fetchError && (
-             <div className="my-4 text-center text-destructive bg-destructive/10 p-4 rounded-md">{fetchError}</div>
+             <Alert variant="destructive" className="mb-4">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Error Fetching Users</AlertTitle>
+                <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
           )}
           <div className="rounded-md border">
             <Table>
@@ -214,12 +235,14 @@ export default function UserListPage() {
                 <TableBody>
                     {isLoading ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading users...</TableCell></TableRow>
-                    ) : paginatedUsers.length === 0 ? (
+                    ) : paginatedUsers.length === 0 && !fetchError ? (
                         <TableRow><TableCell colSpan={5} className="h-24 text-center">No users found.</TableCell></TableRow>
                     ) : (
                         paginatedUsers.map(u => {
                             const rolesToDisplay = Array.isArray(u.role) ? u.role : (u.role ? [u.role as UserRole] : []);
                             const isDisabled = u.disabled === true;
+                            const canPerformActions = isSuperAdmin || (isAdminOrSuperAdmin && !rolesToDisplay.includes('Super Admin'));
+                            
                             return (
                                 <TableRow key={u.id} className={cn(isDisabled && 'bg-muted/50 text-muted-foreground')}>
                                     <TableCell>
@@ -243,9 +266,7 @@ export default function UserListPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                    {(rolesToDisplay.includes("Super Admin") && u.uid !== user?.uid) ? (
-                                        <span className="text-xs text-muted-foreground">No actions</span>
-                                    ) : (
+                                    {isReadOnly ? (<span className="text-xs text-muted-foreground">No actions</span>) : canPerformActions ? (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -254,22 +275,21 @@ export default function UserListPage() {
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/dashboard/settings/users/${u.id}/edit`}>
-                                                        <FileEdit className="mr-2 h-4 w-4" />{isReadOnly ? 'View User' : 'Edit User'}
+                                                        <FileEdit className="mr-2 h-4 w-4" />Edit User
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                 {(isAdminOrSuperAdmin && !isReadOnly && u.uid !== user?.uid) && (
+                                                 {isSuperAdmin && u.uid !== user?.uid && (
                                                     <DropdownMenuItem onClick={() => handleToggleUserStatus(u.id, !!u.disabled)}>
                                                         {u.disabled ? <UserCheck className="mr-2 h-4 w-4"/> : <UserX className="mr-2 h-4 w-4"/>}
                                                         <span>{u.disabled ? 'Enable User' : 'Disable User'}</span>
                                                     </DropdownMenuItem>
                                                 )}
-                                                {isSuperAdmin && (
+                                                {isSuperAdmin && u.uid !== user?.uid && (
                                                     <>
                                                         <DropdownMenuSeparator/>
                                                         <DropdownMenuItem 
                                                             className="text-destructive focus:text-destructive focus:bg-destructive/10" 
                                                             onClick={() => handleDeleteUser(u.id, u.displayName)} 
-                                                            disabled={u.uid === user?.uid || isReadOnly}
                                                         >
                                                             <Trash2 className="mr-2 h-4 w-4" />Delete User
                                                         </DropdownMenuItem>
@@ -277,6 +297,8 @@ export default function UserListPage() {
                                                 )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">No actions</span>
                                         )}
                                     </TableCell>
                                 </TableRow>
