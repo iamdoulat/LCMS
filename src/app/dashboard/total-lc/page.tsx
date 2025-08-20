@@ -9,12 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, ExternalLink, Ship, PackageCheck, FileText, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency } from '@/types';
+import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile } from '@/types';
 import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
@@ -22,6 +21,9 @@ import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
+import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,27 +33,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Ship, PackageCheck, FileText as FileTextIcon, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
-    case 'Draft':
-      return 'outline';
-    case 'Transmitted':
-      return 'secondary';
-    case 'Shipment Pending':
-      return 'default';
-    case 'Payment Pending':
-        return 'destructive'; // Needs attention
-    case 'Payment Done':
-      return 'default';
-    case 'Shipment Done':
-      return 'default';
-    default:
-      return 'outline';
+    case 'Draft': return 'outline';
+    case 'Transmitted': return 'secondary';
+    case 'Shipment Pending': return 'default';
+    case 'Payment Pending': return 'destructive';
+    case 'Payment Done': return 'default';
+    case 'Shipment Done': return 'default';
+    default: return 'outline';
   }
 };
 
@@ -535,15 +529,13 @@ export default function TotalLCPage() {
                         </Select>
                     </div>
                     <div className="pt-6">
-                      <Button onClick={clearFilters} variant="outline" className="w-full">
-                        <XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort
-                      </Button>
+                      <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort</Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -611,7 +603,7 @@ export default function TotalLCPage() {
                             <TableCell className="text-right px-2 sm:px-4">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={!lc.id}>
+                                    <Button className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white" disabled={!lc.id}>
                                         <span className="sr-only">Open menu</span>
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
@@ -707,7 +699,7 @@ export default function TotalLCPage() {
                                 disabled={!lc.finalLcUrl}
                                 title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
                                 >
-                                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
                                 {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                 </Button>
                                 <Button
@@ -717,7 +709,7 @@ export default function TotalLCPage() {
                                 disabled={!lc.finalPIUrl}
                                 title="View Final Proforma Invoice"
                                 >
-                                <FileText className="mr-1.5 h-3.5 w-3.5" /> PI
+                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
                                 </Button>
                                 <Button
                                 variant={lc.shippingDocumentsUrl ? "default" : "outline"}
@@ -735,7 +727,7 @@ export default function TotalLCPage() {
                                 disabled={!lc.packingListUrl}
                                 title="View Packing List"
                                 >
-                                <FileText className="mr-1.5 h-3.5 w-3.5" /> PL
+                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PL
                                 </Button>
                                 <Button
                                 variant={lc.purchaseOrderUrl ? "default" : "outline"}
@@ -840,4 +832,5 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
