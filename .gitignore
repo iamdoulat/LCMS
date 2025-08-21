@@ -11,6 +11,9 @@
 !.yarn/releases
 !.yarn/versions
 
+# gitignore
+.gitignore
+
 # testing
 /coverage
 
@@ -58,6 +61,8 @@ next-env.d.ts
 .vscode/
 
 # firebase
+firebase-debug.log
+firestore-debug.log
 firestore.rules
 storage.rules
 firestore.indexes.json
