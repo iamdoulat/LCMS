@@ -1,50 +1,61 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Local Environment Variables
+# Exclude all local environment files, but keep the example file in version control.
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Dependencies
 /node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
-# testing
-/coverage
-
-# next.js
+# Next.js build output
 /.next/
 /out/
 
-# production
+# Production build directory
 /build
 
-# misc
-.DS_Store
-*.pem
+# TypeScript cache files
+*.tsbuildinfo
+next-env.d.ts
 
-# debug
+# Vercel deployment folder
+.vercel
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
-# local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# editor directories and files
-.vscode/
-.idea/
-.project
-*.sublime-workspace
-*.sublime-project
-
-# Project IDX
+# Project IDX specific files
 .idx/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbs.db for Windows
+Thumbs.db
+
+# Other misc files
+*.pem
+*.tgz
+temp/
