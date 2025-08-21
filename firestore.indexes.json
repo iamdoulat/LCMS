@@ -1,0 +1,159 @@
+
+{
+    "indexes": [
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "arrayConfig": "CONTAINS"
+          },
+          {
+            "fieldPath": "latestShipmentDate",
+            "order": "ASCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "latestShipmentDate",
+            "order": "ASCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "arrayConfig": "CONTAINS"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "arrayConfig": "CONTAINS"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "lc_entries",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "invoices",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "invoices",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "arrayConfig": "CONTAINS"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "installation_reports",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "createdAt",
+            "order": "DESCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "customers",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "applicantName",
+            "order": "ASCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "suppliers",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "beneficiaryName",
+            "order": "ASCENDING"
+          }
+        ]
+      },
+      {
+        "collectionGroup": "installation_reports",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ]
+      }
+    ],
+    "fieldOverrides": []
+  }
+  
