@@ -58,17 +58,13 @@ export default function LoginPage() {
     setIsEmailLoading(true);
     setError(null);
     try {
-      // Use the login method from AuthContext which now handles Firebase Auth
       await contextLogin(data.email, data.password);
-      // Success handling (toast, redirect) is now managed within AuthContext's login
+      // Success is handled by onAuthStateChanged, which will redirect
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to login. Please check your credentials.";
-      setError(errorMessage);
-      Swal.fire({
-        title: "Login Failed",
-        text: errorMessage,
-        icon: "error",
-      });
+      // The context now throws the error, so we can catch it here if needed,
+      // but the user-facing alert is already shown in the context.
+      // We can still set a local error state if we want to display it inline.
+      setError(err.message || "Login failed.");
     } finally {
       setIsEmailLoading(false);
     }
@@ -170,13 +166,6 @@ export default function LoginPage() {
           <CardDescription>Access your Letter of Credit Management Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <LogIn className="h-4 w-4" />
-              <AlertTitle>Login Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-6">
               <FormField

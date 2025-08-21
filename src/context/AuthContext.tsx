@@ -176,16 +176,20 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       });
     } catch (error: any) {
       console.error("AuthContext: Error logging in: ", error);
-      let errorMessage = "Invalid email or password.";
-      if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Too many login attempts. Try again later.";
-      } else if (error.code === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password.";
-      } else if (error.message) {
-        errorMessage = `Login failed: ${error.message}`;
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          Swal.fire({
+              title: "Opps Login Failed.",
+              text: "User Name or Password Wrong. Please contact with Admin",
+              icon: "error"
+          });
+      } else {
+          Swal.fire({
+              title: "Login Failed",
+              text: error.message || "An unknown error occurred.",
+              icon: "error"
+          });
       }
-      Swal.fire({ title: "Login Failed", text: errorMessage, icon: "error" });
-      throw error;
+      throw error; // Re-throw to be caught by the login page if needed
     }
   }, []);
 
