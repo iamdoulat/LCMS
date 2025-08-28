@@ -343,7 +343,6 @@ export function EditInstallationReportForm({ initialData, applicationId: reportI
       setSelectedCommercialInvoiceDateDisplay(null);
       setActivePartialShipmentAccordion(undefined);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, getValues]);
 
 
@@ -650,163 +649,33 @@ export function EditInstallationReportForm({ initialData, applicationId: reportI
             <FileText className="mr-2 h-5 w-5 text-primary" />
             L/C & Invoice Details
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ... other form fields */}
+             <Separator className="my-6" />
             <FormField
                 control={control}
-                name="applicantId"
+                name="installationNotes"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                    <Combobox
-                    options={applicantOptions}
-                    value={field.value || PLACEHOLDER_APPLICANT_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
-                    placeholder="Search Applicant..."
-                    selectPlaceholder={isLoadingDropdowns ? "Loading Applicants..." : "Select Applicant"}
-                    emptyStateMessage="No applicant found."
-                    disabled={isLoadingDropdowns || isLcSelected}
-                    />
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
+                    <FormControl><RichTextEditor placeholder="Enter any notes regarding the installation" value={field.value ?? ''} onChange={field.onChange}/></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
 
-            <FormField
-                control={control}
-                name="beneficiaryId"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                    <Combobox
-                    options={beneficiaryOptions}
-                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
-                    placeholder="Search Beneficiary..."
-                    selectPlaceholder={isLoadingDropdowns ? "Loading Beneficiaries..." : "Select Beneficiary"}
-                    emptyStateMessage="No beneficiary found."
-                    disabled={isLoadingDropdowns || isLcSelected}
-                    />
-                    <FormMessage />
-                </FormItem>
+            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
+                {isSubmitting ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving Changes...
+                </>
+                ) : (
+                <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                </>
                 )}
-            />
-            </div>
-            
-            <h3 className={cn(sectionHeadingClass)}>
-                <ClipboardList className="mr-2 h-5 w-5 text-primary" />
-                Installation Details
-            </h3>
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px] text-foreground">SL No.</TableHead>
-                            <TableHead className="text-foreground">Machine Model*</TableHead>
-                            <TableHead className="text-foreground">Machine Serial No.*</TableHead>
-                            <TableHead className="text-foreground">Ctl. Box Model</TableHead>
-                            <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
-                            <TableHead className="text-foreground">Install Date*</TableHead>
-                            <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
-                            <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {installationDetailsFieldArray.fields.map((field, index) => {
-                            const installDateValue = watch(`installationDetails.${index}.installDate`);
-                            let warrantyDisplay = "N/A";
-                            if (installDateValue && isValid(new Date(installDateValue))) {
-                                const expiryDate = addDays(new Date(installDateValue), 365);
-                                const diffDays = differenceInDays(expiryDate, new Date());
-                                warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
-                            }
-                            return (
-                                <TableRow key={field.id}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={control}
-                                            name={`installationDetails.${index}.machineModel`}
-                                            render={({ field: itemField }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="Enter model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                    <FormMessage className="text-xs" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={control}
-                                            name={`installationDetails.${index}.serialNo`}
-                                            render={({ field: itemField }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="Enter serial no." {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                    <FormMessage className="text-xs" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={control}
-                                            name={`installationDetails.${index}.ctlBoxModel`}
-                                            render={({ field: itemField }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                    <FormMessage className="text-xs" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={control}
-                                            name={`installationDetails.${index}.ctlBoxSerial`}
-                                            render={({ field: itemField }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="Ctl. Box Serial" value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                    <FormMessage className="text-xs" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={control}
-                                            name={`installationDetails.${index}.installDate`}
-                                            render={({ field: itemField }) => (
-                                                <FormItem>
-                                                    <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
-                                                    <FormMessage className="text-xs" />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-          </div>
-          <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving Report...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Installation Report
-              </>
-            )}
-          </Button>
+            </Button>
         </form>
     </Form>
   )

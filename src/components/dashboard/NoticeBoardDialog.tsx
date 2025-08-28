@@ -7,6 +7,7 @@ import type { NoticeBoardSettings } from '@/types';
 import { X } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import DOMPurify from 'dompurify';
 
 interface NoticeBoardDialogProps {
   notice: (NoticeBoardSettings & { id: string }) | null;
@@ -17,6 +18,8 @@ const NOTICE_DISMISSED_KEY_PREFIX = 'noticeDismissed_';
 export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { userRole } = useAuth();
+  const [sanitizedContent, setSanitizedContent] = React.useState('');
+
 
   React.useEffect(() => {
     if (notice && notice.isEnabled && notice.isPopupEnabled && notice.updatedAt && userRole) {
@@ -43,6 +46,13 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
       setIsOpen(false);
     }
   }, [notice, userRole]);
+
+  React.useEffect(() => {
+    if (notice?.content) {
+      // Sanitize the HTML content on the client-side before rendering
+      setSanitizedContent(DOMPurify.sanitize(notice.content));
+    }
+  }, [notice?.content]);
 
   const handleDismiss = () => {
     if (notice && notice.updatedAt) {
@@ -72,7 +82,7 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
         </AlertDialogHeader>
         <div 
           className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1"
-          dangerouslySetInnerHTML={{ __html: notice.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         />
         <AlertDialogFooter>
           <AlertDialogAction onClick={handleDismiss}>
