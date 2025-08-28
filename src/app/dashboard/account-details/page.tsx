@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { getCroppedImg } from '@/lib/image-utils';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -32,54 +33,6 @@ const accountDetailsSchema = z.object({
 
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 
-// --- Helper for creating a cropped image blob ---
-async function getCroppedImg(
-  image: HTMLImageElement,
-  crop: PixelCrop, // Use PixelCrop for definite dimensions
-  fileName: string
-): Promise<File | null> {
-  const canvas = document.createElement('canvas');
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
-  
-  const pixelRatio = window.devicePixelRatio || 1;
-  canvas.width = crop.width * pixelRatio;
-  canvas.height = crop.height * pixelRatio;
-  
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return null;
-  }
-
-  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  ctx.imageSmoothingQuality = 'high';
-
-  ctx.drawImage(
-    image,
-    crop.x * scaleX,
-    crop.y * scaleY,
-    crop.width * scaleX,
-    crop.height * scaleY,
-    0,
-    0,
-    crop.width,
-    crop.height
-  );
-
-  return new Promise((resolve) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          resolve(null);
-          return;
-        }
-        resolve(new File([blob], fileName, { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      0.95 // High quality
-    );
-  });
-}
 
 export default function AccountDetailsPage() {
   const { user, loading: authLoading, setUser: setAuthUser, userRole } = useAuth();
@@ -154,7 +107,7 @@ export default function AccountDetailsPage() {
     }
 
     setIsUploading(true);
-    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name);
+    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
 
     if (!croppedImageBlob) {
         Swal.fire("Error", "Failed to create cropped image.", "error");
