@@ -1,12 +1,13 @@
 
+
 "use client";
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, PIShipmentMode } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, piShipmentModeOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -83,6 +84,7 @@ const defaultFormValues: LCEditFormValues = {
   totalGrossWeight: 0,
   totalCbm: 0,
   shipmentMode: shipmentModeOptions[0],
+  shipmentTerms: piShipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -222,22 +224,23 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             secondPartialAmount: initialData.secondPartialAmount ?? defaultFormValues.secondPartialAmount,
             thirdPartialAmount: initialData.thirdPartialAmount ?? defaultFormValues.thirdPartialAmount,
             firstPartialPkgs: initialData.firstPartialPkgs ?? defaultFormValues.firstPartialPkgs,
-            secondPartialPkgs: initialData.secondPartialPkgs ?? defaultFormValues.secondPartialPkgs,
-            thirdPartialPkgs: initialData.thirdPartialPkgs ?? defaultFormValues.thirdPartialPkgs,
-            firstPartialNetWeight: initialData.firstPartialNetWeight ?? defaultFormValues.firstPartialNetWeight,
             secondPartialNetWeight: initialData.secondPartialNetWeight ?? defaultFormValues.secondPartialNetWeight,
-            thirdPartialNetWeight: initialData.thirdPartialNetWeight ?? defaultFormValues.thirdPartialNetWeight,
             firstPartialGrossWeight: initialData.firstPartialGrossWeight ?? defaultFormValues.firstPartialGrossWeight,
-            secondPartialGrossWeight: initialData.secondPartialGrossWeight ?? defaultFormValues.secondPartialGrossWeight,
-            thirdPartialGrossWeight: initialData.thirdPartialGrossWeight ?? defaultFormValues.thirdPartialGrossWeight,
             firstPartialCbm: initialData.firstPartialCbm ?? defaultFormValues.firstPartialCbm,
+            secondPartialPkgs: initialData.secondPartialPkgs ?? defaultFormValues.secondPartialPkgs,
+            secondPartialNetWeight: initialData.secondPartialNetWeight ?? defaultFormValues.secondPartialNetWeight,
+            secondPartialGrossWeight: initialData.secondPartialGrossWeight ?? defaultFormValues.secondPartialGrossWeight,
             secondPartialCbm: initialData.secondPartialCbm ?? defaultFormValues.secondPartialCbm,
+            thirdPartialPkgs: initialData.thirdPartialPkgs ?? defaultFormValues.thirdPartialPkgs,
+            thirdPartialNetWeight: initialData.thirdPartialNetWeight ?? defaultFormValues.thirdPartialNetWeight,
+            thirdPartialGrossWeight: initialData.thirdPartialGrossWeight ?? defaultFormValues.thirdPartialGrossWeight,
             thirdPartialCbm: initialData.thirdPartialCbm ?? defaultFormValues.thirdPartialCbm,
             totalPackageQty: initialData.totalPackageQty ?? defaultFormValues.totalPackageQty,
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
             totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
             totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
             shipmentMode: initialData.shipmentMode ?? defaultFormValues.shipmentMode,
+            shipmentTerms: initialData.shipmentTerms,
             vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
             vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
             flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
@@ -290,7 +293,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
 
-  const watchedShipmentMode = watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
   if (watchedShipmentMode === "Sea") {
     viaLabel = "Vessel Name";
@@ -298,7 +300,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     viaLabel = "Flight Name";
   }
 
-  const watchedCurrency = watch("currency");
   const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
 
   const watchedTermsOfPay = watch("termsOfPay");
@@ -359,8 +360,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const thirdPartialAmount = Number(getValues("thirdPartialAmount") || 0);
     const newTotalAmount = firstPartialAmount + secondPartialAmount + thirdPartialAmount;
 
-    setTotalCalculatedPartialQty(newTotalQty);
-    setTotalCalculatedPartialAmount(newTotalAmount);
+    if (totalCalculatedPartialQty !== newTotalQty) {
+      setTotalCalculatedPartialQty(newTotalQty);
+    }
+    if (totalCalculatedPartialAmount !== newTotalAmount) {
+      setTotalCalculatedPartialAmount(newTotalAmount);
+    }
     
     if (watchedPartialShipmentAllowed === "Yes") {
         const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
@@ -413,6 +418,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
+      shipmentTerms: finalData.shipmentTerms,
       trackingCourier: finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
@@ -855,7 +861,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <FormField
                 control={control}
                 name="partialShipments"
@@ -894,6 +900,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormMessage />
                 </FormItem>
                 )}
+            />
+            <FormField
+              control={control}
+              name="shipmentTerms"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Shipment Terms</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                    >
+                      {piShipmentModeOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={option} /></FormControl>
+                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
         </div>
         <FormField
@@ -1280,7 +1310,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
-            control={control}
+            control={form.control}
             name="isFirstShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1294,7 +1324,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="isSecondShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1308,7 +1338,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="isThirdShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1427,7 +1457,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <FormItem>
               <FormLabel>Notify Party Name and Address</FormLabel>
               <FormControl>
-                 <RichTextEditor
+                <RichTextEditor
                   value={field.value ?? ''}
                   onChange={field.onChange}
                   placeholder="Enter notify party's full name and address"

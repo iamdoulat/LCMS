@@ -1,12 +1,13 @@
 
+
 "use client";
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, PIShipmentMode } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, piShipmentModeOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -78,6 +79,7 @@ const defaultFormValues: NewLCFormValues = {
   totalGrossWeight: 0,
   totalCbm: 0,
   shipmentMode: shipmentModeOptions[0],
+  shipmentTerms: piShipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -327,6 +329,7 @@ export function NewLCEntryForm() {
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
+      shipmentTerms: finalData.shipmentTerms,
       trackingCourier: finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
@@ -768,7 +771,7 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <FormField
                 control={control}
                 name="partialShipments"
@@ -807,6 +810,30 @@ export function NewLCEntryForm() {
                     <FormMessage />
                 </FormItem>
                 )}
+            />
+            <FormField
+              control={control}
+              name="shipmentTerms"
+              render={({ field }) => (
+                  <FormItem className="space-y-3">
+                      <FormLabel>Shipment Terms</FormLabel>
+                      <FormControl>
+                          <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                          >
+                              {piShipmentModeOptions.map((option) => (
+                                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                                      <FormControl><RadioGroupItem value={option} /></FormControl>
+                                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                                  </FormItem>
+                              ))}
+                          </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+              )}
             />
         </div>
         <FormField
@@ -1193,7 +1220,7 @@ export function NewLCEntryForm() {
 
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
-            control={control}
+            control={form.control}
             name="isFirstShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1207,7 +1234,7 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="isSecondShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1221,7 +1248,7 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
+            control={form.control}
             name="isThirdShipment"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -1649,4 +1676,5 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
+
 

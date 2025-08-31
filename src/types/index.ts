@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -92,6 +93,7 @@ export interface LCEntry {
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
   shipmentMode?: ShipmentMode;
+  shipmentTerms?: PIShipmentMode; // New field for shipment terms
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -196,6 +198,7 @@ export const lcEntrySchema = z.object({
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
   totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
   shipmentMode: z.enum(shipmentModeOptions).optional(),
+  shipmentTerms: z.enum(["CFR", "CPT", "FOB", "EXW"]).optional(), // Added shipmentTerms
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -300,6 +303,7 @@ export interface LCEntryDocument {
   etd?: string; // ISO string
   eta?: string; // ISO string
   shipmentMode?: ShipmentMode;
+  shipmentTerms?: PIShipmentMode; // New field for shipment terms
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -494,7 +498,7 @@ export type ExtractShippingDataOutput = z.infer<typeof ExtractShippingDataOutput
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
-export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
+export const piShipmentModeOptions = ["CFR", "CPT", "FOB", "EXW"] as const;
 export type PIShipmentMode = typeof piShipmentModeOptions[number];
 
 export interface ProformaInvoiceLineItem {
