@@ -293,6 +293,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }, [watchedApplicantId, applicantOptions, setValue]);
 
+  const watchedShipmentMode = watch("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
   if (watchedShipmentMode === "Sea") {
     viaLabel = "Vessel Name";
@@ -300,6 +301,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     viaLabel = "Flight Name";
   }
 
+  const watchedCurrency = watch("currency");
   const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
 
   const watchedTermsOfPay = watch("termsOfPay");
@@ -905,24 +907,24 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               control={control}
               name="shipmentTerms"
               render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Shipment Terms</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap items-center gap-x-4 gap-y-2"
-                    >
-                      {piShipmentModeOptions.map((option) => (
-                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={option} /></FormControl>
-                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                  <FormItem className="space-y-3">
+                      <FormLabel>Shipment Terms</FormLabel>
+                      <FormControl>
+                          <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                          >
+                              {piShipmentModeOptions.map((option) => (
+                                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                                      <FormControl><RadioGroupItem value={option} /></FormControl>
+                                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                                  </FormItem>
+                              ))}
+                          </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
               )}
             />
         </div>
@@ -1753,12 +1755,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Saving Entry...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <FileText className="mr-2 h-4 w-4" />
+              Submit T/T OR L/C Entry
             </>
           )}
         </Button>
@@ -1766,3 +1768,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
+
+
