@@ -1,5 +1,3 @@
-
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -93,7 +91,7 @@ export interface LCEntry {
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
   shipmentMode?: ShipmentMode;
-  shipmentTerms?: PIShipmentMode; // New field for shipment terms
+  shipmentTerms?: PIShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -198,7 +196,7 @@ export const lcEntrySchema = z.object({
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
   totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
   shipmentMode: z.enum(shipmentModeOptions).optional(),
-  shipmentTerms: z.enum(["CFR", "CPT", "FOB", "EXW"]).optional(), // Added shipmentTerms
+  shipmentTerms: z.enum(["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"]).optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -303,7 +301,7 @@ export interface LCEntryDocument {
   etd?: string; // ISO string
   eta?: string; // ISO string
   shipmentMode?: ShipmentMode;
-  shipmentTerms?: PIShipmentMode; // New field for shipment terms
+  shipmentTerms?: PIShipmentMode;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -878,6 +876,8 @@ export const QuoteSchema = z.object({
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedToInvoiceId: z.string().optional(),
+  shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type QuoteFormValues = z.infer<typeof QuoteSchema>;
 
@@ -917,6 +917,8 @@ export interface QuoteDocument {
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
   convertedToInvoiceId?: string;
+  shipmentMode?: PIShipmentMode;
+  freightCharges?: number;
 }
 // --- END Quote Types ---
 
@@ -962,7 +964,6 @@ export const InvoiceSchema = z.object({
   shipmentMode: z.enum(piShipmentModeOptions).optional(),
   packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
-  freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;

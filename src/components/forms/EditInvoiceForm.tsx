@@ -182,7 +182,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         }
       });
     }
-
+    
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
     const additionalCharges = freight + other;
@@ -404,6 +404,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           )}
         />
         <Separator className="my-6" />
+
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -430,7 +431,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -441,8 +442,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -462,18 +465,17 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   </FormItem>
               )}
           />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormLabel className="font-bold underline">TERMS AND CONDITIONS:</FormLabel>
+                <FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         
         <div className="flex justify-end space-y-2 mt-6">
@@ -481,9 +483,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
@@ -510,8 +512,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                freightCharges: initialData.freightCharges,
-                otherCharges: (initialData as any).otherCharges,
+                packingCharge: initialData.packingCharge,
+                handlingCharge: initialData.handlingCharge,
+                otherCharges: initialData.otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -523,4 +526,5 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
 
