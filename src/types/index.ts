@@ -498,7 +498,7 @@ export type ExtractShippingDataOutput = z.infer<typeof ExtractShippingDataOutput
 // --- Proforma Invoice Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
-export const piShipmentModeOptions = ["CFR", "CPT", "FOB", "EXW"] as const;
+export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
 export type PIShipmentMode = typeof piShipmentModeOptions[number];
 
 export interface ProformaInvoiceLineItem {

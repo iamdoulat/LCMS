@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -24,7 +25,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
-import { z } from 'zod';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,9 +133,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
-            shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
+            shipmentMode: initialData.shipmentMode ?? piShipmentModeOptions[0],
             freightCharges: initialData.freightCharges,
-            otherCharges: (initialData as any).otherCharges,
+            otherCharges: initialData.otherCharges,
           });
         }
       } catch (error) {
@@ -151,7 +151,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const watchedFreightCharges = watch("freightCharges");
   const watchedOtherCharges = watch("otherCharges");
   const watchedShipmentMode = watch("shipmentMode");
-  
+
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -163,9 +163,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        let itemTotalBeforeDiscount = 0;
+        const itemTotalBeforeDiscount = qty * unitPrice;
+        
         if (qty > 0 && unitPrice >= 0) {
-          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -215,7 +215,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
+    window.open(`/dashboard/pi/preview/${invoiceId}`, '_blank');
   };
 
   async function onSubmit(data: InvoiceFormValues) {
@@ -272,14 +272,15 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
-      freightCharges: data.freightCharges,
-      otherCharges: data.otherCharges,
+      amountPaid: initialData.amountPaid || 0, // Preserve existing paid amount
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
+      shipmentMode: data.shipmentMode,
+      freightCharges: data.freightCharges,
+      otherCharges: data.otherCharges,
       updatedAt: serverTimestamp(),
       convertedFromQuoteId: data.convertedFromQuoteId,
-      shipmentMode: data.shipmentMode,
     };
     
     Object.keys(dataToUpdate).forEach(key => {
@@ -298,18 +299,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       setIsSubmitting(false);
     }
   }
-
-  const grandTotalLabel =
-    watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL:"
-      : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL:"
-      : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
-      : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
-      : "TOTAL:";
-
+  
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -366,6 +357,28 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -392,7 +405,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         />
         <Separator className="my-6" />
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
@@ -426,9 +441,8 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -509,3 +523,4 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+

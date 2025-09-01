@@ -9,13 +9,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, PIShipmentMode } from '@/types';
-import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions, piShipmentModeOptions } from '@/types';
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus } from '@/types'; // Updated types
+import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions, piShipmentModeOptions } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,8 +36,8 @@ import {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__INVOICE_CUSTOMER_PLACEHOLDER__";
-const PLACEHOLDER_ITEM_VALUE = "__INVOICE_ITEM_PLACEHOLDER__";
+const PLACEHOLDER_CUSTOMER_VALUE = "__SALE_CUSTOMER_PLACEHOLDER__";
+const PLACEHOLDER_ITEM_VALUE = "__SALE_ITEM_PLACEHOLDER__";
 
 interface ItemOption extends ComboboxOption {
   description?: string;
@@ -51,24 +51,26 @@ interface CustomerOption extends ComboboxOption {
   address?: string;
 }
 
-export function CreateInvoiceForm() {
+type SaleFormValues = PageSaleFormValues;
+type SaleLineItemFormValues = PageSaleLineItemFormValues;
+
+
+export function CreateSaleInvoiceForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const [generatedInvoiceId, setGeneratedInvoiceId] = React.useState<string | null>(null);
+  const [generatedSaleId, setGeneratedSaleId] = React.useState<string | null>(null);
 
-  const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(InvoiceSchema),
+  const form = useForm<SaleFormValues>({
+    resolver: zodResolver(SaleSchema),
     defaultValues: {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
       invoiceDate: new Date(),
-      paymentTerms: '',
       salesperson: '',
-      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
       lineItems: [{
         itemId: '',
         itemCode: '',
@@ -79,14 +81,15 @@ export function CreateInvoiceForm() {
         taxPercentage: '0',
         total: '0.00'
       }],
+      status: "Draft",
       taxType: 'Default',
-      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment: Allowed\nPI Expiry Date : 30 days from above date",
+      comments: '',
       privateComments: '',
-      showItemCodeColumn: false,
-      showDiscountColumn: false,
-      showTaxColumn: false,
-      shipmentMode: piShipmentModeOptions[0],
-      freightCharges: undefined,
+      showItemCodeColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
+      packingCharge: undefined,
+      handlingCharge: undefined,
       otherCharges: undefined,
     },
   });
@@ -105,9 +108,10 @@ export function CreateInvoiceForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
-  const watchedShipmentMode = watch("shipmentMode");
-  const watchedFreightCharges = watch("freightCharges");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
   const watchedOtherCharges = watch("otherCharges");
+  const watchedShipmentMode = watch("shipmentMode");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -141,10 +145,11 @@ export function CreateInvoiceForm() {
         }
       });
     }
-    
-    const freight = Number(watchedFreightCharges || 0);
+
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
     const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = freight + other;
+    const additionalCharges = packing + handling + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
@@ -154,7 +159,7 @@ export function CreateInvoiceForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -162,14 +167,16 @@ export function CreateInvoiceForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
+
         setCustomerOptions(
           customersSnap.docs.map(doc => {
             const data = doc.data() as CustomerDocument;
             return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
           })
         );
+
         setItemOptions(
           itemsSnap.docs.map(doc => {
             const data = doc.data() as ItemDoc;
@@ -184,7 +191,9 @@ export function CreateInvoiceForm() {
             };
           })
         );
+
       } catch (error) {
+        console.error("Error fetching dropdown options for Sale form: ", error);
         Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
@@ -206,6 +215,7 @@ export function CreateInvoiceForm() {
     }
   }, [watchedCustomerId, customerOptions, setValue]);
 
+
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -225,162 +235,145 @@ export function CreateInvoiceForm() {
     }
   };
 
-  const saveInvoiceLogic = async (data: InvoiceFormValues): Promise<string | null> => {
+  async function onSubmit(data: SaleFormValues) {
     setIsSubmitting(true);
-    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
-    const currentYear = new Date().getFullYear();
-    const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
+    
     try {
-      const newInvoiceId = await runTransaction(firestore, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        let currentCount = 0;
-        if (counterDoc.exists()) {
-          const counterData = counterDoc.data();
-          currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
-        }
-        const newCount = currentCount + 1;
-        const formattedInvoiceId = `SS${currentYear}-${String(newCount).padStart(3, '0')}`;
-        
-        const processedLineItems = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
+        const counterRef = doc(firestore, "counters", "saleNumberGenerator");
 
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          const total = itemTotalBeforeDiscount;
-          
-          const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+        const newSaleId = await runTransaction(firestore, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
 
-          const lineItemData: any = {
-            itemId: item.itemId, itemName: itemDetails?.label.split(' (')[0] || 'N/A', itemCode: itemDetails?.itemCode,
-            description: item.description || '', qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total,
-          };
-          Object.keys(lineItemData).forEach(key => {
-            if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
-              delete lineItemData[key];
+            const itemsToUpdate: { itemRef: any, newQty: number, label: string }[] = [];
+            for (const lineItem of data.lineItems) {
+                if (!lineItem.itemId) continue;
+                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
+                if (itemOption?.manageStock) {
+                    const itemRef = doc(firestore, "items", lineItem.itemId);
+                    const itemSnap = await transaction.get(itemRef);
+
+                    if (!itemSnap.exists()) {
+                        throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
+                    }
+                    const itemData = itemSnap.data() as ItemDoc;
+                    const currentItemQty = itemData.currentQuantity || 0;
+                    const requestedQty = parseFloat(String(lineItem.qty || '0'));
+                    if (currentItemQty < requestedQty) {
+                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
+                    }
+                    itemsToUpdate.push({
+                        itemRef: itemRef,
+                        newQty: currentItemQty - requestedQty,
+                        label: itemData.itemName || "Unknown Item",
+                    });
+                }
             }
-          });
-          return lineItemData;
+
+            const currentYear = new Date().getFullYear();
+            let currentCount = 0;
+            if (counterDoc.exists()) {
+                const counterData = counterDoc.data();
+                currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
+            }
+            const newCount = currentCount + 1;
+            const formattedSaleId = `IMI${currentYear}-${String(newCount).padStart(2, '0')}`;
+            
+            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+            
+            const processedLineItems = data.lineItems.map(item => {
+                const qty = parseFloat(String(item.qty || '0'));
+                const unitPriceStr = String(item.unitPrice || '0');
+                const finalUnitPrice = parseFloat(unitPriceStr);
+                const discountPercentageStr = String(item.discountPercentage || '0');
+                const finalDiscountPercentage = parseFloat(discountPercentageStr);
+                const taxPercentageStr = String(item.taxPercentage || '0');
+                const finalTaxPercentage = parseFloat(taxPercentageStr);
+
+                const itemTotalBeforeDiscount = qty * finalUnitPrice;
+                
+                const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+
+                const lineItemData: any = {
+                    itemId: item.itemId,
+                    itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+                    itemCode: itemDetails?.itemCode,
+                    description: item.description || '',
+                    qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
+                };
+                 Object.keys(lineItemData).forEach(key => {
+                    if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
+                        delete lineItemData[key];
+                    }
+                });
+                return lineItemData;
+            });
+            
+            const dataToSave: Record<string, any> = {
+              customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
+              billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
+              invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+              dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+              paymentTerms: data.paymentTerms, salesperson: data.salesperson,
+              subject: data.subject,
+              lineItems: processedLineItems, taxType: data.taxType,
+              comments: data.comments, privateComments: data.privateComments,
+              subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
+              totalAmount: grandTotal, status: data.status || "Draft",
+              amountPaid: 0,
+              packingCharge: data.packingCharge,
+              handlingCharge: data.handlingCharge,
+              otherCharges: data.otherCharges,
+              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+              showItemCodeColumn: data.showItemCodeColumn,
+              showDiscountColumn: data.showDiscountColumn,
+              showTaxColumn: data.showTaxColumn,
+            };
+
+            const cleanedDataToSave = Object.fromEntries(
+                Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
+            ) as Partial<Omit<SaleDocument, 'id'>>;
+            
+            const newSaleRef = doc(firestore, "sales_invoice", formattedSaleId);
+            transaction.set(newSaleRef, cleanedDataToSave);
+
+            const newCounters = {
+                yearlyCounts: {
+                    ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
+                    [currentYear]: newCount,
+                }
+            };
+            transaction.set(counterRef, newCounters, { merge: true });
+
+            itemsToUpdate.forEach(itemUpdate => {
+                transaction.update(itemUpdate.itemRef, {
+                    currentQuantity: itemUpdate.newQty,
+                    updatedAt: serverTimestamp(),
+                });
+            });
+
+            return formattedSaleId;
         });
 
-        const invoiceDataToSave: Record<string, any> = {
-          customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
-          billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
-          invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          paymentTerms: data.paymentTerms, salesperson: data.salesperson,
-          subject: data.subject,
-          lineItems: processedLineItems, taxType: data.taxType,
-          comments: data.comments, privateComments: data.privateComments,
-          subtotal: subtotal,
-          totalDiscountAmount: totalDiscountAmount,
-          totalTaxAmount: totalTaxAmount,
-          totalAmount: grandTotal,
-          amountPaid: 0,
-          status: "Draft",
-          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-          showItemCodeColumn: data.showItemCodeColumn,
-          showDiscountColumn: data.showDiscountColumn,
-          showTaxColumn: data.showTaxColumn,
-          convertedFromQuoteId: data.convertedFromQuoteId,
-          shipmentMode: data.shipmentMode,
-          freightCharges: data.freightCharges,
-          otherCharges: data.otherCharges,
-        };
-
-        const cleanedData = Object.fromEntries(
-            Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined && value !== null && value !== '')
-        ) as Partial<Omit<InvoiceDocument, 'id'>>;
-
-        const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
-        transaction.set(newInvoiceRef, cleanedData);
-        transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
-        return formattedInvoiceId;
+      setGeneratedSaleId(newSaleId);
+      Swal.fire({
+        title: "Sale Recorded!",
+        text: `Sale successfully recorded with ID: ${newSaleId}. Item stock levels updated.`,
+        icon: "success",
       });
-      return newInvoiceId;
+      form.reset(); 
     } catch (error: any) {
-      Swal.fire("Save Failed", `Failed to save invoice: ${error.message}`, "error");
-      return null;
+      console.error("Error recording sale: ", error);
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to record sale: ${error.message}`,
+        icon: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleRegularSave = async (data: InvoiceFormValues) => {
-    const newId = await saveInvoiceLogic(data);
-    if (newId) {
-      setGeneratedInvoiceId(newId);
-      Swal.fire("Invoice Saved!", `Invoice successfully saved with ID: ${newId}.`, "success");
-    }
-  };
-
-  const handleSaveAndPreview = async (data: InvoiceFormValues) => {
-    const newId = await saveInvoiceLogic(data);
-    if (newId) {
-      setGeneratedInvoiceId(newId);
-      Swal.fire({
-        title: "Invoice Saved!", text: `Invoice successfully saved with ID: ${newId}. Navigating to preview...`,
-        icon: "success", timer: 1500, showConfirmButton: false,
-      }).then(() => router.push(`/dashboard/invoices/preview/${newId}`));
-    }
-  };
-
-  const handlePreviewLastSaved = () => {
-    if (generatedInvoiceId) {
-      router.push(`/dashboard/invoices/preview/${generatedInvoiceId}`);
-    } else {
-      Swal.fire("No Invoice Saved", "Please save an invoice first to preview it.", "info");
-    }
-  };
+  }
   
-  // Custom reset function that maintains the new default values
-  const handleReset = () => {
-    reset({
-      customerId: '',
-      billingAddress: '',
-      shippingAddress: '',
-      invoiceDate: new Date(),
-      paymentTerms: '',
-      salesperson: '',
-      subject: 'BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY.',
-      lineItems: [{
-        itemId: '',
-        itemCode: '',
-        description: '',
-        qty: '1',
-        unitPrice: '0',
-        discountPercentage: '0',
-        taxPercentage: '0',
-        total: '0.00'
-      }],
-      taxType: 'Default',
-      comments: "By Irrevocable LC at 120 days deferred from the date of B/L\nSmart Solution PTE. Ltd.\nA/C No.: 010-905029-9\nDBS Bank Ltd.\nSouth Bridge Branch, Blk 531, Upper Cross Street,\n#01-51 Hong Lim Complex, Singapore 050531\nSwift code : DBSSSGSG\n\nDelivery : Subject to your final order confirmation\nGross Weight : To be advise after sales confirmation\nHS Code : 8452.21.00\nPort of Loading : Any Seaport of HONGKONG / SINGAPORE\nShipping Mark : REGENCY THREE LTD / SMART SOLUTION\nPort of Discharge : Chattogram\nCountry of Origin : JAPAN / CHINA / TAIWAN\nPartial Shipment: Allowed\nPI Expiry Date : 30 days from above date",
-      privateComments: '',
-      // Ensure these remain false on reset
-      showItemCodeColumn: false,
-      showDiscountColumn: false,
-      showTaxColumn: false,
-      shipmentMode: piShipmentModeOptions[0],
-      freightCharges: undefined,
-      otherCharges: undefined,
-    });
-    setGeneratedInvoiceId(null);
-  };
-
-  const grandTotalLabel =
-    watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL:"
-      : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL:"
-      : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
-      : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
-      : "TOTAL:";
-
+  const grandTotalLabel = "TOTAL (BDT):";
 
   if (isLoadingDropdowns) {
     return (
@@ -391,12 +384,10 @@ export function CreateInvoiceForm() {
     );
   }
 
-  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
-  const actionButtonsDisabled = !generatedInvoiceId || isSubmitting;
-
   return (
     <Form {...form}>
-      <form className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -423,12 +414,12 @@ export function CreateInvoiceForm() {
           <div>
             <FormField
               control={control}
-              name="billingAddress"
+              name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill To*</FormLabel>
+                  <FormLabel>Delivery Address*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                    <Textarea placeholder="Delivery address" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -453,53 +444,93 @@ export function CreateInvoiceForm() {
             />
           </div>
           <div>
-            <FormField
+             <FormField
               control={control}
-              name="shippingAddress"
+              name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormLabel>Bill To*</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
+                    <Textarea placeholder="Billing address" {...field} rows={3} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
         </div>
-        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={generatedInvoiceId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        
+        <h3 className={cn(sectionHeadingClass)}>
+          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+          Invoice Details
+        </h3>
+         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+            <FormItem>
+              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel>
+              <Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+            </FormItem>
+            <FormField
+                control={control}
+                name="invoiceDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Invoice Date*</FormLabel>
+                    <DatePickerField field={field} placeholder="Select invoice date" />
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="taxType"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Tax</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select tax type" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {quoteTaxTypes.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {saleStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
         <Separator className="my-6" />
-        <FormField
-          control={control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Invoice Subject</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-sm font-normal"
-                  {...field}
-                  value={field.value ?? ''}
-                  rows={2}
-                />
-              </FormControl>
-              <FormDescription>
-                This text will appear below the address section on the invoice.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Separator className="my-6" />
+
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
@@ -534,68 +565,50 @@ export function CreateInvoiceForm() {
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
-          />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+                <FormLabel className="font-bold underline">TERMS AND CONDITIONS:</FormLabel>
+                <FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
+        
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => {
-                reset();
-                setGeneratedInvoiceId(null);
+                form.reset();
+                setGeneratedSaleId(null);
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Invoice...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Invoice</> )}
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording Sale...</> ) : ( <><Save className="mr-2 h-4 w-4" />Record Sale</> )}
             </Button>
-            <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}><Printer className="mr-2 h-4 w-4" />Save and Preview</Button>
-            <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}><Printer className="mr-2 h-4 w-4" />Preview Last Saved</Button>
         </div>
       </form>
     </Form>
   );
 }
+
+
 

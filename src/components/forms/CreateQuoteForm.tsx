@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -101,6 +102,44 @@ export function CreateQuoteForm() {
 
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
+  const watchedTaxType = watch("taxType");
+
+  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
+    let currentSubtotal = 0;
+    let currentTotalTax = 0;
+    let currentTotalDiscount = 0;
+
+    if (Array.isArray(watchedLineItems)) {
+      watchedLineItems.forEach((item) => {
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
+        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
+
+        const itemTotalBeforeDiscount = qty * unitPrice;
+
+        if (qty > 0 && unitPrice >= 0) {
+          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
+          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
+          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
+
+          currentSubtotal += itemTotalBeforeDiscount;
+          currentTotalDiscount += lineDiscountAmount;
+          currentTotalTax += lineTaxAmount;
+        }
+      });
+    }
+
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
+
+    return {
+      subtotal: currentSubtotal,
+      totalDiscountAmount: currentTotalDiscount,
+      totalTaxAmount: currentTotalTax,
+      grandTotal: currentGrandTotal,
+    };
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn]);
+
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -153,42 +192,6 @@ export function CreateQuoteForm() {
       setValue("shippingAddress", "");
     }
   }, [watchedCustomerId, customerOptions, setValue]);
-
-  const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
-    let currentSubtotal = 0;
-    let currentTotalTax = 0;
-    let currentTotalDiscount = 0;
-
-    if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item) => {
-        const qty = parseFloat(String(item.qty || '0')) || 0;
-        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
-        const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-
-        const itemTotalBeforeDiscount = qty * unitPrice;
-
-        if (qty > 0 && unitPrice >= 0) {
-          const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
-          const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
-          const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-
-          currentSubtotal += itemTotalBeforeDiscount;
-          currentTotalDiscount += lineDiscountAmount;
-          currentTotalTax += lineTaxAmount;
-        }
-      });
-    }
-
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-
-    return {
-      subtotal: currentSubtotal,
-      totalDiscountAmount: currentTotalDiscount,
-      totalTaxAmount: currentTotalTax,
-      grandTotal: currentGrandTotal,
-    };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn]);
 
 
   const handleItemSelect = (itemId: string, index: number) => {
@@ -339,14 +342,14 @@ export function CreateQuoteForm() {
         timer: 1500,
         showConfirmButton: false,
       }).then(() => {
-        router.push(`/dashboard/quotes/preview/${newId}`);
+        router.push(`/dashboard/quotations/preview/${newId}`);
       });
     }
   };
 
   const handlePreviewLastSaved = () => {
     if (generatedQuoteId) {
-      router.push(`/dashboard/quotes/preview/${generatedQuoteId}`);
+      router.push(`/dashboard/quotations/preview/${generatedQuoteId}`);
     } else {
       Swal.fire("No Quote Saved", "Please save a quote first to preview it.", "info");
     }
@@ -412,10 +415,7 @@ export function CreateQuoteForm() {
     <Form {...form}>
       <form onSubmit={handleSubmit(() => {})} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <Users className="mr-2 h-5 w-5 text-primary" />
-          Customer & Delivery Information
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -457,11 +457,8 @@ export function CreateQuoteForm() {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-          Quote Details
-        </h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
               <Input value={generatedQuoteId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
@@ -552,7 +549,7 @@ export function CreateQuoteForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -566,7 +563,7 @@ export function CreateQuoteForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>

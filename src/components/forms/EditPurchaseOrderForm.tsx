@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -200,11 +201,14 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     if (watchedBeneficiaryId) {
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
+        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", initialData.shippingAddress || selectedBeneficiary.address || "");
+        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+          setValue("shippingAddress", selectedBeneficiary.address || "");
+        }
       }
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, initialData.shippingAddress]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -224,7 +228,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/inventory/inventory-orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -307,7 +311,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
 
 
     try {
-      const orderDocRef = doc(firestore, "purchase_orders", orderId);
+      const orderDocRef = doc(firestore, "inventory_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
