@@ -1,8 +1,10 @@
+
 "use client";
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -13,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -145,7 +147,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-
+  
   const watchedLineItems = watch("lineItems");
   const watchedPackingCharge = watch("packingCharge");
   const watchedHandlingCharge = watch("handlingCharge");
@@ -181,7 +183,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         }
       });
     }
-    
+
     const packing = Number(watchedPackingCharge || 0);
     const handling = Number(watchedHandlingCharge || 0);
     const other = Number(watchedOtherCharges || 0);
@@ -291,14 +293,14 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     try {
       const invoiceDocRef = doc(firestore, "sales_invoice", invoiceId);
       await updateDoc(invoiceDocRef, dataToUpdate);
-      Swal.fire("Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
+      Swal.fire("Sales Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update invoice: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
   }
-
+  
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
@@ -377,6 +379,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 )}
             />
         </div>
+
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">

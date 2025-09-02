@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -366,8 +367,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     });
     
     const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
-    const finalTotalDiscount = showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalDiscount = data.showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax + Number(data.freightCharges || 0);
 
     const dataToUpdate: Record<string, any> = {
@@ -413,8 +414,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setIsSubmitting(false);
     }
   }
-
+  
   const grandTotalLabel = `TOTAL (USD):`;
+
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -515,7 +517,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
         </div>
-        
         <Separator className="my-6" />
         <FormField
           control={control}
@@ -627,7 +628,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
              <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting || watchedStatus === 'Invoiced'}>
               <Edit className="mr-2 h-4 w-4" />Convert to Invoice
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
               {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
             </Button>
         </div>
