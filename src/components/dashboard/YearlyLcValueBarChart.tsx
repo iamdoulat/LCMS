@@ -37,7 +37,7 @@ const yAxisTickFormatter = (value: number) => {
   return value.toString();
 };
 
-export function YearlyLcValueBarChart({ data }: YearlyLcValueBarChartProps) {
+export default function YearlyLcValueBarChart({ data }: YearlyLcValueBarChartProps) {
   if (!data || data.length === 0) {
     return <p className="text-center text-muted-foreground">No yearly L/C value data to display.</p>;
   }
@@ -78,5 +78,3 @@ export function YearlyLcValueBarChart({ data }: YearlyLcValueBarChartProps) {
     </ResponsiveContainer>
   );
 };
-
-export default YearlyLcValueBarChart;
