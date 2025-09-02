@@ -389,12 +389,9 @@ export function CreatePurchaseOrderForm() {
 
   return (
     <Form {...form}>
-      <form className="space-y-8">
+      <form onSubmit={handleSubmit(handleRegularSave)} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <Building className="mr-2 h-5 w-5 text-primary" />
-          Beneficiary & Delivery
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><Building className="mr-2 h-5 w-5 text-primary" />Beneficiary & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -581,10 +578,10 @@ export function CreatePurchaseOrderForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Order...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Order</> )}
             </Button>
-            <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
+            <Button type="button" variant="outline" onClick={() => form.handleSubmit(handleSaveAndPreview)()} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
             <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
@@ -595,3 +592,5 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+
+    

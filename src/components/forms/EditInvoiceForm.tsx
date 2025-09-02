@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -217,7 +217,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/inventory/sales/print/${invoiceId}`, '_blank');
+    window.open(`/dashboard/pi/preview/${invoiceId}`, '_blank');
   };
 
   async function onSubmit(data: InvoiceFormValues) {
@@ -291,9 +291,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     });
 
     try {
-      const invoiceDocRef = doc(firestore, "sales_invoice", invoiceId);
+      const invoiceDocRef = doc(firestore, "invoices", invoiceId);
       await updateDoc(invoiceDocRef, dataToUpdate);
-      Swal.fire("Sales Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
+      Swal.fire("Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update invoice: ${error.message}`, "error");
     } finally {
@@ -369,7 +369,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {saleStatusOptions.map(status => (
+                        {invoiceStatusOptions.map(status => (
                             <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
                         </SelectContent>
@@ -419,6 +419,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
@@ -449,7 +450,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleViewPdf}>
+             <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
@@ -484,3 +485,5 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
+
+    
