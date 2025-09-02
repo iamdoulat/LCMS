@@ -8,13 +8,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions } from '@/types';
+import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument, PIShipmentMode } from '@/types';
+import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions, piShipmentModeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -103,6 +103,7 @@ export function CreateQuoteForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedTaxType = watch("taxType");
+  const watchedFreightCharges = watch("freightCharges");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -130,15 +131,16 @@ export function CreateQuoteForm() {
       });
     }
 
-    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax;
-
+    const freight = Number(watchedFreightCharges || 0);
+    const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + freight;
+    
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
 
 
   React.useEffect(() => {
@@ -258,7 +260,7 @@ export function CreateQuoteForm() {
         const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
         const finalTotalDiscount = data.showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
         const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
-        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax;
+        const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax + Number(data.freightCharges || 0);
 
         const quoteDataToSave: Record<string, any> = {
           customerId: data.customerId,
@@ -283,6 +285,8 @@ export function CreateQuoteForm() {
           showDiscountColumn: data.showDiscountColumn,
           showTaxColumn: data.showTaxColumn,
           convertedToInvoiceId: data.convertedToInvoiceId,
+          shipmentMode: data.shipmentMode,
+          freightCharges: data.freightCharges,
         };
         
         // Final cleaning of the main object before saving
@@ -458,7 +462,7 @@ export function CreateQuoteForm() {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
             <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
               <Input value={generatedQuoteId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
@@ -574,6 +578,7 @@ export function CreateQuoteForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                  {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
                  {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>

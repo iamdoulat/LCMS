@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -13,7 +14,7 @@ import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions, pi
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DatePickerField } from './DatePickerField';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -134,7 +135,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             convertedToInvoiceId: initialData.convertedToInvoiceId,
-            shipmentMode: initialData.shipmentMode ?? piShipmentModeOptions[0],
+            shipmentMode: initialData.shipmentMode,
             freightCharges: initialData.freightCharges,
           });
         }
@@ -156,7 +157,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     let currentTotalDiscount = 0;
 
     if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item, index) => {
+      watchedLineItems.forEach((item) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
@@ -569,7 +570,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
                   {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
-                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
+                  <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>

@@ -64,7 +64,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema.extend({
         status: z.enum(invoiceStatusOptions).optional(),
-    })),
+    })), 
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -300,7 +300,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       setIsSubmitting(false);
     }
   }
-  
+
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
@@ -379,7 +379,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 )}
             />
         </div>
-
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
@@ -485,5 +484,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
-    

@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, writeBatch } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus } from '@/types'; // Updated types
 import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
@@ -233,7 +233,7 @@ export function CreateSaleInvoiceForm() {
     }
   };
 
-  const saveSaleLogic = async (data: SaleFormValues): Promise<string | null> => {
+  async function onSubmit(data: SaleFormValues) {
     setIsSubmitting(true);
     
     try {
@@ -317,7 +317,6 @@ export function CreateSaleInvoiceForm() {
                 comments: data.comments, privateComments: data.privateComments,
                 subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
                 totalAmount: grandTotal, status: data.status || "Draft",
-                amountPaid: 0,
                 packingCharge: data.packingCharge,
                 handlingCharge: data.handlingCharge,
                 otherCharges: data.otherCharges,
@@ -354,51 +353,20 @@ export function CreateSaleInvoiceForm() {
             return formattedSaleId;
         });
 
-      return newSaleId;
+      setGeneratedSaleId(newSaleId);
+      Swal.fire("Sale Recorded!", `Sale successfully recorded with ID: ${newSaleId}. Item stock levels updated.`, "success");
+      form.reset(); 
     } catch (error: any) {
-      console.error("Error in saveSaleLogic: ", error);
+      console.error("Error recording sale: ", error);
       Swal.fire({
         title: "Save Failed",
         text: `Failed to record sale: ${error.message}`,
         icon: "error",
       });
-      return null;
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleRegularSave = async (data: SaleFormValues) => {
-    const newId = await saveSaleLogic(data);
-    if (newId) {
-      setGeneratedSaleId(newId);
-      Swal.fire("Sale Recorded!", `Sale successfully recorded with ID: ${newId}. Item stock levels updated.`, "success");
-    }
-  };
-
-  const handleSaveAndPreview = async (data: SaleFormValues) => {
-    const newId = await saveSaleLogic(data);
-    if (newId) {
-      setGeneratedSaleId(newId);
-      Swal.fire({
-        title: "Sale Recorded!",
-        text: `Sale successfully recorded with ID: ${newId}. Navigating to preview...`,
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      }).then(() => {
-        router.push(`/dashboard/inventory/sales/print/${newId}`);
-      });
-    }
-  };
-
-  const handlePreviewLastSaved = () => {
-    if (generatedSaleId) {
-      router.push(`/dashboard/inventory/sales/print/${generatedSaleId}`);
-    } else {
-      Swal.fire("No Sale Recorded", "Please save an invoice first to preview it.", "info");
-    }
-  };
+  }
 
   if (isLoadingDropdowns) {
     return (
@@ -408,13 +376,10 @@ export function CreateSaleInvoiceForm() {
       </div>
     );
   }
-  
-  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
-  const actionButtonsDisabled = !generatedSaleId || isSubmitting;
 
   return (
     <Form {...form}>
-      <form className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -554,8 +519,7 @@ export function CreateSaleInvoiceForm() {
             />
         </div>
 
-        <Separator className="my-6" />
-
+        <Separator />
         <div className="flex justify-between items-center">
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
@@ -630,14 +594,12 @@ export function CreateSaleInvoiceForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording Sale...</> ) : ( <><Save className="mr-2 h-4 w-4" />Record Sale</> )}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Save and Preview
-            </Button>
-            <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording Sale...</>
+              ) : (
+                <><Save className="mr-2 h-4 w-4" />Record Sale</>
+              )}
             </Button>
         </div>
       </form>
