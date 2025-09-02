@@ -1,40 +1,28 @@
-
 "use client";
 
 import * as React from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
-import type {
-  CustomerDocument,
-  QuoteDocument,
-  ItemDocument as ItemDoc,
-  QuoteFormValues as PageQuoteFormValues,
-  QuoteLineItemFormValues as PageQuoteLineItemFormValues,
-  InvoiceDocument
-} from '@/types';
+import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument, PIShipmentMode } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions, piShipmentModeOptions } from '@/types';
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
-import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, Users, FileText, CalendarDays, Hash, Columns, ShoppingBag, X, Printer, Mail, Ship } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { DatePickerField } from './DatePickerField';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useParams, useRouter } from 'next/navigation';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,8 +34,8 @@ import {
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_CUSTOMER_VALUE = "__EDIT_QUOTE_CUSTOMER_PLACEHOLDER__";
-const PLACEHOLDER_ITEM_VALUE_PREFIX = "__EDIT_QUOTE_ITEM_PLACEHOLDER__";
+const PLACEHOLDER_CUSTOMER_VALUE = "__QUOTE_EDIT_CUSTOMER__";
+const PLACEHOLDER_ITEM_VALUE_PREFIX = "__QUOTE_EDIT_ITEM__";
 
 interface ItemOption extends ComboboxOption {
   description?: string;
@@ -74,7 +62,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const [generatedQuoteId, setGeneratedQuoteId] = React.useState<string | null>(quoteId);
 
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema),
@@ -168,7 +155,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     let currentTotalDiscount = 0;
 
     if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item) => {
+      watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
@@ -315,7 +302,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                 updatedAt: serverTimestamp()
             });
             
-            transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data()?.yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
+            transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
 
             return formattedInvoiceId;
         });
@@ -418,18 +405,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     try {
       const quoteDocRef = doc(firestore, "quotes", quoteId);
       await updateDoc(quoteDocRef, dataToUpdate);
-      Swal.fire({
-        title: "Quote Updated!",
-        text: `Quote Number: ${quoteId} successfully updated.`,
-        icon: "success",
-      });
+      Swal.fire("Quote Updated!", `Quote Number: ${quoteId} successfully updated.`, "success");
     } catch (error: any) {
       console.error("Error updating quote: ", error);
-      Swal.fire({
-        title: "Update Failed",
-        text: `Failed to update quote: ${error.message}`,
-        icon: "error",
-      });
+      Swal.fire("Update Failed", `Failed to update quote: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -440,10 +419,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
-  
-  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
-  const actionButtonsDisabled = !generatedQuoteId || isSubmitting;
-
 
   return (
     <Form {...form}>
@@ -540,29 +515,6 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               )}
             />
         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
-          />
-           <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-        </div>
         
         <Separator className="my-6" />
         <FormField
@@ -639,8 +591,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+                 {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+                 {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
                 <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
@@ -683,4 +635,3 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     </Form>
   );
 }
-

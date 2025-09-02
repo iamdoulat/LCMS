@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from 'react';
@@ -133,9 +131,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
-            shipmentMode: initialData.shipmentMode ?? piShipmentModeOptions[0],
-            freightCharges: initialData.freightCharges,
+            packingCharge: initialData.packingCharge,
+            handlingCharge: initialData.handlingCharge,
             otherCharges: initialData.otherCharges,
+            convertedFromQuoteId: initialData.convertedFromQuoteId,
           });
         }
       } catch (error) {
@@ -148,9 +147,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   }, [initialData, reset]);
 
   const watchedLineItems = watch("lineItems");
-  const watchedFreightCharges = watch("freightCharges");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
   const watchedOtherCharges = watch("otherCharges");
-  const watchedShipmentMode = watch("shipmentMode");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -163,9 +162,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
         
-        const itemTotalBeforeDiscount = qty * unitPrice;
-        
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -183,9 +182,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       });
     }
     
-    const freight = Number(watchedFreightCharges || 0);
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
     const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = freight + other;
+    const additionalCharges = packing + handling + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
@@ -195,7 +195,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -215,7 +215,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/pi/preview/${invoiceId}`, '_blank');
+    window.open(`/dashboard/inventory/sales/print/${invoiceId}`, '_blank');
   };
 
   async function onSubmit(data: InvoiceFormValues) {
@@ -272,13 +272,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       totalTaxAmount: totalTaxAmount,
       totalAmount: grandTotal,
       status: data.status,
-      amountPaid: initialData.amountPaid || 0, // Preserve existing paid amount
+      packingCharge: data.packingCharge,
+      handlingCharge: data.handlingCharge,
+      otherCharges: data.otherCharges,
       showItemCodeColumn: data.showItemCodeColumn,
       showDiscountColumn: data.showDiscountColumn,
       showTaxColumn: data.showTaxColumn,
-      shipmentMode: data.shipmentMode,
-      freightCharges: data.freightCharges,
-      otherCharges: data.otherCharges,
       updatedAt: serverTimestamp(),
       convertedFromQuoteId: data.convertedFromQuoteId,
     };
@@ -290,7 +289,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     });
 
     try {
-      const invoiceDocRef = doc(firestore, "invoices", invoiceId);
+      const invoiceDocRef = doc(firestore, "sales_invoice", invoiceId);
       await updateDoc(invoiceDocRef, dataToUpdate);
       Swal.fire("Invoice Updated!", `Invoice ID: ${invoiceId} successfully updated.`, "success");
     } catch (error: any) {
@@ -299,8 +298,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       setIsSubmitting(false);
     }
   }
-  
-  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
@@ -370,7 +367,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {invoiceStatusOptions.map(status => (
+                        {saleStatusOptions.map(status => (
                             <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
                         </SelectContent>
@@ -380,29 +377,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 )}
             />
         </div>
-        <Separator className="my-6" />
-        <FormField
-          control={control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Invoice Subject</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
-                  className="text-sm font-normal"
-                  {...field}
-                  value={field.value ?? ''}
-                  rows={2}
-                />
-              </FormControl>
-              <FormDescription>
-                This text will appear below the address section on the invoice.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
@@ -442,29 +416,10 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
-          <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
-          />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -485,13 +440,13 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
                 <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-             <Button type="button" variant="outline" onClick={handleViewPdf}>
+            <Button type="button" variant="outline" onClick={handleViewPdf}>
                 <Printer className="mr-2 h-4 w-4" />
                 View PDF
             </Button>
@@ -526,5 +481,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
-
