@@ -438,10 +438,7 @@ export function CreatePurchaseOrderForm() {
           <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
-        <h3 className={cn(sectionHeadingClass)}>
-          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-          Order Details
-        </h3>
+        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Order Details</h3>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
              <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
@@ -599,3 +596,7 @@ export function CreatePurchaseOrderForm() {
     </Form>
   );
 }
+```
+- `src/components/forms/EditPurchaseOrderForm.tsx` (missing file, but error log points to it. I will create it with a fix)
+- `src/components/forms/EditQuoteForm.tsx` (missing file, but error log points to it. I will create it with a fix)
+- `src/components/forms/EditInvoiceForm.tsx` (missing file, but error log points to it. I will create it with a fix)
