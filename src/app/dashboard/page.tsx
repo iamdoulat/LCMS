@@ -753,9 +753,9 @@ export default function DashboardPage() {
                                 {[
                                     { flag: shipment.isFirstShipment, label: "1st", note: shipment.firstShipmentNote },
                                     { flag: shipment.isSecondShipment, label: "2nd", note: shipment.secondShipmentNote },
-                                    { flag: shipment.secondShipmentNote },
                                     { flag: shipment.isThirdShipment, label: "3rd", note: shipment.thirdShipmentNote }
                                 ].map((s, idx) => (
+                                  s.label && (
                                   <TooltipProvider key={idx} delayDuration={100}>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -776,6 +776,7 @@ export default function DashboardPage() {
                                       )}
                                     </Tooltip>
                                   </TooltipProvider>
+                                  )
                                 ))}
                             </div>
                             <Link href={`/dashboard/total-lc/${shipment.id}/edit`} className="font-medium text-primary hover:underline truncate block pr-24">
@@ -1015,4 +1016,3 @@ export default function DashboardPage() {
 
     
 
-    
