@@ -404,11 +404,9 @@ export default function InstallationReportsViewPage() {
 
                     <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
                       {report.createdAt && (<span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>)}
-                      {report.packingListUrl && (
-                        <Button variant="default" size="sm" className="h-7 px-2 py-1 text-xs" onClick={() => handleViewUrl(report.packingListUrl)}>
+                        <Button variant="default" size="sm" className="h-7 px-2 py-1 text-xs" onClick={() => handleViewUrl(report.packingListUrl)} disabled={!report.packingListUrl}>
                           <FileText className="mr-1.5 h-3 w-3" /> Packing List
                         </Button>
-                      )}
                     </div>
                   </li>
                 );
