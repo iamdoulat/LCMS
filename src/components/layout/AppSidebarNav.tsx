@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from 'next/link';
@@ -156,6 +155,7 @@ const serviceNavItems: NavItem[] = [
 
 const humanResourcesNavItems: NavItem[] = [
     { href: '/dashboard/human-resources/dashboard', label: 'HR Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
+    { href: '/dashboard/human-resources/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
 ];
 
 const settingsNavItems: NavItem[] = [
