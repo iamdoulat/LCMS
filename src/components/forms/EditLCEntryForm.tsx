@@ -224,7 +224,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             secondPartialAmount: initialData.secondPartialAmount ?? defaultFormValues.secondPartialAmount,
             thirdPartialAmount: initialData.thirdPartialAmount ?? defaultFormValues.thirdPartialAmount,
             firstPartialPkgs: initialData.firstPartialPkgs ?? defaultFormValues.firstPartialPkgs,
-            secondPartialNetWeight: initialData.secondPartialNetWeight ?? defaultFormValues.secondPartialNetWeight,
             firstPartialGrossWeight: initialData.firstPartialGrossWeight ?? defaultFormValues.firstPartialGrossWeight,
             firstPartialCbm: initialData.firstPartialCbm ?? defaultFormValues.firstPartialCbm,
             secondPartialPkgs: initialData.secondPartialPkgs ?? defaultFormValues.secondPartialPkgs,
