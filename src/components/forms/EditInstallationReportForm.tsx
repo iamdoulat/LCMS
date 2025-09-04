@@ -38,13 +38,12 @@ import { RichTextEditor } from '../ui/RichTextEditor';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_APPLICANT_VALUE = "__EDIT_INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__EDIT_INSTALL_REPORT_BENEFICIARY__";
-const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__EDIT_INSTALL_REPORT_COMM_INV__";
+const PLACEHOLDER_APPLICANT_VALUE = "EDIT_INSTALL_REPORT_APPLICANT";
+const PLACEHOLDER_BENEFICIARY_VALUE = "EDIT_INSTALL_REPORT_BENEFICIARY";
+const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "EDIT_INSTALL_REPORT_COMM_INV";
 
 type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
-
 
 const formatDisplayDate = (dateString?: string | Date | null): string => {
   if (!dateString) return 'N/A';
@@ -61,8 +60,8 @@ const renderPartialDetailReadOnly = (label: string, value?: number | string | nu
   if (value === null || value === undefined) displayValue = "0";
   return (
     <FormItem className="mb-2">
-        <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
-        <Input type="text" value={`${displayValue} ${unit || ''}`.trim()} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
+      <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
+      <Input type="text" value={`${displayValue} ${unit || ''}`.trim()} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
     </FormItem>
   );
 };
@@ -112,7 +111,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
 
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
-  
+
   const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
   const [warrantyExpiredCount, setWarrantyExpiredCount] = React.useState(0);
   const [warrantyRemainingCount, setWarrantyRemainingCount] = React.useState(0);
@@ -120,15 +119,15 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
     defaultValues: {
-        ...initialData,
-        invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : undefined,
-        commercialInvoiceDate: initialData.commercialInvoiceDate ? parseISO(initialData.commercialInvoiceDate) : undefined,
-        etdDate: initialData.etdDate ? parseISO(initialData.etdDate) : undefined,
-        etaDate: initialData.etaDate ? parseISO(initialData.etaDate) : undefined,
-        installationDetails: initialData.installationDetails?.map(item => ({
-            ...item,
-            installDate: item.installDate ? parseISO(item.installDate) : new Date(),
-        })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
+      ...initialData,
+      invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : undefined,
+      commercialInvoiceDate: initialData.commercialInvoiceDate ? parseISO(initialData.commercialInvoiceDate) : undefined,
+      etdDate: initialData.etdDate ? parseISO(initialData.etdDate) : undefined,
+      etaDate: initialData.etaDate ? parseISO(initialData.etaDate) : undefined,
+      installationDetails: initialData.installationDetails?.map(item => ({
+        ...item,
+        installDate: item.installDate ? parseISO(item.installDate) : new Date(),
+      })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
     },
   });
 
@@ -145,46 +144,93 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   });
 
   const fetchOptions = React.useCallback(async () => {
-    setIsLoadingDropdowns(true);
-    try {
-      const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
-        getDocs(collection(firestore, "customers")),
-        getDocs(collection(firestore, "suppliers")),
-        getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", "")))
-      ]);
+      setIsLoadingDropdowns(true);
+      try {
+        const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
+          getDocs(collection(firestore, "customers")),
+          getDocs(collection(firestore, "suppliers")),
+          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))),
+          getDocs(collection(firestore, "installation_reports"))
+        ]);
 
-      setApplicantOptions(
-        customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-      );
-      setBeneficiaryOptions(
-        suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-      );
-      
-      const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
-      lcsSnap.forEach(docSnap => {
+        setApplicantOptions(
+          customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        setBeneficiaryOptions(
+          suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+        
+        // For edit mode, we need to include currently used L/C but exclude others that are used
+        const usedLcIdsForReports = new Set(
+          existingReportsSnap.docs
+            .filter(doc => doc.id !== reportId) // Exclude current report
+            .map(doc => (doc.data() as InstallationReportDocument).selectedCommercialInvoiceLcId)
+            .filter(Boolean)
+        );
+
+        const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
+        lcsSnap.forEach(docSnap => {
           const data = docSnap.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) { 
+          if (data.commercialInvoiceNumber && 
+              (!usedLcIdsForReports.has(docSnap.id) || docSnap.id === initialData.selectedCommercialInvoiceLcId)) {
             fetchedLcOptions.push({
               value: docSnap.id,
               label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: docSnap.id } ,
+              lcData: { ...data, id: docSnap.id },
             });
           }
-      });
-      setLcOptionsForCommercialInvoice(fetchedLcOptions);
+        });
+        setLcOptionsForCommercialInvoice(fetchedLcOptions);
 
-    } catch (error) {
-      console.error("Error fetching dropdown options for Installation Report form: ", error);
-      Swal.fire("Error", "Could not load supporting data. Please try again.", "error");
-    } finally {
-      setIsLoadingDropdowns(false);
-    }
-  }, []);
+      } catch (error) {
+        console.error("Error fetching dropdown options for Installation Report form: ", error);
+        Swal.fire("Error", "Could not load supporting data. Please try again.", "error");
+      } finally {
+        setIsLoadingDropdowns(false);
+      }
+    }, [reportId, initialData.selectedCommercialInvoiceLcId]);
 
   React.useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
-  
+
+  // Initialize L/C details from initial data
+  React.useEffect(() => {
+    if (initialData.selectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
+      const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
+      if (selectedOption) {
+        const lc = selectedOption.lcData;
+        setSelectedLcDetails({
+          isFirstShipment: lc.isFirstShipment,
+          isSecondShipment: lc.isSecondShipment,
+          isThirdShipment: lc.isThirdShipment,
+          lcIdForLink: lc.id,
+          partialShipmentAllowed: lc.partialShipmentAllowed,
+          firstPartialQty: lc.firstPartialQty, 
+          firstPartialPkgs: lc.firstPartialPkgs, 
+          firstPartialNetWeight: lc.firstPartialNetWeight, 
+          firstPartialGrossWeight: lc.firstPartialGrossWeight, 
+          firstPartialCbm: lc.firstPartialCbm,
+          secondPartialQty: lc.secondPartialQty, 
+          secondPartialPkgs: lc.secondPartialPkgs, 
+          secondPartialNetWeight: lc.secondPartialNetWeight, 
+          secondPartialGrossWeight: lc.secondPartialGrossWeight, 
+          secondPartialCbm: lc.secondPartialCbm,
+          thirdPartialQty: lc.thirdPartialQty, 
+          thirdPartialPkgs: lc.thirdPartialPkgs, 
+          thirdPartialNetWeight: lc.thirdPartialNetWeight, 
+          thirdPartialGrossWeight: lc.thirdPartialGrossWeight, 
+          thirdPartialCbm: lc.thirdPartialCbm,
+          packingListUrl: lc.packingListUrl,
+        });
+        setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+        if (lc.partialShipmentAllowed === "Yes") {
+          setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        }
+      }
+    }
+  }, [initialData.selectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice]);
+
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
@@ -202,26 +248,49 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
         setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
 
         setSelectedLcDetails({
-            isFirstShipment: lc.isFirstShipment,
-            isSecondShipment: lc.isSecondShipment,
-            isThirdShipment: lc.isThirdShipment,
-            lcIdForLink: lc.id,
-            partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
-            secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
-            thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
-            packingListUrl: lc.packingListUrl,
+          isFirstShipment: lc.isFirstShipment,
+          isSecondShipment: lc.isSecondShipment,
+          isThirdShipment: lc.isThirdShipment,
+          lcIdForLink: lc.id,
+          partialShipmentAllowed: lc.partialShipmentAllowed,
+          firstPartialQty: lc.firstPartialQty, 
+          firstPartialPkgs: lc.firstPartialPkgs, 
+          firstPartialNetWeight: lc.firstPartialNetWeight, 
+          firstPartialGrossWeight: lc.firstPartialGrossWeight, 
+          firstPartialCbm: lc.firstPartialCbm,
+          secondPartialQty: lc.secondPartialQty, 
+          secondPartialPkgs: lc.secondPartialPkgs, 
+          secondPartialNetWeight: lc.secondPartialNetWeight, 
+          secondPartialGrossWeight: lc.secondPartialGrossWeight, 
+          secondPartialCbm: lc.secondPartialCbm,
+          thirdPartialQty: lc.thirdPartialQty, 
+          thirdPartialPkgs: lc.thirdPartialPkgs, 
+          thirdPartialNetWeight: lc.thirdPartialNetWeight, 
+          thirdPartialGrossWeight: lc.thirdPartialGrossWeight, 
+          thirdPartialCbm: lc.thirdPartialCbm,
+          packingListUrl: lc.packingListUrl,
         });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-         if(lc.partialShipmentAllowed === "Yes") {
-            setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        if (lc.partialShipmentAllowed === "Yes") {
+          setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
         } else {
-            setActivePartialShipmentAccordion(undefined);
+          setActivePartialShipmentAccordion(undefined);
         }
       }
+    } else if (!watchedSelectedCommercialInvoiceLcId) {
+      // If C.I. Number is deselected/cleared
+      setSelectedLcDetails({ 
+        lcIdForLink: null, 
+        isFirstShipment: false, 
+        isSecondShipment: false, 
+        isThirdShipment: false, 
+        partialShipmentAllowed: "No", 
+        packingListUrl: '' 
+      });
+      setSelectedCommercialInvoiceDateDisplay(null);
+      setActivePartialShipmentAccordion(undefined);
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
-
 
   React.useEffect(() => {
     const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
@@ -263,46 +332,40 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
 
     const dataToUpdate: Record<string, any> = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"),
+      applicantName: selectedApplicant?.label,
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"),
-      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || null,
-      commercialInvoiceNumber: selectedLcOption?.label || null,
-      commercialInvoiceDate: data.commercialInvoiceDate && isValid(new Date(data.commercialInvoiceDate)) ? format(new Date(data.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
-      documentaryCreditNumber: data.documentaryCreditNumber || null,
-      totalMachineQtyFromLC: data.totalMachineQtyFromLC || null,
-      proformaInvoiceNumber: data.proformaInvoiceNumber || null,
-      invoiceDate: data.invoiceDate && isValid(new Date(data.invoiceDate)) ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
-      etdDate: data.etdDate && isValid(new Date(data.etdDate)) ? format(new Date(data.etdDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
-      etaDate: data.etaDate && isValid(new Date(data.etaDate)) ? format(new Date(data.etaDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
-      packingListUrl: data.packingListUrl || null,
+      beneficiaryName: selectedBeneficiary?.label,
+      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId,
+      commercialInvoiceNumber: selectedLcOption?.label,
+      commercialInvoiceDate: data.commercialInvoiceDate ? format(data.commercialInvoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      totalMachineQtyFromLC: data.totalMachineQtyFromLC,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etdDate: data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      etaDate: data.etaDate ? format(data.etaDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      packingListUrl: data.packingListUrl,
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
-        slNo: item.slNo || null,
-        machineModel: item.machineModel,
-        serialNo: item.serialNo,
-        ctlBoxModel: item.ctlBoxModel || null,
-        ctlBoxSerial: item.ctlBoxSerial || null,
-        installDate: item.installDate && isValid(new Date(item.installDate)) ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+        ...item,
+        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: typeof pendingQty === 'number' ? pendingQty : null,
-      missingItemInfo: data.missingItemInfo || null,
-      extraFoundInfo: data.extraFoundInfo || null,
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
+      missingItemInfo: data.missingItemInfo,
+      extraFoundInfo: data.extraFoundInfo,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
       extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
-      installationNotes: data.installationNotes || null,
+      installationNotes: data.installationNotes,
       updatedAt: serverTimestamp(),
     };
-
-    // Clean the object before sending to Firestore
+    
+    // Explicitly delete any keys with undefined or empty string values
     Object.keys(dataToUpdate).forEach(key => {
-        if (dataToUpdate[key] === undefined || (typeof dataToUpdate[key] === 'string' && dataToUpdate[key].trim() === '')) {
-            dataToUpdate[key] = null; // Use null for empty/undefined string fields as well
-        }
-        if (dataToUpdate[key] === null) {
-            delete dataToUpdate[key]; // Or better, delete them if you prefer not to store nulls.
+        const value = dataToUpdate[key];
+        if (value === undefined || value === null || value === '') {
+            delete dataToUpdate[key];
         }
     });
 
@@ -349,7 +412,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
-        installDate: lastRow.installDate ? new Date(lastRow.installDate) : new Date(),
+        installDate: lastRow.installDate,
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
@@ -508,17 +571,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
     reader.readAsText(file);
   };
 
-
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
-
-  if (isLoadingDropdowns) {
-    return (
-      <div className="flex items-center justify-center py-10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-muted-foreground">Loading form options...</p>
-      </div>
-    );
-  }
 
   return (
     <Form {...form}>
@@ -548,6 +601,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
               </FormItem>
             )}
           />
+
           <FormField
             control={control}
             name="beneficiaryId"
@@ -568,35 +622,41 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
             )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-          <FormField
-            control={control}
-            name="selectedCommercialInvoiceLcId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number (to auto-fill)</FormLabel>
-                <Combobox
-                  options={lcOptionsForCommercialInvoice}
-                  value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
-                  onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
-                  placeholder="Search by C.I. No..."
-                  selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
-                  emptyStateMessage="No available C.I. Number found."
-                  disabled={isLoadingDropdowns}
-                />
-                <FormMessage />
+
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+           <FormField
+              control={control}
+              name="selectedCommercialInvoiceLcId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number</FormLabel>
+                  <div className="flex items-center gap-2">
+                  <Combobox
+                    options={lcOptionsForCommercialInvoice}
+                    value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
+                    placeholder="Search by C.I. No..."
+                    selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                    emptyStateMessage="No available C.I. Number found."
+                    disabled={isLoadingDropdowns}
+                  />
+                  <Button type="button" size="icon" variant="outline" onClick={fetchOptions} title="Refresh C.I. List"><RefreshCw className="h-4 w-4" /></Button>
+                  </div>
+                   <FormDescription>Select a C.I. to auto-fill details. Current C.I. is included for this report.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {selectedCommercialInvoiceDateDisplay && (
+               <FormItem>
+                  <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel>
+                  <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
               </FormItem>
             )}
-          />
-          {selectedCommercialInvoiceDateDisplay && (
-              <FormItem>
-                <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel>
-                <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
-            </FormItem>
-          )}
-        </div>
+         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField
+           <FormField
             control={control}
             name="documentaryCreditNumber"
             render={({ field }) => (
@@ -629,7 +689,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
               </FormItem>
             )}
           />
-            <FormField
+           <FormField
               control={control}
               name="invoiceDate"
               render={({ field }) => (
@@ -639,7 +699,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                   <FormMessage />
                   </FormItem>
               )}
-            />
+           />
           <FormField
               control={control}
               name="etdDate"
@@ -661,10 +721,10 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                   <FormMessage />
                   </FormItem>
               )}
-            />
+           />
         </div>
         <Separator className="my-2" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           <div className="p-3 border rounded-md bg-muted/30">
               <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
               {selectedLcDetails.lcIdForLink ? (
@@ -722,7 +782,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
         </div>
         
         {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
-            <Accordion
+           <Accordion
               type="single"
               collapsible
               className="w-full"
@@ -733,7 +793,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                   <AccordionTrigger
                   className={cn(
                       "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
-                        "text-md font-semibold"
+                       "text-md font-semibold"
                   )}
                   >
                   <div className="flex items-center gap-2">
@@ -757,7 +817,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                           (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
                               <React.Fragment key={index}>
                               {index > 0 && <Separator className="my-2" />}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
+                               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
                                   {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
                                   {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
                                   {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
@@ -773,6 +833,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
           </Accordion>
         )}
         <Separator className="my-6" />
+
         <h3 className={cn(sectionHeadingClass)}>
           <ClipboardList className="mr-2 h-5 w-5 text-primary" />
           Installation Details
@@ -865,7 +926,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                                 </TableCell>
                                 <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
                                 <TableCell className="text-right">
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={Boolean(installationDetailsFieldArray.fields.length <= 1)} title="Remove Installation Item">
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </TableCell>
@@ -936,7 +997,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                   name="missingItemInfo"
                   render={({ field }) => (
                       <FormItem>
-                          <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing And Short Shipment Item Information</FormLabel>
+                          <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-amber-500" />Missing And Short Shipment Item Information</FormLabel>
                           <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedMissingItemsIssueResolved} /></FormControl>
                           <FormMessage />
                       </FormItem>
@@ -968,7 +1029,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                   name="extraFoundInfo"
                   render={({ field }) => (
                       <FormItem>
-                          <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found and Return Information</FormLabel>
+                          <FormLabel className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-blue-500" />Extra Found and Return Information</FormLabel>
                           <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedExtraItemsIssueResolved} /></FormControl>
                           <FormMessage />
                       </FormItem>
@@ -1033,27 +1094,27 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
           render={({ field }) => (
           <FormItem>
               <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
-              <FormControl>
-                <RichTextEditor placeholder="Enter any notes regarding the installation" value={field.value ?? ''} onChange={field.onChange}/>
-              </FormControl>
-              <FormMessage />
-          </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </form>
-    </Form>
-  );
+          <FormControl>
+            <RichTextEditor placeholder="Enter any notes regarding the installation" value={field.value ?? ''} onChange={field.onChange}/>
+          </FormControl>
+          <FormMessage />
+      </FormItem>
+      )}
+    />
+    <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
+      {isSubmitting ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Saving Changes...
+        </>
+      ) : (
+        <>
+          <Save className="mr-2 h-4 w-4" />
+          Save Changes
+        </>
+      )}
+    </Button>
+  </form>
+</Form>
+);
 }
