@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -7,9 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, where, doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type {
   CustomerDocument,
+  SupplierDocument,
+  LCEntryDocument,
   InstallationReportFormValues as PageInstallationReportFormValues,
   InstallationReportDocument,
   LcForInvoiceDropdownOption,
@@ -23,21 +24,22 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, ShieldAlert, AlertCircle, Copy, Download, Upload, RefreshCw, Save } from 'lucide-react';
+import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useParams, useRouter } from 'next/navigation';
 import { RichTextEditor } from '../ui/RichTextEditor';
-import Link from 'next/link';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
-const PLACEHOLDER_APPLICANT_VALUE = "__EDIT_INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__EDIT_INSTALL_REPORT_BENEFICIARY__";
-const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__EDIT_INSTALL_REPORT_COMM_INV__";
+const PLACEHOLDER_APPLICANT_VALUE = "EDIT_INSTALL_REPORT_APPLICANT";
+const PLACEHOLDER_BENEFICIARY_VALUE = "EDIT_INSTALL_REPORT_BENEFICIARY";
+const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "EDIT_INSTALL_REPORT_COMM_INV";
 
 type InstallationReportFormValues = PageInstallationReportFormValues;
 type InstallationDetailItemType = PageInstallationDetailItemType;
@@ -81,14 +83,32 @@ interface EditInstallationReportFormProps {
 }
 
 export function EditInstallationReportForm({ initialData, reportId }: EditInstallationReportFormProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
   const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const [selectedLcDetails, setSelectedLcDetails] = React.useState<any>({ lcIdForLink: null });
+  const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
+    isFirstShipment?: boolean;
+    isSecondShipment?: boolean;
+    isThirdShipment?: boolean;
+    lcIdForLink: string | null;
+    partialShipmentAllowed?: LCEntryDocument['partialShipmentAllowed'];
+    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
+    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
+    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
+    packingListUrl?: string;
+  }>({
+    lcIdForLink: null,
+    isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
+    partialShipmentAllowed: "No",
+    packingListUrl: '',
+  });
+
   const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
   const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
   
@@ -98,12 +118,16 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
 
   const form = useForm<InstallationReportFormValues>({
     resolver: zodResolver(InstallationReportSchema),
-    defaultValues: { ...initialData,
-      commercialInvoiceDate: initialData.commercialInvoiceDate ? parseISO(initialData.commercialInvoiceDate) : undefined,
+    defaultValues: {
+      ...initialData,
       invoiceDate: initialData.invoiceDate ? parseISO(initialData.invoiceDate) : undefined,
+      commercialInvoiceDate: initialData.commercialInvoiceDate ? parseISO(initialData.commercialInvoiceDate) : undefined,
       etdDate: initialData.etdDate ? parseISO(initialData.etdDate) : undefined,
       etaDate: initialData.etaDate ? parseISO(initialData.etaDate) : undefined,
-      installationDetails: initialData.installationDetails?.map(d => ({...d, installDate: d.installDate ? parseISO(d.installDate) : new Date() }))
+      installationDetails: initialData.installationDetails?.map(item => ({
+        ...item,
+        installDate: item.installDate ? parseISO(item.installDate) : new Date(),
+      })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
     },
   });
 
@@ -121,55 +145,92 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   });
 
   const fetchOptions = React.useCallback(async () => {
-    setIsLoadingDropdowns(true);
-    try {
-      const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
-        getDocs(collection(firestore, "customers")),
-        getDocs(collection(firestore, "suppliers")),
-        getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))),
-        getDocs(collection(firestore, "installation_reports"))
-      ]);
+      setIsLoadingDropdowns(true);
+      try {
+        const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
+          getDocs(collection(firestore, "customers")),
+          getDocs(collection(firestore, "suppliers")),
+          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))),
+          getDocs(collection(firestore, "installation_reports"))
+        ]);
 
-      setApplicantOptions(
-        customersSnap.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-      );
-      setBeneficiaryOptions(
-        suppliersSnap.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Beneficiary' }))
-      );
-      
-      const usedLcIdsForReports = new Set(
-        existingReportsSnap.docs
-          .map(doc => (doc.data() as InstallationReportDocument).selectedCommercialInvoiceLcId)
-          .filter(Boolean)
-      );
+        setApplicantOptions(
+          customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        setBeneficiaryOptions(
+          suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+        
+        const usedLcIdsForReports = new Set(
+          existingReportsSnap.docs
+            .filter(doc => doc.id !== reportId) 
+            .map(doc => (doc.data() as InstallationReportDocument).selectedCommercialInvoiceLcId)
+            .filter(Boolean)
+        );
 
-      const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
-      lcsSnap.forEach(docSnap => {
-        // Allow the current report's L/C to be in the list, but filter out others that are already used.
-        if (!usedLcIdsForReports.has(docSnap.id) || docSnap.id === initialData.selectedCommercialInvoiceLcId) {
+        const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
+        lcsSnap.forEach(docSnap => {
           const data = docSnap.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) { 
+          if (data.commercialInvoiceNumber && 
+              (!usedLcIdsForReports.has(docSnap.id) || docSnap.id === initialData.selectedCommercialInvoiceLcId)) {
             fetchedLcOptions.push({
-              value: docSnap.id, // L/C document ID
-              label: data.commercialInvoiceNumber, // Commercial Invoice Number for display
-              lcData: { ...data, id: docSnap.id } , // Store the full L/C data
+              value: docSnap.id,
+              label: data.commercialInvoiceNumber,
+              lcData: { ...data, id: docSnap.id } ,
             });
           }
-        }
-      });
-      setLcOptionsForCommercialInvoice(fetchedLcOptions);
+        });
+        setLcOptionsForCommercialInvoice(fetchedLcOptions);
 
-    } catch (error) {
-      Swal.fire("Error", "Could not load supporting data.", "error");
-    } finally {
-      setIsLoadingDropdowns(false);
-    }
-  }, [initialData.selectedCommercialInvoiceLcId]);
+      } catch (error) {
+        console.error("Error fetching dropdown options for Installation Report form: ", error);
+        Swal.fire("Error", "Could not load supporting data. Please try again.", "error");
+      } finally {
+        setIsLoadingDropdowns(false);
+      }
+    }, [reportId, initialData.selectedCommercialInvoiceLcId]);
 
   React.useEffect(() => {
     fetchOptions();
   }, [fetchOptions]);
-  
+
+  // Initialize L/C details from initial data
+  React.useEffect(() => {
+    if (initialData.selectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
+      const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
+      if (selectedOption) {
+        const lc = selectedOption.lcData;
+        setSelectedLcDetails({
+          isFirstShipment: lc.isFirstShipment,
+          isSecondShipment: lc.isSecondShipment,
+          isThirdShipment: lc.isThirdShipment,
+          lcIdForLink: lc.id,
+          partialShipmentAllowed: lc.partialShipmentAllowed,
+          firstPartialQty: lc.firstPartialQty, 
+          firstPartialPkgs: lc.firstPartialPkgs, 
+          firstPartialNetWeight: lc.firstPartialNetWeight, 
+          firstPartialGrossWeight: lc.firstPartialGrossWeight, 
+          firstPartialCbm: lc.firstPartialCbm,
+          secondPartialQty: lc.secondPartialQty, 
+          secondPartialPkgs: lc.secondPartialPkgs, 
+          secondPartialNetWeight: lc.secondPartialNetWeight, 
+          secondPartialGrossWeight: lc.secondPartialGrossWeight, 
+          secondPartialCbm: lc.secondPartialCbm,
+          thirdPartialQty: lc.thirdPartialQty, 
+          thirdPartialPkgs: lc.thirdPartialPkgs, 
+          thirdPartialNetWeight: lc.thirdPartialNetWeight, 
+          thirdPartialGrossWeight: lc.thirdPartialGrossWeight, 
+          thirdPartialCbm: lc.thirdPartialCbm,
+          packingListUrl: lc.packingListUrl,
+        });
+        setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
+        if (lc.partialShipmentAllowed === "Yes") {
+          setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        }
+      }
+    }
+  }, [initialData.selectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice]);
+
   React.useEffect(() => {
     if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
@@ -185,10 +246,48 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
         setValue("etdDate", lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined, { shouldValidate: true });
         setValue("etaDate", lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined, { shouldValidate: true });
         setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true });
-        setSelectedLcDetails(lc);
+
+        setSelectedLcDetails({
+          isFirstShipment: lc.isFirstShipment,
+          isSecondShipment: lc.isSecondShipment,
+          isThirdShipment: lc.isThirdShipment,
+          lcIdForLink: lc.id,
+          partialShipmentAllowed: lc.partialShipmentAllowed,
+          firstPartialQty: lc.firstPartialQty, 
+          firstPartialPkgs: lc.firstPartialPkgs, 
+          firstPartialNetWeight: lc.firstPartialNetWeight, 
+          firstPartialGrossWeight: lc.firstPartialGrossWeight, 
+          firstPartialCbm: lc.firstPartialCbm,
+          secondPartialQty: lc.secondPartialQty, 
+          secondPartialPkgs: lc.secondPartialPkgs, 
+          secondPartialNetWeight: lc.secondPartialNetWeight, 
+          secondPartialGrossWeight: lc.secondPartialGrossWeight, 
+          secondPartialCbm: lc.secondPartialCbm,
+          thirdPartialQty: lc.thirdPartialQty, 
+          thirdPartialPkgs: lc.thirdPartialPkgs, 
+          thirdPartialNetWeight: lc.thirdPartialNetWeight, 
+          thirdPartialGrossWeight: lc.thirdPartialGrossWeight, 
+          thirdPartialCbm: lc.thirdPartialCbm,
+          packingListUrl: lc.packingListUrl,
+        });
         setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-        setActivePartialShipmentAccordion(lc.partialShipmentAllowed === "Yes" ? "partialShipmentDetailsAccordionInstallReport" : undefined);
+        if (lc.partialShipmentAllowed === "Yes") {
+          setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
+        } else {
+          setActivePartialShipmentAccordion(undefined);
+        }
       }
+    } else if (!watchedSelectedCommercialInvoiceLcId) {
+      setSelectedLcDetails({ 
+        lcIdForLink: null, 
+        isFirstShipment: false, 
+        isSecondShipment: false, 
+        isThirdShipment: false, 
+        partialShipmentAllowed: "No", 
+        packingListUrl: '' 
+      });
+      setSelectedCommercialInvoiceDateDisplay(null);
+      setActivePartialShipmentAccordion(undefined);
     }
   }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue]);
 
@@ -196,9 +295,13 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   React.useEffect(() => {
     const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
     const installedQtyValue = installationDetailsFieldArray.fields.length;
-    setPendingQty(watchedTotalLcMachineQty !== undefined ? totalLcQtyValue - installedQtyValue : 'N/A');
+    if (watchedTotalLcMachineQty !== undefined) {
+      setPendingQty(totalLcQtyValue - installedQtyValue);
+    } else {
+      setPendingQty('N/A');
+    }
 
-    if (Array.isArray(watchedInstallationDetails)) {
+    if (watchedInstallationDetails && Array.isArray(watchedInstallationDetails)) {
       let expired = 0;
       let remaining = 0;
       const today = new Date();
@@ -218,39 +321,61 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   }, [watchedTotalLcMachineQty, watchedInstallationDetails, installationDetailsFieldArray.fields.length]);
 
   async function onSubmit(data: InstallationReportFormValues) {
+    if (!reportId) {
+      Swal.fire("Error", "Report ID is missing. Cannot update.", "error");
+      return;
+    }
     setIsSubmitting(true);
-    
-    // Create a mutable copy of the data object
-    const dataToUpdate: Record<string, any> = { ...data };
+    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
+    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
+    const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === data.selectedCommercialInvoiceLcId);
 
-    // Format dates to ISO strings, handling potential undefined values
-    dataToUpdate.commercialInvoiceDate = data.commercialInvoiceDate ? format(data.commercialInvoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null;
-    dataToUpdate.invoiceDate = data.invoiceDate ? format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null;
-    dataToUpdate.etdDate = data.etdDate ? format(data.etdDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null;
-    dataToUpdate.etaDate = data.etaDate ? format(data.etaDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null;
-    dataToUpdate.installationDetails = data.installationDetails.map(item => ({
-        ...item,
-        installDate: item.installDate ? format(item.installDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
-    }));
-    
-    // Add calculated and timestamp fields
-    dataToUpdate.totalInstalledQty = data.installationDetails.length;
-    dataToUpdate.pendingQty = typeof pendingQty === 'number' ? pendingQty : null;
-    dataToUpdate.updatedAt = serverTimestamp();
+    const dataToUpdate: Record<string, any> = {
+      applicantId: data.applicantId,
+      applicantName: selectedApplicant?.label,
+      beneficiaryId: data.beneficiaryId,
+      beneficiaryName: selectedBeneficiary?.label,
+      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId,
+      commercialInvoiceNumber: selectedLcOption?.label,
+      commercialInvoiceDate: data.commercialInvoiceDate ? format(new Date(data.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      totalMachineQtyFromLC: data.totalMachineQtyFromLC,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
+      invoiceDate: data.invoiceDate ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      etdDate: data.etdDate ? format(new Date(data.etdDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      etaDate: data.etaDate ? format(new Date(data.etaDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      packingListUrl: data.packingListUrl,
+      technicianName: data.technicianName,
+      reportingEngineerName: data.reportingEngineerName,
+      installationDetails: data.installationDetails.map(item => ({
+        slNo: item.slNo,
+        machineModel: item.machineModel,
+        serialNo: item.serialNo,
+        ctlBoxModel: item.ctlBoxModel,
+        ctlBoxSerial: item.ctlBoxSerial,
+        installDate: item.installDate ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      })),
+      totalInstalledQty: installationDetailsFieldArray.fields.length,
+      pendingQty: typeof pendingQty === 'number' ? pendingQty : null,
+      missingItemInfo: data.missingItemInfo,
+      extraFoundInfo: data.extraFoundInfo,
+      missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
+      extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
+      installationNotes: data.installationNotes,
+      updatedAt: serverTimestamp(),
+    };
 
-    // Iterate over the object and delete any keys with an undefined value.
-    // This is the most reliable way to prevent Firestore errors.
-    Object.keys(dataToUpdate).forEach(key => {
-        if (dataToUpdate[key] === undefined) {
-            delete dataToUpdate[key];
-        } else if (dataToUpdate[key] === '') {
-             dataToUpdate[key] = null; // Convert empty strings to null for consistency
+    const cleanedDataToUpdate: { [key: string]: any } = {};
+    for (const key in dataToUpdate) {
+        const value = dataToUpdate[key];
+        if (value !== undefined) {
+            cleanedDataToUpdate[key] = value;
         }
-    });
+    }
 
     try {
       const reportDocRef = doc(firestore, "installation_reports", reportId);
-      await updateDoc(reportDocRef, dataToUpdate);
+      await updateDoc(reportDocRef, cleanedDataToUpdate);
       Swal.fire({
         title: "Installation Report Updated!",
         text: `Report ID: ${reportId} successfully updated.`,
@@ -258,15 +383,19 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       });
     } catch (error: any) {
       console.error("Error updating installation report: ", error);
+      let errorMessage = `Failed to update report: ${error.message}`;
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+        errorMessage = `Failed to update report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'. Original Firebase Error: ${error.message}`;
+      }
       Swal.fire({
         title: "Update Failed",
-        text: `Failed to update report: ${error.message}`,
+        text: errorMessage,
         icon: "error",
       });
     } finally {
       setIsSubmitting(false);
     }
-}
+  }
 
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
@@ -287,7 +416,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
-        installDate: lastRow.installDate ? new Date(lastRow.installDate) : new Date(),
+        installDate: lastRow.installDate, // Keep the date as is (it's a Date object in the form state)
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
@@ -302,7 +431,10 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       return;
     }
 
-    const headers = ["SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty"];
+    const headers = [
+      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty"
+    ];
+    
     const applicantNameFromState = applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId || "N/A";
     const beneficiaryNameFromState = beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId || "N/A";
     const commercialInvoiceNumberFromState = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A";
@@ -321,7 +453,8 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
     ];
 
     let csvContent = reportHeaderInfo.map(row => row.map(escapeCsvCell).join(",")).join("\n");
-    csvContent += "\n\n" + headers.map(escapeCsvCell).join(",") + "\n";
+    csvContent += "\n\n"; 
+    csvContent += headers.map(escapeCsvCell).join(",") + "\n";
 
     formData.installationDetails.forEach((item, index) => {
       let warrantyDisplay = "N/A";
@@ -330,7 +463,15 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
         const diffDays = differenceInDays(expiryDate, new Date());
         warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days`;
       }
-      const row = [item.slNo || (index + 1).toString(), item.machineModel, item.serialNo, item.ctlBoxModel, item.ctlBoxSerial, item.installDate ? formatDisplayDate(new Date(item.installDate)) : "N/A", warrantyDisplay];
+      const row = [
+        item.slNo || (index + 1).toString(),
+        item.machineModel,
+        item.serialNo,
+        item.ctlBoxModel,
+        item.ctlBoxSerial,
+        item.installDate ? formatDisplayDate(new Date(item.installDate)) : "N/A",
+        warrantyDisplay,
+      ];
       csvContent += row.map(escapeCsvCell).join(",") + "\n";
     });
 
@@ -346,12 +487,16 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    } else {
+        Swal.fire("Export Failed", "Your browser doesn't support direct CSV download.", "error");
     }
   };
 
   const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     if (file.type !== "text/csv") {
       Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -361,45 +506,76 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      if (!text) { Swal.fire("Error Reading File", "Could not read file content.", "error"); return; }
+      if (!text) {
+        Swal.fire("Error Reading File", "Could not read file content.", "error");
+        return;
+      }
       try {
         const rows = text.split(/\r\n|\n/).filter(row => row.trim() !== '');
-        if (rows.length <= 1) { Swal.fire("Empty or Header-Only CSV", "The CSV file is empty or contains only a header row.", "info"); return; }
+        if (rows.length <= 1) {
+          Swal.fire("Empty or Header-Only CSV", "The CSV file is empty or contains only a header row.", "info");
+          return;
+        }
 
         const dataRows = rows.slice(1);
         const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
           const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
-          const [machineModel, serialNo, ctlBoxModel, ctlBoxSerial, installDateStr] = columns;
+          
+          const machineModel = columns[0] || '';
+          const serialNo = columns[1] || '';
+          const ctlBoxModel = columns[2] || '';
+          const ctlBoxSerial = columns[3] || '';
+          const installDateStr = columns[4];
+          
           let installDate: Date | undefined = undefined;
           if (installDateStr) {
-            let parsedDate = parseISO(installDateStr);
-            if (!isValid(parsedDate)) parsedDate = new Date(installDateStr);
-            if (isValid(parsedDate)) installDate = parsedDate;
+            let parsedDate = parseISO(installDateStr); 
+            if (!isValid(parsedDate)) {
+                parsedDate = parseDateFns(installDateStr, 'PPP', new Date());
+                if (!isValid(parsedDate)) {
+                    parsedDate = new Date(installDateStr); 
+                }
+            }
+            if (isValid(parsedDate)) {
+                installDate = parsedDate;
+            } else {
+                console.warn(`Could not parse date "${installDateStr}" for CSV row ${csvRowIndex + 1}.`);
+            }
           }
           const existingRowsCount = installationDetailsFieldArray.fields.length;
           return {
             slNo: (existingRowsCount + csvRowIndex + 1).toString(),
-            machineModel: machineModel || '', serialNo: serialNo || '', ctlBoxModel: ctlBoxModel || undefined, ctlBoxSerial: ctlBoxSerial || undefined,
+            machineModel,
+            serialNo,
+            ctlBoxModel: ctlBoxModel || undefined,
+            ctlBoxSerial: ctlBoxSerial || undefined,
             installDate: installDate || new Date(),
           };
         });
 
         if (newInstallationDetailsFromCsv.length > 0) {
-          installationDetailsFieldArray.append(newInstallationDetailsFromCsv);
+          newInstallationDetailsFromCsv.forEach(item => {
+            installationDetailsFieldArray.append(item);
+          });
           Swal.fire("Import Complete", `${newInstallationDetailsFromCsv.length} rows appended successfully.`, "success");
         } else {
           Swal.fire("No Data Imported", "No valid data rows found in the CSV after the header.", "info");
         }
       } catch (parseError) {
+        console.error("Error parsing CSV: ", parseError);
         Swal.fire("CSV Parse Error", "Could not parse the CSV file. Please ensure it's correctly formatted.", "error");
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     };
-    reader.onerror = () => { Swal.fire("File Read Error", "Error reading the selected file.", "error"); if (fileInputRef.current) fileInputRef.current.value = ""; };
+    reader.onerror = () => {
+      Swal.fire("File Read Error", "Error reading the selected file.", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
     reader.readAsText(file);
   };
-  
+
+
   const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
 
   if (isLoadingDropdowns) {
@@ -412,24 +588,540 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <h3 className={cn(sectionHeadingClass)}><FileText className="mr-2 h-5 w-5 text-primary" />L/C & Invoice Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={control} name="applicantId" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel><Combobox options={applicantOptions} value={field.value || PLACEHOLDER_APPLICANT_VALUE} onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)} placeholder="Search Applicant..." selectPlaceholder={isLoadingDropdowns ? "Loading Applicants..." : "Select Applicant"} emptyStateMessage="No applicant found." disabled={isLoadingDropdowns || isLcSelected} /><FormMessage /></FormItem>)} />
-                <FormField control={control} name="beneficiaryId" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel><Combobox options={beneficiaryOptions} value={field.value || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)} placeholder="Search Beneficiary..." selectPlaceholder={isLoadingDropdowns ? "Loading Beneficiaries..." : "Select Beneficiary"} emptyStateMessage="No beneficiary found." disabled={isLoadingDropdowns || isLcSelected} /><FormMessage /></FormItem>)} />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
+          <h3 className={cn(sectionHeadingClass)}>
+            <FileText className="mr-2 h-5 w-5 text-primary" />
+            L/C & Invoice Details
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={control}
+              name="applicantId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
+                  <Combobox
+                    options={applicantOptions}
+                    value={field.value || PLACEHOLDER_APPLICANT_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
+                    placeholder="Search Applicant..."
+                    selectPlaceholder={isLoadingDropdowns ? "Loading Applicants..." : "Select Applicant"}
+                    emptyStateMessage="No applicant found."
+                    disabled={isLoadingDropdowns || isLcSelected}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="beneficiaryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
+                  <Combobox
+                    options={beneficiaryOptions}
+                    value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
+                    placeholder="Search Beneficiary..."
+                    selectPlaceholder={isLoadingDropdowns ? "Loading Beneficiaries..." : "Select Beneficiary"}
+                    emptyStateMessage="No beneficiary found."
+                    disabled={isLoadingDropdowns || isLcSelected}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+             <FormField
+                control={control}
+                name="selectedCommercialInvoiceLcId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number</FormLabel>
+                    <div className="flex items-center gap-2">
+                    <Combobox
+                      options={lcOptionsForCommercialInvoice}
+                      value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)}
+                      placeholder="Search by C.I. No..."
+                      selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"}
+                      emptyStateMessage="No available C.I. Number found."
+                      disabled={isLoadingDropdowns}
+                    />
+                    <Button type="button" size="icon" variant="outline" onClick={fetchOptions} title="Refresh C.I. List"><RefreshCw className="h-4 w-4" /></Button>
+                    </div>
+                     <FormDescription>Select a C.I. to auto-fill details. Used C.I. numbers will not appear.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {selectedCommercialInvoiceDateDisplay && (
+                 <FormItem>
+                    <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel>
+                    <Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+                </FormItem>
+              )}
+           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <FormField
+              control={control}
+              name="documentaryCreditNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Documentary Credit No.*</FormLabel>
+                  <FormControl><Input placeholder="L/C Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="totalMachineQtyFromLC"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                  <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="proformaInvoiceNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Proforma Invoice Number</FormLabel>
+                  <FormControl><Input placeholder="PI Number" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+                control={control}
+                name="invoiceDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Date</FormLabel>
+                    <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select Invoice Date" disabled={isLcSelected} />
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
+            <FormField
+                control={control}
+                name="etdDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />ETD Date</FormLabel>
+                    <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select ETD Date" disabled={isLcSelected} />
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="etaDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />ETA Date</FormLabel>
+                    <DatePickerField field={{...field, value: field.value ?? undefined}} placeholder="Select ETA Date" disabled={isLcSelected} />
+                    <FormMessage />
+                    </FormItem>
+                )}
+             />
+          </div>
+          <Separator className="my-2" />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="p-3 border rounded-md bg-muted/30">
+                <FormLabel className="text-sm font-medium text-muted-foreground mb-2 block">Shipment Status (from L/C)</FormLabel>
+                {selectedLcDetails.lcIdForLink ? (
+                    <div className="flex items-center gap-3">
+                        {[
+                            { flag: selectedLcDetails.isFirstShipment, label: "1st" },
+                            { flag: selectedLcDetails.isSecondShipment, label: "2nd" },
+                            { flag: selectedLcDetails.isThirdShipment, label: "3rd" }
+                        ].map((shipment, index) => (
+                            <Button
+                                key={index}
+                                type="button"
+                                variant={shipment.flag ? "default" : "outline"}
+                                size="icon"
+                                className={cn(
+                                "h-8 w-8 rounded-full p-0 text-xs font-bold",
+                                shipment.flag
+                                    ? "bg-green-500 hover:bg-green-600 text-white"
+                                    : "border-destructive text-destructive hover:bg-destructive/10"
+                                )}
+                                title={`${shipment.label} Shipment Status`}
+                                onClick={() => selectedLcDetails.lcIdForLink && window.open(`/dashboard/total-lc/${selectedLcDetails.lcIdForLink}/edit`, '_blank')}
+                            >
+                                {shipment.label}
+                            </Button>
+                        ))}
+                    </div>
+                ) : <p className="text-xs text-muted-foreground">Select a C.I. Number to view status.</p>}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                <FormField control={control} name="selectedCommercialInvoiceLcId" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Number</FormLabel><div className="flex items-center gap-2"><Combobox options={lcOptionsForCommercialInvoice} value={field.value || PLACEHOLDER_COMMERCIAL_INVOICE_VALUE} onValueChange={(value) => field.onChange(value === PLACEHOLDER_COMMERCIAL_INVOICE_VALUE ? undefined : value)} placeholder="Search by C.I. No..." selectPlaceholder={isLoadingDropdowns ? "Loading C.I. Numbers..." : "Select C.I. Number"} emptyStateMessage="No available C.I. Number found." disabled={isLoadingDropdowns} /><Button type="button" size="icon" variant="outline" onClick={fetchOptions} title="Refresh C.I. List"><RefreshCw className="h-4 w-4" /></Button></div><FormDescription>Select a C.I. to auto-fill details. C.I.s already used in a report will not appear.</FormDescription><FormMessage /></FormItem>)} />
-                {selectedCommercialInvoiceDateDisplay && (<FormItem><FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Commercial Invoice Date</FormLabel><Input value={selectedCommercialInvoiceDateDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>)}
-            </div>
-            {/* Rest of the form remains the same as NewInstallationReportForm */}
-            {/* ... form content ... */}
-            <Separator className="my-6" />
-            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
-                {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
+            <FormField
+            control={control}
+            name="packingListUrl"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Packing List URL</FormLabel>
+                <div className="flex items-center gap-2">
+                    <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/packing-list.pdf" {...field} value={field.value ?? ""} readOnly={isLcSelected && !!selectedLcDetails.packingListUrl} className={cn((isLcSelected && !!selectedLcDetails.packingListUrl) && "bg-muted/50 cursor-not-allowed")}/>
+                    </FormControl>
+                    <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Packing List"
+                    >
+                    <ExternalLink className="h-4 w-4" />
+                    </Button>
+                </div>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+          </div>
+          
+          {isLcSelected && selectedLcDetails.partialShipmentAllowed === "Yes" && (
+             <Accordion
+                type="single"
+                collapsible
+                className="w-full"
+                value={activePartialShipmentAccordion}
+                onValueChange={setActivePartialShipmentAccordion}
+            >
+                <AccordionItem value="partialShipmentDetailsAccordionInstallReport" className="border rounded-md shadow-sm bg-muted/20">
+                    <AccordionTrigger
+                    className={cn(
+                        "flex w-full items-center justify-between px-4 py-3 text-foreground hover:no-underline",
+                         "text-md font-semibold"
+                    )}
+                    >
+                    <div className="flex items-center gap-2">
+                        <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+                        Partial Shipment Breakdown (from L/C)
+                    </div>
+                    {activePartialShipmentAccordion === "partialShipmentDetailsAccordionInstallReport" ? (
+                        <Minus className="h-5 w-5 text-primary" />
+                    ) : (
+                        <Plus className="h-5 w-5 text-primary" />
+                    )}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pt-2 pb-4">
+                    <div className="text-xs text-muted-foreground mb-3">(Read-only values from selected L/C)</div>
+                    <div className="space-y-3">
+                        {[
+                            { labelPrefix: "1st", qty: selectedLcDetails.firstPartialQty, pkgs: selectedLcDetails.firstPartialPkgs, netW: selectedLcDetails.firstPartialNetWeight, grossW: selectedLcDetails.firstPartialGrossWeight, cbm: selectedLcDetails.firstPartialCbm },
+                            { labelPrefix: "2nd", qty: selectedLcDetails.secondPartialQty, pkgs: selectedLcDetails.secondPartialPkgs, netW: selectedLcDetails.secondPartialNetWeight, grossW: selectedLcDetails.secondPartialGrossWeight, cbm: selectedLcDetails.secondPartialCbm },
+                            { labelPrefix: "3rd", qty: selectedLcDetails.thirdPartialQty, pkgs: selectedLcDetails.thirdPartialPkgs, netW: selectedLcDetails.thirdPartialNetWeight, grossW: selectedLcDetails.thirdPartialGrossWeight, cbm: selectedLcDetails.thirdPartialCbm },
+                        ].map((partial, index) => (
+                            (partial.qty || 0) > 0 || (partial.pkgs || 0) > 0 || (partial.netW || 0) > 0 || (partial.grossW || 0) > 0 || (partial.cbm || 0) > 0 ? (
+                                <React.Fragment key={index}>
+                                {index > 0 && <Separator className="my-2" />}
+                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-2 items-start">
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Qty`, partial.qty)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Pkgs`, partial.pkgs)}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Net W.`, partial.netW, "KGS")}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. Gross W.`, partial.grossW, "KGS")}
+                                    {renderPartialDetailReadOnly(`${partial.labelPrefix} P. CBM`, partial.cbm)}
+                                </div>
+                                </React.Fragment>
+                            ) : null
+                        ))}
+                    </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+          )}
+          <Separator className="my-6" />
+
+          <h3 className={cn(sectionHeadingClass)}>
+            <ClipboardList className="mr-2 h-5 w-5 text-primary" />
+            Installation Details
+          </h3>
+          <div className="rounded-md border">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead className="w-[50px] text-foreground">SL No.</TableHead>
+                          <TableHead className="text-foreground">Machine Model*</TableHead>
+                          <TableHead className="text-foreground">Machine Serial No.*</TableHead>
+                          <TableHead className="text-foreground">Ctl. Box Model</TableHead>
+                          <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
+                          <TableHead className="text-foreground">Install Date*</TableHead>
+                          <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
+                          <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {installationDetailsFieldArray.fields.map((field, index) => {
+                          const installDateValue = watch(`installationDetails.${index}.installDate`);
+                          let warrantyDisplay = "N/A";
+                          if (installDateValue && isValid(new Date(installDateValue))) {
+                              const expiryDate = addDays(new Date(installDateValue), 365);
+                              const diffDays = differenceInDays(expiryDate, new Date());
+                              warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
+                          }
+                          return (
+                              <TableRow key={field.id}>
+                                  <TableCell>{index + 1}</TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={control}
+                                          name={`installationDetails.${index}.machineModel`}
+                                          render={({ field: itemField }) => (
+                                              <FormItem>
+                                                  <FormControl><Input placeholder="Enter model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                  <FormMessage className="text-xs" />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={control}
+                                          name={`installationDetails.${index}.serialNo`}
+                                          render={({ field: itemField }) => (
+                                              <FormItem>
+                                                  <FormControl><Input placeholder="Enter serial no." {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                  <FormMessage className="text-xs" />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={control}
+                                          name={`installationDetails.${index}.ctlBoxModel`}
+                                          render={({ field: itemField }) => (
+                                              <FormItem>
+                                                  <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                  <FormMessage className="text-xs" />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={control}
+                                          name={`installationDetails.${index}.ctlBoxSerial`}
+                                          render={({ field: itemField }) => (
+                                              <FormItem>
+                                                  <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                                  <FormMessage className="text-xs" />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={control}
+                                          name={`installationDetails.${index}.installDate`}
+                                          render={({ field: itemField }) => (
+                                              <FormItem>
+                                                  <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
+                                                  <FormMessage className="text-xs" />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
+                                  <TableCell className="text-right">
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                  </TableCell>
+                              </TableRow>
+                          );
+                      })}
+                  </TableBody>
+              </Table>
+        </div>
+        {form.formState.errors.installationDetails && (
+            <FormMessage>
+            {form.formState.errors.installationDetails.message ||
+              (typeof form.formState.errors.installationDetails === 'object' && (form.formState.errors.installationDetails as any).root?.message) ||
+              "Please ensure all installation detail fields are correct and serial numbers are unique."}
+            </FormMessage>
+        )}
+          <div className="flex flex-wrap gap-2 mt-2">
+              <Button type="button" variant="outline" onClick={() => installationDetailsFieldArray.append({ slNo: (installationDetailsFieldArray.fields.length + 1).toString(), machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() })}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Installation Item
             </Button>
-      </form>
-    </Form>
-  )
+            <Button type="button" variant="outline" onClick={handleDuplicateLastRow} disabled={installationDetailsFieldArray.fields.length === 0}>
+              <Copy className="mr-2 h-4 w-4" /> Duplicate Last Row
+            </Button>
+            <Button type="button" variant="outline" onClick={handleExportToCsv} disabled={installationDetailsFieldArray.fields.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Export to CSV
+            </Button>
+            <input
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                onChange={handleImportCsv}
+                className="hidden"
+                id="csv-import-input"
+            />
+            <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <Upload className="mr-2 h-4 w-4" /> Import from CSV
+            </Button>
+        </div>
+
+
+         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
+            <FormItem>
+                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
+                <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+            </FormItem>
+             <FormItem>
+                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
+                <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+            </FormItem>
+        </div>
+        <Separator className="my-6" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <FormItem>
+                <FormField
+                    control={control}
+                    name="missingItemInfo"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-amber-500" />Missing And Short Shipment Item Information</FormLabel>
+                            <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedMissingItemsIssueResolved} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                  <FormField
+                    control={form.control}
+                    name="missingItemsIssueResolved"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm mt-2 bg-card">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel className="hover:cursor-pointer text-sm font-normal">
+                            Issues Resolved for Missing/Short Items
+                            </FormLabel>
+                        </div>
+                        </FormItem>
+                    )}
+                  />
+            </FormItem>
+            <FormItem>
+                <FormField
+                    control={control}
+                    name="extraFoundInfo"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-blue-500" />Extra Found and Return Information</FormLabel>
+                            <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedExtraItemsIssueResolved} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="extraItemsIssueResolved"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm mt-2 bg-card">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel className="hover:cursor-pointer text-sm font-normal">
+                            Issues Resolved for Extra/Found Items
+                            </FormLabel>
+                        </div>
+                        </FormItem>
+                    )}
+                />
+            </FormItem>
+        </div>
+        <Separator className="my-6" />
+
+
+          <h3 className={cn(sectionHeadingClass)}>
+              <UserCheck className="mr-2 h-5 w-5 text-primary" />
+              Technician and Reporting Engineer Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+                control={control}
+                name="technicianName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Wrench className="mr-2 h-4 w-4 text-muted-foreground" />Technician Name*</FormLabel>
+                    <FormControl><Input placeholder="Enter technician's name" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="reportingEngineerName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><UserCheck className="mr-2 h-4 w-4 text-muted-foreground" />Reporting Engineer Name*</FormLabel>
+                    <FormControl><Input placeholder="Enter reporting engineer's name" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+          </div>
+          <Separator className="my-6" />
+          <FormField
+            control={control}
+            name="installationNotes"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
+            <FormControl>
+              <RichTextEditor placeholder="Enter any notes regarding the installation" value={field.value ?? ''} onChange={field.onChange}/>
+            </FormControl>
+            <FormMessage />
+        </FormItem>
+        )}
+      />
+      <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving Changes...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </>
+        )}
+      </Button>
+    </form>
+  </Form>
+  );
 }
