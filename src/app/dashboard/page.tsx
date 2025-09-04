@@ -730,12 +730,6 @@ export default function DashboardPage() {
                   L/Cs from {selectedYear} nearing ETD (Shipment Arranged).
                 </CardDescription>
               </div>
-              <Button
-                variant="default"
-                className="rounded-full bg-accent text-accent-foreground text-xl font-bold h-8 px-2.5 flex items-center justify-center"
-              >
-                {upcomingEtdShipments.length}
-              </Button>
             </CardHeader>
             <CardContent className="h-[350px] space-y-3">
                  {isLoading || upcomingEtdShipments.length === 0 && !isLoading ? (
@@ -1017,3 +1011,6 @@ export default function DashboardPage() {
     
 
 
+
+
+    
