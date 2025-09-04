@@ -1,9 +1,10 @@
+
 "use client";
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Users, UserPlus, LogOut, Birthday, CalendarOff, UserClock, AlertTriangle, FileClock, ShieldAlert, FolderCheck, CheckCircle } from 'lucide-react';
+import { Users, UserPlus, LogOut, Birthday, CalendarOff, UserClock, FileClock, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
