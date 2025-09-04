@@ -90,6 +90,7 @@ export default function InstallationReportsViewPage() {
             commercialInvoiceDate: data.commercialInvoiceDate && isValid(parseISO(data.commercialInvoiceDate)) ? data.commercialInvoiceDate : undefined,
             etdDate: data.etdDate && isValid(parseISO(data.etdDate)) ? data.etdDate : undefined,
             etaDate: data.etaDate && isValid(parseISO(data.etaDate)) ? data.etaDate : undefined,
+            packingListUrl: data.packingListUrl || undefined, // Ensure packingListUrl is explicitly handled
             installationDetails: data.installationDetails?.map((item: any) => ({
                 ...item,
                 installDate: item.installDate && isValid(parseISO(item.installDate)) ? item.installDate : undefined,
@@ -429,6 +430,8 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
+    
+    
     
 
     
