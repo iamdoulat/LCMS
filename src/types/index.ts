@@ -964,6 +964,7 @@ export const InvoiceSchema = z.object({
   shipmentMode: z.enum(piShipmentModeOptions).optional(),
   packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
