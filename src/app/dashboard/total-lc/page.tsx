@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -630,30 +630,28 @@ export default function TotalLCPage() {
                           <TableRow key={`${lc.id}-actions`}>
                             <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
                               <div className="flex flex-wrap justify-center items-center gap-2">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant={lc.etd && lc.eta ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn(
-                                                    "h-7 w-7 rounded-full p-0",
-                                                    lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
-                                                )}
-                                            >
-                                                <CalendarDays className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="p-2">
-                                            <div className="text-sm space-y-1">
-                                                <p className="font-semibold text-foreground">Shipment Info</p>
-                                                <Separator className="my-1"/>
-                                                <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
-                                                <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
-                                            </div>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                        variant={lc.etd && lc.eta ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn(
+                                            "h-7 w-7 rounded-full p-0",
+                                            lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
+                                        )}
+                                    >
+                                        <CalendarDays className="h-4 w-4" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-2">
+                                    <div className="text-sm space-y-1">
+                                        <p className="font-semibold text-foreground">Shipment Info</p>
+                                        <Separator className="my-1"/>
+                                        <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
+                                        <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                                 <Button
                                     variant={ (lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber) ? "default" : "outline" }
                                     size="sm"
@@ -743,29 +741,41 @@ export default function TotalLCPage() {
                                     { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
                                     { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
                                 ].map((shipment, idx) => (
-                                    <TooltipProvider key={idx} delayDuration={100}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant={shipment.flag ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn(
-                                                    "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                    shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                                )}
-                                                title={`${shipment.label} Shipment Status`}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                            >
-                                                {shipment.label}
-                                            </Button>
-                                        </TooltipTrigger>
-                                        {shipment.note && (
-                                        <TooltipContent>
-                                            <p className="max-w-xs">{shipment.note}</p>
-                                        </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                    </TooltipProvider>
+                                    shipment.note ? (
+                                        <Popover key={idx}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={shipment.flag ? "default" : "outline"}
+                                                    size="icon"
+                                                    className={cn(
+                                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                        shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                                    )}
+                                                >
+                                                    {shipment.label}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80">
+                                                <div className="space-y-2">
+                                                    <h4 className="font-medium leading-none">{`${shipment.label} Shipment Note`}</h4>
+                                                    <p className="text-sm text-muted-foreground">{shipment.note}</p>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    ) : (
+                                        <Button
+                                            key={idx}
+                                            variant={shipment.flag ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn(
+                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                            )}
+                                            title={`${shipment.label} Shipment Status`}
+                                        >
+                                            {shipment.label}
+                                        </Button>
+                                    )
                                 ))}
                               </div>
                             </TableCell>
@@ -832,5 +842,6 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
