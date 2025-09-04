@@ -361,7 +361,7 @@ export default function EditInstallationReportPage() {
       setValue("invoiceDate", defaultValuesForReset.invoiceDate || undefined, { shouldValidate: true, shouldDirty: true });
       setValue("commercialInvoiceDate", defaultValuesForReset.commercialInvoiceDate || undefined, { shouldValidate: true, shouldDirty: true });
       setValue("etdDate", defaultValuesForReset.etdDate || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("etaDate", defaultValuesForReset.etaDate || undefined, { shouldValidate: true, shouldDirty: true });
+      setValue("etaDate", defaultValuesForReset.etdDate || undefined, { shouldValidate: true, shouldDirty: true });
       setValue("packingListUrl", defaultValuesForReset.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
       setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
       setSelectedCommercialInvoiceDateDisplay(null);
@@ -403,8 +403,8 @@ export default function EditInstallationReportPage() {
 
   async function onSubmit(data: InstallationReportFormValues) {
     if (!reportId) {
-      Swal.fire("Error", "Report ID is missing. Cannot update.", "error");
-      return;
+        Swal.fire("Error", "Report ID is missing. Cannot update.", "error");
+        return;
     }
     setIsSubmitting(true);
     const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
@@ -413,44 +413,42 @@ export default function EditInstallationReportPage() {
 
     const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
       applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"), // Fallback to current form value if not found
+      applicantName: selectedApplicant?.label || getValues("applicantId"),
       beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), // Fallback
-      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined,
+      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"),
+      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId,
+      commercialInvoiceNumber: selectedLcOption?.label,
       commercialInvoiceDate: data.commercialInvoiceDate && isValid(new Date(data.commercialInvoiceDate)) ? format(new Date(data.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      documentaryCreditNumber: data.documentaryCreditNumber || undefined,
-      totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
-      proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
+      documentaryCreditNumber: data.documentaryCreditNumber,
+      totalMachineQtyFromLC: data.totalMachineQtyFromLC,
+      proformaInvoiceNumber: data.proformaInvoiceNumber,
       invoiceDate: data.invoiceDate && isValid(new Date(data.invoiceDate)) ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etdDate: data.etdDate && isValid(new Date(data.etdDate)) ? format(new Date(data.etdDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       etaDate: data.etaDate && isValid(new Date(data.etaDate)) ? format(new Date(data.etaDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      packingListUrl: data.packingListUrl || undefined,
+      packingListUrl: data.packingListUrl,
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
-        slNo: item.slNo || undefined,
+        slNo: item.slNo,
         machineModel: item.machineModel,
         serialNo: item.serialNo,
-        ctlBoxModel: item.ctlBoxModel || undefined,
-        ctlBoxSerial: item.ctlBoxSerial || undefined,
+        ctlBoxModel: item.ctlBoxModel,
+        ctlBoxSerial: item.ctlBoxSerial,
         installDate: item.installDate && isValid(new Date(item.installDate)) ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
       pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
-      missingItemInfo: data.missingItemInfo || undefined,
-      extraFoundInfo: data.extraFoundInfo || undefined,
+      missingItemInfo: data.missingItemInfo,
+      extraFoundInfo: data.extraFoundInfo,
       missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
       extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
-      installationNotes: data.installationNotes || undefined,
+      installationNotes: data.installationNotes,
       updatedAt: serverTimestamp(),
     };
-    
-    // Explicitly remove undefined fields to prevent Firestore errors
-    const cleanedDataToUpdate = Object.fromEntries(
-        Object.entries(dataToUpdate).filter(([, value]) => value !== undefined)
-    );
 
+    const cleanedDataToUpdate = Object.fromEntries(
+        Object.entries(dataToUpdate).filter(([_, value]) => value !== undefined && value !== '' && value !== null)
+    );
 
     console.log("Installation Report Data to be updated in Firestore:", cleanedDataToUpdate);
 
@@ -964,91 +962,80 @@ export default function EditInstallationReportPage() {
                         <TableHead className="text-foreground">Ctl. Box Model</TableHead>
                         <TableHead className="text-foreground">Ctl. Box Serial</TableHead>
                         <TableHead className="text-foreground">Install Date*</TableHead>
-                        <TableHead className="text-foreground w-[150px]">Warranty</TableHead>
                         <TableHead className="w-[80px] text-right text-foreground">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {installationDetailsFieldArray.fields.map((field, index) => {
-                        const installDateValue = watch(`installationDetails.${index}.installDate`);
-                        let warrantyDisplay = "N/A";
-                        if (installDateValue && isValid(new Date(installDateValue))) {
-                            const expiryDate = addDays(new Date(installDateValue), 365);
-                            const diffDays = differenceInDays(expiryDate, new Date());
-                            warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days remaining`;
-                        }
-                        return (
-                            <TableRow key={field.id}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>
-                                    <FormField
-                                        control={control}
-                                        name={`installationDetails.${index}.machineModel`}
-                                        render={({ field: itemField }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="Enter model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <FormField
-                                        control={control}
-                                        name={`installationDetails.${index}.serialNo`}
-                                        render={({ field: itemField }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="Enter serial no." {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <FormField
-                                        control={control}
-                                        name={`installationDetails.${index}.ctlBoxModel`}
-                                        render={({ field: itemField }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <FormField
-                                        control={control}
-                                        name={`installationDetails.${index}.ctlBoxSerial`}
-                                        render={({ field: itemField }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
-                                                <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <FormField
-                                        control={control}
-                                        name={`installationDetails.${index}.installDate`}
-                                        render={({ field: itemField }) => (
-                                            <FormItem>
-                                                <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
-                                                <FormMessage className="text-xs" />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell className="text-xs text-foreground w-[150px]">{warrantyDisplay}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
+                    {installationDetailsFieldArray.fields.map((field, index) => (
+                        <TableRow key={field.id}>
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>
+                                <FormField
+                                    control={control}
+                                    name={`installationDetails.${index}.machineModel`}
+                                    render={({ field: itemField }) => (
+                                        <FormItem>
+                                            <FormControl><Input placeholder="Enter model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                    control={control}
+                                    name={`installationDetails.${index}.serialNo`}
+                                    render={({ field: itemField }) => (
+                                        <FormItem>
+                                            <FormControl><Input placeholder="Enter serial no." {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                    control={control}
+                                    name={`installationDetails.${index}.ctlBoxModel`}
+                                    render={({ field: itemField }) => (
+                                        <FormItem>
+                                            <FormControl><Input placeholder="Ctl. Box Model" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                    control={control}
+                                    name={`installationDetails.${index}.ctlBoxSerial`}
+                                    render={({ field: itemField }) => (
+                                        <FormItem>
+                                            <FormControl><Input placeholder="Ctl. Box Serial" {...itemField} value={itemField.value ?? ''} className="h-9" /></FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TableCell>
+                            <TableCell>
+                                <FormField
+                                    control={control}
+                                    name={`installationDetails.${index}.installDate`}
+                                    render={({ field: itemField }) => (
+                                        <FormItem>
+                                            <DatePickerField field={{...itemField, value: itemField.value ?? undefined }} placeholder="Select date" />
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Button type="button" variant="ghost" size="icon" onClick={() => installationDetailsFieldArray.remove(index)} disabled={installationDetailsFieldArray.fields.length <= 1} title="Remove Installation Item">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
                 </TableBody>
             </Table>
       </div>
@@ -1056,7 +1043,7 @@ export default function EditInstallationReportPage() {
           <FormMessage>
           {form.formState.errors.installationDetails.message ||
            (typeof form.formState.errors.installationDetails === 'object' && (form.formState.errors.installationDetails as any).root?.message) ||
-           "Please ensure Machine Serial No. are unique."}
+           "Please ensure all installation detail fields are correct and serial numbers are unique."}
           </FormMessage>
       )}
        <div className="flex flex-wrap gap-2 mt-2">
@@ -1087,7 +1074,7 @@ export default function EditInstallationReportPage() {
       </div>
 
 
-       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
         <FormItem>
             <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
             <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
@@ -1095,14 +1082,6 @@ export default function EditInstallationReportPage() {
          <FormItem>
             <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
             <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
-        </FormItem>
-        <FormItem>
-          <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-destructive" />Warranty Expired:</FormLabel>
-          <Input type="text" value={`${warrantyExpiredCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-destructive" />
-        </FormItem>
-        <FormItem>
-          <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-green-600" />Warranty Remaining:</FormLabel>
-          <Input type="text" value={`${warrantyRemainingCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-green-600" />
         </FormItem>
       </div>
       <Separator className="my-6" />
@@ -1114,7 +1093,7 @@ export default function EditInstallationReportPage() {
                   name="missingItemInfo"
                   render={({ field }) => (
                       <FormItem>
-                          <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Missing And Short Shipment Item Information</FormLabel>
+                          <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-amber-500" />Missing And Short Shipment Item Information</FormLabel>
                           <FormControl><Textarea placeholder="Describe any missing items..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedMissingItemsIssueResolved} /></FormControl>
                           <FormMessage />
                       </FormItem>
@@ -1146,7 +1125,7 @@ export default function EditInstallationReportPage() {
                   name="extraFoundInfo"
                   render={({ field }) => (
                       <FormItem>
-                          <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Extra Found and Return Information</FormLabel>
+                          <FormLabel className="flex items-center"><ShieldAlert className="mr-2 h-4 w-4 text-blue-500" />Extra Found and Return Information</FormLabel>
                           <FormControl><Textarea placeholder="Describe any extra items found..." rows={3} {...field} value={field.value ?? ""} disabled={!!watchedExtraItemsIssueResolved} /></FormControl>
                           <FormMessage />
                       </FormItem>
@@ -1234,7 +1213,8 @@ export default function EditInstallationReportPage() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }
+
 
     
