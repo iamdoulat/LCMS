@@ -59,7 +59,7 @@ export default function InstallationReportsViewPage() {
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterLcNumber, setFilterLcNumber] = useState('');
-  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
