@@ -200,11 +200,14 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     if (watchedBeneficiaryId) {
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
+        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedBeneficiary.address || "");
-        setValue("shippingAddress", initialData.shippingAddress || selectedBeneficiary.address || "");
+        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+          setValue("shippingAddress", selectedBeneficiary.address || "");
+        }
       }
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, initialData.shippingAddress]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);

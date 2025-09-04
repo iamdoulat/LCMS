@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc, setDoc } from 'firebase/firestore';
 import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument, PIShipmentMode } from '@/types';
 import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions, piShipmentModeOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -148,6 +148,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     fetchOptionsAndSetData();
   }, [initialData, reset]);
 
+  const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
   
@@ -187,6 +188,18 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
 
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        // Only set billing address. Let initialData handle shipping address.
+        setValue("billingAddress", selectedCustomer.address || "");
+        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+          setValue("shippingAddress", selectedCustomer.address || "");
+        }
+      }
+    }
+  }, [watchedCustomerId, customerOptions, setValue, getValues]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -417,12 +430,13 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }
   
   const grandTotalLabel = `TOTAL (USD):`;
+  const actionButtonsDisabled = !quoteId || isSubmitting || watchedStatus === 'Invoiced';
 
 
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
-
+  
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8"> 
@@ -544,9 +558,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
-                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
-            </h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />

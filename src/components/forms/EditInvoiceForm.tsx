@@ -64,7 +64,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(InvoiceSchema.extend({
         status: z.enum(invoiceStatusOptions).optional(),
-    })),
+    })), 
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -72,8 +72,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
-  const watchedStatus = watch("status");
-
+  
   const { fields, append, remove } = useFieldArray({
     control,
     name: "lineItems",
@@ -133,6 +132,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showItemCodeColumn: initialData.showItemCodeColumn ?? true,
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
+            convertedFromQuoteId: initialData.convertedFromQuoteId,
             shipmentMode: (initialData as any).shipmentMode ?? piShipmentModeOptions[0],
             freightCharges: initialData.freightCharges,
             otherCharges: (initialData as any).otherCharges,
@@ -146,12 +146,12 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-
+  
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
   const watchedOtherCharges = watch("otherCharges");
   const watchedShipmentMode = watch("shipmentMode");
-  
+
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -182,7 +182,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         }
       });
     }
-
+    
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
     const additionalCharges = freight + other;
@@ -215,7 +215,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/invoices/preview/${invoiceId}`, '_blank');
+    window.open(`/dashboard/pi/preview/${invoiceId}`, '_blank');
   };
 
   async function onSubmit(data: InvoiceFormValues) {
@@ -299,16 +299,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     }
   }
 
-  const grandTotalLabel =
-    watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL:"
-      : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL:"
-      : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
-      : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
-      : "TOTAL:";
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
 
   if (isLoadingDropdowns) {
@@ -366,6 +357,28 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {invoiceStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -391,8 +404,11 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
           )}
         />
         <Separator className="my-6" />
+
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
@@ -496,8 +512,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
-                freightCharges: initialData.freightCharges,
-                otherCharges: (initialData as any).otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
