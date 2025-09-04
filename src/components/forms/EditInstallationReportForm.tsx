@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -348,11 +349,11 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       technicianName: data.technicianName,
       reportingEngineerName: data.reportingEngineerName,
       installationDetails: data.installationDetails.map(item => ({
-        slNo: item.slNo,
+        slNo: item.slNo || null,
         machineModel: item.machineModel,
         serialNo: item.serialNo,
-        ctlBoxModel: item.ctlBoxModel,
-        ctlBoxSerial: item.ctlBoxSerial,
+        ctlBoxModel: item.ctlBoxModel || null,
+        ctlBoxSerial: item.ctlBoxSerial || null,
         installDate: item.installDate ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
       })),
       totalInstalledQty: installationDetailsFieldArray.fields.length,
@@ -365,11 +366,15 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       updatedAt: serverTimestamp(),
     };
 
+    // Robustly clean the object to remove any `undefined` properties
     const cleanedDataToUpdate: { [key: string]: any } = {};
     for (const key in dataToUpdate) {
-        const value = dataToUpdate[key];
-        if (value !== undefined) {
-            cleanedDataToUpdate[key] = value;
+        if (Object.prototype.hasOwnProperty.call(dataToUpdate, key)) {
+            const value = dataToUpdate[key];
+            if (value !== undefined) {
+                // Keep nulls, empty strings, and booleans, but not undefined
+                cleanedDataToUpdate[key] = value;
+            }
         }
     }
 
@@ -416,7 +421,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
       const lastRow = installationDetails[installationDetails.length - 1];
       installationDetailsFieldArray.append({
         ...lastRow,
-        installDate: lastRow.installDate, // Keep the date as is (it's a Date object in the form state)
+        installDate: lastRow.installDate ? new Date(lastRow.installDate) : new Date(),
         slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
       });
     } else {
@@ -656,7 +661,7 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
                     />
                     <Button type="button" size="icon" variant="outline" onClick={fetchOptions} title="Refresh C.I. List"><RefreshCw className="h-4 w-4" /></Button>
                     </div>
-                     <FormDescription>Select a C.I. to auto-fill details. Used C.I. numbers will not appear.</FormDescription>
+                     <FormDescription>Select a C.I. to auto-fill details. C.I.s already used in a report will not appear.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -985,19 +990,27 @@ export function EditInstallationReportForm({ initialData, reportId }: EditInstal
         </div>
 
 
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6 mt-4">
-            <FormItem>
-                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
-                <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
-            </FormItem>
-             <FormItem>
-                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
-                <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
-            </FormItem>
+         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-4">
+          <FormItem>
+              <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total Installed QTY:</FormLabel>
+              <Input type="text" value={installationDetailsFieldArray.fields.length} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+          </FormItem>
+           <FormItem>
+              <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Pending QTY:</FormLabel>
+              <Input type="text" value={pendingQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+          </FormItem>
+          <FormItem>
+            <FormLabel className="flex items-center"><AlertCircle className="mr-2 h-4 w-4 text-destructive" />Warranty Expired:</FormLabel>
+            <Input type="text" value={`${warrantyExpiredCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-destructive" />
+          </FormItem>
+          <FormItem>
+            <FormLabel className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-green-600" />Warranty Remaining:</FormLabel>
+            <Input type="text" value={`${warrantyRemainingCount} sets`} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold text-green-600" />
+          </FormItem>
         </div>
         <Separator className="my-6" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <FormItem>
                 <FormField
                     control={control}
