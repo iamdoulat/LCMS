@@ -2,681 +2,559 @@
 "use client";
 
 import * as React from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format, parseISO, isValid, addDays, differenceInDays, parse as parseDateFns } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, query, where, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type {
-  CustomerDocument,
-  SupplierDocument,
-  LCEntryDocument,
-  InstallationReportFormValues as PageInstallationReportFormValues,
-  InstallationReportDocument,
-  LcForInvoiceDropdownOption,
-  InstallationDetailItem as PageInstallationDetailItemType
-} from '@/types';
-import { InstallationDetailItemSchema, InstallationReportSchema } from '@/types';
+import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import type { DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus, DemoMachineApplicationFormValues as PageDemoMachineApplicationFormValues, AppliedMachineItem as PageAppliedMachineItem } from '@/types';
+import { demoMachineApplicationSchema, AppliedMachineItemSchema } from '@/types';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, Wrench, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Package, Plus, Minus, UserCheck, Edit, ClipboardList, PlusCircle, Trash2, AlertTriangle, ArrowLeft, Save, ShieldAlert, ShieldCheck, AlertCircle, Copy, Download, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import Link from 'next/link';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Loader2, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge, PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useParams, useRouter } from 'next/navigation';
-import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
-const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
+const phoneRegexForValidation = new RegExp(
+  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
 
-const PLACEHOLDER_APPLICANT_VALUE = "__EDIT_INSTALL_REPORT_APPLICANT__";
-const PLACEHOLDER_BENEFICIARY_VALUE = "__EDIT_INSTALL_REPORT_BENEFICIARY__";
-const PLACEHOLDER_COMMERCIAL_INVOICE_VALUE = "__EDIT_INSTALL_REPORT_COMM_INV__";
+type DemoMachineApplicationFormValues = PageDemoMachineApplicationFormValues;
+type AppliedMachineItemType = PageAppliedMachineItem; // Matches the schema used
 
-type InstallationReportFormValues = PageInstallationReportFormValues;
-type InstallationDetailItemType = PageInstallationDetailItemType;
+const PLACEHOLDER_FACTORY_VALUE = "__EDIT_DEMO_APP_FACTORY__";
+const PLACEHOLDER_MACHINE_VALUE_PREFIX = "__EDIT_DEMO_APP_MACHINE_PLACEHOLDER__"; // Prefix for unique placeholders
 
-
-const formatDisplayDate = (dateString?: string | Date | null): string => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
-  } catch (e) {
-    return 'N/A';
-  }
-};
-
-const renderPartialDetailReadOnly = (label: string, value?: number | string | null, unit?: string) => {
-  let displayValue = (typeof value === 'number' && !isNaN(value)) ? value.toString() : (String(value || "0"));
-  if (value === null || value === undefined) displayValue = "0";
-  return (
-    <FormItem className="mb-2">
-        <FormLabel className="text-xs text-muted-foreground">{label}</FormLabel>
-        <Input type="text" value={`${displayValue} ${unit || ''}`.trim()} readOnly disabled className="h-8 text-xs bg-muted/50 cursor-not-allowed" />
-    </FormItem>
-  );
-};
-
-const escapeCsvCell = (cellData: any): string => {
-  if (cellData === null || cellData === undefined) {
-    return '';
-  }
-  const stringData = String(cellData);
-  if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
-    return `"${stringData.replace(/"/g, '""')}"`;
-  }
-  return stringData;
-};
-
-interface EditInstallationReportFormProps {
-  initialData: InstallationReportDocument;
-  applicationId: string; // The report ID is passed as applicationId here
-  onApplicationStatusChange?: (status: any) => void; // Keeping this for consistency with EditDemoMachineApplicationForm
+interface FactoryOption extends ComboboxOption {
+  id: string;
+  location: string;
+  contactPerson?: string;
+  cellNumber?: string;
+}
+interface AvailableMachineOption extends ComboboxOption {
+  id: string;
+  serial: string;
+  brand: string;
+  currentStatus?: AppDemoMachineStatus; // To know if it's available or allocated to this app
 }
 
-export function EditInstallationReportForm({ initialData, applicationId: reportId, onApplicationStatusChange }: EditInstallationReportFormProps) {
-  const router = useRouter();
+type CurrentDemoStatus = "Upcoming" | "Active" | "Overdue" | "Returned";
+
+interface EditDemoMachineApplicationFormProps {
+  initialData: DemoMachineApplicationDocument;
+  applicationId: string;
+  onApplicationStatusChange?: (status: CurrentDemoStatus) => void;
+}
+
+export function EditDemoMachineApplicationForm({ initialData, applicationId, onApplicationStatusChange }: EditDemoMachineApplicationFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
-  const [applicantOptions, setApplicantOptions] = React.useState<ComboboxOption[]>([]);
-  const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<ComboboxOption[]>([]);
-  const [lcOptionsForCommercialInvoice, setLcOptionsForCommercialInvoice] = React.useState<LcForInvoiceDropdownOption[]>([]);
-  const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [factoryOptions, setFactoryOptions] = React.useState<FactoryOption[]>([]);
+  const [allFetchedMachines, setAllFetchedMachines] = React.useState<DemoMachineDocument[]>([]);
+  const [availableMachineOptions, setAvailableMachineOptions] = React.useState<AvailableMachineOption[]>([]);
 
-  const [selectedLcDetails, setSelectedLcDetails] = React.useState<{
-    isFirstShipment?: boolean;
-    isSecondShipment?: boolean;
-    isThirdShipment?: boolean;
-    lcIdForLink: string | null;
-    partialShipmentAllowed?: LCEntryDocument['partialShipmentAllowed'];
-    firstPartialQty?: number; firstPartialPkgs?: number; firstPartialNetWeight?: number; firstPartialGrossWeight?: number; firstPartialCbm?: number;
-    secondPartialQty?: number; secondPartialPkgs?: number; secondPartialNetWeight?: number; secondPartialGrossWeight?: number; secondPartialCbm?: number;
-    thirdPartialQty?: number; thirdPartialPkgs?: number; thirdPartialNetWeight?: number; thirdPartialGrossWeight?: number; thirdPartialCbm?: number;
-    packingListUrl?: string;
-  }>({
-    lcIdForLink: null,
-    isFirstShipment: false, isSecondShipment: false, isThirdShipment: false,
-    partialShipmentAllowed: "No",
-    packingListUrl: '',
-  });
+  const [isLoadingFactories, setIsLoadingFactories] = React.useState(true);
+  const [isLoadingMachines, setIsLoadingMachines] = React.useState(true);
 
-  const [activePartialShipmentAccordion, setActivePartialShipmentAccordion] = React.useState<string | undefined>(undefined);
-  const [selectedCommercialInvoiceDateDisplay, setSelectedCommercialInvoiceDateDisplay] = React.useState<string | null>(null);
-  
-  const [pendingQty, setPendingQty] = React.useState<number | string>('N/A');
-  const [warrantyExpiredCount, setWarrantyExpiredCount] = React.useState(0);
-  const [warrantyRemainingCount, setWarrantyRemainingCount] = React.useState(0);
+  const [factoryLocationDisplay, setFactoryLocationDisplay] = React.useState<string>(initialData.factoryLocation || '');
+  const [demoPeriodDisplay, setDemoPeriodDisplay] = React.useState<string>(`${initialData.demoPeriodDays || 0} Day(s)`);
 
-  const form = useForm<InstallationReportFormValues>({
-    resolver: zodResolver(InstallationReportSchema),
+  const form = useForm<DemoMachineApplicationFormValues>({
+    resolver: zodResolver(demoMachineApplicationSchema),
     defaultValues: {
-      applicantId: '',
-      beneficiaryId: '',
-      selectedCommercialInvoiceLcId: undefined,
-      documentaryCreditNumber: '',
-      totalMachineQtyFromLC: undefined,
-      proformaInvoiceNumber: '',
-      invoiceDate: undefined,
-      commercialInvoiceDate: undefined,
-      etdDate: undefined,
-      etaDate: undefined,
-      packingListUrl: '',
-      technicianName: '',
-      reportingEngineerName: '',
-      installationDetails: [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
-      missingItemInfo: '',
-      extraFoundInfo: '',
-      missingItemsIssueResolved: false,
-      extraItemsIssueResolved: false,
-      installationNotes: '',
+      factoryId: initialData.factoryId || '',
+      challanNo: initialData.challanNo || '',
+      deliveryPersonName: initialData.deliveryPersonName || '',
+      deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
+      estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+      factoryInchargeName: initialData.factoryInchargeName || '',
+      inchargeCell: initialData.inchargeCell || '',
+      notes: initialData.notes || '',
+      machineReturned: initialData.machineReturned ?? false,
+      appliedMachines: initialData.appliedMachines?.map(m => ({ demoMachineId: m.demoMachineId })) || [{ demoMachineId: '' }],
     },
   });
 
-  const { control, setValue, watch, reset, formState, getValues } = form;
-  const watchedSelectedCommercialInvoiceLcId = watch("selectedCommercialInvoiceLcId");
-  const watchedTotalLcMachineQty = watch("totalMachineQtyFromLC");
-  const watchedInstallationDetails = watch("installationDetails");
-  const watchedMissingItemsIssueResolved = watch("missingItemsIssueResolved");
-  const watchedExtraItemsIssueResolved = watch("extraItemsIssueResolved");
+  const { control, setValue, watch, reset, getValues, formState: { errors } } = form;
 
-
-  const installationDetailsFieldArray = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
-    name: "installationDetails",
+    name: "appliedMachines",
   });
 
+  const watchedFactoryId = watch("factoryId");
+  const watchedAppliedMachines = watch("appliedMachines");
+  const watchedDeliveryDate = watch("deliveryDate");
+  const watchedEstReturnDate = watch("estReturnDate");
+  const watchedInchargeCell = watch("inchargeCell");
+  const watchedMachineReturned = watch("machineReturned");
+
   React.useEffect(() => {
-    const fetchDropdownOptions = async () => {
-      setIsLoadingDropdowns(true);
+    const calculateCurrentDemoStatus = (): CurrentDemoStatus => {
+        const machineReturnedValue = getValues("machineReturned");
+        if (machineReturnedValue) return "Returned";
+        const deliveryDateValue = getValues("deliveryDate");
+        const estReturnDateValue = getValues("estReturnDate");
+        const today = startOfDay(new Date());
+        const delivery = deliveryDateValue ? startOfDay(new Date(deliveryDateValue)) : null;
+        const estReturn = estReturnDateValue ? startOfDay(new Date(estReturnDateValue)) : null;
+        if (!delivery || !estReturn || !isValid(delivery) || !isValid(estReturn)) return "Upcoming";
+        if (isPast(estReturn) && !isToday(estReturn)) return "Overdue";
+        if ((isToday(delivery) || isPast(delivery)) && (isToday(estReturn) || isFuture(estReturn))) return "Active";
+        if (isFuture(delivery)) return "Upcoming";
+        return "Upcoming";
+    };
+    const newStatus = calculateCurrentDemoStatus();
+    if (onApplicationStatusChange) {
+        onApplicationStatusChange(newStatus);
+    }
+  }, [watchedDeliveryDate, watchedEstReturnDate, watchedMachineReturned, getValues, onApplicationStatusChange]);
+
+  React.useEffect(() => {
+    const fetchInitialDropdownData = async () => {
+      setIsLoadingFactories(true);
+      setIsLoadingMachines(true);
       try {
-        const [customersSnap, suppliersSnap, lcsSnap] = await Promise.all([
-          getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "suppliers")),
-          getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", "")))
-        ]);
-
-        setApplicantOptions(
-          customersSnap.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-        );
-        setBeneficiaryOptions(
-          suppliersSnap.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        const factoriesSnapshot = await getDocs(query(collection(firestore, "demo_machine_factories"), orderBy("factoryName")));
+        setFactoryOptions(
+          factoriesSnapshot.docs.map(docSnap => {
+            const data = docSnap.data() as DemoMachineFactoryDocument;
+            return { id: docSnap.id, value: docSnap.id, label: data.factoryName || 'Unnamed Factory', location: data.factoryLocation || 'N/A', contactPerson: data.contactPerson, cellNumber: data.cellNumber };
+          })
         );
 
-        const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
-        lcsSnap.forEach(docSnap => {
-          const data = docSnap.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) {
-            fetchedLcOptions.push({
-              value: docSnap.id,
-              label: data.commercialInvoiceNumber,
-              lcData: { ...data, id: docSnap.id } ,
-            });
-          }
-        });
-        setLcOptionsForCommercialInvoice(fetchedLcOptions);
+        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
+        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...(docSnap.data() as Omit<DemoMachineDocument, 'id'>), id: docSnap.id }));
+        setAllFetchedMachines(fetchedMachines);
 
-      } catch (error: any) {
-        console.error("Error fetching dropdown options for Edit Installation Report form: ", error);
-        Swal.fire("Error", `Could not load supporting data for dropdowns. Error: ${error.message}`, "error");
+      } catch (error) {
+        console.error("Error fetching dropdown data:", error);
+        Swal.fire("Error", `Could not load factories or machines: ${(error as Error).message}`, "error");
       } finally {
-        setIsLoadingDropdowns(false);
+        setIsLoadingFactories(false);
+        setIsLoadingMachines(false);
       }
     };
-
-    fetchDropdownOptions();
+    fetchInitialDropdownData();
   }, []);
 
   React.useEffect(() => {
-    if (initialData && !isLoadingDropdowns) {
-        const formValuesToSet: InstallationReportFormValues = {
-            applicantId: initialData.applicantId || '',
-            beneficiaryId: initialData.beneficiaryId || '',
-            selectedCommercialInvoiceLcId: initialData.selectedCommercialInvoiceLcId || undefined,
-            documentaryCreditNumber: initialData.documentaryCreditNumber || '',
-            totalMachineQtyFromLC: initialData.totalMachineQtyFromLC || undefined,
-            proformaInvoiceNumber: initialData.proformaInvoiceNumber || '',
-            invoiceDate: initialData.invoiceDate && isValid(parseISO(initialData.invoiceDate)) ? parseISO(initialData.invoiceDate) : undefined,
-            commercialInvoiceDate: initialData.commercialInvoiceDate && isValid(parseISO(initialData.commercialInvoiceDate)) ? parseISO(initialData.commercialInvoiceDate) : undefined,
-            etdDate: initialData.etdDate && isValid(parseISO(initialData.etdDate)) ? parseISO(initialData.etdDate) : undefined,
-            etaDate: initialData.etaDate && isValid(parseISO(initialData.etaDate)) ? parseISO(initialData.etaDate) : undefined,
-            packingListUrl: initialData.packingListUrl || '',
-            technicianName: initialData.technicianName || '',
-            reportingEngineerName: initialData.reportingEngineerName || '',
-            installationDetails: initialData.installationDetails?.map((item, index) => ({
-              slNo: item.slNo || (index + 1).toString(),
-              machineModel: item.machineModel || '',
-              serialNo: item.serialNo || '',
-              ctlBoxModel: item.ctlBoxModel || '',
-              ctlBoxSerial: item.ctlBoxSerial || '',
-              installDate: item.installDate && isValid(parseISO(item.installDate)) ? parseISO(item.installDate) : new Date(),
-            })) || [{ slNo: '1', machineModel: '', serialNo: '', ctlBoxModel: '', ctlBoxSerial: '', installDate: new Date() }],
-            missingItemInfo: initialData.missingItemInfo || '',
-            extraFoundInfo: initialData.extraFoundInfo || '',
-            missingItemsIssueResolved: initialData.missingItemsIssueResolved ?? false,
-            extraItemsIssueResolved: initialData.extraItemsIssueResolved ?? false,
-            installationNotes: initialData.installationNotes || '',
-          };
-          reset(formValuesToSet);
-
-          if (initialData.selectedCommercialInvoiceLcId) { 
-             const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === initialData.selectedCommercialInvoiceLcId);
-             if (selectedLcOption) {
-                const lc = selectedLcOption.lcData;
-                setSelectedLcDetails({
-                    isFirstShipment: lc.isFirstShipment,
-                    isSecondShipment: lc.isSecondShipment,
-                    isThirdShipment: lc.isThirdShipment,
-                    lcIdForLink: lc.id,
-                    partialShipmentAllowed: lc.partialShipmentAllowed,
-                    firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
-                    secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
-                    thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
-                    packingListUrl: lc.packingListUrl,
-                });
-                setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-                if(lc.partialShipmentAllowed === "Yes") {
-                    setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
-                }
-             }
-          }
-    }
-  }, [initialData, lcOptionsForCommercialInvoice, reset, isLoadingDropdowns]);
-
-
-  React.useEffect(() => {
-    if (watchedSelectedCommercialInvoiceLcId && lcOptionsForCommercialInvoice.length > 0) {
-      const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
-      if (selectedOption) {
-        const lc = selectedOption.lcData;
-        const currentFormValues = getValues();
-
-        if (currentFormValues.applicantId !== lc.applicantId || !currentFormValues.applicantId) {
-            setValue("applicantId", lc.applicantId || '', { shouldValidate: true, shouldDirty: true });
-        }
-        if (currentFormValues.beneficiaryId !== lc.beneficiaryId || !currentFormValues.beneficiaryId) {
-            setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
-        }
-        if (currentFormValues.documentaryCreditNumber !== lc.documentaryCreditNumber || !currentFormValues.documentaryCreditNumber) {
-            setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true, shouldDirty: true });
-        }
-        if (currentFormValues.totalMachineQtyFromLC !== lc.totalMachineQty || currentFormValues.totalMachineQtyFromLC === undefined) {
-            setValue("totalMachineQtyFromLC", lc.totalMachineQty || undefined, { shouldValidate: true, shouldDirty: true });
-        }
-        if (currentFormValues.proformaInvoiceNumber !== lc.proformaInvoiceNumber || !currentFormValues.proformaInvoiceNumber) {
-            setValue("proformaInvoiceNumber", lc.proformaInvoiceNumber || '', { shouldValidate: true, shouldDirty: true });
-        }
-
-        const newInvoiceDate = lc.invoiceDate && isValid(parseISO(lc.invoiceDate)) ? parseISO(lc.invoiceDate) : undefined;
-        const currentInvoiceDateMs = currentFormValues.invoiceDate ? new Date(currentFormValues.invoiceDate).getTime() : null;
-        const newInvoiceDateMs = newInvoiceDate ? newInvoiceDate.getTime() : null;
-        if (currentInvoiceDateMs !== newInvoiceDateMs) {
-             setValue("invoiceDate", newInvoiceDate, { shouldValidate: true, shouldDirty: true });
-        }
-
-        const newCommercialInvoiceDate = lc.commercialInvoiceDate && isValid(parseISO(lc.commercialInvoiceDate)) ? parseISO(lc.commercialInvoiceDate) : undefined;
-        const currentCommercialInvoiceDateMs = currentFormValues.commercialInvoiceDate ? new Date(currentFormValues.commercialInvoiceDate).getTime() : null;
-        const newCommercialInvoiceDateMs = newCommercialInvoiceDate ? newCommercialInvoiceDate.getTime() : null;
-        if (currentCommercialInvoiceDateMs !== newCommercialInvoiceDateMs) {
-            setValue("commercialInvoiceDate", newCommercialInvoiceDate, { shouldValidate: true, shouldDirty: true });
-        }
+    if (!isLoadingFactories && !isLoadingMachines && initialData) {
+        const resetValues = {
+            factoryId: initialData.factoryId || '',
+            challanNo: initialData.challanNo || '',
+            deliveryPersonName: initialData.deliveryPersonName || '',
+            deliveryDate: initialData.deliveryDate && isValid(parseISO(initialData.deliveryDate)) ? parseISO(initialData.deliveryDate) : undefined,
+            estReturnDate: initialData.estReturnDate && isValid(parseISO(initialData.estReturnDate)) ? parseISO(initialData.estReturnDate) : undefined,
+            factoryInchargeName: initialData.factoryInchargeName || '',
+            inchargeCell: initialData.inchargeCell || '',
+            notes: initialData.notes || '',
+            machineReturned: initialData.machineReturned ?? false,
+            appliedMachines: initialData.appliedMachines && initialData.appliedMachines.length > 0
+                ? initialData.appliedMachines.map(m => ({ demoMachineId: m.demoMachineId || '' }))
+                : [{ demoMachineId: '' }],
+        };
+        replace(resetValues.appliedMachines); // Use replace for field array to correctly set initial values
         
-        const newEtdDate = lc.etd && isValid(parseISO(lc.etd)) ? parseISO(lc.etd) : undefined;
-        const currentEtdDateMs = currentFormValues.etdDate ? new Date(currentFormValues.etdDate).getTime() : null;
-        const newEtdDateMs = newEtdDate ? newEtdDate.getTime() : null;
-        if (currentEtdDateMs !== newEtdDateMs) {
-            setValue("etdDate", newEtdDate, { shouldValidate: true, shouldDirty: true });
-        }
-
-        const newEtaDate = lc.eta && isValid(parseISO(lc.eta)) ? parseISO(lc.eta) : undefined;
-        const currentEtaDateMs = currentFormValues.etaDate ? new Date(currentFormValues.etaDate).getTime() : null;
-        const newEtaDateMs = newEtaDate ? newEtaDate.getTime() : null;
-        if (currentEtaDateMs !== newEtaDateMs) {
-            setValue("etaDate", newEtaDate, { shouldValidate: true, shouldDirty: true });
-        }
-
-        if (currentFormValues.packingListUrl !== lc.packingListUrl || !currentFormValues.packingListUrl) {
-           setValue("packingListUrl", lc.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
-        }
-
-        setSelectedLcDetails({
-            isFirstShipment: lc.isFirstShipment,
-            isSecondShipment: lc.isSecondShipment,
-            isThirdShipment: lc.isThirdShipment,
-            lcIdForLink: lc.id,
-            partialShipmentAllowed: lc.partialShipmentAllowed,
-            firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
-            secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
-            thirdPartialQty: lc.thirdPartialQty, thirdPartialPkgs: lc.thirdPartialPkgs, thirdPartialNetWeight: lc.thirdPartialNetWeight, thirdPartialGrossWeight: lc.thirdPartialGrossWeight, thirdPartialCbm: lc.thirdPartialCbm,
-            packingListUrl: lc.packingListUrl,
+        // Need to reset other form values separately if `replace` only handles array
+        Object.keys(resetValues).forEach(key => {
+            if (key !== 'appliedMachines') {
+                setValue(key as keyof DemoMachineApplicationFormValues, resetValues[key as keyof DemoMachineApplicationFormValues], { shouldValidate: true, shouldDirty: false });
+            }
         });
-        setSelectedCommercialInvoiceDateDisplay(lc.commercialInvoiceDate ? formatDisplayDate(lc.commercialInvoiceDate) : null);
-         if(lc.partialShipmentAllowed === "Yes") {
-            setActivePartialShipmentAccordion("partialShipmentDetailsAccordionInstallReport");
-        } else {
-            setActivePartialShipmentAccordion(undefined);
-        }
-      }
-    } else if (!watchedSelectedCommercialInvoiceLcId) { 
-      const defaultValuesForReset = form.formState.defaultValues || getValues(); 
-      setValue("applicantId", defaultValuesForReset.applicantId || '', { shouldValidate: true, shouldDirty: true });
-      setValue("beneficiaryId", defaultValuesForReset.beneficiaryId || '', { shouldValidate: true, shouldDirty: true });
-      setValue("documentaryCreditNumber", defaultValuesForReset.documentaryCreditNumber || '', { shouldValidate: true, shouldDirty: true });
-      setValue("totalMachineQtyFromLC", defaultValuesForReset.totalMachineQtyFromLC || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("proformaInvoiceNumber", defaultValuesForReset.proformaInvoiceNumber || '', { shouldValidate: true, shouldDirty: true });
-      setValue("invoiceDate", defaultValuesForReset.invoiceDate || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("commercialInvoiceDate", defaultValuesForReset.commercialInvoiceDate || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("etdDate", defaultValuesForReset.etdDate || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("etaDate", defaultValuesForReset.etaDate || undefined, { shouldValidate: true, shouldDirty: true });
-      setValue("packingListUrl", defaultValuesForReset.packingListUrl || '', { shouldValidate: true, shouldDirty: true });
-      setSelectedLcDetails({ lcIdForLink: null, isFirstShipment: false, isSecondShipment: false, isThirdShipment: false, partialShipmentAllowed: "No", packingListUrl: '' });
-      setSelectedCommercialInvoiceDateDisplay(null);
-      setActivePartialShipmentAccordion(undefined);
     }
-  }, [watchedSelectedCommercialInvoiceLcId, lcOptionsForCommercialInvoice, setValue, getValues]);
+  }, [initialData, isLoadingFactories, isLoadingMachines, replace, setValue]);
 
 
   React.useEffect(() => {
-    const totalLcQtyValue = Number(watchedTotalLcMachineQty || 0);
-    const installedQtyValue = installationDetailsFieldArray.fields.length;
-    if (watchedTotalLcMachineQty !== undefined) {
-      setPendingQty(totalLcQtyValue - installedQtyValue);
+    const currentAppliedMachineIds = watchedAppliedMachines.map(m => m.demoMachineId).filter(Boolean);
+    const newAvailableOptions = allFetchedMachines
+      .filter(machine =>
+        (machine.currentStatus === "Available" || currentAppliedMachineIds.includes(machine.id)) // Machine is available OR already selected in this app
+      )
+      .map(machine => ({
+        id: machine.id,
+        value: machine.id,
+        label: `${machine.machineModel || 'Unnamed Model'} (S/N: ${machine.machineSerial || 'N/A'})`,
+        serial: machine.machineSerial || 'N/A',
+        brand: machine.machineBrand || 'N/A',
+        currentStatus: machine.currentStatus,
+      }));
+    setAvailableMachineOptions(newAvailableOptions);
+  }, [watchedAppliedMachines, allFetchedMachines]);
+
+
+  React.useEffect(() => {
+    if (watchedFactoryId && factoryOptions.length > 0) {
+      const selectedFactory = factoryOptions.find(opt => opt.id === watchedFactoryId);
+      setFactoryLocationDisplay(selectedFactory?.location || initialData.factoryLocation || 'N/A');
+      setValue("factoryInchargeName", selectedFactory?.contactPerson || initialData.factoryInchargeName || '', { shouldValidate: true, shouldDirty: true });
+      setValue("inchargeCell", selectedFactory?.cellNumber || initialData.inchargeCell || '', { shouldValidate: true, shouldDirty: true });
+    }
+  }, [watchedFactoryId, factoryOptions, setValue, initialData]);
+
+
+  React.useEffect(() => {
+    if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
+      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate));
+      setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
-      setPendingQty('N/A');
+      setDemoPeriodDisplay(initialData.demoPeriodDays ? `${initialData.demoPeriodDays} Day(s)` : '0 Days');
     }
+  }, [watchedDeliveryDate, watchedEstReturnDate, initialData.demoPeriodDays]);
 
-    if (watchedInstallationDetails && Array.isArray(watchedInstallationDetails)) {
-      let expired = 0;
-      let remaining = 0;
-      const today = new Date();
-      watchedInstallationDetails.forEach(item => {
-        if (item.installDate && isValid(new Date(item.installDate))) {
-          const expiryDate = addDays(new Date(item.installDate), 365);
-          if (differenceInDays(expiryDate, today) < 0) {
-            expired++;
-          } else {
-            remaining++;
-          }
-        }
-      });
-      setWarrantyExpiredCount(expired);
-      setWarrantyRemainingCount(remaining);
-    }
-  }, [watchedTotalLcMachineQty, watchedInstallationDetails, installationDetailsFieldArray.fields.length]);
-
-
-
-  async function onSubmit(data: InstallationReportFormValues) {
-    if (!reportId) {
-      Swal.fire("Error", "Report ID is missing. Cannot update.", "error");
+  async function onSubmit(data: DemoMachineApplicationFormValues) {
+    if (!applicationId) {
+      Swal.fire("Error", "Application ID is missing. Cannot update.", "error");
       return;
     }
     setIsSubmitting(true);
-    const selectedApplicant = applicantOptions.find(opt => opt.value === data.applicantId);
-    const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === data.beneficiaryId);
-    const selectedLcOption = lcOptionsForCommercialInvoice.find(opt => opt.value === data.selectedCommercialInvoiceLcId);
+    const batch = writeBatch(firestore);
 
-    const dataToUpdate: Partial<Omit<InstallationReportDocument, 'id' | 'createdAt'>> & {updatedAt: any} = {
-      applicantId: data.applicantId,
-      applicantName: selectedApplicant?.label || getValues("applicantId"), // Fallback to current form value if not found
-      beneficiaryId: data.beneficiaryId,
-      beneficiaryName: selectedBeneficiary?.label || getValues("beneficiaryId"), // Fallback
-      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
-      commercialInvoiceNumber: selectedLcOption?.label || undefined,
-      commercialInvoiceDate: data.commercialInvoiceDate && isValid(new Date(data.commercialInvoiceDate)) ? format(new Date(data.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      documentaryCreditNumber: data.documentaryCreditNumber || undefined,
-      totalMachineQtyFromLC: data.totalMachineQtyFromLC || undefined,
-      proformaInvoiceNumber: data.proformaInvoiceNumber || undefined,
-      invoiceDate: data.invoiceDate && isValid(new Date(data.invoiceDate)) ? format(new Date(data.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      etdDate: data.etdDate && isValid(new Date(data.etdDate)) ? format(new Date(data.etdDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      etaDate: data.etaDate && isValid(new Date(data.etaDate)) ? format(new Date(data.etaDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      packingListUrl: data.packingListUrl || undefined,
-      technicianName: data.technicianName,
-      reportingEngineerName: data.reportingEngineerName,
-      installationDetails: data.installationDetails.map(item => ({
-        slNo: item.slNo || undefined,
-        machineModel: item.machineModel,
-        serialNo: item.serialNo,
-        ctlBoxModel: item.ctlBoxModel || undefined,
-        ctlBoxSerial: item.ctlBoxSerial || undefined,
-        installDate: item.installDate && isValid(new Date(item.installDate)) ? format(new Date(item.installDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined as any,
-      })),
-      totalInstalledQty: installationDetailsFieldArray.fields.length,
-      pendingQty: typeof pendingQty === 'number' ? pendingQty : undefined,
-      missingItemInfo: data.missingItemInfo || undefined,
-      extraFoundInfo: data.extraFoundInfo || undefined,
-      missingItemsIssueResolved: data.missingItemsIssueResolved ?? false,
-      extraItemsIssueResolved: data.extraItemsIssueResolved ?? false,
-      installationNotes: data.installationNotes || undefined,
+    const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
+    const deliveryDateVal = getValues("deliveryDate");
+    const estReturnDateVal = getValues("estReturnDate");
+
+    const finalAppliedMachines = data.appliedMachines.map(applied => {
+      const machineDetail = allFetchedMachines.find(m => m.id === applied.demoMachineId);
+      return {
+        demoMachineId: applied.demoMachineId,
+        machineModel: machineDetail?.machineModel || 'N/A',
+        machineSerial: machineDetail?.machineSerial || 'N/A',
+        machineBrand: machineDetail?.machineBrand || 'N/A',
+      };
+    }).filter(m => m.demoMachineId); // Ensure only valid entries are saved
+
+    const appDataToUpdate = {
+      factoryId: data.factoryId,
+      factoryName: selectedFactory?.label || initialData.factoryName,
+      factoryLocation: selectedFactory?.location || initialData.factoryLocation,
+      challanNo: data.challanNo,
+      deliveryPersonName: data.deliveryPersonName,
+      deliveryDate: deliveryDateVal ? format(new Date(deliveryDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      estReturnDate: estReturnDateVal ? format(new Date(estReturnDateVal), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : null,
+      demoPeriodDays: (deliveryDateVal && estReturnDateVal && isValid(new Date(deliveryDateVal)) && isValid(new Date(estReturnDateVal)) && new Date(estReturnDateVal) >= new Date(deliveryDateVal)) ? differenceInDays(new Date(estReturnDateVal), new Date(deliveryDateVal)) : initialData.demoPeriodDays,
+      factoryInchargeName: data.factoryInchargeName,
+      inchargeCell: data.inchargeCell,
+      notes: data.notes,
+      machineReturned: data.machineReturned ?? false,
+      appliedMachines: finalAppliedMachines,
       updatedAt: serverTimestamp(),
     };
-
-    const cleanedDataToUpdate = Object.entries(dataToUpdate).reduce((acc, [key, value]) => {
+    
+    // Clean the object to remove any undefined values before sending to Firestore
+    const cleanedData = Object.entries(appDataToUpdate).reduce((acc, [key, value]) => {
         if (value !== undefined) {
-             if (typeof value === 'string' && value.trim() === '' &&
-                ['documentaryCreditNumber', 'proformaInvoiceNumber', 'packingListUrl', 'missingItemInfo', 'extraFoundInfo', 'installationNotes', 'selectedCommercialInvoiceLcId', 'commercialInvoiceNumber'].includes(key)
-               ) {
-                 // Keep empty strings for these specific fields if that's the intent, or make them undefined
-                 (acc as any)[key] = value; 
-            } else {
-                (acc as any)[key] = value;
-            }
+            (acc as any)[key] = value;
         }
         return acc;
-    }, {} as typeof dataToUpdate);
+    }, {} as Partial<Omit<DemoMachineApplicationDocument, 'id' | 'createdAt'>> & { updatedAt: any });
 
-    console.log("Installation Report Data to be updated in Firestore:", cleanedDataToUpdate);
+    const appDocRef = doc(firestore, "demo_machine_applications", applicationId);
+    batch.update(appDocRef, cleanedData);
+
+    // Machine Status Update Logic
+    const initialMachineIds = new Set(initialData.appliedMachines?.map(m => m.demoMachineId));
+    const finalMachineIds = new Set(finalAppliedMachines.map(m => m.demoMachineId));
+
+    // Machines removed from this application
+    initialData.appliedMachines?.forEach(initialMachine => {
+      if (initialMachine.demoMachineId && !finalMachineIds.has(initialMachine.demoMachineId)) {
+        const machineRef = doc(firestore, "demo_machines", initialMachine.demoMachineId);
+        batch.update(machineRef, { currentStatus: "Available" as AppDemoMachineStatus, machineReturned: true, updatedAt: serverTimestamp() });
+      }
+    });
+
+    // Machines added or kept in this application
+    finalAppliedMachines.forEach(finalMachine => {
+      const machineRef = doc(firestore, "demo_machines", finalMachine.demoMachineId);
+      const newStatus = data.machineReturned ? "Available" : "Allocated";
+      batch.update(machineRef, { currentStatus: newStatus as AppDemoMachineStatus, machineReturned: data.machineReturned, updatedAt: serverTimestamp() });
+    });
 
     try {
-      const reportDocRef = doc(firestore, "installation_reports", reportId);
-      await updateDoc(reportDocRef, cleanedDataToUpdate);
-      Swal.fire({
-        title: "Installation Report Updated!",
-        text: `Report ID: ${reportId} successfully updated.`,
-        icon: "success",
-      });
-    } catch (error: any) {
-      console.error("Error updating installation report: ", error);
-      let errorMessage = `Failed to update report: ${error.message}`;
-      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMessage = `Failed to update report: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'. Original Firebase Error: ${error.message}`;
-      }
-      Swal.fire({
-        title: "Update Failed",
-        text: errorMessage,
-        icon: "error",
-      });
+      await batch.commit();
+      Swal.fire("Success!", "Demo machine application and machine statuses updated.", "success");
+    } catch (error) {
+      console.error("Error updating demo application and machines:", error);
+      Swal.fire("Error", `Failed to update: ${(error as Error).message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const handleViewUrl = (url: string | undefined | null) => {
-    if (url && url.trim() !== "") {
-      try {
-        new URL(url);
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } catch (e) {
-        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
-      }
-    } else {
-      Swal.fire("No URL", "No URL provided to view.", "info");
-    }
-  };
-
-  const handleDuplicateLastRow = () => {
-    const installationDetails = getValues("installationDetails");
-    if (installationDetails && installationDetails.length > 0) {
-      const lastRow = installationDetails[installationDetails.length - 1];
-      installationDetailsFieldArray.append({
-        ...lastRow,
-        installDate: lastRow.installDate ? new Date(lastRow.installDate) : new Date(),
-        slNo: (installationDetailsFieldArray.fields.length + 1).toString(),
-      });
-    } else {
-      Swal.fire("Info", "No rows to duplicate.", "info");
-    }
-  };
-  
-  const handleExportToCsv = () => {
-    const formData = getValues();
-    if (!formData.installationDetails || formData.installationDetails.length === 0) {
-      Swal.fire("No Data", "No installation details to export.", "info");
-      return;
-    }
-
-    const headers = [
-      "SL No.", "Machine Model", "Machine Serial No.", "Ctl. Box Model", "Ctl. Box Serial", "Install Date", "Warranty"
-    ];
-    
-    const applicantNameFromState = applicantOptions.find(opt => opt.value === formData.applicantId)?.label || formData.applicantId || "N/A";
-    const beneficiaryNameFromState = beneficiaryOptions.find(opt => opt.value === formData.beneficiaryId)?.label || formData.beneficiaryId || "N/A";
-    const commercialInvoiceNumberFromState = lcOptionsForCommercialInvoice.find(opt => opt.value === formData.selectedCommercialInvoiceLcId)?.label || "N/A";
-
-    const reportHeaderInfo = [
-      ["Applicant Name:", applicantNameFromState],
-      ["Beneficiary Name:", beneficiaryNameFromState],
-      ["L/C No.:", formData.documentaryCreditNumber || "N/A"],
-      ["C.I. No.:", commercialInvoiceNumberFromState],
-      ["C.I. Date:", selectedCommercialInvoiceDateDisplay || "N/A"],
-      ["Total L/C QTY:", formData.totalMachineQtyFromLC || "N/A"],
-      ["Total Installed QTY:", installationDetailsFieldArray.fields.length],
-      ["Pending QTY:", pendingQty],
-      ["Technician Name:", formData.technicianName],
-      ["Reporting Engineer Name:", formData.reportingEngineerName]
-    ];
-
-    let csvContent = reportHeaderInfo.map(row => row.map(escapeCsvCell).join(",")).join("\n");
-    csvContent += "\n\n"; 
-    csvContent += headers.map(escapeCsvCell).join(",") + "\n";
-
-    formData.installationDetails.forEach((item, index) => {
-      let warrantyDisplay = "N/A";
-      if (item.installDate && isValid(new Date(item.installDate))) {
-        const expiryDate = addDays(new Date(item.installDate), 365);
-        const diffDays = differenceInDays(expiryDate, new Date());
-        warrantyDisplay = diffDays < 0 ? "Expired" : `${diffDays} days`;
-      }
-      const row = [
-        item.slNo || (index + 1).toString(),
-        item.machineModel,
-        item.serialNo,
-        item.ctlBoxModel,
-        item.ctlBoxSerial,
-        item.installDate ? formatDisplayDate(new Date(item.installDate)) : "N/A",
-        warrantyDisplay,
-      ];
-      csvContent += row.map(escapeCsvCell).join(",") + "\n";
-    });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      const ciNumberForFilename = commercialInvoiceNumberFromState !== "N/A" ? commercialInvoiceNumberFromState : "report";
-      link.setAttribute("download", `installation_report_${ciNumberForFilename.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else {
-        Swal.fire("Export Failed", "Your browser doesn't support direct CSV download.", "error");
-    }
-  };
-
-  const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (file.type !== "text/csv") {
-      Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      if (!text) {
-        Swal.fire("Error Reading File", "Could not read file content.", "error");
-        return;
-      }
-      try {
-        const rows = text.split(/\r\n|\n/).filter(row => row.trim() !== '');
-        if (rows.length <= 1) {
-          Swal.fire("Empty or Header-Only CSV", "The CSV file is empty or contains only a header row.", "info");
-          return;
-        }
-
-        const dataRows = rows.slice(1);
-        const newInstallationDetailsFromCsv: InstallationDetailItemType[] = dataRows.map((row, csvRowIndex) => {
-          const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
-          
-          const machineModel = columns[0] || '';
-          const serialNo = columns[1] || '';
-          const ctlBoxModel = columns[2] || '';
-          const ctlBoxSerial = columns[3] || '';
-          const installDateStr = columns[4];
-          
-          let installDate: Date | undefined = undefined;
-          if (installDateStr) {
-            let parsedDate = parseISO(installDateStr); 
-            if (!isValid(parsedDate)) {
-                parsedDate = parseDateFns(installDateStr, 'PPP', new Date());
-                if (!isValid(parsedDate)) {
-                    parsedDate = new Date(installDateStr); 
-                }
-            }
-            if (isValid(parsedDate)) {
-                installDate = parsedDate;
-            } else {
-                console.warn(`Could not parse date "${installDateStr}" for CSV row ${csvRowIndex + 1}.`);
-            }
-          }
-          const existingRowsCount = installationDetailsFieldArray.fields.length;
-          return {
-            slNo: (existingRowsCount + csvRowIndex + 1).toString(),
-            machineModel,
-            serialNo,
-            ctlBoxModel: ctlBoxModel || undefined,
-            ctlBoxSerial: ctlBoxSerial || undefined,
-            installDate: installDate || new Date(),
-          };
-        });
-
-        if (newInstallationDetailsFromCsv.length > 0) {
-          newInstallationDetailsFromCsv.forEach(item => {
-            installationDetailsFieldArray.append(item);
-          });
-          Swal.fire("Import Complete", `${newInstallationDetailsFromCsv.length} rows appended successfully.`, "success");
-        } else {
-          Swal.fire("No Data Imported", "No valid data rows found in the CSV after the header.", "info");
-        }
-      } catch (parseError) {
-        console.error("Error parsing CSV: ", parseError);
-        Swal.fire("CSV Parse Error", "Could not parse the CSV file. Please ensure it's correctly formatted.", "error");
-      } finally {
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-    reader.onerror = () => {
-      Swal.fire("File Read Error", "Error reading the selected file.", "error");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-    reader.readAsText(file);
-  };
-
-
-  const isLcSelected = !!watchedSelectedCommercialInvoiceLcId;
+  if (isLoadingFactories || isLoadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center h-60">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+        <p className="text-muted-foreground">Loading form options...</p>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <h3 className={cn(sectionHeadingClass)}>
-            <FileText className="mr-2 h-5 w-5 text-primary" />
-            L/C & Invoice Details
-            </h3>
-            {/* ... other form fields */}
-             <Separator className="my-6" />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+            control={control}
+            name="factoryId"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel className="flex items-center"><Factory className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name (Factory)*</FormLabel>
+                <Combobox
+                    options={factoryOptions}
+                    value={field.value || PLACEHOLDER_FACTORY_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_FACTORY_VALUE ? '' : value)}
+                    placeholder="Search Factory..."
+                    selectPlaceholder="Select Factory"
+                    emptyStateMessage="No factory found."
+                    disabled={isLoadingFactories}
+                />
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormItem>
+            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Factory Location</FormLabel>
+            <Input value={factoryLocationDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+            </FormItem>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+              control={form.control}
+              name="challanNo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No:*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Challan No" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="deliveryPersonName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Delivery Person*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Delivery Person Name" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        </div>
+        <Separator />
+
+        <h3 className="text-lg font-semibold text-foreground flex items-center">
+            <Laptop className="mr-2 h-5 w-5 text-primary" /> Applied Machines
+        </h3>
+        {fields.map((item, index) => {
+            const currentMachineIdInField = getValues(`appliedMachines.${index}.demoMachineId`);
+            const selectedMachineDetails = allFetchedMachines.find(m => m.id === currentMachineIdInField);
+            return (
+            <div key={item.id} className="p-4 border rounded-md space-y-4 relative bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <FormField
+                    control={control}
+                    name={`appliedMachines.${index}.demoMachineId`}
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                        <FormLabel className="flex items-center"><Laptop className="mr-2 h-4 w-4 text-muted-foreground" />Machine Model*</FormLabel>
+                        <Combobox
+                        options={availableMachineOptions}
+                        value={field.value || PLACEHOLDER_MACHINE_VALUE_PREFIX + index}
+                        onValueChange={(value) => field.onChange(value === (PLACEHOLDER_MACHINE_VALUE_PREFIX + index) ? '' : value)}
+                        placeholder="Search Machine Model..."
+                        selectPlaceholder="Select Machine Model"
+                        emptyStateMessage="No available machine found or all selected."
+                        disabled={isLoadingMachines}
+                        />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormItem className="md:col-span-1">
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Serial</FormLabel>
+                    <Input value={selectedMachineDetails?.machineSerial || 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormItem>
+                <FormItem className="md:col-span-1">
+                    <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Machine Brand</FormLabel>
+                    <Input value={selectedMachineDetails?.machineBrand || 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+                </FormItem>
+                </div>
+                {fields.length > 1 && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(index)}
+                    className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
+                    title="Remove Machine"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+                )}
+            </div>
+            );
+        })}
+        <Button
+            type="button"
+            variant="outline"
+            onClick={() => append({ demoMachineId: '' })}
+            className="mt-2"
+        >
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Another Machine
+        </Button>
+        {errors.appliedMachines && typeof errors.appliedMachines.message === 'string' && (
+            <FormMessage>{errors.appliedMachines.message}</FormMessage>
+        )}
+        {errors.appliedMachines && Array.isArray(errors.appliedMachines) && errors.appliedMachines.map((err, i) => err?.demoMachineId?.message ? <FormMessage key={i}>Machine {i+1}: {err.demoMachineId.message}</FormMessage> : null)}
+
+
+        <Separator />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+          <FormField
+            control={control}
+            name="deliveryDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Delivery Date*</FormLabel>
+                <DatePickerField field={field} placeholder="Select delivery date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="estReturnDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Est. Return Date*</FormLabel>
+                <DatePickerField field={field} placeholder="Select return date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormItem>
+            <FormLabel className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />Demo Period</FormLabel>
+            <Input value={demoPeriodDisplay} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+          </FormItem>
+        </div>
+
+        <Separator />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <FormField
                 control={control}
-                name="installationNotes"
+                name="factoryInchargeName"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Installation Notes</FormLabel>
-                    <FormControl><RichTextEditor placeholder="Enter any notes regarding the installation" value={field.value ?? ''} onChange={field.onChange}/></FormControl>
+                    <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Factory Incharge Name</FormLabel>
+                    <FormControl><Input placeholder="Enter incharge name" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-
-            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingDropdowns}>
-                {isSubmitting ? (
-                <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Changes...
-                </>
-                ) : (
-                <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                </>
+            <FormField
+                control={control}
+                name="inchargeCell"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Incharge Cell</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                            <Input type="tel" placeholder="Enter cell number" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                            <a href={`tel:${watchedInchargeCell.replace(/\s/g, '')}`} title={`Call ${watchedInchargeCell}`}>
+                                <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                    <Phone className="h-4 w-4 text-primary" />
+                                </Button>
+                            </a>
+                        ) : (
+                            <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        )}
+                        {watchedInchargeCell && phoneRegexForValidation.test(watchedInchargeCell) ? (
+                            <a
+                            href={`https://wa.me/${watchedInchargeCell.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Chat on WhatsApp with ${watchedInchargeCell}`}
+                            >
+                                <Button type="button" variant="outline" size="icon" className="shrink-0">
+                                    <MessageSquare className="h-4 w-4 text-primary" />
+                                </Button>
+                            </a>
+                        ) : (
+                            <Button type="button" variant="outline" size="icon" className="shrink-0" disabled>
+                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        )}
+                    </div>
+                    <FormMessage />
+                </FormItem>
                 )}
-            </Button>
-        </form>
+            />
+        </div>
+        <Separator />
+
+        <div className="space-y-4">
+            <FormField
+                control={form.control}
+                name="machineReturned"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="editMachineReturned"
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel htmlFor="editMachineReturned" className="text-sm font-medium hover:cursor-pointer">
+                            All Machines Returned by Factory
+                            </FormLabel>
+                            <FormDescription className="text-xs">
+                            Check this if all demo machines in this application have been returned. This will update their statuses.
+                            </FormDescription>
+                        </div>
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={control}
+                name="notes"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
+                    <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''}/></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingFactories || isLoadingMachines}>
+          {isSubmitting ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes...</>
+          ) : (
+            <><Save className="mr-2 h-4 w-4" /> Save Changes</>
+          )}
+        </Button>
+      </form>
     </Form>
-  )
+  );
 }
