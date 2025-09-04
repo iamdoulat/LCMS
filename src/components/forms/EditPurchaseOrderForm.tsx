@@ -200,14 +200,11 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
     if (watchedBeneficiaryId) {
       const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === watchedBeneficiaryId);
       if (selectedBeneficiary) {
-        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedBeneficiary.address || "");
-        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
-          setValue("shippingAddress", selectedBeneficiary.address || "");
-        }
+        setValue("shippingAddress", initialData.shippingAddress || selectedBeneficiary.address || "");
       }
     }
-  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, getValues]);
+  }, [watchedBeneficiaryId, beneficiaryOptions, setValue, initialData.shippingAddress]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -227,7 +224,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
   };
   
   const handleViewPdf = () => {
-    window.open(`/dashboard/inventory/inventory-orders/preview/${orderId}`, '_blank');
+    window.open(`/dashboard/purchase-orders/preview/${orderId}`, '_blank');
   };
 
   async function onSubmit(data: OrderFormValues) {
@@ -310,7 +307,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
 
 
     try {
-      const orderDocRef = doc(firestore, "inventory_orders", orderId);
+      const orderDocRef = doc(firestore, "purchase_orders", orderId);
       await updateDoc(orderDocRef, cleanedDataToUpdate);
       Swal.fire("Order Updated!", `Order ID: ${orderId} successfully updated.`, "success");
     } catch (error: any) {
@@ -440,7 +437,7 @@ export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrde
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
