@@ -106,58 +106,6 @@ export function CreateQuoteForm() {
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
 
-  React.useEffect(() => {
-    const fetchOptions = async () => {
-      setIsLoadingDropdowns(true);
-      try {
-        const [customersSnap, itemsSnap] = await Promise.all([
-          getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "quote_items"))
-        ]);
-
-        setCustomerOptions(
-          customersSnap.docs.map(doc => {
-            const data = doc.data() as CustomerDocument;
-            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
-          })
-        );
-
-        setItemOptions(
-          itemsSnap.docs.map(doc => {
-            const data = doc.data() as ItemDoc;
-            return {
-              value: doc.id,
-              label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
-              description: data.description,
-              salesPrice: data.salesPrice,
-              itemCode: data.itemCode,
-            };
-          })
-        );
-
-      } catch (error) {
-        console.error("Error fetching dropdown options for Quote form: ", error);
-        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
-      } finally {
-        setIsLoadingDropdowns(false);
-      }
-    };
-    fetchOptions();
-  }, []);
-
-  React.useEffect(() => {
-    if (watchedCustomerId) {
-      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
-      if (selectedCustomer) {
-        setValue("billingAddress", selectedCustomer.address || "");
-        setValue("shippingAddress", selectedCustomer.address || "");
-      }
-    } else {
-      setValue("billingAddress", "");
-      setValue("shippingAddress", "");
-    }
-  }, [watchedCustomerId, customerOptions, setValue]);
-
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -186,7 +134,6 @@ export function CreateQuoteForm() {
 
     const freight = Number(watchedFreightCharges || 0);
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + freight;
-
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
@@ -195,6 +142,54 @@ export function CreateQuoteForm() {
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
 
+  React.useEffect(() => {
+    const fetchOptions = async () => {
+      setIsLoadingDropdowns(true);
+      try {
+        const [customersSnap, itemsSnap] = await Promise.all([
+          getDocs(collection(firestore, "customers")),
+          getDocs(collection(firestore, "quote_items"))
+        ]);
+        setCustomerOptions(
+          customersSnap.docs.map(doc => {
+            const data = doc.data() as CustomerDocument;
+            return { value: doc.id, label: data.applicantName || 'Unnamed Customer', address: data.address };
+          })
+        );
+        setItemOptions(
+          itemsSnap.docs.map(doc => {
+            const data = doc.data() as ItemDoc;
+            return {
+              value: doc.id,
+              label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
+              description: data.description,
+              salesPrice: data.salesPrice,
+              itemCode: data.itemCode,
+            };
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching dropdown options for Quote form: ", error);
+        Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
+      } finally {
+        setIsLoadingDropdowns(false);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  React.useEffect(() => {
+    if (watchedCustomerId) {
+      const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
+      if (selectedCustomer) {
+        setValue("billingAddress", selectedCustomer.address || "");
+        setValue("shippingAddress", selectedCustomer.address || "");
+      }
+    } else {
+      setValue("billingAddress", "");
+      setValue("shippingAddress", "");
+    }
+  }, [watchedCustomerId, customerOptions, setValue]);
 
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
@@ -310,11 +305,11 @@ export function CreateQuoteForm() {
         return formattedQuoteId;
       });
       return newQuoteId;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error in saveQuoteLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save quote: ${error.message}`,
+        text: `Failed to save quote: ${(error as Error).message}`,
         icon: "error",
       });
       return null;

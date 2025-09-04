@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -88,6 +87,8 @@ export function CreateInvoiceForm() {
       shipmentMode: piShipmentModeOptions[0],
       freightCharges: undefined,
       otherCharges: undefined,
+      packingCharge: undefined,
+      handlingCharge: undefined
     },
   });
 
@@ -108,6 +109,8 @@ export function CreateInvoiceForm() {
   const watchedShipmentMode = watch("shipmentMode");
   const watchedFreightCharges = watch("freightCharges");
   const watchedOtherCharges = watch("otherCharges");
+  const watchedPackingCharge = watch("packingCharge");
+  const watchedHandlingCharge = watch("handlingCharge");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -142,9 +145,12 @@ export function CreateInvoiceForm() {
       });
     }
 
+    const packing = Number(watchedPackingCharge || 0);
+    const handling = Number(watchedHandlingCharge || 0);
     const freight = Number(watchedFreightCharges || 0);
     const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = freight + other;
+    const additionalCharges = packing + handling + freight + other;
+
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
@@ -154,7 +160,7 @@ export function CreateInvoiceForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges, watchedOtherCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedFreightCharges, watchedOtherCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -262,7 +268,7 @@ export function CreateInvoiceForm() {
                 qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
             };
             Object.keys(lineItemData).forEach(key => {
-                if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+                if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
                     delete lineItemData[key];
                 }
             });
@@ -290,6 +296,8 @@ export function CreateInvoiceForm() {
           showTaxColumn: data.showTaxColumn,
           convertedFromQuoteId: data.convertedFromQuoteId,
           shipmentMode: data.shipmentMode,
+          packingCharge: data.packingCharge,
+          handlingCharge: data.handlingCharge,
           freightCharges: data.freightCharges,
           otherCharges: data.otherCharges,
         };
@@ -311,8 +319,13 @@ export function CreateInvoiceForm() {
         return formattedInvoiceId;
       });
       return newInvoiceId;
-    } catch (error: any) => {
-      Swal.fire("Save Failed", `Failed to save invoice: ${error.message}`, "error");
+    } catch (error) {
+      console.error("Error in saveInvoiceLogic: ", error);
+      Swal.fire({
+        title: "Save Failed",
+        text: `Failed to save invoice: ${(error as Error).message}`,
+        icon: "error",
+      });
       return null;
     } finally {
       setIsSubmitting(false);
@@ -332,9 +345,14 @@ export function CreateInvoiceForm() {
     if (newId) {
       setGeneratedSaleId(newId);
       Swal.fire({
-        title: "Invoice Saved!", text: `Invoice successfully saved with ID: ${newId}. Navigating to preview...`,
-        icon: "success", timer: 1500, showConfirmButton: false,
-      }).then(() => router.push(`/dashboard/pi/preview/${newId}`));
+        title: "Invoice Saved!",
+        text: `Invoice successfully saved with ID: ${newId}. Navigating to preview...`,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push(`/dashboard/pi/preview/${newId}`);
+      });
     }
   };
 
@@ -376,20 +394,13 @@ export function CreateInvoiceForm() {
       shipmentMode: piShipmentModeOptions[0],
       freightCharges: undefined,
       otherCharges: undefined,
+      packingCharge: undefined,
+      handlingCharge: undefined,
     });
     setGeneratedSaleId(null);
   };
 
-  const grandTotalLabel =
-    watchedShipmentMode === "CFR CHATTOGRAM"
-      ? "CFR CHATTOGRAM TOTAL:"
-      : watchedShipmentMode === "CPT DHAKA"
-      ? "CPT DHAKA TOTAL:"
-      : watchedShipmentMode === "FOB"
-      ? "FOB TOTAL:"
-      : watchedShipmentMode === "EXW"
-      ? "EXW TOTAL:"
-      : "TOTAL:";
+  const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
 
   if (isLoadingDropdowns) {
@@ -507,7 +518,7 @@ export function CreateInvoiceForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -518,7 +529,6 @@ export function CreateInvoiceForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
