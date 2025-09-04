@@ -426,13 +426,10 @@ export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema> & {
 export interface CompanyProfile {
   companyName?: string;
   address?: string;
-  contactPerson?: string;
-  cellNumber?: string;
   emailId?: string;
-  binNumber?: string;
-  tinNumber?: string;
-  companyLogoUrl?: string;
+  cellNumber?: string;
   invoiceLogoUrl?: string;
+  companyLogoUrl?: string;
   hideCompanyName?: boolean;
   updatedAt?: any;
 }
@@ -1302,3 +1299,42 @@ export interface DemoChallanDocument {
   updatedAt: any; // Firestore ServerTimestamp
 }
 // --- END Demo Machine Challan Types ---
+
+// --- Employee Types ---
+export const genderOptions = ["Male", "Female", "Other"] as const;
+export const maritalStatusOptions = ["Single", "Married", "Divorced", "Widowed"] as const;
+export const bloodGroupOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+
+export const EmployeeSchema = z.object({
+  employeeCode: z.string().min(1, "Employee Code is required."),
+  fullName: z.string().min(1, "Full Name is required."),
+  email: z.string().email("Invalid email address."),
+  phone: z.string().min(1, "Phone number is required."),
+  dateOfBirth: z.date({ required_error: "Date of Birth is required." }),
+  gender: z.enum(genderOptions, { required_error: "Gender is required." }),
+  maritalStatus: z.enum(maritalStatusOptions).optional(),
+  nationalId: z.string().optional(),
+  bloodGroup: z.enum(bloodGroupOptions).optional(),
+  photoURL: z.string().url().optional(),
+});
+
+export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
+
+export interface Employee {
+  id?: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string; // ISO string
+  gender: (typeof genderOptions)[number];
+  maritalStatus?: (typeof maritalStatusOptions)[number];
+  nationalId?: string;
+  bloodGroup?: (typeof bloodGroupOptions)[number];
+  photoURL?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export type EmployeeDocument = Employee & { id: string };
+// --- END Employee Types ---
