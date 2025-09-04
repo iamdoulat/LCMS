@@ -273,6 +273,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             firstShipmentNote: initialData.firstShipmentNote ?? defaultFormValues.firstShipmentNote,
             secondShipmentNote: initialData.secondShipmentNote ?? defaultFormValues.secondShipmentNote,
             thirdShipmentNote: initialData.thirdShipmentNote ?? defaultFormValues.thirdShipmentNote,
+            firstPartialNetWeight: initialData.firstPartialNetWeight || defaultFormValues.firstPartialNetWeight,
         };
       reset(valuesToSet);
     }
