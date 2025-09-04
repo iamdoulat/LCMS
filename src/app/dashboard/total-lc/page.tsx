@@ -89,6 +89,64 @@ const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
 const ITEMS_PER_PAGE = 10;
 
+const escapeCsvCell = (cellData: any): string => {
+  const stringData = String(cellData ?? "");
+  if (stringData.includes(',') || stringData.includes('"') || stringData.includes('\n')) {
+    return `"${stringData.replace(/"/g, '""')}"`;
+  }
+  return stringData;
+};
+
+async function getInitialReportData() {
+    const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
+    const customersQuery = query(collection(firestore, "customers"));
+    const suppliersQuery = query(collection(firestore, "suppliers"));
+
+    const [lcSnapshot, customersSnapshot, suppliersSnapshot] = await Promise.all([
+        getDocs(lcQuery),
+        getDocs(customersQuery),
+        getDocs(suppliersQuery)
+    ]);
+
+    const allLcEntries = lcSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument));
+    const applicantOptions = customersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }));
+    const beneficiaryOptions = suppliersSnapshot.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }));
+
+    return { allLcEntries, applicantOptions, beneficiaryOptions };
+}
+
+const TableSkeleton = () => (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <React.Fragment key={i}>
+            <TableRow className="border-b-0">
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+            </TableRow>
+             <TableRow key={`${i}-actions`} className="bg-muted/20">
+                <TableCell colSpan={9} className="py-2 px-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Skeleton className="h-7 w-7 rounded-full" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                        <Skeleton className="h-7 w-20 rounded-md" />
+                    </div>
+                </TableCell>
+            </TableRow>
+        </React.Fragment>
+      ))}
+    </>
+  );
+
+
 export default function TotalLCPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
@@ -378,37 +436,16 @@ export default function TotalLCPage() {
     }
     return pageNumbers;
   };
+  
+  const getShipmentTermLabel = (term?: string) => {
+    if (!term) return null;
+    if (term.includes("CFR")) return "CFR";
+    if (term.includes("CPT")) return "CPT";
+    if (term === "FOB") return "FOB";
+    if (term === "EXW") return "EXW";
+    return null;
+  };
 
-  const TableSkeleton = () => (
-    <>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <React.Fragment key={i}>
-            <TableRow className="border-b-0">
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
-            </TableRow>
-             <TableRow key={`${i}-actions`} className="bg-muted/20">
-                <TableCell colSpan={9} className="py-2 px-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Skeleton className="h-7 w-7 rounded-full" />
-                        <Skeleton className="h-7 w-20 rounded-md" />
-                        <Skeleton className="h-7 w-20 rounded-md" />
-                        <Skeleton className="h-7 w-20 rounded-md" />
-                        <Skeleton className="h-7 w-20 rounded-md" />
-                    </div>
-                </TableCell>
-            </TableRow>
-        </React.Fragment>
-      ))}
-    </>
-  );
 
   return (
     <div className="container mx-auto py-8">
@@ -630,6 +667,18 @@ export default function TotalLCPage() {
                           <TableRow key={`${lc.id}-actions`}>
                             <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
                               <div className="flex flex-wrap justify-center items-center gap-2">
+                                  {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                             <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 text-xs font-bold bg-green-500 hover:bg-green-600">
+                                                {getShipmentTermLabel(lc.shipmentTerms)}
+                                             </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-2">
+                                             <p className="text-sm font-medium">{lc.shipmentTerms}</p>
+                                        </PopoverContent>
+                                    </Popover>
+                                  )}
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button
@@ -741,41 +790,28 @@ export default function TotalLCPage() {
                                     { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
                                     { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
                                 ].map((shipment, idx) => (
-                                    shipment.note ? (
-                                        <Popover key={idx}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant={shipment.flag ? "default" : "outline"}
-                                                    size="icon"
-                                                    className={cn(
-                                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                        shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                                    )}
-                                                >
-                                                    {shipment.label}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-80">
-                                                <div className="space-y-2">
-                                                    <h4 className="font-medium leading-none">{`${shipment.label} Shipment Note`}</h4>
-                                                    <p className="text-sm text-muted-foreground">{shipment.note}</p>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
-                                    ) : (
-                                        <Button
-                                            key={idx}
-                                            variant={shipment.flag ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn(
-                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                            )}
-                                            title={`${shipment.label} Shipment Status`}
-                                        >
-                                            {shipment.label}
-                                        </Button>
-                                    )
+                                    <Popover key={idx}>
+                                        <PopoverTrigger asChild>
+                                             <Button
+                                                variant={shipment.flag ? "default" : "outline"}
+                                                size="icon"
+                                                className={cn(
+                                                    "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                    shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                                )}
+                                            >
+                                                {shipment.label}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        {shipment.note && (
+                                        <PopoverContent className="w-80">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">{`${shipment.label} Shipment Note`}</h4>
+                                                <p className="text-sm text-muted-foreground">{shipment.note}</p>
+                                            </div>
+                                        </PopoverContent>
+                                        )}
+                                    </Popover>
                                 ))}
                               </div>
                             </TableCell>
@@ -842,6 +878,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
