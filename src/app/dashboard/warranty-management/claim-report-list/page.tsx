@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, MoreHorizontal, Printer, FileText, ChevronLeft, ChevronRight, Building } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, Users, CalendarDays, MoreHorizontal, Printer, FileText, ChevronLeft, ChevronRight, Building, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -61,6 +61,14 @@ export default function ClaimReportListPage() {
   const [supplierOptions, setSupplierOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url); window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) { Swal.fire("Invalid URL", "The provided URL is not valid.", "error"); }
+    } else { Swal.fire("No URL", "No URL provided to view.", "info"); }
+  };
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -224,19 +232,18 @@ export default function ClaimReportListPage() {
                   <TableHead>Claim No.</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Supplier</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Claim Qty</TableHead>
-                  <TableHead>Received Qty</TableHead>
                   <TableHead>Pending Qty</TableHead>
                   <TableHead>Email Resent</TableHead>
+                  <TableHead>Claim View</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((report) => (
                     <TableRow key={report.id}>
@@ -244,11 +251,20 @@ export default function ClaimReportListPage() {
                       <TableCell className="font-medium">{report.claimNumber}</TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(report.status)}>{report.status}</Badge></TableCell>
                       <TableCell>{report.supplierName}</TableCell>
-                      <TableCell className="truncate max-w-xs" title={report.claimDescription}>{report.claimDescription || 'N/A'}</TableCell>
                       <TableCell>{report.claimQty}</TableCell>
-                      <TableCell>{report.partialReceivedQty}</TableCell>
                       <TableCell className="font-semibold">{report.pendingQty}</TableCell>
                       <TableCell>{report.emailResentCount}</TableCell>
+                      <TableCell>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={!report.emailsViewUrl}
+                            onClick={() => handleViewUrl(report.emailsViewUrl)}
+                            title="View Email Thread"
+                        >
+                            <LinkIcon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -267,7 +283,7 @@ export default function ClaimReportListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
