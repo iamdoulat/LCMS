@@ -236,7 +236,7 @@ export default function ClaimReportListPage() {
                   <TableHead>Pending Qty</TableHead>
                   <TableHead>Email Resent</TableHead>
                   <TableHead>Email View</TableHead>
-                  <TableHead>Claim Report(.XLS)</TableHead>
+                  <TableHead>Claim Report (.XLS)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
