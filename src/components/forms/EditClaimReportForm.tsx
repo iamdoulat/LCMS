@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, updateDoc } from 'firebase/firestore';
-import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument as InvoiceDocument, ClaimReportDocument } from '@/types';
+import { collection, doc, serverTimestamp, getDocs, updateDoc, query } from 'firebase/firestore';
+import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, InstallationReportDocument, ClaimReportDocument } from '@/types';
 import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,8 @@ const PLACEHOLDER_CUSTOMER_VALUE = "__CLAIM_EDIT_CUSTOMER__";
 const PLACEHOLDER_SUPPLIER_VALUE = "__CLAIM_EDIT_SUPPLIER__";
 const PLACEHOLDER_INVOICE_VALUE = "__CLAIM_EDIT_INVOICE__";
 
-interface InvoiceOption extends ComboboxOption {
-    invoiceData?: InvoiceDocument;
+interface ReportInvoiceOption extends ComboboxOption {
+    reportData?: InstallationReportDocument;
 }
 
 interface EditClaimReportFormProps {
@@ -41,7 +41,7 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
-  const [invoiceOptions, setInvoiceOptions] = React.useState<InvoiceOption[]>([]);
+  const [reportInvoiceOptions, setReportInvoiceOptions] = React.useState<ReportInvoiceOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [selectedInvoiceDate, setSelectedInvoiceDate] = React.useState<string | null>(null);
 
@@ -65,19 +65,22 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, suppliersSnap, invoicesSnap] = await Promise.all([
+        const [customersSnap, suppliersSnap, reportsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "sales_invoice"))
+          getDocs(query(collection(firestore, "installation_reports")))
         ]);
         setCustomerOptions(customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Customer' })));
         setSupplierOptions(suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Supplier' })));
-        setInvoiceOptions(
-          invoicesSnap.docs.map(doc => ({
-            value: doc.id,
-            label: `${doc.id} - ${(doc.data() as InvoiceDocument).customerName}`,
-            invoiceData: { ...doc.data(), id: doc.id } as InvoiceDocument,
-          }))
+        setReportInvoiceOptions(
+          reportsSnap.docs.map(doc => {
+            const data = doc.data() as InstallationReportDocument;
+            return {
+              value: doc.id, // Use report ID as a unique value
+              label: `${data.commercialInvoiceNumber || 'No C.I.'} - ${data.applicantName}`,
+              reportData: { ...data, id: doc.id },
+            };
+          })
         );
       } catch (error) {
         Swal.fire("Error", "Could not load required data. Please try again.", "error");
@@ -90,17 +93,19 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
 
   React.useEffect(() => {
     if (watchedInvoiceId) {
-      const selectedInvoice = invoiceOptions.find(opt => opt.value === watchedInvoiceId)?.invoiceData;
-      if (selectedInvoice) {
-        const date = parseISO(selectedInvoice.invoiceDate);
-        setSelectedInvoiceDate(isValid(date) ? format(date, 'PPP') : 'Invalid Date');
-        setValue("customerId", selectedInvoice.customerId, { shouldValidate: true });
-        // Add logic to find supplier if needed, similar to Add form
+      const selectedReport = reportInvoiceOptions.find(opt => opt.value === watchedInvoiceId)?.reportData;
+      if (selectedReport) {
+        const date = selectedReport.commercialInvoiceDate ? parseISO(selectedReport.commercialInvoiceDate) : null;
+        setSelectedInvoiceDate(date && isValid(date) ? format(date, 'PPP') : 'Invalid Date');
+        setValue("customerId", selectedReport.applicantId, { shouldValidate: true });
+        setValue("supplierId", selectedReport.beneficiaryId, { shouldValidate: true });
+      } else {
+        setSelectedInvoiceDate(null);
       }
     } else {
-        setSelectedInvoiceDate(initialData.invoiceId ? format(parseISO(initialData.claimDate), 'PPP') : null);
+        setSelectedInvoiceDate(null);
     }
-  }, [watchedInvoiceId, invoiceOptions, setValue, initialData]);
+  }, [watchedInvoiceId, reportInvoiceOptions, setValue]);
 
   const pendingQty = React.useMemo(() => {
     const claim = Number(watchedClaimQty || 0);
@@ -114,7 +119,7 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
     const customer = customerOptions.find(c => c.value === data.customerId);
     const supplier = supplierOptions.find(s => s.value === data.supplierId);
 
-    const dataToSave: Partial<Omit<ClaimReportDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+    const dataToUpdate: Partial<Omit<ClaimReportDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
       customerName: customer?.label || initialData.customerName,
       supplierName: supplier?.label || initialData.supplierName,
       claimNumber: data.claimNumber,
@@ -132,16 +137,16 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
       updatedAt: serverTimestamp(),
     };
     
-    Object.keys(dataToSave).forEach(key => {
-        const typedKey = key as keyof typeof dataToSave;
-        if (dataToSave[typedKey] === undefined) {
-            delete dataToSave[typedKey];
+    Object.keys(dataToUpdate).forEach(key => {
+        const typedKey = key as keyof typeof dataToUpdate;
+        if (dataToUpdate[typedKey] === undefined) {
+            delete dataToUpdate[typedKey];
         }
     });
 
     try {
       const reportDocRef = doc(firestore, "claim_reports", reportId);
-      await updateDoc(reportDocRef, dataToSave);
+      await updateDoc(reportDocRef, dataToUpdate);
       Swal.fire("Success", "Claim report updated successfully!", "success").then(() => {
         router.push('/dashboard/warranty-management/claim-report-list');
       });
@@ -180,10 +185,12 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
                 <FormItem>
                   <FormLabel>Invoice Against Claim*</FormLabel>
                     <Combobox
-                      options={invoiceOptions}
+                      options={reportInvoiceOptions}
                       value={field.value || PLACEHOLDER_INVOICE_VALUE}
                       onValueChange={(value) => field.onChange(value === PLACEHOLDER_INVOICE_VALUE ? '' : value)}
-                      placeholder="Select Invoice..."
+                      placeholder="Select Invoice from Installation Report..."
+                      selectPlaceholder="Select from Installation Reports..."
+                      emptyStateMessage="No Installation Report Found"
                     />
                   <FormMessage />
                 </FormItem>
