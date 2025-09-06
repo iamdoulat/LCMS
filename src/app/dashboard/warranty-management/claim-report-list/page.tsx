@@ -251,7 +251,12 @@ export default function ClaimReportListPage() {
                       <TableCell>{report.emailResentCount}</TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0" disabled={!report.id}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="default" className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white" disabled={!report.id}>
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleEdit(report.id)} disabled={isReadOnly}><FileEdit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
