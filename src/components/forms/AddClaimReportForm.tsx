@@ -6,13 +6,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc } from 'firebase/firestore';
+import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument as InvoiceDocument, ItemDocument } from '@/types';
 import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Save, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ const PLACEHOLDER_SUPPLIER_VALUE = "__CLAIM_SUPPLIER_PLACEHOLDER__";
 const PLACEHOLDER_INVOICE_VALUE = "__CLAIM_INVOICE_PLACEHOLDER__";
 
 interface InvoiceOption extends ComboboxOption {
-    invoiceDate?: string;
+    invoiceData?: InvoiceDocument;
 }
 
 export function AddClaimReportForm() {
@@ -77,7 +77,13 @@ export function AddClaimReportForm() {
         ]);
         setCustomerOptions(customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Customer' })));
         setSupplierOptions(suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Supplier' })));
-        setInvoiceOptions(invoicesSnap.docs.map(doc => ({ value: doc.id, label: doc.id, invoiceDate: (doc.data() as SaleDocument).invoiceDate })));
+        setInvoiceOptions(
+          invoicesSnap.docs.map(doc => ({
+            value: doc.id,
+            label: `${doc.id} - ${(doc.data() as InvoiceDocument).customerName}`,
+            invoiceData: { ...doc.data(), id: doc.id } as InvoiceDocument,
+          }))
+        );
       } catch (error) {
         Swal.fire("Error", "Could not load required data. Please try again.", "error");
       } finally {
@@ -88,16 +94,45 @@ export function AddClaimReportForm() {
   }, []);
 
   React.useEffect(() => {
-    const invoice = invoiceOptions.find(opt => opt.value === watchedInvoiceId);
-    if (invoice?.invoiceDate) {
-        const date = parseISO(invoice.invoiceDate);
-        if(isValid(date)) {
-            setSelectedInvoiceDate(format(date, 'PPP'));
+    const autoFillFromInvoice = async () => {
+        if (!watchedInvoiceId) {
+            setSelectedInvoiceDate(null);
+            return;
         }
-    } else {
-        setSelectedInvoiceDate(null);
-    }
-  }, [watchedInvoiceId, invoiceOptions]);
+
+        const selectedInvoice = invoiceOptions.find(opt => opt.value === watchedInvoiceId)?.invoiceData;
+        if (selectedInvoice) {
+            // Set invoice date display
+            const date = parseISO(selectedInvoice.invoiceDate);
+            setSelectedInvoiceDate(isValid(date) ? format(date, 'PPP') : 'Invalid Date');
+
+            // Set customer ID
+            setValue("customerId", selectedInvoice.customerId, { shouldValidate: true });
+
+            // Find the supplier
+            if (selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0) {
+                const firstItemId = selectedInvoice.lineItems[0].itemId;
+                if (firstItemId) {
+                    try {
+                        const itemDocRef = doc(firestore, "items", firstItemId);
+                        const itemDocSnap = await getDoc(itemDocRef);
+                        if (itemDocSnap.exists()) {
+                            const itemData = itemDocSnap.data() as ItemDocument;
+                            if (itemData.supplierId) {
+                                setValue("supplierId", itemData.supplierId, { shouldValidate: true });
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error fetching item details for supplier lookup:", error);
+                    }
+                }
+            }
+        } else {
+            setSelectedInvoiceDate(null);
+        }
+    };
+    autoFillFromInvoice();
+  }, [watchedInvoiceId, invoiceOptions, setValue]);
 
   const pendingQty = React.useMemo(() => {
     const claim = Number(watchedClaimQty || 0);
@@ -155,15 +190,50 @@ export function AddClaimReportForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="customerId" render={({ field }) => (
+            <FormField
+              control={control}
+              name="invoiceId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invoice Against Claim*</FormLabel>
+                    <Combobox
+                      options={invoiceOptions}
+                      value={field.value || PLACEHOLDER_INVOICE_VALUE}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_INVOICE_VALUE ? '' : value)}
+                      placeholder="Select Invoice..."
+                    />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormItem>
+                <FormLabel>Invoice Date</FormLabel>
+                <Input value={selectedInvoiceDate || 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed"/>
+            </FormItem>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <FormField control={control} name="customerId" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name*</FormLabel>
-                    <Combobox options={customerOptions} value={field.value || PLACEHOLDER_CUSTOMER_VALUE} onValueChange={val => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} placeholder="Select Customer..."/>
+                    <Combobox 
+                      options={customerOptions} 
+                      value={field.value || PLACEHOLDER_CUSTOMER_VALUE} 
+                      onValueChange={val => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} 
+                      placeholder="Select Customer..."
+                      disabled={!!watchedInvoiceId} // Disable if invoice is selected
+                    />
                 <FormMessage />
                 </FormItem>
             )}/>
             <FormField control={control} name="supplierId" render={({ field }) => (
                 <FormItem><FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name*</FormLabel>
-                    <Combobox options={supplierOptions} value={field.value || PLACEHOLDER_SUPPLIER_VALUE} onValueChange={val => field.onChange(val === PLACEHOLDER_SUPPLIER_VALUE ? '' : val)} placeholder="Select Supplier..."/>
+                    <Combobox 
+                      options={supplierOptions} 
+                      value={field.value || PLACEHOLDER_SUPPLIER_VALUE} 
+                      onValueChange={val => field.onChange(val === PLACEHOLDER_SUPPLIER_VALUE ? '' : val)} 
+                      placeholder="Select Supplier..."
+                      disabled={!!watchedInvoiceId} // Disable if invoice is selected
+                    />
                 <FormMessage />
                 </FormItem>
             )}/>
@@ -174,36 +244,11 @@ export function AddClaimReportForm() {
             <FormField control={control} name="claimDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Claim Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)}/>
             <FormItem><FormLabel>Last Date of Update</FormLabel><Input value={format(new Date(), 'PPP')} disabled readOnly className="bg-muted/50" /></FormItem>
         </div>
-
-        <Separator />
         
-        <h3 className={cn(sectionHeadingClass)}><FileText className="mr-2 h-5 w-5" />Invoice & Quantity Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField control={control} name="invoiceId" render={({ field }) => (
-                <FormItem><FormLabel>Invoice Against Claim*</FormLabel>
-                    <Combobox options={invoiceOptions} value={field.value || PLACEHOLDER_INVOICE_VALUE} onValueChange={val => field.onChange(val === PLACEHOLDER_INVOICE_VALUE ? '' : val)} placeholder="Select Invoice..."/>
-                <FormMessage />
-                </FormItem>
-            )}/>
-            <FormItem><FormLabel>Invoice Date</FormLabel><Input value={selectedInvoiceDate || 'N/A'} readOnly disabled className="bg-muted/50"/></FormItem>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField control={control} name="claimQty" render={({ field }) => (<FormItem><FormLabel>Claim Qty*</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="partialReceivedQty" render={({ field }) => (<FormItem><FormLabel>Partial Received Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <FormItem><FormLabel>Pending Qty</FormLabel><Input value={pendingQty} readOnly disabled className="bg-muted/50"/></FormItem>
-        </div>
-        
-        <Separator/>
-
-        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5" />Status & Comments</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField control={control} name="preparedBy" render={({ field }) => (<FormItem><FormLabel>Claim Prepared by*</FormLabel><FormControl><Input placeholder="Prepared by name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="emailResentCount" render={({ field }) => (<FormItem><FormLabel>No. of Email Resent</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="status" render={({ field }) => (<FormItem><FormLabel>Current Claim Status*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl>
-                <SelectContent>{claimStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
-            )}/>
         </div>
         
         <FormField control={control} name="emailsViewUrl" render={({ field }) => (
@@ -215,6 +260,15 @@ export function AddClaimReportForm() {
                 <FormMessage />
             </FormItem>
         )}/>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField control={control} name="preparedBy" render={({ field }) => (<FormItem><FormLabel>Claim Prepared by*</FormLabel><FormControl><Input placeholder="Prepared by name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="emailResentCount" render={({ field }) => (<FormItem><FormLabel>No. of Email Resent</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="status" render={({ field }) => (<FormItem><FormLabel>Current Claim Status*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl>
+                <SelectContent>{claimStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+            )}/>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="claimDescription" render={({ field }) => (<FormItem><FormLabel>Claim Description</FormLabel><FormControl><Textarea placeholder="Describe the claim details..." rows={4} {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -228,3 +282,4 @@ export function AddClaimReportForm() {
     </Form>
   );
 }
+
