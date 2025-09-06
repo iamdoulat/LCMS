@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query } from 'firebase/firestore';
-import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument as InvoiceDocument, ItemDocument } from '@/types';
+import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, InstallationReportDocument, ItemDocument } from '@/types';
 import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,15 +28,15 @@ const PLACEHOLDER_CUSTOMER_VALUE = "__CLAIM_CUSTOMER_PLACEHOLDER__";
 const PLACEHOLDER_SUPPLIER_VALUE = "__CLAIM_SUPPLIER_PLACEHOLDER__";
 const PLACEHOLDER_INVOICE_VALUE = "__CLAIM_INVOICE_PLACEHOLDER__";
 
-interface InvoiceOption extends ComboboxOption {
-    invoiceData?: InvoiceDocument;
+interface ReportInvoiceOption extends ComboboxOption {
+    reportData?: InstallationReportDocument;
 }
 
 export function AddClaimReportForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<ComboboxOption[]>([]);
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
-  const [invoiceOptions, setInvoiceOptions] = React.useState<InvoiceOption[]>([]);
+  const [reportInvoiceOptions, setReportInvoiceOptions] = React.useState<ReportInvoiceOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
   const [selectedInvoiceDate, setSelectedInvoiceDate] = React.useState<string | null>(null);
 
@@ -70,19 +70,22 @@ export function AddClaimReportForm() {
     const fetchOptions = async () => {
       setIsLoadingDropdowns(true);
       try {
-        const [customersSnap, suppliersSnap, invoicesSnap] = await Promise.all([
+        const [customersSnap, suppliersSnap, reportsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
-          getDocs(query(collection(firestore, "sales_invoice"))) // Fetches all invoices
+          getDocs(query(collection(firestore, "installation_reports")))
         ]);
         setCustomerOptions(customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Customer' })));
         setSupplierOptions(suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Supplier' })));
-        setInvoiceOptions(
-          invoicesSnap.docs.map(doc => ({
-            value: doc.id,
-            label: `${doc.id} - ${(doc.data() as InvoiceDocument).customerName}`,
-            invoiceData: { ...doc.data(), id: doc.id } as InvoiceDocument,
-          }))
+        setReportInvoiceOptions(
+          reportsSnap.docs.map(doc => {
+            const data = doc.data() as InstallationReportDocument;
+            return {
+              value: doc.id, // Use report ID as a unique value
+              label: `${data.commercialInvoiceNumber || 'No C.I.'} - ${data.applicantName}`,
+              reportData: { ...data, id: doc.id },
+            };
+          })
         );
       } catch (error) {
         Swal.fire("Error", "Could not load required data. Please try again.", "error");
@@ -94,42 +97,25 @@ export function AddClaimReportForm() {
   }, []);
 
   React.useEffect(() => {
-    const autoFillFromInvoice = async () => {
+    const autoFillFromReport = async () => {
         if (!watchedInvoiceId) {
             setSelectedInvoiceDate(null);
             return;
         }
 
-        const selectedInvoice = invoiceOptions.find(opt => opt.value === watchedInvoiceId)?.invoiceData;
-        if (selectedInvoice) {
-            const date = parseISO(selectedInvoice.invoiceDate);
-            setSelectedInvoiceDate(isValid(date) ? format(date, 'PPP') : 'Invalid Date');
+        const selectedReport = reportInvoiceOptions.find(opt => opt.value === watchedInvoiceId)?.reportData;
+        if (selectedReport) {
+            const date = selectedReport.commercialInvoiceDate ? parseISO(selectedReport.commercialInvoiceDate) : null;
+            setSelectedInvoiceDate(date && isValid(date) ? format(date, 'PPP') : 'Invalid Date');
 
-            setValue("customerId", selectedInvoice.customerId, { shouldValidate: true });
-
-            if (selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0) {
-                const firstItemId = selectedInvoice.lineItems[0].itemId;
-                if (firstItemId) {
-                    try {
-                        const itemDocRef = doc(firestore, "items", firstItemId);
-                        const itemDocSnap = await getDoc(itemDocRef);
-                        if (itemDocSnap.exists()) {
-                            const itemData = itemDocSnap.data() as ItemDocument;
-                            if (itemData.supplierId) {
-                                setValue("supplierId", itemData.supplierId, { shouldValidate: true });
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error fetching item details for supplier lookup:", error);
-                    }
-                }
-            }
+            setValue("customerId", selectedReport.applicantId, { shouldValidate: true });
+            setValue("supplierId", selectedReport.beneficiaryId, { shouldValidate: true });
         } else {
             setSelectedInvoiceDate(null);
         }
     };
-    autoFillFromInvoice();
-  }, [watchedInvoiceId, invoiceOptions, setValue]);
+    autoFillFromReport();
+  }, [watchedInvoiceId, reportInvoiceOptions, setValue]);
 
   const pendingQty = React.useMemo(() => {
     const claim = Number(watchedClaimQty || 0);
@@ -195,10 +181,12 @@ export function AddClaimReportForm() {
                 <FormItem>
                   <FormLabel>Invoice Against Claim*</FormLabel>
                     <Combobox
-                      options={invoiceOptions}
+                      options={reportInvoiceOptions}
                       value={field.value || PLACEHOLDER_INVOICE_VALUE}
                       onValueChange={(value) => field.onChange(value === PLACEHOLDER_INVOICE_VALUE ? '' : value)}
-                      placeholder="Select Invoice..."
+                      placeholder="Select Invoice from Installation Report..."
+                      selectPlaceholder="Select from Installation Reports..."
+                      emptyStateMessage="No Installation Report Found"
                     />
                   <FormMessage />
                 </FormItem>
@@ -218,7 +206,7 @@ export function AddClaimReportForm() {
                       value={field.value || PLACEHOLDER_CUSTOMER_VALUE} 
                       onValueChange={val => field.onChange(val === PLACEHOLDER_CUSTOMER_VALUE ? '' : val)} 
                       placeholder="Select Customer..."
-                      disabled={!!watchedInvoiceId} // Disable if invoice is selected
+                      disabled={!!watchedInvoiceId}
                     />
                 <FormMessage />
                 </FormItem>
@@ -230,7 +218,7 @@ export function AddClaimReportForm() {
                       value={field.value || PLACEHOLDER_SUPPLIER_VALUE} 
                       onValueChange={val => field.onChange(val === PLACEHOLDER_SUPPLIER_VALUE ? '' : val)} 
                       placeholder="Select Supplier..."
-                      disabled={!!watchedInvoiceId} // Disable if invoice is selected
+                      disabled={!!watchedInvoiceId}
                     />
                 <FormMessage />
                 </FormItem>
