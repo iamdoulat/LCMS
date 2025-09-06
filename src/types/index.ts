@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1299,6 +1300,59 @@ export interface DemoChallanDocument {
   updatedAt: any; // Firestore ServerTimestamp
 }
 // --- END Demo Machine Challan Types ---
+
+// --- Claim Report Types ---
+export const claimStatusOptions = ["Pending", "Rejected", "Complete"] as const;
+export type ClaimStatus = typeof claimStatusOptions[number];
+
+export const ClaimReportSchema = z.object({
+    customerId: z.string().min(1, "Customer name is required."),
+    supplierId: z.string().min(1, "Supplier name is required."),
+    claimNumber: z.string().min(1, "Claim number is required."),
+    claimDate: z.date({ required_error: "Claim date is required." }),
+    invoiceId: z.string().min(1, "Invoice selection is required."),
+    claimQty: z.preprocess(
+        (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+        z.number({ invalid_type_error: "Claim Qty must be a number" }).positive("Claim Qty must be positive.")
+    ),
+    partialReceivedQty: z.preprocess(
+        (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+        z.number({ invalid_type_error: "Received Qty must be a number" }).nonnegative("Received Qty cannot be negative.").optional()
+    ),
+    emailsViewUrl: z.string().url("Invalid URL format.").optional().or(z.literal('')),
+    preparedBy: z.string().min(1, "Prepared by is required."),
+    emailResentCount: z.preprocess(
+        (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
+        z.number({ invalid_type_error: "Count must be a number." }).int().nonnegative("Count must be a non-negative integer.").optional()
+    ),
+    status: z.enum(claimStatusOptions, { required_error: "Status is required." }),
+    claimDescription: z.string().optional(),
+    supplierComments: z.string().optional(),
+});
+export type ClaimReportFormValues = z.infer<typeof ClaimReportSchema>;
+
+export interface ClaimReportDocument {
+  id: string;
+  customerId: string;
+  customerName: string;
+  supplierId: string;
+  supplierName: string;
+  claimNumber: string;
+  claimDate: string; // ISO String
+  invoiceId: string;
+  claimQty: number;
+  partialReceivedQty: number;
+  pendingQty: number;
+  emailsViewUrl?: string;
+  preparedBy: string;
+  emailResentCount: number;
+  status: ClaimStatus;
+  claimDescription?: string;
+  supplierComments?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+// --- END Claim Report Types ---
 
 // --- Employee Types ---
 export const genderOptions = ["Male", "Female", "Other"] as const;

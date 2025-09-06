@@ -146,6 +146,7 @@ const demoNavItems: NavItem[] = [
 
 const serviceNavItems: NavItem[] = [
     { href: '/dashboard/warranty-management/search', label: 'Warranty Search', icon: Search, iconColorClass: 'bg-icon-search' },
+    { href: '/dashboard/warranty-management/claim-report', label: 'Claim Report', icon: FileText, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/warranty-management/new-installation-report', label: 'New Installation Report', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
     { href: '/dashboard/warranty-management/installation-reports-view', label: 'View Installation Reports', icon: ClipboardList, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, iconColorClass: 'bg-icon-archive' },
