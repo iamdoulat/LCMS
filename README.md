@@ -60,6 +60,7 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 *   **Warranty Management**: Provide premium after-sales service with a robust warranty tracking system.
     *   **Installation Reporting**: Create detailed installation reports, linking machines to customers and automatically calculating warranty periods.
     *   **Warranty Status Lists**: Get instant access to lists of all machines currently "Under Warranty" or "Out of Warranty".
+    *   **Claim Report Tracking**: Efficiently manage warranty claims with suppliers. Create and track claims against specific invoices, log claim quantities, and monitor claim status from "Pending" to "Complete".
     *   **Missing & Found Items**: Track and resolve discrepancies in shipments with a dedicated module for missing or extra items found during installation.
     *   **Warranty Search Engine**: A comprehensive search tool to find any machine's warranty status by serial number, model, or customer.
 
