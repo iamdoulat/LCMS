@@ -236,14 +236,15 @@ export default function ClaimReportListPage() {
                   <TableHead>Pending Qty</TableHead>
                   <TableHead>Email Resent</TableHead>
                   <TableHead>Claim View</TableHead>
+                  <TableHead>Claim Report(.XLS)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((report) => (
                     <TableRow key={report.id}>
@@ -270,6 +271,18 @@ export default function ClaimReportListPage() {
                             <LinkIcon className="h-4 w-4" />
                         </Button>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                            variant="default"
+                            size="icon"
+                            disabled={!report.claimReportUrl}
+                            onClick={() => handleViewUrl(report.claimReportUrl)}
+                            title="View Claim Report"
+                            className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
+                        >
+                            <LinkIcon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -288,7 +301,7 @@ export default function ClaimReportListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={9} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
