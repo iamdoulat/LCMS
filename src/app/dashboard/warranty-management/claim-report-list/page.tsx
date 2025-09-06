@@ -256,11 +256,12 @@ export default function ClaimReportListPage() {
                       <TableCell>{report.emailResentCount}</TableCell>
                       <TableCell>
                         <Button
-                            variant="outline"
+                            variant="default"
                             size="icon"
                             disabled={!report.emailsViewUrl}
                             onClick={() => handleViewUrl(report.emailsViewUrl)}
                             title="View Email Thread"
+                            className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
                         >
                             <LinkIcon className="h-4 w-4" />
                         </Button>
