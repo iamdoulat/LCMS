@@ -5,8 +5,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, updateDoc } from 'firebase/firestore';
 import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument as InvoiceDocument, ClaimReportDocument } from '@/types';
 import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,6 @@ import { Loader2, Save, Users, Building, FileText, CalendarDays, Hash, Link as L
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, parseISO, isValid } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-4 flex items-center";
@@ -114,17 +114,30 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
     const customer = customerOptions.find(c => c.value === data.customerId);
     const supplier = supplierOptions.find(s => s.value === data.supplierId);
 
-    const dataToSave = {
-      ...data,
-      customerName: customer?.label || '',
-      supplierName: supplier?.label || '',
+    const dataToSave: Partial<Omit<ClaimReportDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
+      customerName: customer?.label || initialData.customerName,
+      supplierName: supplier?.label || initialData.supplierName,
+      claimNumber: data.claimNumber,
+      claimDate: format(data.claimDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      invoiceId: data.invoiceId,
       claimQty: Number(data.claimQty),
       partialReceivedQty: Number(data.partialReceivedQty || 0),
       pendingQty: pendingQty,
+      emailsViewUrl: data.emailsViewUrl || '',
+      preparedBy: data.preparedBy,
       emailResentCount: Number(data.emailResentCount || 0),
-      claimDate: format(data.claimDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      status: data.status,
+      claimDescription: data.claimDescription || '',
+      supplierComments: data.supplierComments || '',
       updatedAt: serverTimestamp(),
     };
+    
+    Object.keys(dataToSave).forEach(key => {
+        const typedKey = key as keyof typeof dataToSave;
+        if (dataToSave[typedKey] === undefined) {
+            delete dataToSave[typedKey];
+        }
+    });
 
     try {
       const reportDocRef = doc(firestore, "claim_reports", reportId);
@@ -212,7 +225,12 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField control={control} name="claimNumber" render={({ field }) => (<FormItem><FormLabel>Claim Number*</FormLabel><FormControl><Input placeholder="Claim No." {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <FormField control={control} name="claimDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Claim Date*</FormLabel><DatePickerField field={field} /><FormMessage /></FormItem>)}/>
-            <FormItem><FormLabel>Last Date of Update</FormLabel><Input value={format(new Date(), 'PPP')} disabled readOnly className="bg-muted/50" /></FormItem>
+            <FormItem>
+              <FormLabel>Last Date of Update</FormLabel>
+              <Input
+                value={initialData.updatedAt && isValid(new Date(initialData.updatedAt as any)) ? format(new Date(initialData.updatedAt as any), 'PPP p') : 'N/A'}
+                disabled readOnly className="bg-muted/50" />
+            </FormItem>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
