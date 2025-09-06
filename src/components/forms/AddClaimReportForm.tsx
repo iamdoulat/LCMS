@@ -258,6 +258,7 @@ export function AddClaimReportForm() {
                     <FormControl><Input type="url" placeholder="https://mail.google.com/..." {...field} /></FormControl>
                     <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
                     <Button type="button" variant="secondary" onClick={() => window.open('https://drive.google.com/drive/folders/1HWlTkjdz5DPWDHgmFPK8uspdK2kOj2cy?usp=sharing', '_blank')}><Upload className="mr-2 h-4 w-4"/> Upload</Button>
+                    <Button type="button" variant="secondary" onClick={() => window.open('https://www.coolutils.com/online/EML-to-PDF', '_blank')}>EML to PDF</Button>
                 </div>
                 <FormMessage />
             </FormItem>
