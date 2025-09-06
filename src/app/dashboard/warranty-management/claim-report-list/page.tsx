@@ -180,7 +180,7 @@ export default function ClaimReportListPage() {
   
   const getStatusBadgeVariant = (status: ClaimStatus) => {
     switch (status) {
-      case 'Pending': return 'secondary';
+      case 'Pending': return 'destructive';
       case 'Complete': return 'default';
       case 'Rejected': return 'destructive';
       default: return 'outline';
