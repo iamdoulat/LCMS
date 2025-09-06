@@ -1,12 +1,11 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit } from 'lucide-react';
+import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit, HelpCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -16,7 +15,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
-import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType } from '@/types';
+import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType, ClaimReportDocument } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -56,7 +55,7 @@ const WarrantySearchSkeleton = () => (
             <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Array.from({ length: 5 }).map((_, index) => (
+                    {Array.from({ length: 6 }).map((_, index) => (
                         <Card key={index} className="shadow-lg"><CardContent className="p-6 flex justify-between items-center"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-9 w-24" /></div><Skeleton className="h-12 w-12 rounded-lg" /></CardContent></Card>
                     ))}
                 </div>
@@ -85,6 +84,8 @@ export default function WarrantySearchPage() {
     totalPendingMachines: 0,
     machinesUnderWarranty: 0,
     machinesOutOfWarranty: 0,
+    totalClaims: 0,
+    pendingClaims: 0,
   });
 
   const fetchAllReportsAndCalculateStats = useCallback(async (yearToFilter: string) => {
@@ -92,8 +93,12 @@ export default function WarrantySearchPage() {
     setSearchError(null);
     try {
       const reportsCollectionRef = collection(firestore, "installation_reports");
+      const claimsCollectionRef = collection(firestore, "claim_reports");
       const reportsQuery = query(reportsCollectionRef, firestoreOrderBy("createdAt", "desc"));
-      const reportsSnapshot = await getDocs(reportsQuery);
+      const claimsQuery = query(claimsCollectionRef);
+
+      const [reportsSnapshot, claimsSnapshot] = await Promise.all([getDocs(reportsQuery), getDocs(claimsQuery)]);
+
       const fetchedReports = reportsSnapshot.docs.map(docSnap => {
         const data = docSnap.data();
          return {
@@ -112,7 +117,11 @@ export default function WarrantySearchPage() {
       });
       setAllReports(fetchedReports);
 
+      const fetchedClaims = claimsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data() as Omit<ClaimReportDocument, 'id'>}));
+
       let reportsForSelectedYear = fetchedReports;
+      let claimsForSelectedYear = fetchedClaims;
+
       if (yearToFilter !== "All Years") {
         const numericYear = parseInt(yearToFilter);
         reportsForSelectedYear = fetchedReports.filter(report => {
@@ -121,6 +130,15 @@ export default function WarrantySearchPage() {
             try {
               const reportDate = parseISO(reportDateString);
               return isValid(reportDate) && getYear(reportDate) === numericYear;
+            } catch { return false; }
+          }
+          return false;
+        });
+        claimsForSelectedYear = fetchedClaims.filter(claim => {
+           if (claim.claimDate && claim.claimDate !== 'N/A') {
+            try {
+              const claimDate = parseISO(claim.claimDate as string);
+              return isValid(claimDate) && getYear(claimDate) === numericYear;
             } catch { return false; }
           }
           return false;
@@ -154,6 +172,9 @@ export default function WarrantySearchPage() {
           }
         });
       });
+      
+      const totalClaims = claimsForSelectedYear.length;
+      const pendingClaims = claimsForSelectedYear.filter(claim => claim.status === 'Pending').length;
 
       setWarrantyStats({
         totalLcMachineries,
@@ -161,18 +182,20 @@ export default function WarrantySearchPage() {
         totalPendingMachines: totalLcMachineries - totalInstalledMachines,
         machinesUnderWarranty,
         machinesOutOfWarranty,
+        totalClaims,
+        pendingClaims
       });
 
     } catch (error: any) {
       console.error("Error fetching/calculating warranty stats:", error);
       let errorMsg = "Failed to load statistics.";
       if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-        errorMsg = "Failed to load statistics: Missing or insufficient permissions. Please check Firestore rules for 'installation_reports'.";
+        errorMsg = "Failed to load statistics: Missing or insufficient permissions. Please check Firestore rules for 'installation_reports' and 'claim_reports'.";
       } else if (error.message) {
         errorMsg = `Failed to load statistics: ${error.message}`;
       }
       Swal.fire("Statistics Error", errorMsg, "error");
-      setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0 });
+      setWarrantyStats({ totalLcMachineries: 0, totalInstalledMachines: 0, totalPendingMachines: 0, machinesUnderWarranty: 0, machinesOutOfWarranty: 0, totalClaims: 0, pendingClaims: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -541,6 +564,13 @@ export default function WarrantySearchPage() {
                 value={warrantyStats.machinesOutOfWarranty.toLocaleString()}
                 icon={<ShieldOff className="h-6 w-6" />}
                 description={`For year ${selectedYear === "All Years" ? "Overall" : selectedYear}`}
+                className="bg-[#D0021B]"
+              />
+               <StatCard
+                title="Total Claims Overall"
+                value={warrantyStats.totalClaims.toLocaleString()}
+                icon={<HelpCircle className="h-6 w-6" />}
+                description={`${warrantyStats.pendingClaims} Total Pending`}
                 className="bg-[#BD10E0]"
               />
             </div>
@@ -549,4 +579,3 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
