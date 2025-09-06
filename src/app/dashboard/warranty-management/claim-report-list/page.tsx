@@ -231,6 +231,7 @@ export default function ClaimReportListPage() {
                   <TableHead>Claim Date</TableHead>
                   <TableHead>Claim No.</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Customer Name</TableHead>
                   <TableHead>Supplier</TableHead>
                   <TableHead>Claim Qty</TableHead>
                   <TableHead>Pending Qty</TableHead>
@@ -242,15 +243,16 @@ export default function ClaimReportListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="h-24 text-center"><Loader2 className="mr-2 h-6 w-6 animate-spin inline" /> Loading reports...</TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="h-24 text-center text-destructive">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((report) => (
                     <TableRow key={report.id}>
                       <TableCell>{formatDisplayDate(report.claimDate)}</TableCell>
                       <TableCell className="font-medium">{report.claimNumber}</TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(report.status)}>{report.status}</Badge></TableCell>
+                      <TableCell>{report.customerName || 'N/A'}</TableCell>
                       <TableCell>{report.supplierName}</TableCell>
                       <TableCell>{report.claimQty}</TableCell>
                       <TableCell className="font-semibold">{report.pendingQty}</TableCell>
@@ -301,7 +303,7 @@ export default function ClaimReportListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={10} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="h-24 text-center">No claim reports found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
