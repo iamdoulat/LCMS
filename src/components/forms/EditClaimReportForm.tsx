@@ -129,6 +129,7 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
       partialReceivedQty: Number(data.partialReceivedQty || 0),
       pendingQty: pendingQty,
       emailsViewUrl: data.emailsViewUrl || '',
+      claimReportUrl: data.claimReportUrl || '',
       preparedBy: data.preparedBy,
       emailResentCount: Number(data.emailResentCount || 0),
       status: data.status,
@@ -246,17 +247,28 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
             <FormItem><FormLabel>Pending Qty</FormLabel><Input value={pendingQty} readOnly disabled className="bg-muted/50"/></FormItem>
         </div>
         
-        <FormField control={control} name="emailsViewUrl" render={({ field }) => (
-            <FormItem><FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Emails View URL</FormLabel>
-                <div className="flex items-center gap-2">
-                    <FormControl><Input type="url" placeholder="https://mail.google.com/..." {...field} /></FormControl>
-                    <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
-                    <Button type="button" variant="secondary" onClick={() => window.open('https://drive.google.com/drive/folders/1HWlTkjdz5DPWDHgmFPK8uspdK2kOj2cy?usp=sharing', '_blank')}><Upload className="mr-2 h-4 w-4"/> Upload</Button>
-                    <Button type="button" variant="secondary" onClick={() => window.open('https://www.coolutils.com/online/EML-to-PDF', '_blank')}>EML to PDF</Button>
-                </div>
-                <FormMessage />
-            </FormItem>
-        )}/>
+        <div className="space-y-4">
+            <FormField control={control} name="emailsViewUrl" render={({ field }) => (
+                <FormItem><FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Emails View URL</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl><Input type="url" placeholder="https://mail.google.com/..." {...field} /></FormControl>
+                        <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
+                        <Button type="button" variant="secondary" onClick={() => window.open('https://drive.google.com/drive/folders/1HWlTkjdz5DPWDHgmFPK8uspdK2kOj2cy?usp=sharing', '_blank')}><Upload className="mr-2 h-4 w-4"/> Upload</Button>
+                        <Button type="button" variant="secondary" onClick={() => window.open('https://www.coolutils.com/online/EML-to-PDF', '_blank')}>EML to PDF</Button>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+             <FormField control={control} name="claimReportUrl" render={({ field }) => (
+                <FormItem><FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Claim Report (.xls) URL</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl><Input type="url" placeholder="https://docs.google.com/spreadsheets/..." {...field} /></FormControl>
+                        <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField control={control} name="preparedBy" render={({ field }) => (<FormItem><FormLabel>Claim Prepared by*</FormLabel><FormControl><Input placeholder="Prepared by name" {...field} /></FormControl><FormMessage /></FormItem>)}/>

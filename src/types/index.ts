@@ -1320,6 +1320,7 @@ export const ClaimReportSchema = z.object({
         z.number({ invalid_type_error: "Received Qty must be a number" }).nonnegative("Received Qty cannot be negative.").optional()
     ),
     emailsViewUrl: z.string().url("Invalid URL format.").optional().or(z.literal('')),
+    claimReportUrl: z.string().url("Invalid URL format.").optional().or(z.literal('')),
     preparedBy: z.string().min(1, "Prepared by is required."),
     emailResentCount: z.preprocess(
         (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
@@ -1344,6 +1345,7 @@ export interface ClaimReportDocument {
   partialReceivedQty: number;
   pendingQty: number;
   emailsViewUrl?: string;
+  claimReportUrl?: string;
   preparedBy: string;
   emailResentCount: number;
   status: ClaimStatus;
