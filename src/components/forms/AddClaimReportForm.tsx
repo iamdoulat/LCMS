@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Loader2, Save, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -189,6 +189,7 @@ export function AddClaimReportForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <h3 className={cn(sectionHeadingClass)}><FileText className="mr-2 h-5 w-5" />Claim &amp; Invoice Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={control}
@@ -256,6 +257,7 @@ export function AddClaimReportForm() {
                 <div className="flex items-center gap-2">
                     <FormControl><Input type="url" placeholder="https://mail.google.com/..." {...field} /></FormControl>
                     <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
+                    <Button type="button" variant="secondary" onClick={() => window.open('https://drive.google.com/drive/folders/1HWlTkjdz5DPWDHgmFPK8uspdK2kOj2cy?usp=sharing', '_blank')}><Upload className="mr-2 h-4 w-4"/> Upload</Button>
                 </div>
                 <FormMessage />
             </FormItem>
@@ -276,10 +278,9 @@ export function AddClaimReportForm() {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
-          {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>) : 'Submit Claim Report'}
+          {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>) : (<><Save className="mr-2 h-4 w-4"/>Submit Claim Report</>)}
         </Button>
       </form>
     </Form>
   );
 }
-
