@@ -12,7 +12,7 @@ import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Save, Users, Building, FileText, CalendarDays, Hash, Link as LinkIcon, ExternalLink, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -227,6 +227,7 @@ export function EditClaimReportForm({ initialData, reportId }: EditClaimReportFo
                     <FormControl><Input type="url" placeholder="https://mail.google.com/..." {...field} /></FormControl>
                     <Button type="button" variant="outline" size="icon" onClick={() => handleViewUrl(field.value)} disabled={!field.value}><ExternalLink className="h-4 w-4" /></Button>
                     <Button type="button" variant="secondary" onClick={() => window.open('https://drive.google.com/drive/folders/1HWlTkjdz5DPWDHgmFPK8uspdK2kOj2cy?usp=sharing', '_blank')}><Upload className="mr-2 h-4 w-4"/> Upload</Button>
+                    <Button type="button" variant="secondary" onClick={() => window.open('https://www.coolutils.com/online/EML-to-PDF', '_blank')}>EML to PDF</Button>
                 </div>
                 <FormMessage />
             </FormItem>
