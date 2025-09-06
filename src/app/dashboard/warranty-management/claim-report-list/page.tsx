@@ -253,7 +253,11 @@ export default function ClaimReportListPage() {
                       <TableCell>{report.supplierName}</TableCell>
                       <TableCell>{report.claimQty}</TableCell>
                       <TableCell className="font-semibold">{report.pendingQty}</TableCell>
-                      <TableCell>{report.emailResentCount}</TableCell>
+                      <TableCell>
+                        <Button variant="destructive" size="sm" className="font-bold cursor-default">
+                            {report.emailResentCount}
+                        </Button>
+                      </TableCell>
                       <TableCell>
                         <Button
                             variant="default"
