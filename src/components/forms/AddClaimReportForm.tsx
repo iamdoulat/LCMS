@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc, query } from 'firebase/firestore';
 import type { ClaimReportFormValues, CustomerDocument, SupplierDocument, SaleDocument as InvoiceDocument, ItemDocument } from '@/types';
 import { ClaimReportSchema, claimStatusOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -73,7 +73,7 @@ export function AddClaimReportForm() {
         const [customersSnap, suppliersSnap, invoicesSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "sales_invoice"))
+          getDocs(query(collection(firestore, "sales_invoice"))) // Fetches all invoices
         ]);
         setCustomerOptions(customersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as CustomerDocument).applicantName || 'Unnamed Customer' })));
         setSupplierOptions(suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Supplier' })));
@@ -102,14 +102,11 @@ export function AddClaimReportForm() {
 
         const selectedInvoice = invoiceOptions.find(opt => opt.value === watchedInvoiceId)?.invoiceData;
         if (selectedInvoice) {
-            // Set invoice date display
             const date = parseISO(selectedInvoice.invoiceDate);
             setSelectedInvoiceDate(isValid(date) ? format(date, 'PPP') : 'Invalid Date');
 
-            // Set customer ID
             setValue("customerId", selectedInvoice.customerId, { shouldValidate: true });
 
-            // Find the supplier
             if (selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0) {
                 const firstItemId = selectedInvoice.lineItems[0].itemId;
                 if (firstItemId) {
