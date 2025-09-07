@@ -541,7 +541,7 @@ export default function NewDemoMachineApplicationPage() {
                     name="notes"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note or Manual Challan No.</FormLabel>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
                         <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''} /></FormControl>
                         <FormMessage />
                         </FormItem>
