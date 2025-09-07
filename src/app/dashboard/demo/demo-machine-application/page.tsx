@@ -178,7 +178,7 @@ export default function NewDemoMachineApplicationPage() {
 
   React.useEffect(() => {
     if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
-      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedDeliveryDate));
+      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedEstReturnDate));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay('0 Days');
@@ -196,27 +196,16 @@ export default function NewDemoMachineApplicationPage() {
       return;
     }
     
-    // --- Challan & Application ID Generation ---
-    const challanCounterRef = doc(firestore, "counters", "demoChallanNumberGenerator");
+    // --- Application ID Generation ---
     const appCounterRef = doc(firestore, "counters", "demoApplicationNumberGenerator");
 
-    let newChallanId: string;
     let newAppId: string;
 
     try {
-        const [challanCounterSnap, appCounterSnap] = await Promise.all([
-            getDoc(challanCounterRef),
-            getDoc(appCounterRef)
-        ]);
+        const appCounterSnap = await getDoc(appCounterRef);
 
         const currentYear = new Date().getFullYear();
         const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
-        
-        // Challan ID
-        const currentChallanCount = challanCounterSnap.exists() ? challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0 : 0;
-        const newChallanCount = currentChallanCount + 1;
-        newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
-        batch.set(challanCounterRef, { yearlyCounts: { ...(challanCounterSnap.data()?.yearlyCounts || {}), [currentYear]: newChallanCount }}, { merge: true });
         
         // Application ID
         const currentAppCount = appCounterSnap.exists() ? appCounterSnap.data()?.yearlyCounts?.[currentYear] || 0 : 0;
@@ -249,7 +238,7 @@ export default function NewDemoMachineApplicationPage() {
       factoryName: selectedFactory?.label || 'N/A',
       factoryLocation: selectedFactory?.location || 'N/A',
       appliedMachines: machinesToSave,
-      challanNo: newChallanId, // Link to the new challan
+      challanNo: data.challanNo, // Use manually entered challan no
       deliveryPersonName: data.deliveryPersonName,
       deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
       estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
@@ -265,24 +254,6 @@ export default function NewDemoMachineApplicationPage() {
     const newAppDocRef = doc(firestore, "demo_machine_applications", newAppId);
     batch.set(newAppDocRef, appDataToSave);
 
-    // --- Prepare Challan Data ---
-    const challanDataToSave = {
-      factoryId: data.factoryId,
-      factoryName: selectedFactory?.label || 'N/A',
-      deliveryAddress: selectedFactory?.location || 'N/A',
-      challanDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      linkedApplicationId: newAppId,
-      deliveryPerson: data.deliveryPersonName,
-      lineItems: machinesToSave.map(m => ({
-        demoMachineId: m.demoMachineId,
-        description: `${m.machineModel || 'N/A'} (S/N: ${m.machineSerial || 'N/A'})`,
-        qty: 1
-      })),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    const newChallanDocRef = doc(firestore, "demo_machine_challans", newChallanId);
-    batch.set(newChallanDocRef, challanDataToSave);
 
     // --- Update Machine Statuses ---
     for (const appliedMachine of data.appliedMachines) {
@@ -297,7 +268,7 @@ export default function NewDemoMachineApplicationPage() {
 
     try {
       await batch.commit();
-      Swal.fire("Success!", `Demo application submitted with ID: ${newAppId} and Challan No: ${newChallanId} has been created. Machine statuses updated.`, "success");
+      Swal.fire("Success!", `Demo application submitted with ID: ${newAppId} and Challan No: ${data.challanNo} has been created. Machine statuses updated.`, "success");
       reset(); 
       setFactoryLocationDisplay('');
       setDemoPeriodDisplay('0 Days');
@@ -306,7 +277,7 @@ export default function NewDemoMachineApplicationPage() {
       const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as DemoMachineDocument));
       setAllFetchedMachines(fetchedMachines);
     } catch (error) {
-      console.error("Error submitting demo application and challan:", error);
+      console.error("Error submitting demo application:", error);
       Swal.fire("Error", `Failed to submit application: ${(error as Error).message}`, "error");
     } finally {
       setIsSubmitting(false);
@@ -385,7 +356,7 @@ export default function NewDemoMachineApplicationPage() {
                         <FormItem>
                           <FormLabel className="flex items-center"><FileBadge className="mr-2 h-4 w-4 text-muted-foreground" />Challan No.*</FormLabel>
                           <FormControl>
-                            <Input placeholder="(Auto-generated on submit)" {...field} value={field.value ?? ''} readOnly disabled/>
+                            <Input placeholder="Enter Manual Challan No." {...field} value={field.value ?? ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -578,7 +549,7 @@ export default function NewDemoMachineApplicationPage() {
                     name="notes"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note</FormLabel>
+                        <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Expected Result After Test/ Note or Manual Challan No.</FormLabel>
                         <FormControl><Textarea placeholder="Describe expected results or any notes..." {...field} rows={4} value={field.value ?? ''} /></FormControl>
                         <FormMessage />
                         </FormItem>
@@ -601,6 +572,3 @@ export default function NewDemoMachineApplicationPage() {
     </div>
   );
 }
-    
-
-    
