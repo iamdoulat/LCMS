@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, updateDoc, setDoc, getDoc, writeBatch, runTransaction, where } from 'firebase/firestore';
 import type { DemoMachineApplicationFormValues, DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus, AppliedMachineItem } from '@/types';
 import { demoMachineApplicationSchema } from '@/types';
 
@@ -196,54 +196,40 @@ export default function NewDemoMachineApplicationPage() {
       return;
     }
     
-    // --- Application ID Generation ---
-    const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
-    const dateStr = format(new Date(), 'yyyyMMdd');
-    const baseAppId = `${factoryPrefix}-demo-${dateStr}`;
-    
-    const appsCollectionRef = collection(firestore, "demo_machine_applications");
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const q = query(appsCollectionRef, where("createdAt", ">=", new Date(todayStr))); // Rough filter
-    const todaysAppsSnap = await getDocs(q);
-    const todaysAppIds = new Set(todaysAppsSnap.docs.map(d => d.id).filter(id => id.startsWith(baseAppId)));
-    
-    let counter = 1;
-    let finalAppId = baseAppId;
-    while(todaysAppIds.has(finalAppId)) {
-        finalAppId = `${baseAppId}-${counter}`;
-        counter++;
-    }
-    
-    // --- Challan ID Generation ---
+    // --- Challan & Application ID Generation ---
     const challanCounterRef = doc(firestore, "counters", "demoChallanNumberGenerator");
-    
-    let newChallanId;
-    
-    try {
-        await runTransaction(firestore, async (transaction) => {
-            const challanCounterSnap = await transaction.get(challanCounterRef);
-            const currentYear = new Date().getFullYear();
-            let challanCount = 0;
-            if (challanCounterSnap.exists()) {
-                challanCount = challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0;
-            }
-            const newChallanCount = challanCount + 1;
-            newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
-            transaction.set(challanCounterRef, { yearlyCounts: { ...challanCounterSnap.data()?.yearlyCounts, [currentYear]: newChallanCount }}, { merge: true });
-        });
-    } catch (error) {
-        console.error("Error generating challan ID in transaction:", error);
-        Swal.fire("Error", `Could not generate a unique Challan ID. Please try again. Error: ${(error as Error).message}`, "error");
-        setIsSubmitting(false);
-        return;
-    }
-    
-    if (!newChallanId) {
-        Swal.fire("Error", "Failed to generate Challan ID. Please try again.", "error");
-        setIsSubmitting(false);
-        return;
-    }
+    const appCounterRef = doc(firestore, "counters", "demoApplicationNumberGenerator");
 
+    let newChallanId: string;
+    let newAppId: string;
+
+    try {
+        const [challanCounterSnap, appCounterSnap] = await Promise.all([
+            getDoc(challanCounterRef),
+            getDoc(appCounterRef)
+        ]);
+
+        const currentYear = new Date().getFullYear();
+        const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
+        
+        // Challan ID
+        const currentChallanCount = challanCounterSnap.exists() ? challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0 : 0;
+        const newChallanCount = currentChallanCount + 1;
+        newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
+        batch.set(challanCounterRef, { yearlyCounts: { ...(challanCounterSnap.data()?.yearlyCounts || {}), [currentYear]: newChallanCount }}, { merge: true });
+        
+        // Application ID
+        const currentAppCount = appCounterSnap.exists() ? appCounterSnap.data()?.yearlyCounts?.[currentYear] || 0 : 0;
+        const newAppCount = currentAppCount + 1;
+        newAppId = `${factoryPrefix}${currentYear}${String(newAppCount).padStart(3, '0')}`;
+        batch.set(appCounterRef, { yearlyCounts: { ...(appCounterSnap.data()?.yearlyCounts || {}), [currentYear]: newAppCount }}, { merge: true });
+
+    } catch (error) {
+        console.error("Error generating unique IDs:", error);
+        Swal.fire("Error", `Could not generate unique IDs. Please try again. Error: ${(error as Error).message}`, "error");
+        setIsSubmitting(false);
+        return;
+    }
 
     // --- Prepare Application Data ---
     const deliveryDateValue = getValues("deliveryDate");
@@ -276,7 +262,7 @@ export default function NewDemoMachineApplicationPage() {
       updatedAt: serverTimestamp(),
     };
     Object.keys(appDataToSave).forEach(key => { if (appDataToSave[key as keyof typeof appDataToSave] === undefined) delete appDataToSave[key as keyof typeof appDataToSave]; });
-    const newAppDocRef = doc(firestore, "demo_machine_applications", finalAppId);
+    const newAppDocRef = doc(firestore, "demo_machine_applications", newAppId);
     batch.set(newAppDocRef, appDataToSave);
 
     // --- Prepare Challan Data ---
@@ -285,7 +271,7 @@ export default function NewDemoMachineApplicationPage() {
       factoryName: selectedFactory?.label || 'N/A',
       deliveryAddress: selectedFactory?.location || 'N/A',
       challanDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      linkedApplicationId: finalAppId,
+      linkedApplicationId: newAppId,
       deliveryPerson: data.deliveryPersonName,
       lineItems: machinesToSave.map(m => ({
         demoMachineId: m.demoMachineId,
@@ -311,7 +297,7 @@ export default function NewDemoMachineApplicationPage() {
 
     try {
       await batch.commit();
-      Swal.fire("Success!", `Demo application submitted with ID: ${finalAppId} and Challan No: ${newChallanId} has been created. Machine statuses updated.`, "success");
+      Swal.fire("Success!", `Demo application submitted with ID: ${newAppId} and Challan No: ${newChallanId} has been created. Machine statuses updated.`, "success");
       reset(); 
       setFactoryLocationDisplay('');
       setDemoPeriodDisplay('0 Days');
