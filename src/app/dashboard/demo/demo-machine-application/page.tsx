@@ -200,31 +200,50 @@ export default function NewDemoMachineApplicationPage() {
     const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
     const dateStr = format(new Date(), 'yyyyMMdd');
     const baseAppId = `${factoryPrefix}-demo-${dateStr}`;
-    let finalAppId = baseAppId;
-    let counter = 1;
-    let isUnique = false;
     
-    while (!isUnique) {
-      const appDocRefCheck = doc(firestore, "demo_machine_applications", finalAppId);
-      const docSnap = await getDoc(appDocRefCheck);
-      if (docSnap.exists()) {
+    const appsCollectionRef = collection(firestore, "demo_machine_applications");
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const q = query(appsCollectionRef, where("createdAt", ">=", new Date(todayStr))); // Rough filter
+    const todaysAppsSnap = await getDocs(q);
+    const todaysAppIds = new Set(todaysAppsSnap.docs.map(d => d.id).filter(id => id.startsWith(baseAppId)));
+    
+    let counter = 1;
+    let finalAppId = baseAppId;
+    while(todaysAppIds.has(finalAppId)) {
         finalAppId = `${baseAppId}-${counter}`;
         counter++;
-      } else {
-        isUnique = true;
-      }
     }
     
     // --- Challan ID Generation ---
     const challanCounterRef = doc(firestore, "counters", "demoChallanNumberGenerator");
-    const challanCounterSnap = await getDoc(challanCounterRef);
-    const currentYear = new Date().getFullYear();
-    let challanCount = 0;
-    if (challanCounterSnap.exists()) {
-      challanCount = challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0;
+    
+    let newChallanId;
+    
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const challanCounterSnap = await transaction.get(challanCounterRef);
+            const currentYear = new Date().getFullYear();
+            let challanCount = 0;
+            if (challanCounterSnap.exists()) {
+                challanCount = challanCounterSnap.data()?.yearlyCounts?.[currentYear] || 0;
+            }
+            const newChallanCount = challanCount + 1;
+            newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
+            transaction.set(challanCounterRef, { yearlyCounts: { ...challanCounterSnap.data()?.yearlyCounts, [currentYear]: newChallanCount }}, { merge: true });
+        });
+    } catch (error) {
+        console.error("Error generating challan ID in transaction:", error);
+        Swal.fire("Error", `Could not generate a unique Challan ID. Please try again. Error: ${(error as Error).message}`, "error");
+        setIsSubmitting(false);
+        return;
     }
-    const newChallanCount = challanCount + 1;
-    const newChallanId = `DMCN${currentYear}-${String(newChallanCount).padStart(3, '0')}`;
+    
+    if (!newChallanId) {
+        Swal.fire("Error", "Failed to generate Challan ID. Please try again.", "error");
+        setIsSubmitting(false);
+        return;
+    }
+
 
     // --- Prepare Application Data ---
     const deliveryDateValue = getValues("deliveryDate");
@@ -278,7 +297,6 @@ export default function NewDemoMachineApplicationPage() {
     };
     const newChallanDocRef = doc(firestore, "demo_machine_challans", newChallanId);
     batch.set(newChallanDocRef, challanDataToSave);
-    batch.set(challanCounterRef, { yearlyCounts: { ...challanCounterSnap.data()?.yearlyCounts, [currentYear]: newChallanCount }}, { merge: true });
 
     // --- Update Machine Statuses ---
     for (const appliedMachine of data.appliedMachines) {
@@ -597,4 +615,6 @@ export default function NewDemoMachineApplicationPage() {
     </div>
   );
 }
+    
+
     
