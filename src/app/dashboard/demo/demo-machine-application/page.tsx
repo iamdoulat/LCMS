@@ -177,17 +177,18 @@ export default function NewDemoMachineApplicationPage() {
   }, [watchedFactoryId, factoryOptions, setValue]);
 
   React.useEffect(() => {
-    if (watchedDeliveryDate && watchedEstReturnDate && isValid(new Date(watchedDeliveryDate)) && isValid(new Date(watchedEstReturnDate)) && new Date(watchedEstReturnDate) >= new Date(watchedDeliveryDate)) {
-      const days = differenceInDays(new Date(watchedEstReturnDate), new Date(watchedEstReturnDate));
+    const deliveryDateValue = getValues("deliveryDate");
+    const estReturnDateValue = getValues("estReturnDate");
+    if (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) {
+      const days = differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue));
       setDemoPeriodDisplay(`${days} Day(s)`);
     } else {
       setDemoPeriodDisplay('0 Days');
     }
-  }, [watchedDeliveryDate, watchedEstReturnDate]);
+  }, [watchedDeliveryDate, watchedEstReturnDate, getValues]);
 
   async function onSubmit(data: DemoMachineApplicationFormValues) {
     setIsSubmitting(true);
-    const batch = writeBatch(firestore);
 
     const selectedFactory = factoryOptions.find(opt => opt.value === data.factoryId);
     if (!selectedFactory) {
@@ -195,87 +196,78 @@ export default function NewDemoMachineApplicationPage() {
       setIsSubmitting(false);
       return;
     }
-    
-    // --- Application ID Generation ---
-    const appCounterRef = doc(firestore, "counters", "demoApplicationNumberGenerator");
-
-    let newAppId: string;
 
     try {
-        const appCounterSnap = await getDoc(appCounterRef);
-
+      await runTransaction(firestore, async (transaction) => {
+        const appCounterRef = doc(firestore, "counters", "demoApplicationNumberGenerator");
+        const appCounterSnap = await transaction.get(appCounterRef);
         const currentYear = new Date().getFullYear();
         const factoryPrefix = selectedFactory.label.substring(0, 3).toUpperCase();
         
         // Application ID
         const currentAppCount = appCounterSnap.exists() ? appCounterSnap.data()?.yearlyCounts?.[currentYear] || 0 : 0;
         const newAppCount = currentAppCount + 1;
-        newAppId = `${factoryPrefix}${currentYear}${String(newAppCount).padStart(3, '0')}`;
-        batch.set(appCounterRef, { yearlyCounts: { ...(appCounterSnap.data()?.yearlyCounts || {}), [currentYear]: newAppCount }}, { merge: true });
-
-    } catch (error) {
-        console.error("Error generating unique IDs:", error);
-        Swal.fire("Error", `Could not generate unique IDs. Please try again. Error: ${(error as Error).message}`, "error");
-        setIsSubmitting(false);
-        return;
-    }
-
-    // --- Prepare Application Data ---
-    const deliveryDateValue = getValues("deliveryDate");
-    const estReturnDateValue = getValues("estReturnDate");
-    const machinesToSave = data.appliedMachines.map(appliedMachine => {
-        const machineDetails = allFetchedMachines.find(m => m.id === appliedMachine.demoMachineId);
-        return {
-            demoMachineId: appliedMachine.demoMachineId,
-            machineModel: machineDetails?.machineModel || 'N/A',
-            machineSerial: machineDetails?.machineSerial || 'N/A',
-            machineBrand: machineDetails?.machineBrand || 'N/A',
-        };
-    });
-    
-    const appDataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
-      factoryId: data.factoryId,
-      factoryName: selectedFactory?.label || 'N/A',
-      factoryLocation: selectedFactory?.location || 'N/A',
-      appliedMachines: machinesToSave,
-      challanNo: data.challanNo, // Use manually entered challan no
-      deliveryPersonName: data.deliveryPersonName,
-      deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
-      estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
-      demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
-      factoryInchargeName: data.factoryInchargeName || undefined,
-      inchargeCell: data.inchargeCell || undefined,
-      notes: data.notes || undefined,
-      machineReturned: data.machineReturned ?? false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    Object.keys(appDataToSave).forEach(key => { if (appDataToSave[key as keyof typeof appDataToSave] === undefined) delete appDataToSave[key as keyof typeof appDataToSave]; });
-    const newAppDocRef = doc(firestore, "demo_machine_applications", newAppId);
-    batch.set(newAppDocRef, appDataToSave);
-
-
-    // --- Update Machine Statuses ---
-    for (const appliedMachine of data.appliedMachines) {
-      if (appliedMachine.demoMachineId) {
-        const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
-        batch.update(machineRef, {
-          currentStatus: "Allocated" as AppDemoMachineStatus,
-          updatedAt: serverTimestamp(),
+        const newAppId = `${factoryPrefix}${currentYear}${String(newAppCount).padStart(3, '0')}`;
+        
+        transaction.set(appCounterRef, { yearlyCounts: { ...(appCounterSnap.data()?.yearlyCounts || {}), [currentYear]: newAppCount }}, { merge: true });
+        
+        // --- Prepare Application Data ---
+        const deliveryDateValue = getValues("deliveryDate");
+        const estReturnDateValue = getValues("estReturnDate");
+        const machinesToSave = data.appliedMachines.map(appliedMachine => {
+            const machineDetails = allFetchedMachines.find(m => m.id === appliedMachine.demoMachineId);
+            return {
+                demoMachineId: appliedMachine.demoMachineId,
+                machineModel: machineDetails?.machineModel || 'N/A',
+                machineSerial: machineDetails?.machineSerial || 'N/A',
+                machineBrand: machineDetails?.machineBrand || 'N/A',
+            };
         });
-      }
-    }
-
-    try {
-      await batch.commit();
-      Swal.fire("Success!", `Demo application submitted with ID: ${newAppId} and Challan No: ${data.challanNo} has been created. Machine statuses updated.`, "success");
-      reset(); 
-      setFactoryLocationDisplay('');
-      setDemoPeriodDisplay('0 Days');
-      // Refetch machine options to reflect updated statuses
-      const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
-      const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as DemoMachineDocument));
-      setAllFetchedMachines(fetchedMachines);
+        
+        const appDataToSave: Omit<DemoMachineApplicationDocument, 'id' | 'createdAt' | 'updatedAt'> = {
+          factoryId: data.factoryId,
+          factoryName: selectedFactory?.label || 'N/A',
+          factoryLocation: selectedFactory?.location || 'N/A',
+          appliedMachines: machinesToSave,
+          challanNo: data.challanNo || '', // Use manually entered challan no
+          deliveryPersonName: data.deliveryPersonName,
+          deliveryDate: deliveryDateValue ? format(new Date(deliveryDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
+          estReturnDate: estReturnDateValue ? format(new Date(estReturnDateValue), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '',
+          demoPeriodDays: (deliveryDateValue && estReturnDateValue && isValid(new Date(deliveryDateValue)) && isValid(new Date(estReturnDateValue)) && new Date(estReturnDateValue) >= new Date(deliveryDateValue)) ? differenceInDays(new Date(estReturnDateValue), new Date(deliveryDateValue)) : 0,
+          factoryInchargeName: data.factoryInchargeName || undefined,
+          inchargeCell: data.inchargeCell || undefined,
+          notes: data.notes || undefined,
+          machineReturned: data.machineReturned ?? false,
+        };
+        
+        const cleanedAppData = { ...appDataToSave, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        Object.keys(cleanedAppData).forEach(key => { if (cleanedAppData[key as keyof typeof cleanedAppData] === undefined) delete cleanedAppData[key as keyof typeof cleanedAppData]; });
+        
+        const newAppDocRef = doc(firestore, "demo_machine_applications", newAppId);
+        transaction.set(newAppDocRef, cleanedAppData);
+    
+        // --- Update Machine Statuses ---
+        for (const appliedMachine of data.appliedMachines) {
+          if (appliedMachine.demoMachineId) {
+            const machineRef = doc(firestore, "demo_machines", appliedMachine.demoMachineId);
+            transaction.update(machineRef, {
+              currentStatus: "Allocated" as AppDemoMachineStatus,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+        return newAppId; // Return new ID for success message
+      }).then(async (newAppId) => {
+        Swal.fire("Success!", `Demo application submitted with ID: ${newAppId} and Challan No: ${data.challanNo} has been created. Machine statuses updated.`, "success");
+        reset(); 
+        setFactoryLocationDisplay('');
+        setDemoPeriodDisplay('0 Days');
+        
+        // Refetch machine options to reflect updated statuses
+        const machinesSnapshot = await getDocs(query(collection(firestore, "demo_machines"), orderBy("machineModel")));
+        const fetchedMachines = machinesSnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as DemoMachineDocument));
+        setAllFetchedMachines(fetchedMachines);
+      });
     } catch (error) {
       console.error("Error submitting demo application:", error);
       Swal.fire("Error", `Failed to submit application: ${(error as Error).message}`, "error");
