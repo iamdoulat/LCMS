@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -24,6 +23,7 @@ import { Textarea } from '../ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '../ui/label';
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -259,7 +259,7 @@ export function AddEmployeeForm() {
         </div>
 
         <Separator />
-
+        
         <Card className="p-4">
             <CardHeader className="p-2 pt-0">
                 <CardTitle className="text-lg flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary"/>Education Information</CardTitle>
