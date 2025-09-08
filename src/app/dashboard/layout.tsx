@@ -1,5 +1,8 @@
 
-import Sidebar from '@/components/Sidebar';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
+import { BottomNavBar } from '@/components/layout/BottomNavBar';
+import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import React from 'react';
 
 interface DashboardLayoutProps {
@@ -8,14 +11,22 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 overflow-x-hidden overflow-y-auto">
-        <main className="container mx-auto px-6 py-8">
-          {children}
-        </main>
+    <SidebarProvider>
+      <div className="relative flex min-h-screen flex-col bg-background">
+        <AppHeader />
+        <div className="flex flex-1">
+          <Sidebar>
+            <AppSidebarNav />
+          </Sidebar>
+          <SidebarInset>
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
+        <BottomNavBar />
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
