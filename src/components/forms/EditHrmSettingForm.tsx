@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Save } from 'lucide-react';
 import { DatePickerField } from './DatePickerField';
+import { useRouter } from 'next/navigation';
 
 interface EditHrmSettingFormProps {
   initialData: HrmSettingDocument;
@@ -24,6 +25,7 @@ interface EditHrmSettingFormProps {
 
 export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSettingFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const router = useRouter();
   const form = useForm<HrmSettingFormValues>({
     resolver: zodResolver(HrmSettingSchema),
     defaultValues: {
@@ -52,6 +54,7 @@ export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSetting
         showConfirmButton: false,
       });
       onFormSubmit(); // Close the dialog
+      router.refresh(); // Refresh the page to show the latest data
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update setting: ${error.message}`, "error");
     } finally {

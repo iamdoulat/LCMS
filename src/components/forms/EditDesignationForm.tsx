@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Save } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface EditDesignationFormProps {
   initialData: DesignationDocument;
@@ -22,6 +23,7 @@ interface EditDesignationFormProps {
 
 export function EditDesignationForm({ initialData, onFormSubmit }: EditDesignationFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const router = useRouter();
   const form = useForm<DesignationFormValues>({
     resolver: zodResolver(DesignationSchema),
     defaultValues: {
@@ -46,6 +48,7 @@ export function EditDesignationForm({ initialData, onFormSubmit }: EditDesignati
         showConfirmButton: false,
       });
       onFormSubmit(); // Close the dialog
+      router.refresh(); // Refresh the page to show the latest data
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update designation: ${error.message}`, "error");
     } finally {
