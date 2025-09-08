@@ -18,9 +18,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
 import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Textarea } from '../ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '../ui/label';
@@ -434,10 +434,49 @@ export function AddEmployeeForm() {
             </CardHeader>
             <CardContent className="p-2 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-                    <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (<FormItem><FormLabel>Is Consolidate*</FormLabel><FormControl><RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2"><FormItem><FormControl><RadioGroupItem value="true" /> </FormControl><FormLabel>Yes</FormLabel></FormItem><FormItem><FormControl><RadioGroupItem value="false" /> </FormControl><FormLabel>No</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="salaryStructure.paymentType" render={({ field }) => (<FormItem><FormLabel>Payment Type*</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2"><FormItem><FormControl><RadioGroupItem value="Bank" /> </FormControl><FormLabel>Bank</FormLabel></FormItem><FormItem><FormControl><RadioGroupItem value="Cash" /> </FormControl><FormLabel>Cash</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Is Consolidate*</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2">
+                                  <div className="flex items-center space-x-2"><RadioGroupItem value="true" id="isConsolidateYes" /><Label htmlFor="isConsolidateYes">Yes</Label></div>
+                                  <div className="flex items-center space-x-2"><RadioGroupItem value="false" id="isConsolidateNo" /><Label htmlFor="isConsolidateNo">No</Label></div>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                    <FormField control={control} name="salaryStructure.paymentType" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Payment Type*</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
+                                  <div className="flex items-center space-x-2"><RadioGroupItem value="Bank" id="paymentTypeBank" /><Label htmlFor="paymentTypeBank">Bank</Label></div>
+                                  <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="paymentTypeCash" /><Label htmlFor="paymentTypeCash">Cash</Label></div>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
                     <FormField control={control} name="salaryStructure.structureDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Structure Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (<FormItem><FormLabel>Payment Frequency*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl><SelectContent>{paymentFrequencyOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Frequency*</FormLabel>
+                          <div>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select frequency" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {paymentFrequencyOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                    )}/>
                 </div>
                 <Separator />
                 <FormItem>
