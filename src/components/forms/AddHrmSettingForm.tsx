@@ -26,11 +26,9 @@ export function AddHrmSettingForm({ onFormSubmit }: AddHrmSettingFormProps) {
   const form = useForm<HrmSettingFormValues>({
     resolver: zodResolver(HrmSettingSchema),
     defaultValues: {
-      division: '',
       branch: '',
       department: '',
       unit: '',
-      effectiveDate: new Date(),
     },
   });
 
@@ -38,7 +36,6 @@ export function AddHrmSettingForm({ onFormSubmit }: AddHrmSettingFormProps) {
     setIsSubmitting(true);
     const dataToSave = {
       ...data,
-      effectiveDate: format(data.effectiveDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       createdAt: serverTimestamp(),
     };
 
@@ -62,13 +59,7 @@ export function AddHrmSettingForm({ onFormSubmit }: AddHrmSettingFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-        <FormField control={form.control} name="division" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Division*</FormLabel>
-            <FormControl><Input placeholder="e.g., Corporate" {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+        
         <FormField control={form.control} name="branch" render={({ field }) => (
           <FormItem>
             <FormLabel>Branch*</FormLabel>
@@ -90,13 +81,7 @@ export function AddHrmSettingForm({ onFormSubmit }: AddHrmSettingFormProps) {
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="effectiveDate" render={({ field }) => (
-          <FormItem className="flex flex-col">
-            <FormLabel>Effective Date*</FormLabel>
-            <DatePickerField field={field} />
-            <FormMessage />
-          </FormItem>
-        )} />
+        
         <div className="flex justify-end pt-2">
             <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (

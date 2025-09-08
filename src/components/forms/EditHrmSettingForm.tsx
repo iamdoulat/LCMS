@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { format, parseISO, isValid } from 'date-fns';
+import { parseISO, isValid } from 'date-fns';
 import type { HrmSettingFormValues, HrmSettingDocument } from '@/types';
 import { HrmSettingSchema } from '@/types';
 
@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Save } from 'lucide-react';
-import { DatePickerField } from './DatePickerField';
 import { useRouter } from 'next/navigation';
 
 interface EditHrmSettingFormProps {
@@ -28,19 +27,13 @@ export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSetting
   const router = useRouter();
   const form = useForm<HrmSettingFormValues>({
     resolver: zodResolver(HrmSettingSchema),
-    defaultValues: {
-        ...initialData,
-        effectiveDate: initialData.effectiveDate && isValid(parseISO(initialData.effectiveDate)) 
-                         ? parseISO(initialData.effectiveDate) 
-                         : new Date(),
-    },
+    defaultValues: initialData,
   });
 
   async function onSubmit(data: HrmSettingFormValues) {
     setIsSubmitting(true);
     const dataToUpdate = {
       ...data,
-      effectiveDate: format(data.effectiveDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       updatedAt: serverTimestamp(),
     };
 
@@ -53,8 +46,8 @@ export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSetting
         timer: 1500,
         showConfirmButton: false,
       });
-      onFormSubmit(); // Close the dialog
-      router.refresh(); // Refresh the page to show the latest data
+      onFormSubmit();
+      router.refresh();
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update setting: ${error.message}`, "error");
     } finally {
@@ -65,13 +58,6 @@ export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSetting
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-        <FormField control={form.control} name="division" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Division*</FormLabel>
-            <FormControl><Input placeholder="e.g., Corporate" {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
         <FormField control={form.control} name="branch" render={({ field }) => (
           <FormItem>
             <FormLabel>Branch*</FormLabel>

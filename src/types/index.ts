@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1454,10 +1453,9 @@ export const EmployeeSchema = z.object({
   remarksDivision: z.string().optional(),
   jobStatus: z.enum(jobStatusOptions).optional(),
   jobStatusEffectiveDate: z.date().optional(),
-  remarksJobStatus: z.string().optional(),
+  remarksJobBase: z.string().optional(),
   jobBase: z.enum(jobBaseOptions).optional(),
   jobBaseEffectiveDate: z.date().optional(),
-  remarksJobBase: z.string().optional(),
   educationDetails: z.array(EducationSchema).optional(),
   presentAddress: AddressSchema.optional(),
   permanentAddress: AddressSchema.optional(),
@@ -1522,21 +1520,17 @@ export type EmployeeDocument = Employee & { id: string };
 
 // HRM Settings
 export const HrmSettingSchema = z.object({
-  division: z.string().min(1, "Division is required."),
   branch: z.string().min(1, "Branch is required."),
   department: z.string().min(1, "Department is required."),
   unit: z.string().min(1, "Unit is required."),
-  effectiveDate: z.date({ required_error: "Effective Date is required." }),
 });
 export type HrmSettingFormValues = z.infer<typeof HrmSettingSchema>;
 
 export interface HrmSettingDocument {
   id: string;
-  division: string;
   branch: string;
   department: string;
   unit: string;
-  effectiveDate: string; // ISO string
   createdAt: any;
 }
 

@@ -63,7 +63,7 @@ export default function HrmSettingsPage() {
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
-        const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("division", "asc"));
+        const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("branch", "asc"));
         const desigQuery = query(collection(firestore, "designations"), orderBy("name", "asc"));
 
         const unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
@@ -144,7 +144,7 @@ export default function HrmSettingsPage() {
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
-                                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Unit, Department Setup</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Unit, Department Setup</CardTitle>
                                     <CardDescription>Manage organizational units.</CardDescription>
                                 </div>
                                 <DialogTrigger asChild>
@@ -160,7 +160,6 @@ export default function HrmSettingsPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Division</TableHead>
                                                     <TableHead>Branch</TableHead>
                                                     <TableHead>Department</TableHead>
                                                     <TableHead>Unit</TableHead>
@@ -170,7 +169,6 @@ export default function HrmSettingsPage() {
                                             <TableBody>
                                                 {settings.map(setting => (
                                                     <TableRow key={setting.id}>
-                                                        <TableCell>{setting.division}</TableCell>
                                                         <TableCell>{setting.branch}</TableCell>
                                                         <TableCell>{setting.department}</TableCell>
                                                         <TableCell>{setting.unit}</TableCell>
@@ -181,7 +179,7 @@ export default function HrmSettingsPage() {
                                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                                     <DropdownMenuItem onClick={() => handleEditSetting(setting)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                     <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem onClick={() => handleDelete('hrm_settings', setting.id, setting.division)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleDelete('hrm_settings', setting.id, setting.branch)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </TableCell>
@@ -196,7 +194,7 @@ export default function HrmSettingsPage() {
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Organizational Unit</DialogTitle>
-                                <DialogDescription>Create a new combination of division, branch, department, and unit.</DialogDescription>
+                                <DialogDescription>Create a new combination of branch, department, and unit.</DialogDescription>
                             </DialogHeader>
                             <AddHrmSettingForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
                         </DialogContent>
