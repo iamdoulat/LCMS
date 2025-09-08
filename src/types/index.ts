@@ -1505,7 +1505,6 @@ export interface Employee {
   remarksJobBase?: string;
   jobBase?: (typeof jobBaseOptions)[number];
   jobBaseEffectiveDate?: string; // ISO string
-  remarksJobBase?: string;
   educationDetails?: Education[];
   presentAddress?: z.infer<typeof AddressSchema>;
   permanentAddress?: z.infer<typeof AddressSchema>;
@@ -1520,6 +1519,28 @@ export interface Employee {
 }
 
 export type EmployeeDocument = Employee & { id: string };
+
+// HRM Settings
+export const HrmSettingSchema = z.object({
+  division: z.string().min(1, "Division is required."),
+  branch: z.string().min(1, "Branch is required."),
+  department: z.string().min(1, "Department is required."),
+  unit: z.string().min(1, "Unit is required."),
+  effectiveDate: z.date({ required_error: "Effective Date is required." }),
+});
+export type HrmSettingFormValues = z.infer<typeof HrmSettingSchema>;
+
+export interface HrmSettingDocument {
+  id: string;
+  division: string;
+  branch: string;
+  department: string;
+  unit: string;
+  effectiveDate: string; // ISO string
+  createdAt: any;
+}
+
 // --- END Employee Types ---
 
   
+
