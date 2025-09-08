@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { EmployeeFormValues, Education, BankDetails } from '@/types';
-import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, jobStatusOptions, jobBaseOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions } from '@/types';
+import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, jobStatusOptions, jobBaseOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, employeeStatusOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,6 +182,25 @@ export function AddEmployeeForm() {
             <FormField control={control} name="phone" render={({ field }) => (<FormItem><FormLabel>Mobile No*</FormLabel><FormControl><Input type="tel" placeholder="Enter mobile number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         
+        <FormField control={control} name="status" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Employee Status</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {employeeStatusOptions.map(o => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}/>
+
         <Separator />
 
         <Card className="p-4">
