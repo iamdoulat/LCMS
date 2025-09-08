@@ -184,7 +184,7 @@ export default function HrmSettingsPage() {
     );
 
     return (
-        <div className="container mx-auto py-8">
+        <div className="py-8">
             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -195,7 +195,7 @@ export default function HrmSettingsPage() {
                         Manage core settings for the Human Resource Management module.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-8">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
                         <DialogTrigger asChild>{renderTableSection("Branches", "Manage company branches.", branches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}</DialogTrigger>
                         <DialogContent className="sm:max-w-md">
