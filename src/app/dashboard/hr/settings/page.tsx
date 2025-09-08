@@ -63,7 +63,7 @@ export default function HrmSettingsPage() {
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
-        const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("effectiveDate", "desc"));
+        const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("division", "asc"));
         const desigQuery = query(collection(firestore, "designations"), orderBy("name", "asc"));
 
         const unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
@@ -164,7 +164,6 @@ export default function HrmSettingsPage() {
                                                     <TableHead>Branch</TableHead>
                                                     <TableHead>Department</TableHead>
                                                     <TableHead>Unit</TableHead>
-                                                    <TableHead>Effective Date</TableHead>
                                                     <TableHead className="text-right w-[50px]">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -175,7 +174,6 @@ export default function HrmSettingsPage() {
                                                         <TableCell>{setting.branch}</TableCell>
                                                         <TableCell>{setting.department}</TableCell>
                                                         <TableCell>{setting.unit}</TableCell>
-                                                        <TableCell>{formatDisplayDate(setting.effectiveDate)}</TableCell>
                                                         <TableCell className="text-right">
                                                            <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
