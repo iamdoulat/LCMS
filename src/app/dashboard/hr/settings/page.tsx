@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Edit, MoreHorizontal, Building, CalendarDays } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Edit, MoreHorizontal, Building, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { HrmSettingDocument } from '@/types';
+import type { HrmSettingDocument, DesignationDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { AddHrmSettingForm } from '@/components/forms/AddHrmSettingForm';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
+import { AddDesignationForm } from '@/components/forms/AddDesignationForm';
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -38,27 +39,49 @@ export default function HrmSettingsPage() {
     const isReadOnly = userRole?.includes('Viewer');
 
     const [settings, setSettings] = React.useState<HrmSettingDocument[]>([]);
+    const [designations, setDesignations] = React.useState<DesignationDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
-    const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+    const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
+    const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
         const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("effectiveDate", "desc"));
-        const unsubscribe = onSnapshot(settingsQuery, (snapshot) => {
+        const desigQuery = query(collection(firestore, "designations"), orderBy("name", "asc"));
+
+        const unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
             setSettings(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as HrmSettingDocument)));
-            setIsLoading(false);
+            if (!isLoading) setIsLoading(false);
         }, (error) => {
             console.error("Error fetching HRM settings:", error);
-            setFetchError("Could not load settings. Check permissions and console.");
+            setFetchError("Could not load unit settings. Check permissions and console.");
             setIsLoading(false);
         });
-        return () => unsubscribe();
-    }, []);
 
-    const handleDelete = async (id: string, name: string) => {
+        const unsubDesignations = onSnapshot(desigQuery, (snapshot) => {
+            setDesignations(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as DesignationDocument)));
+             if (!isLoading) setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching designations:", error);
+            setFetchError("Could not load designations. Check permissions and console.");
+            setIsLoading(false);
+        });
+        
+        Promise.all([new Promise(resolve => setTimeout(resolve, 500))]).then(() => {
+           if (isLoading) setIsLoading(false);
+        });
+
+
+        return () => {
+            unsubSettings();
+            unsubDesignations();
+        };
+    }, [isLoading]);
+
+    const handleDelete = async (collectionName: string, docId: string, docName: string) => {
         if (isReadOnly) return;
         Swal.fire({
-            title: `Delete '${name}'?`,
+            title: `Delete '${docName}'?`,
             text: "This will permanently delete the setting.",
             icon: 'warning',
             showCancelButton: true,
@@ -67,8 +90,8 @@ export default function HrmSettingsPage() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await deleteDoc(doc(firestore, "hrm_settings", id));
-                    Swal.fire('Deleted!', `'${name}' has been removed.`, 'success');
+                    await deleteDoc(doc(firestore, collectionName, docId));
+                    Swal.fire('Deleted!', `'${docName}' has been removed.`, 'success');
                 } catch (error: any) {
                     Swal.fire('Error!', `Could not delete item: ${error.message}`, 'error');
                 }
@@ -89,7 +112,7 @@ export default function HrmSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <div>
@@ -103,7 +126,7 @@ export default function HrmSettingsPage() {
                             <CardContent>
                                 {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
                                  fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-                                 settings.length === 0 ? <div className="text-muted-foreground text-center p-4">No settings found.</div> :
+                                 settings.length === 0 ? <div className="text-muted-foreground text-center p-4">No unit settings found.</div> :
                                 (
                                     <div className="rounded-md border">
                                         <Table>
@@ -126,7 +149,7 @@ export default function HrmSettingsPage() {
                                                         <TableCell>{setting.unit}</TableCell>
                                                         <TableCell>{formatDisplayDate(setting.effectiveDate)}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" disabled={isReadOnly} onClick={() => handleDelete(setting.id, setting.division)}>
+                                                            <Button variant="ghost" size="icon" disabled={isReadOnly} onClick={() => handleDelete('hrm_settings', setting.id, setting.division)}>
                                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                                             </Button>
                                                         </TableCell>
@@ -143,7 +166,57 @@ export default function HrmSettingsPage() {
                                 <DialogTitle>Add New Organizational Unit</DialogTitle>
                                 <DialogDescription>Create a new combination of division, branch, department, and unit.</DialogDescription>
                             </DialogHeader>
-                            <AddHrmSettingForm onFormSubmit={() => setIsAddDialogOpen(false)} />
+                            <AddHrmSettingForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary"/>Designation Setup</CardTitle>
+                                    <CardDescription>Manage employee job designations.</CardDescription>
+                                </div>
+                                <DialogTrigger asChild>
+                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Designation</Button>
+                                </DialogTrigger>
+                            </CardHeader>
+                            <CardContent>
+                                {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
+                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
+                                 designations.length === 0 ? <div className="text-muted-foreground text-center p-4">No designations found.</div> :
+                                (
+                                    <div className="rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Designation Name</TableHead>
+                                                    <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {designations.map(desig => (
+                                                    <TableRow key={desig.id}>
+                                                        <TableCell className="font-medium">{desig.name}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" disabled={isReadOnly} onClick={() => handleDelete('designations', desig.id, desig.name)}>
+                                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Designation</DialogTitle>
+                                <DialogDescription>Create a new job designation.</DialogDescription>
+                            </DialogHeader>
+                            <AddDesignationForm onFormSubmit={() => setIsAddDesignationDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
                 </CardContent>

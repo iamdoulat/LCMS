@@ -1540,7 +1540,15 @@ export interface HrmSettingDocument {
   createdAt: any;
 }
 
+// --- Designation Types ---
+export const DesignationSchema = z.object({
+  name: z.string().min(2, "Designation name must be at least 2 characters long."),
+});
+export type DesignationFormValues = z.infer<typeof DesignationSchema>;
+
+export interface DesignationDocument {
+  id: string;
+  name: string;
+  createdAt: any;
+}
 // --- END Employee Types ---
-
-  
-
