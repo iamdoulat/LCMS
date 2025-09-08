@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,13 @@ import { Checkbox } from '../ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import type { ComboboxOption } from '@/components/ui/combobox';
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [designationOptions, setDesignationOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingDesignations, setIsLoadingDesignations] = React.useState(true);
+
   
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(EmployeeSchema),
@@ -57,10 +61,9 @@ export function AddEmployeeForm() {
       remarksDivision: '',
       jobStatus: 'Active',
       jobStatusEffectiveDate: undefined,
-      remarksJobStatus: '',
+      remarksJobBase: '',
       jobBase: 'Permanent',
       jobBaseEffectiveDate: undefined,
-      remarksJobBase: '',
       educationDetails: [],
       presentAddress: { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       permanentAddress: { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
@@ -96,6 +99,27 @@ export function AddEmployeeForm() {
   const watchSameAsPresent = watch("sameAsPresentAddress");
   const watchPresentAddress = watch("presentAddress");
   const watchSalaryBreakup = watch("salaryStructure.salaryBreakup");
+  
+  React.useEffect(() => {
+    const fetchDesignations = async () => {
+      setIsLoadingDesignations(true);
+      try {
+        const designationsSnapshot = await getDocs(collection(firestore, "designations"));
+        setDesignationOptions(
+          designationsSnapshot.docs.map(doc => {
+            const data = doc.data() as DesignationDocument;
+            return { value: data.name, label: data.name };
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching designations: ", error);
+        Swal.fire("Error", "Could not load designations.", "error");
+      } finally {
+        setIsLoadingDesignations(false);
+      }
+    };
+    fetchDesignations();
+  }, []);
 
   const { salaryAmount, increasedAmount, totalAmount } = React.useMemo(() => {
     let salary = 0;
@@ -206,7 +230,30 @@ export function AddEmployeeForm() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField control={control} name="employeeCode" render={({ field }) => (<FormItem><FormLabel>Employee Code*</FormLabel><FormControl><Input placeholder="Enter employee code" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="designation" render={({ field }) => (<FormItem><FormLabel>Designation*</FormLabel><FormControl><Input placeholder="Enter designation" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField
+                control={control}
+                name="designation"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Designation*</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingDesignations}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder={isLoadingDesignations ? "Loading..." : "Select designation"} />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {designationOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
             <FormField control={control} name="phone" render={({ field }) => (<FormItem><FormLabel>Mobile No*</FormLabel><FormControl><Input type="tel" placeholder="Enter mobile number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
         
@@ -422,7 +469,7 @@ export function AddEmployeeForm() {
                 <CardTitle className="text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Salary Structure</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                     <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (
                          <FormItem>
                             <FormLabel>Is Consolidate*</FormLabel>
@@ -450,8 +497,8 @@ export function AddEmployeeForm() {
                     <FormField control={control} name="salaryStructure.structureDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Structure Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Payment Frequency*</FormLabel>
-                          <div>
+                            <FormLabel>Payment Frequency*</FormLabel>
+                            <div>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
@@ -463,7 +510,7 @@ export function AddEmployeeForm() {
                               </SelectContent>
                             </Select>
                             <FormMessage />
-                          </div>
+                            </div>
                         </FormItem>
                     )}/>
                 </div>
