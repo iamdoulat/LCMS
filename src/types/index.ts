@@ -1318,7 +1318,7 @@ export const ClaimReportSchema = z.object({
     ),
     partialReceivedQty: z.preprocess(
         (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
-        z.number({ invalid_type_error: "Received Qty must be a number" }).nonnegative("Received Qty cannot be negative.").optional()
+        z.number({ invalid_type_error: "Received Qty must be a number." }).nonnegative("Received Qty cannot be negative.").optional()
     ),
     emailsViewUrl: z.string().url("Invalid URL format.").optional().or(z.literal('')),
     claimReportUrl: z.string().url("Invalid URL format.").optional().or(z.literal('')),
@@ -1365,6 +1365,9 @@ export const genderOptions = ["Male", "Female", "Other"] as const;
 export const maritalStatusOptions = ["Single", "Married", "Divorced", "Widowed"] as const;
 export const bloodGroupOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
+export const jobStatusOptions = ["Active", "Inactive", "On Probation", "Resigned"] as const;
+export const jobBaseOptions = ["Permanent", "Contractual", "Intern"] as const;
+
 export const EmployeeSchema = z.object({
   employeeCode: z.string().min(1, "Employee Code is required."),
   firstName: z.string().min(1, "First Name is required."),
@@ -1383,6 +1386,19 @@ export const EmployeeSchema = z.object({
   bloodGroup: z.enum(bloodGroupOptions).optional(),
   photoURL: z.string().url().optional().or(z.literal('')),
   status: z.enum(employeeStatusOptions).default('Active'),
+  // New Fields
+  division: z.string().optional(),
+  branch: z.string().optional(),
+  department: z.string().optional(),
+  unit: z.string().optional(),
+  effectiveDate: z.date().optional(),
+  remarksDivision: z.string().optional(),
+  jobStatus: z.enum(jobStatusOptions).optional(),
+  jobStatusEffectiveDate: z.date().optional(),
+  remarksJobStatus: z.string().optional(),
+  jobBase: z.enum(jobBaseOptions).optional(),
+  jobBaseEffectiveDate: z.date().optional(),
+  remarksJobBase: z.string().optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1406,7 +1422,22 @@ export interface Employee {
   status?: EmployeeStatus;
   createdAt?: any;
   updatedAt?: any;
+  // New Fields
+  division?: string;
+  branch?: string;
+  department?: string;
+  unit?: string;
+  effectiveDate?: string; // ISO string
+  remarksDivision?: string;
+  jobStatus?: (typeof jobStatusOptions)[number];
+  jobStatusEffectiveDate?: string; // ISO string
+  remarksJobStatus?: string;
+  jobBase?: (typeof jobBaseOptions)[number];
+  jobBaseEffectiveDate?: string; // ISO string
+  remarksJobBase?: string;
 }
 
 export type EmployeeDocument = Employee & { id: string };
 // --- END Employee Types ---
+
+  

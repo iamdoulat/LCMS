@@ -5,12 +5,12 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save } from 'lucide-react';
+import { Loader2, UserPlus, Save, Building, History } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { EmployeeFormValues, EmployeeDocument } from '@/types';
-import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions } from '@/types';
+import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
 import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Separator } from '../ui/separator';
+import { Textarea } from '../ui/textarea';
 
 interface EditEmployeeFormProps {
   employee: EmployeeDocument;
@@ -29,23 +32,16 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(EmployeeSchema),
     defaultValues: {
-      employeeCode: employee.employeeCode,
-      firstName: employee.fullName.split(' ')[0] || '',
-      middleName: employee.fullName.split(' ')[1] || '',
-      lastName: employee.fullName.split(' ').slice(2).join(' ') || employee.fullName.split(' ')[1] || '',
-      email: employee.email,
-      phone: employee.phone,
-      gender: employee.gender,
+      ...employee,
+      // Handle potential name splitting issues if middleName is not present
+      firstName: employee.fullName?.split(' ')[0] || '',
+      middleName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ')[1] : '',
+      lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
       dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
       joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
-      designation: employee.designation,
-      maritalStatus: employee.maritalStatus,
-      nationality: employee.nationality || 'Bangladeshi',
-      religion: employee.religion,
-      nationalId: employee.nationalId,
-      bloodGroup: employee.bloodGroup,
-      photoURL: employee.photoURL || '',
-      status: employee.status || 'Active',
+      effectiveDate: employee.effectiveDate ? new Date(employee.effectiveDate) : undefined,
+      jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
+      jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined,
     },
   });
 
@@ -59,6 +55,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       fullName: fullName,
       dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
       joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
+      effectiveDate: data.effectiveDate ? data.effectiveDate.toISOString() : null,
+      jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
+      jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
       updatedAt: serverTimestamp(),
     };
 
@@ -272,7 +271,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             </FormItem>
           )}/>
         </div>
-
+        
         <FormField control={form.control} name="status" render={({ field }) => (
           <FormItem>
             <FormLabel>Employee Status</FormLabel>
@@ -292,6 +291,48 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           </FormItem>
         )}/>
 
+        <Separator />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-1 p-4">
+                <CardHeader className="p-2 pt-0">
+                    <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
+                    <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-2 space-y-4">
+                    <FormField control={form.control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="effectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                </CardContent>
+            </Card>
+
+            <Card className="md:col-span-1 p-4">
+                <CardHeader className="p-2 pt-0">
+                    <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Status Setup</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 space-y-4">
+                    <FormField control={form.control} name="jobStatus" render={({ field }) => (<FormItem><FormLabel>Job Status*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl><SelectContent>{jobStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="jobStatusEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Status Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="remarksJobStatus" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                </CardContent>
+            </Card>
+            
+            <Card className="md:col-span-1 p-4">
+                <CardHeader className="p-2 pt-0">
+                    <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 space-y-4">
+                    <FormField control={form.control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                </CardContent>
+            </Card>
+        </div>
+
+
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -309,3 +350,5 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     </Form>
   );
 }
+
+  
