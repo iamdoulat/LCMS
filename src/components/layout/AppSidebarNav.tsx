@@ -160,7 +160,7 @@ const hrNavItems: NavItem[] = [
   { href: '/dashboard/hr/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
   { href: '/dashboard/hr/attendance', label: 'Attendance', icon: CalendarDays, iconColorClass: 'bg-icon-upcoming' },
   { href: '/dashboard/hr/payroll', label: 'Payroll', icon: Banknote, iconColorClass: 'bg-icon-payment' },
-  { href: '/dashboard/hr/settings', label: 'HR Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+  { href: '/dashboard/hr/settings', label: 'HRM And Payroll Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
 const settingsNavItems: NavItem[] = [
@@ -361,5 +361,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
