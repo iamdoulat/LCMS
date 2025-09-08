@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -371,7 +370,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         )}/>
 
         <Separator />
-        
+
         <Card className="p-4">
           <CardHeader className="p-2 pt-0">
             <CardTitle>Present Address</CardTitle>
@@ -583,13 +582,17 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </div>
                 <Separator />
                 <div>
-                     <Label>Add Salary Breakup*</Label>
-                    <Select onValueChange={(value) => { if (value && !salaryFields.some(f => f.breakupName === value)) { appendSalary({ breakupName: value, amount: 0, increaseAmount: 0 }); }}}>
-                        <SelectTrigger><SelectValue placeholder="Select Salary Breakup to Add" /></SelectTrigger>
-                        <SelectContent>
-                            {salaryBreakupOptions.map(opt => <SelectItem key={opt} value={opt} disabled={salaryFields.some(f => f.breakupName === opt)}>{opt}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <FormItem>
+                        <div>
+                            <FormLabel>Add Salary Breakup*</FormLabel>
+                        </div>
+                        <Select onValueChange={(value) => { if (value && !salaryFields.some(f => f.breakupName === value)) { appendSalary({ breakupName: value, amount: 0, increaseAmount: 0 }); }}}>
+                            <SelectTrigger><SelectValue placeholder="Select Salary Breakup to Add" /></SelectTrigger>
+                            <SelectContent>
+                                {salaryBreakupOptions.map(opt => <SelectItem key={opt} value={opt} disabled={salaryFields.some(f => f.breakupName === opt)}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </FormItem>
                 </div>
                 <div className="space-y-3">
                     {salaryFields.map((field, index) => (
@@ -617,7 +620,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </div>
             </CardContent>
         </Card>
-
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
           {isSubmitting ? (
