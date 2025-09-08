@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -441,15 +440,17 @@ export function AddEmployeeForm() {
                     <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (<FormItem><FormLabel>Payment Frequency*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl><SelectContent>{paymentFrequencyOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                 </div>
                 <Separator />
-                <div>
-                     <Label>Add Salary Breakup*</Label>
+                <FormItem>
+                   <div>
+                    <Label>Add Salary Breakup*</Label>
                     <Select onValueChange={(value) => { if (value && !salaryFields.some(f => f.breakupName === value)) { appendSalary({ breakupName: value, amount: 0, increaseAmount: 0 }); }}}>
                         <SelectTrigger><SelectValue placeholder="Select Salary Breakup to Add" /></SelectTrigger>
                         <SelectContent>
                             {salaryBreakupOptions.map(opt => <SelectItem key={opt} value={opt} disabled={salaryFields.some(f => f.breakupName === opt)}>{opt}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                </div>
+                   </div>
+                </FormItem>
                 <div className="space-y-3">
                     {salaryFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center">
