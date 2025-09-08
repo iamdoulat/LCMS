@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Edit, MoreHorizontal, Building, UserCheck } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Edit, MoreHorizontal, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -25,14 +25,18 @@ import {
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { HrmSettingDocument, DesignationDocument } from '@/types';
+import type { HrmSettingDocument, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument } from '@/types';
 import Swal from 'sweetalert2';
-import { AddHrmSettingForm } from '@/components/forms/AddHrmSettingForm';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
 import { AddDesignationForm } from '@/components/forms/AddDesignationForm';
-import { EditHrmSettingForm } from '@/components/forms/EditHrmSettingForm';
 import { EditDesignationForm } from '@/components/forms/EditDesignationForm';
+import { AddBranchForm } from '@/components/forms/AddBranchForm';
+import { EditBranchForm } from '@/components/forms/EditBranchForm';
+import { AddDepartmentForm } from '@/components/forms/AddDepartmentForm';
+import { EditDepartmentForm } from '@/components/forms/EditDepartmentForm';
+import { AddUnitForm } from '@/components/forms/AddUnitForm';
+import { EditUnitForm } from '@/components/forms/EditUnitForm';
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -48,69 +52,72 @@ export default function HrmSettingsPage() {
     const { userRole } = useAuth();
     const isReadOnly = userRole?.includes('Viewer');
 
-    const [settings, setSettings] = React.useState<HrmSettingDocument[]>([]);
     const [designations, setDesignations] = React.useState<DesignationDocument[]>([]);
+    const [branches, setBranches] = React.useState<BranchDocument[]>([]);
+    const [departments, setDepartments] = React.useState<DepartmentDocument[]>([]);
+    const [units, setUnits] = React.useState<UnitDocument[]>([]);
+
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
 
-    const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
     const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
+    const [isAddBranchDialogOpen, setIsAddBranchDialogOpen] = React.useState(false);
+    const [isAddDepartmentDialogOpen, setIsAddDepartmentDialogOpen] = React.useState(false);
+    const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
 
-    const [editingSetting, setEditingSetting] = React.useState<HrmSettingDocument | null>(null);
-    const [isEditSettingDialogOpen, setIsEditSettingDialogOpen] = React.useState(false);
-    
     const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
+    
+    const [editingBranch, setEditingBranch] = React.useState<BranchDocument | null>(null);
+    const [isEditBranchDialogOpen, setIsEditBranchDialogOpen] = React.useState(false);
+
+    const [editingDepartment, setEditingDepartment] = React.useState<DepartmentDocument | null>(null);
+    const [isEditDepartmentDialogOpen, setIsEditDepartmentDialogOpen] = React.useState(false);
+
+    const [editingUnit, setEditingUnit] = React.useState<UnitDocument | null>(null);
+    const [isEditUnitDialogOpen, setIsEditUnitDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
-        const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("branch", "asc"));
-        const desigQuery = query(collection(firestore, "designations"), orderBy("name", "asc"));
+        const createSubscription = (collectionName: string, setData: React.Dispatch<any>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
+            const q = query(collection(firestore, collectionName), orderBy("name", "asc"));
+            return onSnapshot(q, (snapshot) => {
+                setData(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })));
+            }, (error) => {
+                console.error(`Error fetching ${collectionName}:`, error);
+                setError(`Could not load ${collectionName}. Check permissions and console.`);
+            });
+        };
 
-        const unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
-            setSettings(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as HrmSettingDocument)));
-            if (!isLoading) setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching HRM settings:", error);
-            setFetchError("Could not load unit settings. Check permissions and console.");
-            setIsLoading(false);
-        });
+        const unsubDesignations = createSubscription('designations', setDesignations, setFetchError);
+        const unsubBranches = createSubscription('branches', setBranches, setFetchError);
+        const unsubDepartments = createSubscription('departments', setDepartments, setFetchError);
+        const unsubUnits = createSubscription('units', setUnits, setFetchError);
 
-        const unsubDesignations = onSnapshot(desigQuery, (snapshot) => {
-            setDesignations(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as DesignationDocument)));
-             if (!isLoading) setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching designations:", error);
-            setFetchError("Could not load designations. Check permissions and console.");
-            setIsLoading(false);
-        });
-        
-        Promise.all([new Promise(resolve => setTimeout(resolve, 500))]).then(() => {
-           if (isLoading) setIsLoading(false);
-        });
-
+        Promise.all([
+          new Promise(resolve => onSnapshot(query(collection(firestore, "designations")), () => resolve(true), () => resolve(false))),
+          new Promise(resolve => onSnapshot(query(collection(firestore, "branches")), () => resolve(true), () => resolve(false))),
+          new Promise(resolve => onSnapshot(query(collection(firestore, "departments")), () => resolve(true), () => resolve(false))),
+          new Promise(resolve => onSnapshot(query(collection(firestore, "units")), () => resolve(true), () => resolve(false))),
+        ]).then(() => setIsLoading(false));
 
         return () => {
-            unsubSettings();
             unsubDesignations();
+            unsubBranches();
+            unsubDepartments();
+            unsubUnits();
         };
-    }, [isLoading]);
+    }, []);
 
-    const handleEditSetting = (setting: HrmSettingDocument) => {
-        setEditingSetting(setting);
-        setIsEditSettingDialogOpen(true);
+    const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
+        setEditingItem(item);
+        setIsEditDialogOpen(true);
     };
-
-    const handleEditDesignation = (designation: DesignationDocument) => {
-        setEditingDesignation(designation);
-        setIsEditDesignationDialogOpen(true);
-    };
-
 
     const handleDelete = async (collectionName: string, docId: string, docName: string) => {
         if (isReadOnly) return;
         Swal.fire({
             title: `Delete '${docName}'?`,
-            text: "This will permanently delete the setting.",
+            text: "This will permanently delete the item.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: 'hsl(var(--destructive))',
@@ -127,6 +134,55 @@ export default function HrmSettingsPage() {
         });
     };
 
+    const renderTableSection = (
+      title: string,
+      description: string,
+      data: any[],
+      onAddClick: () => void,
+      onEditClick: (item: any) => void,
+      collectionName: string
+    ) => (
+      <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                  <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>{title}</CardTitle>
+                  <CardDescription>{description}</CardDescription>
+              </div>
+              <Button size="sm" disabled={isReadOnly} onClick={onAddClick}><PlusCircle className="mr-2 h-4 w-4"/>Add New</Button>
+          </CardHeader>
+          <CardContent>
+              {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
+               fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
+               data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+              (
+                  <div className="rounded-md border">
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {data.map(item => (
+                                  <TableRow key={item.id}>
+                                      <TableCell>{item.name}</TableCell>
+                                      <TableCell className="text-right">
+                                         <DropdownMenu>
+                                              <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                  <DropdownMenuItem onClick={() => onEditClick(item)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                  <DropdownMenuSeparator />
+                                                  <DropdownMenuItem onClick={() => handleDelete(collectionName, item.id, item.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                          </DropdownMenu>
+                                      </TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              )}
+          </CardContent>
+      </Card>
+    );
+
     return (
         <div className="container mx-auto py-8">
             <Card className="shadow-xl">
@@ -140,113 +196,41 @@ export default function HrmSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Unit, Department Setup</CardTitle>
-                                    <CardDescription>Manage organizational units.</CardDescription>
-                                </div>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add New Unit</Button>
-                                </DialogTrigger>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
-                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-                                 settings.length === 0 ? <div className="text-muted-foreground text-center p-4">No unit settings found.</div> :
-                                (
-                                    <div className="rounded-md border">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Branch</TableHead>
-                                                    <TableHead>Department</TableHead>
-                                                    <TableHead>Unit</TableHead>
-                                                    <TableHead className="text-right w-[50px]">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {settings.map(setting => (
-                                                    <TableRow key={setting.id}>
-                                                        <TableCell>{setting.branch}</TableCell>
-                                                        <TableCell>{setting.department}</TableCell>
-                                                        <TableCell>{setting.unit}</TableCell>
-                                                        <TableCell className="text-right">
-                                                           <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                    <DropdownMenuItem onClick={() => handleEditSetting(setting)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem onClick={() => handleDelete('hrm_settings', setting.id, setting.branch)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                    <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
+                        <DialogTrigger asChild>{renderTableSection("Branches", "Manage company branches.", branches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}</DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Add New Organizational Unit</DialogTitle>
-                                <DialogDescription>Create a new combination of branch, department, and unit.</DialogDescription>
+                                <DialogTitle>Add New Branch</DialogTitle>
+                                <DialogDescription>Create a new company branch.</DialogDescription>
                             </DialogHeader>
-                            <AddHrmSettingForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
+                            <AddBranchForm onFormSubmit={() => setIsAddBranchDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                     <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
+                         <DialogTrigger asChild>{renderTableSection("Departments", "Manage company departments.", departments, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}</DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Department</DialogTitle>
+                                <DialogDescription>Create a new company department.</DialogDescription>
+                            </DialogHeader>
+                            <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                    
+                     <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
+                        <DialogTrigger asChild>{renderTableSection("Units", "Manage organizational units.", units, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}</DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Unit</DialogTitle>
+                                <DialogDescription>Create a new organizational unit.</DialogDescription>
+                            </DialogHeader>
+                            <AddUnitForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
 
                     <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary"/>Designation Setup</CardTitle>
-                                    <CardDescription>Manage employee job designations.</CardDescription>
-                                </div>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Designation</Button>
-                                </DialogTrigger>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
-                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-                                 designations.length === 0 ? <div className="text-muted-foreground text-center p-4">No designations found.</div> :
-                                (
-                                    <div className="rounded-md border">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Designation Name</TableHead>
-                                                    <TableHead className="text-right w-[50px]">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {designations.map(desig => (
-                                                    <TableRow key={desig.id}>
-                                                        <TableCell className="font-medium">{desig.name}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                    <DropdownMenuItem onClick={() => handleEditDesignation(desig)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem onClick={() => handleDelete('designations', desig.id, desig.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                         <DialogTrigger asChild>{renderTableSection("Designations", "Manage employee job designations.", designations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}</DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Designation</DialogTitle>
@@ -257,17 +241,47 @@ export default function HrmSettingsPage() {
                     </Dialog>
                 </CardContent>
             </Card>
-
-            {editingSetting && (
-                <Dialog open={isEditSettingDialogOpen} onOpenChange={setIsEditSettingDialogOpen}>
+            
+            {editingBranch && (
+                <Dialog open={isEditBranchDialogOpen} onOpenChange={setIsEditBranchDialogOpen}>
                      <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle>Edit Organizational Unit</DialogTitle>
+                            <DialogTitle>Edit Branch</DialogTitle>
+                            <DialogDescription>Update the details for this branch.</DialogDescription>
+                        </DialogHeader>
+                        <EditBranchForm 
+                          initialData={editingBranch} 
+                          onFormSubmit={() => setIsEditBranchDialogOpen(false)} 
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {editingDepartment && (
+                <Dialog open={isEditDepartmentDialogOpen} onOpenChange={setIsEditDepartmentDialogOpen}>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Department</DialogTitle>
+                            <DialogDescription>Update the details for this department.</DialogDescription>
+                        </DialogHeader>
+                        <EditDepartmentForm 
+                          initialData={editingDepartment} 
+                          onFormSubmit={() => setIsEditDepartmentDialogOpen(false)} 
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+            
+            {editingUnit && (
+                <Dialog open={isEditUnitDialogOpen} onOpenChange={setIsEditUnitDialogOpen}>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Unit</DialogTitle>
                             <DialogDescription>Update the details for this unit.</DialogDescription>
                         </DialogHeader>
-                        <EditHrmSettingForm 
-                          initialData={editingSetting} 
-                          onFormSubmit={() => setIsEditSettingDialogOpen(false)} 
+                        <EditUnitForm 
+                          initialData={editingUnit} 
+                          onFormSubmit={() => setIsEditUnitDialogOpen(false)} 
                         />
                     </DialogContent>
                 </Dialog>
