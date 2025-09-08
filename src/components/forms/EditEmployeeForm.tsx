@@ -413,7 +413,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
         <Separator />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="md:col-span-1 p-4">
                 <CardHeader className="p-2 pt-0">
                     <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
@@ -429,17 +429,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </CardContent>
             </Card>
 
-            <Card className="md:col-span-1 p-4">
-                <CardHeader className="p-2 pt-0">
-                    <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Status Setup</CardTitle>
-                </CardHeader>
-                <CardContent className="p-2 space-y-4">
-                    <FormField control={control} name="jobStatus" render={({ field }) => (<FormItem><FormLabel>Job Status*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl><SelectContent>{jobStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="jobStatusEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Status Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                    <FormField control={control} name="remarksJobStatus" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                </CardContent>
-            </Card>
-            
             <Card className="md:col-span-1 p-4">
                 <CardHeader className="p-2 pt-0">
                     <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
@@ -566,7 +555,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </div>
             </CardContent>
         </Card>
-
         <Separator />
         
         <Card className="p-4">
@@ -577,26 +565,30 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                     <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (
                          <FormItem>
-                           <FormLabel>Is Consolidate*</FormLabel>
-                           <FormControl>
+                            <div className="mb-3">
+                                <FormLabel>Is Consolidate*</FormLabel>
+                            </div>
+                            <FormControl>
                                 <RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2">
                                   <div className="flex items-center space-x-2"><RadioGroupItem value="true" id="isConsolidateYesEdit" /><Label htmlFor="isConsolidateYesEdit">Yes</Label></div>
                                   <div className="flex items-center space-x-2"><RadioGroupItem value="false" id="isConsolidateNoEdit" /><Label htmlFor="isConsolidateNoEdit">No</Label></div>
                                 </RadioGroup>
-                           </FormControl>
-                           <FormMessage />
+                            </FormControl>
+                            <FormMessage />
                          </FormItem>
                     )}/>
                     <FormField control={control} name="salaryStructure.paymentType" render={({ field }) => (
                          <FormItem>
-                           <FormLabel>Payment Type*</FormLabel>
-                           <FormControl>
+                            <div className="mb-3">
+                                <FormLabel>Payment Type*</FormLabel>
+                            </div>
+                            <FormControl>
                                 <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
                                   <div className="flex items-center space-x-2"><RadioGroupItem value="Bank" id="paymentTypeBankEdit" /><Label htmlFor="paymentTypeBankEdit">Bank</Label></div>
                                   <div className="flex items-center space-x-2"><RadioGroupItem value="Cash" id="paymentTypeCashEdit" /><Label htmlFor="paymentTypeCashEdit">Cash</Label></div>
                                 </RadioGroup>
-                           </FormControl>
-                           <FormMessage />
+                            </FormControl>
+                            <FormMessage />
                          </FormItem>
                     )}/>
                     <FormField control={control} name="salaryStructure.structureDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Structure Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)}/>
