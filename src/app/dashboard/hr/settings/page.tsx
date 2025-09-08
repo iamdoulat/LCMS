@@ -8,6 +8,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,6 +31,8 @@ import { AddHrmSettingForm } from '@/components/forms/AddHrmSettingForm';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
 import { AddDesignationForm } from '@/components/forms/AddDesignationForm';
+import { EditHrmSettingForm } from '@/components/forms/EditHrmSettingForm';
+import { EditDesignationForm } from '@/components/forms/EditDesignationForm';
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -42,8 +52,15 @@ export default function HrmSettingsPage() {
     const [designations, setDesignations] = React.useState<DesignationDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
+
     const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
     const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
+
+    const [editingSetting, setEditingSetting] = React.useState<HrmSettingDocument | null>(null);
+    const [isEditSettingDialogOpen, setIsEditSettingDialogOpen] = React.useState(false);
+    
+    const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
+    const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
 
     React.useEffect(() => {
         const settingsQuery = query(collection(firestore, "hrm_settings"), orderBy("effectiveDate", "desc"));
@@ -77,6 +94,17 @@ export default function HrmSettingsPage() {
             unsubDesignations();
         };
     }, [isLoading]);
+
+    const handleEditSetting = (setting: HrmSettingDocument) => {
+        setEditingSetting(setting);
+        setIsEditSettingDialogOpen(true);
+    };
+
+    const handleEditDesignation = (designation: DesignationDocument) => {
+        setEditingDesignation(designation);
+        setIsEditDesignationDialogOpen(true);
+    };
+
 
     const handleDelete = async (collectionName: string, docId: string, docName: string) => {
         if (isReadOnly) return;
@@ -149,9 +177,15 @@ export default function HrmSettingsPage() {
                                                         <TableCell>{setting.unit}</TableCell>
                                                         <TableCell>{formatDisplayDate(setting.effectiveDate)}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" disabled={isReadOnly} onClick={() => handleDelete('hrm_settings', setting.id, setting.division)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                                            </Button>
+                                                           <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleEditSetting(setting)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={() => handleDelete('hrm_settings', setting.id, setting.division)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -199,9 +233,15 @@ export default function HrmSettingsPage() {
                                                     <TableRow key={desig.id}>
                                                         <TableCell className="font-medium">{desig.name}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" disabled={isReadOnly} onClick={() => handleDelete('designations', desig.id, desig.name)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                                            </Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => handleEditDesignation(desig)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={() => handleDelete('designations', desig.id, desig.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -221,6 +261,36 @@ export default function HrmSettingsPage() {
                     </Dialog>
                 </CardContent>
             </Card>
+
+            {editingSetting && (
+                <Dialog open={isEditSettingDialogOpen} onOpenChange={setIsEditSettingDialogOpen}>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Organizational Unit</DialogTitle>
+                            <DialogDescription>Update the details for this unit.</DialogDescription>
+                        </DialogHeader>
+                        <EditHrmSettingForm 
+                          initialData={editingSetting} 
+                          onFormSubmit={() => setIsEditSettingDialogOpen(false)} 
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+
+             {editingDesignation && (
+                <Dialog open={isEditDesignationDialogOpen} onOpenChange={setIsEditDesignationDialogOpen}>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Designation</DialogTitle>
+                            <DialogDescription>Update the name for this designation.</DialogDescription>
+                        </DialogHeader>
+                        <EditDesignationForm
+                          initialData={editingDesignation}
+                          onFormSubmit={() => setIsEditDesignationDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
