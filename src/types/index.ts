@@ -1361,6 +1361,30 @@ export interface ClaimReportDocument {
 export const educationLevelOptions = ["SSC", "HSC", "Diploma", "Bachelors", "Masters", "PhD"] as const;
 export const gradeDivisionOptions = ["1st Division", "2nd Division", "3rd Division", "A+", "A", "A-", "B", "C", "D"] as const;
 
+export const bankNameOptions = [
+  "AB Bank", "Agrani Bank", "Al-Arafah Islami Bank", "Bangladesh Commerce Bank", "Bangladesh Development Bank", 
+  "Bank Al-Falah", "Bank Asia", "BRAC Bank", "Citibank NA", "City Bank", "Commercial Bank of Ceylon", 
+  "Community Bank Bangladesh", "Dhaka Bank", "Dutch-Bangla Bank", "Eastern Bank", "EXIM Bank", 
+  "First Security Islami Bank", "Habib Bank", "ICB Islamic Bank", "IFIC Bank", "Islami Bank Bangladesh", 
+  "Jamuna Bank", "Janata Bank", "Meghna Bank", "Mercantile Bank", "Midland Bank", "Modhumoti Bank", 
+  "Mutual Trust Bank", "National Bank", "National Credit and Commerce Bank", "NRB Bank", "NRB Commercial Bank", 
+  "One Bank", "Padma Bank", "Premier Bank", "Prime Bank", "Pubali Bank", "Rupali Bank", "Shahjalal Islami Bank", 
+  "Social Islami Bank", "Sonali Bank", "Southeast Bank", "Standard Bank", "Standard Chartered Bank", 
+  "State Bank of India", "Trust Bank", "United Commercial Bank", "Uttara Bank", "Woori Bank"
+] as const;
+
+
+export const BankSchema = z.object({
+  id: z.string().optional(),
+  bankName: z.enum(bankNameOptions, { required_error: "Bank Name is required." }),
+  accountNo: z.string().min(1, "Account Number is required."),
+  accountRoutingNo: z.string().optional(),
+  accountName: z.string().min(1, "Account Holder's Name is required."),
+  remarks: z.string().optional(),
+});
+export type BankDetails = z.infer<typeof BankSchema>;
+
+
 export const EducationSchema = z.object({
   id: z.string().optional(), // For key in React
   education: z.enum(educationLevelOptions, { required_error: "Education level is required." }),
@@ -1430,6 +1454,7 @@ export const EmployeeSchema = z.object({
   presentAddress: AddressSchema.optional(),
   permanentAddress: AddressSchema.optional(),
   sameAsPresentAddress: z.boolean().optional(),
+  bankDetails: z.array(BankSchema).optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1469,6 +1494,7 @@ export interface Employee {
   educationDetails?: Education[];
   presentAddress?: z.infer<typeof AddressSchema>;
   permanentAddress?: z.infer<typeof AddressSchema>;
+  bankDetails?: BankDetails[];
 }
 
 export type EmployeeDocument = Employee & { id: string };

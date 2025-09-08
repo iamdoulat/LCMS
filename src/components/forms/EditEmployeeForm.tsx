@@ -1,16 +1,17 @@
 
+
 "use client";
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { EmployeeFormValues, EmployeeDocument, Education } from '@/types';
-import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions } from '@/types';
+import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails } from '@/types';
+import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,14 +54,20 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       presentAddress: employee.presentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       permanentAddress: employee.permanentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       sameAsPresentAddress: false,
+      bankDetails: employee.bankDetails || [],
     },
   });
 
   const { control, handleSubmit, watch, setValue } = form;
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
     control,
     name: "educationDetails",
+  });
+  
+  const { fields: bankFields, append: appendBank, remove: removeBank } = useFieldArray({
+    control,
+    name: "bankDetails",
   });
   
   const watchSameAsPresent = watch("sameAsPresentAddress");
@@ -366,7 +373,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -415,7 +422,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 <CardTitle className="text-lg flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary"/>Education Information</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-                {fields.map((field, index) => (
+                {eduFields.map((field, index) => (
                     <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <FormField control={control} name={`educationDetails.${index}.education`} render={({ field }) => (<FormItem><FormLabel>Education*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Education" /></SelectTrigger></FormControl><SelectContent>{educationLevelOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
@@ -430,10 +437,10 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                             <FormField control={control} name={`educationDetails.${index}.professional`} render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Professional</FormLabel></FormItem>)}/>
                             <FormField control={control} name={`educationDetails.${index}.lastEducation`} render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Last Education</FormLabel></FormItem>)}/>
                         </div>
-                        {fields.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        {eduFields.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeEdu(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ education: 'Bachelors', gradeDivision: 'A', passedYear: '', instituteName: '' })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => appendEdu({ education: 'Bachelors', gradeDivision: 'A', passedYear: '', instituteName: '' })}>
                     <PlusCircle className="mr-2 h-4 w-4"/> Add Education
                 </Button>
 
@@ -448,8 +455,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {fields.length > 0 ? (
-                                fields.map((field, index) => (
+                            {eduFields.length > 0 ? (
+                                eduFields.map((field, index) => (
                                     <TableRow key={field.id}>
                                         <TableCell>{watch(`educationDetails.${index}.education`)}</TableCell>
                                         <TableCell>{watch(`educationDetails.${index}.passedYear`)}</TableCell>
@@ -460,6 +467,61 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center text-muted-foreground">No education details added.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Separator />
+        
+        <Card className="p-4">
+            <CardHeader className="p-2 pt-0">
+                <CardTitle className="text-lg flex items-center gap-2"><Banknote className="h-5 w-5 text-primary"/>Bank Account Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+                 {bankFields.map((field, index) => (
+                    <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField control={control} name={`bankDetails.${index}.bankName`} render={({ field }) => (<FormItem><FormLabel>Bank*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Bank" /></SelectTrigger></FormControl><SelectContent>{bankNameOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`bankDetails.${index}.accountNo`} render={({ field }) => (<FormItem><FormLabel>Account No*</FormLabel><FormControl><Input placeholder="Enter Number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`bankDetails.${index}.accountRoutingNo`} render={({ field }) => (<FormItem><FormLabel>Account Routing No</FormLabel><FormControl><Input placeholder="Enter Number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField control={control} name={`bankDetails.${index}.accountName`} render={({ field }) => (<FormItem><FormLabel>Account Name*</FormLabel><FormControl><Input placeholder="Enter Name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                          <FormField control={control} name={`bankDetails.${index}.remarks`} render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Input placeholder="Enter Remarks" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
+                        {bankFields.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeBank(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    </div>
+                 ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => appendBank({ bankName: 'AB Bank', accountNo: '', accountName: '' })}>
+                    <PlusCircle className="mr-2 h-4 w-4"/> Add Bank Account
+                </Button>
+                <div className="rounded-md border mt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Bank Name</TableHead>
+                                <TableHead>Account No</TableHead>
+                                <TableHead>Account Routing No</TableHead>
+                                <TableHead>Account Name</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {bankFields.length > 0 ? (
+                                bankFields.map((field, index) => (
+                                    <TableRow key={field.id}>
+                                        <TableCell>{watch(`bankDetails.${index}.bankName`)}</TableCell>
+                                        <TableCell>{watch(`bankDetails.${index}.accountNo`)}</TableCell>
+                                        <TableCell>{watch(`bankDetails.${index}.accountRoutingNo`)}</TableCell>
+                                        <TableCell>{watch(`bankDetails.${index}.accountName`)}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No bank details added.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
