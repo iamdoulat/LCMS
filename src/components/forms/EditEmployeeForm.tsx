@@ -24,6 +24,7 @@ import { Separator } from '../ui/separator';
 import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '../ui/label';
 
 interface EditEmployeeFormProps {
   employee: EmployeeDocument;
@@ -50,15 +51,28 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         scale: edu.scale || undefined,
         cgpa: edu.cgpa || undefined,
       })) || [],
+      presentAddress: employee.presentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
+      permanentAddress: employee.permanentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
+      sameAsPresentAddress: false,
     },
   });
 
-  const { control, handleSubmit, watch } = form;
+  const { control, handleSubmit, watch, setValue } = form;
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "educationDetails",
   });
+  
+  const watchSameAsPresent = watch("sameAsPresentAddress");
+  const watchPresentAddress = watch("presentAddress");
+
+  React.useEffect(() => {
+    if (watchSameAsPresent) {
+      setValue("permanentAddress", watchPresentAddress);
+    }
+  }, [watchSameAsPresent, watchPresentAddress, setValue]);
+
 
   async function onSubmit(data: EmployeeFormValues) {
     setIsSubmitting(true);
@@ -84,6 +98,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     delete (dataToSave as any).firstName;
     delete (dataToSave as any).middleName;
     delete (dataToSave as any).lastName;
+    delete (dataToSave as any).sameAsPresentAddress;
+
 
     try {
       await updateDoc(doc(firestore, "employees", employee.id as string), dataToSave);
@@ -310,6 +326,48 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           </FormItem>
         )}/>
 
+        <Separator />
+        
+        <Card className="p-4">
+          <CardHeader className="p-2 pt-0">
+            <CardTitle>Present Address</CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 space-y-4">
+            <FormField control={control} name="presentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <FormField control={control} name="presentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="presentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="presentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="presentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-4">
+          <CardHeader className="p-2 pt-0 flex flex-row items-center justify-between">
+            <CardTitle>Permanent Address</CardTitle>
+            <FormField
+              control={control}
+              name="sameAsPresentAddress"
+              render={({ field }) => (
+                <FormItem className="flex items-center space-x-2">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="sameAsPresent" /></FormControl>
+                  <Label htmlFor="sameAsPresent" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Same as present address</Label>
+                </FormItem>
+              )}
+            />
+          </CardHeader>
+          <CardContent className="p-2 space-y-4">
+            <FormField control={control} name="permanentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <FormField control={control} name="permanentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="permanentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="permanentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={control} name="permanentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
+            </div>
+          </CardContent>
+        </Card>
+        
         <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

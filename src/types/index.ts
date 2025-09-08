@@ -1387,6 +1387,14 @@ export const bloodGroupOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O
 export const jobStatusOptions = ["Active", "Inactive", "On Probation", "Resigned"] as const;
 export const jobBaseOptions = ["Permanent", "Contractual", "Intern"] as const;
 
+const AddressSchema = z.object({
+  address: z.string().optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  zipCode: z.string().optional(),
+});
+
 export const EmployeeSchema = z.object({
   employeeCode: z.string().min(1, "Employee Code is required."),
   firstName: z.string().min(1, "First Name is required."),
@@ -1419,6 +1427,9 @@ export const EmployeeSchema = z.object({
   jobBaseEffectiveDate: z.date().optional(),
   remarksJobBase: z.string().optional(),
   educationDetails: z.array(EducationSchema).optional(),
+  presentAddress: AddressSchema.optional(),
+  permanentAddress: AddressSchema.optional(),
+  sameAsPresentAddress: z.boolean().optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1451,11 +1462,13 @@ export interface Employee {
   remarksDivision?: string;
   jobStatus?: (typeof jobStatusOptions)[number];
   jobStatusEffectiveDate?: string; // ISO string
-  remarksJobStatus?: string;
+  remarksJobBase?: string;
   jobBase?: (typeof jobBaseOptions)[number];
   jobBaseEffectiveDate?: string; // ISO string
   remarksJobBase?: string;
   educationDetails?: Education[];
+  presentAddress?: z.infer<typeof AddressSchema>;
+  permanentAddress?: z.infer<typeof AddressSchema>;
 }
 
 export type EmployeeDocument = Employee & { id: string };
