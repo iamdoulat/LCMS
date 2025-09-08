@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1357,21 +1358,31 @@ export interface ClaimReportDocument {
 // --- END Claim Report Types ---
 
 // --- Employee Types ---
+export const employeeStatusOptions = ["Active", "On Leave", "Terminated"] as const;
+export type EmployeeStatus = (typeof employeeStatusOptions)[number];
+
 export const genderOptions = ["Male", "Female", "Other"] as const;
 export const maritalStatusOptions = ["Single", "Married", "Divorced", "Widowed"] as const;
 export const bloodGroupOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
 export const EmployeeSchema = z.object({
   employeeCode: z.string().min(1, "Employee Code is required."),
-  fullName: z.string().min(1, "Full Name is required."),
+  firstName: z.string().min(1, "First Name is required."),
+  middleName: z.string().optional(),
+  lastName: z.string().min(1, "Last Name is required."),
   email: z.string().email("Invalid email address."),
   phone: z.string().min(1, "Phone number is required."),
-  dateOfBirth: z.date({ required_error: "Date of Birth is required." }),
   gender: z.enum(genderOptions, { required_error: "Gender is required." }),
+  dateOfBirth: z.date({ required_error: "Date of Birth is required." }),
+  joinedDate: z.date({ required_error: "Joined Date is required." }),
+  designation: z.string().min(1, "Designation is required"),
   maritalStatus: z.enum(maritalStatusOptions).optional(),
+  nationality: z.string().optional(),
+  religion: z.string().optional(),
   nationalId: z.string().optional(),
   bloodGroup: z.enum(bloodGroupOptions).optional(),
-  photoURL: z.string().url().optional(),
+  photoURL: z.string().url().optional().or(z.literal('')),
+  status: z.enum(employeeStatusOptions).default('Active'),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1383,11 +1394,16 @@ export interface Employee {
   email: string;
   phone: string;
   dateOfBirth: string; // ISO string
+  joinedDate: string; // ISO string
+  designation: string;
   gender: (typeof genderOptions)[number];
   maritalStatus?: (typeof maritalStatusOptions)[number];
+  nationality?: string;
+  religion?: string;
   nationalId?: string;
   bloodGroup?: (typeof bloodGroupOptions)[number];
   photoURL?: string;
+  status?: EmployeeStatus;
   createdAt?: any;
   updatedAt?: any;
 }

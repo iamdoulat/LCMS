@@ -1,46 +1,22 @@
 
-"use client";
+import Sidebar from '@/components/Sidebar';
+import React from 'react';
 
-import type { PropsWithChildren } from 'react';
-import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
-import { AppHeader } from '@/components/layout/AppHeader';
-import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
-import AuthGuard from '@/components/auth/AuthGuard';
-import { BottomNavBar } from '@/components/layout/BottomNavBar';
-import { cn } from '@/lib/utils';
-
-
-export default function DashboardLayout({ children }: PropsWithChildren) {
-  return (
-    <AuthGuard>
-      <SidebarProvider defaultOpen>
-        <Sidebar collapsible="icon" className="noprint">
-          <AppSidebarNav />
-        </Sidebar>
-        <SidebarInset className={cn("flex flex-col min-h-screen")}>
-            <div className="noprint">
-              <AppHeader />
-            </div>
-            <main className="flex-1 overflow-y-auto pt-4 px-6 pb-20 bg-gradient-to-br from-background to-muted/50">
-              {children}
-            </main>
-            <div className="noprint">
-              <BottomNavBar />
-              <footer className="py-4 px-6 text-center text-sm text-muted-foreground border-t bg-card hidden md:block">
-                © {new Date().getFullYear()} - Designed and Developed by{' '}
-                <a
-                  href="https://vcard.mddoulat.com/iamdoulat"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium hover:text-primary hover:underline"
-                >
-                  Doulat
-                </a>{' '}
-                v1.0
-              </footer>
-            </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </AuthGuard>
-  );
+interface DashboardLayoutProps {
+  children: React.ReactNode;
 }
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  return (
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+      <Sidebar />
+      <div className="flex-1 overflow-x-hidden overflow-y-auto">
+        <main className="container mx-auto px-6 py-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardLayout;

@@ -1,62 +1,55 @@
 
-"use client"
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import * as React from "react";
+import { format } from "date-fns";
+import { ControllerRenderProps } from "react-hook-form";
 
-import * as React from "react"
-import { format } from "date-fns"
-import type { ControllerRenderProps, FieldValues, Path } from "react-hook-form"
-
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-
-interface DatePickerFieldProps<TFieldValues extends FieldValues> {
-  field: ControllerRenderProps<TFieldValues, Path<TFieldValues>> | any
-  placeholder?: string
-  disabled?: boolean
+interface DatePickerFieldProps {
+  field: ControllerRenderProps<any, any>;
+  placeholder?: string;
 }
 
-export function DatePickerField<TFieldValues extends FieldValues>({
-  field,
-  placeholder,
-  disabled,
-}: DatePickerFieldProps<TFieldValues>) {
-  const { onChange, value, ...rest } = field;
+export function DatePickerField({ field, placeholder }: DatePickerFieldProps) {
+  const [date, setDate] = React.useState<Date | undefined>(field.value);
 
-  // The value from react-hook-form might be a Date object or an ISO string.
-  // The native date input expects 'yyyy-MM-dd'.
-  const formattedValue = React.useMemo(() => {
-    if (!value) return "";
-    try {
-      // Handles both Date objects and ISO strings from Firestore
-      return format(new Date(value), "yyyy-MM-dd");
-    } catch (e) {
-      // Return empty string if the date is invalid
-      return "";
-    }
-  }, [value]);
+  React.useEffect(() => {
+    setDate(field.value);
+  }, [field.value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateString = e.target.value;
-    if (dateString) {
-      // The browser provides the date as 'yyyy-MM-dd'.
-      // To avoid timezone issues where this might be interpreted as the previous day
-      // in some timezones, we create the Date object as if it's UTC midnight.
-      const date = new Date(dateString + 'T00:00:00Z');
-      onChange(date);
-    } else {
-      // Handle clearing the date
-      onChange(undefined);
-    }
+  const handleDateChange = (newDate: Date | undefined) => {
+    setDate(newDate);
+    field.onChange(newDate);
   };
 
   return (
-    <Input
-      type="date"
-      placeholder={placeholder}
-      value={formattedValue}
-      onChange={handleChange}
-      disabled={disabled}
-      className={cn("w-full", !value && "text-muted-foreground")}
-      {...rest}
-    />
-  )
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={"outline"}
+          className={cn(
+            "w-[240px] justify-start text-left font-normal",
+            !date && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "PPP") : <span>{placeholder || "Pick a date"}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleDateChange}
+          disabled={(date) =>
+            date > new Date() || date < new Date("1900-01-01")
+          }
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
 }
