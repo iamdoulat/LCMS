@@ -1360,7 +1360,6 @@ export interface ClaimReportDocument {
 // --- Employee Types ---
 export const educationLevelOptions = ["SSC", "HSC", "Diploma", "Bachelors", "Masters", "PhD"] as const;
 export const gradeDivisionOptions = ["1st Division", "2nd Division", "3rd Division", "A+", "A", "A-", "B", "C", "D"] as const;
-
 export const bankNameOptions = [
   "AB Bank", "Agrani Bank", "Al-Arafah Islami Bank", "Bangladesh Commerce Bank", "Bangladesh Development Bank", 
   "Bank Al-Falah", "Bank Asia", "BRAC Bank", "Citibank NA", "City Bank", "Commercial Bank of Ceylon", 
@@ -1372,6 +1371,8 @@ export const bankNameOptions = [
   "Social Islami Bank", "Sonali Bank", "Southeast Bank", "Standard Bank", "Standard Chartered Bank", 
   "State Bank of India", "Trust Bank", "United Commercial Bank", "Uttara Bank", "Woori Bank"
 ] as const;
+export const paymentFrequencyOptions = ["Monthly", "Weekly", "Bi-Weekly", "Annually"] as const;
+export const salaryBreakupOptions = ["Basic", "House Rent", "Entertainment", "Medical Allowance", "Conveyance Allowance", "Utility", "Transportation", "Food Allowance", "Cash"];
 
 
 export const BankSchema = z.object({
@@ -1397,9 +1398,16 @@ export const EducationSchema = z.object({
   professional: z.boolean().default(false).optional(),
   lastEducation: z.boolean().default(false).optional(),
 });
-
 export type Education = z.infer<typeof EducationSchema>;
 
+
+export const SalaryBreakupSchema = z.object({
+  id: z.string().optional(),
+  breakupName: z.string().min(1, "Breakup name is required."),
+  amount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Amount must be non-negative").optional()),
+  increaseAmount: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Increase amount must be non-negative").optional()),
+});
+export type SalaryBreakup = z.infer<typeof SalaryBreakupSchema>;
 
 export const employeeStatusOptions = ["Active", "On Leave", "Terminated"] as const;
 export type EmployeeStatus = (typeof employeeStatusOptions)[number];
@@ -1455,6 +1463,13 @@ export const EmployeeSchema = z.object({
   permanentAddress: AddressSchema.optional(),
   sameAsPresentAddress: z.boolean().optional(),
   bankDetails: z.array(BankSchema).optional(),
+  salaryStructure: z.object({
+    isConsolidate: z.boolean().default(false),
+    paymentType: z.enum(["Bank", "Cash"]).optional(),
+    structureDate: z.date().optional(),
+    paymentFrequency: z.string().optional(),
+    salaryBreakup: z.array(SalaryBreakupSchema).optional(),
+  }).optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1495,6 +1510,13 @@ export interface Employee {
   presentAddress?: z.infer<typeof AddressSchema>;
   permanentAddress?: z.infer<typeof AddressSchema>;
   bankDetails?: BankDetails[];
+  salaryStructure?: {
+    isConsolidate: boolean;
+    paymentType?: "Bank" | "Cash";
+    structureDate?: string; // ISO string
+    paymentFrequency?: string;
+    salaryBreakup?: SalaryBreakup[];
+  };
 }
 
 export type EmployeeDocument = Employee & { id: string };

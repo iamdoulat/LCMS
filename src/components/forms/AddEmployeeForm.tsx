@@ -6,12 +6,12 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote } from 'lucide-react';
+import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { EmployeeFormValues, Education, BankDetails } from '@/types';
-import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, jobStatusOptions, jobBaseOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, employeeStatusOptions } from '@/types';
+import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup } from '@/types';
+import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Checkbox } from '../ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '../ui/label';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -66,6 +67,13 @@ export function AddEmployeeForm() {
       permanentAddress: { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       sameAsPresentAddress: false,
       bankDetails: [],
+      salaryStructure: {
+        isConsolidate: false,
+        paymentType: 'Bank',
+        structureDate: new Date(),
+        paymentFrequency: 'Monthly',
+        salaryBreakup: [],
+      },
     },
   });
 
@@ -81,8 +89,25 @@ export function AddEmployeeForm() {
     name: "bankDetails",
   });
   
+  const { fields: salaryFields, append: appendSalary, remove: removeSalary } = useFieldArray({
+    control,
+    name: "salaryStructure.salaryBreakup",
+  });
+
   const watchSameAsPresent = watch("sameAsPresentAddress");
   const watchPresentAddress = watch("presentAddress");
+  const watchSalaryBreakup = watch("salaryStructure.salaryBreakup");
+
+  const { salaryAmount, increasedAmount, totalAmount } = React.useMemo(() => {
+    let salary = 0;
+    let increased = 0;
+    watchSalaryBreakup?.forEach(item => {
+      salary += Number(item.amount || 0);
+      increased += Number(item.increaseAmount || 0);
+    });
+    return { salaryAmount: salary, increasedAmount: increased, totalAmount: salary + increased };
+  }, [watchSalaryBreakup]);
+
 
   React.useEffect(() => {
     if (watchSameAsPresent) {
@@ -109,6 +134,10 @@ export function AddEmployeeForm() {
           scale: Number(edu.scale) || undefined,
           cgpa: Number(edu.cgpa) || undefined,
       })),
+      salaryStructure: data.salaryStructure ? {
+        ...data.salaryStructure,
+        structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
+      } : undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -395,6 +424,55 @@ export function AddEmployeeForm() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+            </CardContent>
+        </Card>
+        <Separator />
+        
+        <Card className="p-4">
+            <CardHeader className="p-2 pt-0">
+                <CardTitle className="text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Salary Structure</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                    <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (<FormItem><FormLabel>Is Consolidate*</FormLabel><FormControl><RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2"><FormItem><FormControl><RadioGroupItem value="true" /> </FormControl><FormLabel>Yes</FormLabel></FormItem><FormItem><FormControl><RadioGroupItem value="false" /> </FormControl><FormLabel>No</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="salaryStructure.paymentType" render={({ field }) => (<FormItem><FormLabel>Payment Type*</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2"><FormItem><FormControl><RadioGroupItem value="Bank" /> </FormControl><FormLabel>Bank</FormLabel></FormItem><FormItem><FormControl><RadioGroupItem value="Cash" /> </FormControl><FormLabel>Cash</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="salaryStructure.structureDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Structure Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (<FormItem><FormLabel>Payment Frequency*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl><SelectContent>{paymentFrequencyOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                </div>
+                <Separator />
+                <div>
+                     <Label>Add Salary Breakup*</Label>
+                    <Select onValueChange={(value) => { if (value && !salaryFields.some(f => f.breakupName === value)) { appendSalary({ breakupName: value, amount: 0, increaseAmount: 0 }); }}}>
+                        <SelectTrigger><SelectValue placeholder="Select Salary Breakup to Add" /></SelectTrigger>
+                        <SelectContent>
+                            {salaryBreakupOptions.map(opt => <SelectItem key={opt} value={opt} disabled={salaryFields.some(f => f.breakupName === opt)}>{opt}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-3">
+                    {salaryFields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center">
+                            <FormField control={control} name={`salaryStructure.salaryBreakup.${index}.breakupName`} render={({ field }) => (<FormItem><FormLabel className="sr-only">Breakup Name</FormLabel><FormControl><Input readOnly disabled {...field} className="bg-muted/50 font-semibold" /></FormControl></FormItem>)}/>
+                            <FormField control={control} name={`salaryStructure.salaryBreakup.${index}.amount`} render={({ field }) => (<FormItem><FormLabel className="sr-only">Amount</FormLabel><FormControl><Input type="number" placeholder="Amount" {...field} /></FormControl></FormItem>)}/>
+                            <FormField control={control} name={`salaryStructure.salaryBreakup.${index}.increaseAmount`} render={({ field }) => (<FormItem><FormLabel className="sr-only">Increase Amount</FormLabel><FormControl><Input type="number" placeholder="Increase Amount" {...field} /></FormControl></FormItem>)}/>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSalary(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                    ))}
+                </div>
+                 <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                        <Label>Salary Amount</Label>
+                        <Input value={salaryAmount.toFixed(2)} readOnly disabled />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Label>Increased Amount</Label>
+                        <Input value={increasedAmount.toFixed(2)} readOnly disabled />
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Label>Total Amount</Label>
+                        <Input value={totalAmount.toFixed(2)} readOnly disabled className="font-bold text-primary" />
+                    </div>
                 </div>
             </CardContent>
         </Card>
