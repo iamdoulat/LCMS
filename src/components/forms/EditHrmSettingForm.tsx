@@ -90,17 +90,6 @@ export function EditHrmSettingForm({ initialData, onFormSubmit }: EditHrmSetting
             <FormMessage />
           </FormItem>
         )} />
-        <FormField
-          control={form.control}
-          name="effectiveDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Effective Date*</FormLabel>
-              <DatePickerField field={field} />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <div className="flex justify-end pt-2">
             <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
