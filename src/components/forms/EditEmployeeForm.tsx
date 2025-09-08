@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp, getDocs, collection } from 'firebase/firestore';
-import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument } from '@/types';
+import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc } from 'firebase/firestore';
+import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,15 @@ import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ComboboxOption } from '@/components/ui/combobox';
 
+const divisionOptions = [
+    { value: "Technical", label: "Technical" },
+    { value: "Sales", label: "Sales" },
+    { value: "Commercial", label: "Commercial" },
+    { value: "Accounts", label: "Accounts" },
+    { value: "HR", label: "HR" },
+    { value: "Admin", label: "Admin" },
+    { value: "Not Defined", label: "Not Defined" },
+];
 
 interface EditEmployeeFormProps {
   employee: EmployeeDocument;
@@ -36,8 +45,13 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [designationOptions, setDesignationOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingDesignations, setIsLoadingDesignations] = React.useState(true);
+  const [branchOptions, setBranchOptions] = React.useState<ComboboxOption[]>([]);
+  const [departmentOptions, setDepartmentOptions] = React.useState<ComboboxOption[]>([]);
+  const [unitOptions, setUnitOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingHrmOptions, setIsLoadingHrmOptions] = React.useState(true);
 
 
+  
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(EmployeeSchema),
     defaultValues: {
@@ -47,7 +61,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
       dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
       joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
-      effectiveDate: employee.effectiveDate ? new Date(employee.effectiveDate) : undefined,
       jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
       jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined,
       educationDetails: employee.educationDetails?.map(edu => ({
@@ -96,24 +109,37 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   });
   
   React.useEffect(() => {
-    const fetchDesignations = async () => {
+    const fetchHrmOptions = async () => {
       setIsLoadingDesignations(true);
+      setIsLoadingHrmOptions(true);
       try {
-        const designationsSnapshot = await getDocs(collection(firestore, "designations"));
+        const [designationsSnap, branchesSnap, departmentsSnap, unitsSnap] = await Promise.all([
+            getDocs(collection(firestore, "designations")),
+            getDocs(collection(firestore, "branches")),
+            getDocs(collection(firestore, "departments")),
+            getDocs(collection(firestore, "units")),
+        ]);
         setDesignationOptions(
-          designationsSnapshot.docs.map(doc => {
-            const data = doc.data() as DesignationDocument;
-            return { value: data.name, label: data.name };
-          })
+          designationsSnap.docs.map(doc => ({ value: (doc.data() as DesignationDocument).name, label: (doc.data() as DesignationDocument).name }))
+        );
+        setBranchOptions(
+          branchesSnap.docs.map(doc => ({ value: (doc.data() as BranchDocument).name, label: (doc.data() as BranchDocument).name }))
+        );
+        setDepartmentOptions(
+          departmentsSnap.docs.map(doc => ({ value: (doc.data() as DepartmentDocument).name, label: (doc.data() as DepartmentDocument).name }))
+        );
+        setUnitOptions(
+          unitsSnap.docs.map(doc => ({ value: (doc.data() as UnitDocument).name, label: (doc.data() as UnitDocument).name }))
         );
       } catch (error) {
-        console.error("Error fetching designations: ", error);
-        Swal.fire("Error", "Could not load designations.", "error");
+        console.error("Error fetching HRM options: ", error);
+        Swal.fire("Error", "Could not load required form options.", "error");
       } finally {
         setIsLoadingDesignations(false);
+        setIsLoadingHrmOptions(false);
       }
     };
-    fetchDesignations();
+    fetchHrmOptions();
   }, []);
 
   const watchSameAsPresent = watch("sameAsPresentAddress");
@@ -148,7 +174,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       fullName: fullName,
       dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
       joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
-      effectiveDate: data.effectiveDate ? data.effectiveDate.toISOString() : null,
       jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
       jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
       educationDetails: data.educationDetails?.map(edu => ({
@@ -355,7 +380,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-           <FormField
+          <FormField
             control={control}
             name="designation"
             render={({ field }) => (
@@ -413,72 +438,64 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
         <Card className="p-4">
           <CardHeader className="p-2 pt-0">
-            <CardTitle>Present Address</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
+            <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
           </CardHeader>
           <CardContent className="p-2 space-y-4">
-            <FormField control={control} name="presentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField control={control} name="presentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-            </div>
+            <FormField control={control} name="division" render={({ field }) => (
+                <FormItem><FormLabel>Division*</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl>
+                    <SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
+            )}/>
+            <FormField control={control} name="branch" render={({ field }) => (
+                <FormItem><FormLabel>Branch*</FormLabel>
+                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl>
+                    <SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
+            )}/>
+            <FormField control={control} name="department" render={({ field }) => (
+                <FormItem><FormLabel>Department*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl>
+                    <SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
+            )}/>
+            <FormField control={control} name="unit" render={({ field }) => (
+                <FormItem><FormLabel>Unit*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl>
+                    <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
+            )}/>
+            <FormField control={control} name="remarksDivision" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Remarks</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter Here" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}/>
           </CardContent>
         </Card>
 
-        <Card className="p-4">
-          <CardHeader className="p-2 pt-0 flex flex-row items-center justify-between">
-            <CardTitle>Permanent Address</CardTitle>
-            <FormField
-              control={control}
-              name="sameAsPresentAddress"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="sameAsPresent" /></FormControl>
-                  <Label htmlFor="sameAsPresent" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Same as present address</Label>
-                </FormItem>
-              )}
-            />
-          </CardHeader>
-          <CardContent className="p-2 space-y-4">
-            <FormField control={control} name="permanentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField control={control} name="permanentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-            </div>
-          </CardContent>
+        <Card className="md:col-span-1 p-4">
+            <CardHeader className="p-2 pt-0">
+                <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+                <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            </CardContent>
         </Card>
-
-        <Separator />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="md:col-span-1 p-4">
-                <CardHeader className="p-2 pt-0">
-                    <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
-                    <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-2 space-y-4">
-                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                </CardContent>
-            </Card>
-
-            <Card className="md:col-span-1 p-4">
-                <CardHeader className="p-2 pt-0">
-                    <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
-                </CardHeader>
-                <CardContent className="p-2 space-y-4">
-                    <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                    <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                </CardContent>
-            </Card>
-        </div>
 
         <Separator />
         
@@ -601,17 +618,17 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 <CardTitle className="text-lg flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Salary Structure</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                     <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (
                          <FormItem>
                             <div className="mb-3">
                                 <FormLabel>Is Consolidate*</FormLabel>
                             </div>
                             <FormControl>
-                                <RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2">
-                                  <div className="flex items-center space-x-2"><RadioGroupItem value="true" id="isConsolidateYesEdit" /><Label htmlFor="isConsolidateYesEdit">Yes</Label></div>
-                                  <div className="flex items-center space-x-2"><RadioGroupItem value="false" id="isConsolidateNoEdit" /><Label htmlFor="isConsolidateNoEdit">No</Label></div>
-                                </RadioGroup>
+                                 <RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2">
+                                   <div className="flex items-center space-x-2"><RadioGroupItem value="true" id="isConsolidateYesEdit" /><Label htmlFor="isConsolidateYesEdit">Yes</Label></div>
+                                   <div className="flex items-center space-x-2"><RadioGroupItem value="false" id="isConsolidateNoEdit" /><Label htmlFor="isConsolidateNoEdit">No</Label></div>
+                                 </RadioGroup>
                             </FormControl>
                             <FormMessage />
                          </FormItem>
@@ -633,8 +650,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <FormField control={control} name="salaryStructure.structureDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Structure Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="salaryStructure.paymentFrequency" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Payment Frequency*</FormLabel>
-                          <div>
+                            <FormLabel>Payment Frequency*</FormLabel>
+                            <div>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
@@ -646,7 +663,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                               </SelectContent>
                             </Select>
                             <FormMessage />
-                          </div>
+                            </div>
                         </FormItem>
                     )}/>
                 </div>
