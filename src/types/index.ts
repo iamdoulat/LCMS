@@ -1518,22 +1518,26 @@ export interface Employee {
 
 export type EmployeeDocument = Employee & { id: string };
 
-// HRM Settings
-export const HrmSettingSchema = z.object({
-  branch: z.string().min(1, "Branch is required."),
-  department: z.string().min(1, "Department is required."),
-  unit: z.string().min(1, "Unit is required."),
-});
-export type HrmSettingFormValues = z.infer<typeof HrmSettingSchema>;
-
-export interface HrmSettingDocument {
+export type BranchFormValues = z.infer<typeof BranchSchema>;
+export interface BranchDocument {
   id: string;
-  branch: string;
-  department: string;
-  unit: string;
+  name: string;
   createdAt: any;
 }
 
+export type DepartmentFormValues = z.infer<typeof DepartmentSchema>;
+export interface DepartmentDocument {
+  id: string;
+  name: string;
+  createdAt: any;
+}
+
+export type UnitFormValues = z.infer<typeof UnitSchema>;
+export interface UnitDocument {
+  id: string;
+  name: string;
+  createdAt: any;
+}
 // --- Designation Types ---
 export const DesignationSchema = z.object({
   name: z.string().min(2, "Designation name must be at least 2 characters long."),

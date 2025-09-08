@@ -4,16 +4,20 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { DepartmentFormValues } from '@/types';
-import { DepartmentSchema } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Save } from 'lucide-react';
+
+const DepartmentSchema = z.object({
+  name: z.string().min(2, "Department name must be at least 2 characters long."),
+});
 
 interface AddDepartmentFormProps {
   onFormSubmit: () => void;
