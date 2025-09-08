@@ -20,6 +20,7 @@ import { DatePickerField } from './DatePickerField';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Textarea } from '../ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -204,5 +205,3 @@ export function AddEmployeeForm() {
     </Form>
   );
 }
-
-  
