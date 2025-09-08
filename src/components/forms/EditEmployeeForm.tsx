@@ -435,67 +435,69 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         )}/>
 
         <Separator />
-
-        <Card className="p-4">
-          <CardHeader className="p-2 pt-0">
-            <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
-            <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-2 space-y-4">
-            <FormField control={control} name="division" render={({ field }) => (
-                <FormItem><FormLabel>Division*</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl>
-                    <SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage /></FormItem>
-            )}/>
-            <FormField control={control} name="branch" render={({ field }) => (
-                <FormItem><FormLabel>Branch*</FormLabel>
-                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl>
-                    <SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage /></FormItem>
-            )}/>
-            <FormField control={control} name="department" render={({ field }) => (
-                <FormItem><FormLabel>Department*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl>
-                    <SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage /></FormItem>
-            )}/>
-            <FormField control={control} name="unit" render={({ field }) => (
-                <FormItem><FormLabel>Unit*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl>
-                    <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage /></FormItem>
-            )}/>
-            <FormField control={control} name="remarksDivision" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Remarks</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Enter Here" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}/>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-1 p-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-4">
             <CardHeader className="p-2 pt-0">
-                <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
+              <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-                <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={control} name="division" render={({ field }) => (
+                  <FormItem><FormLabel>Division*</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl>
+                      <SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage /></FormItem>
+              )}/>
+              <FormField control={control} name="branch" render={({ field }) => (
+                  <FormItem><FormLabel>Branch*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl>
+                      <SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage /></FormItem>
+              )}/>
+              <FormField control={control} name="department" render={({ field }) => (
+                  <FormItem><FormLabel>Department*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl>
+                      <SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage /></FormItem>
+              )}/>
+              <FormField control={control} name="unit" render={({ field }) => (
+                  <FormItem><FormLabel>Unit*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
+                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl>
+                      <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FormMessage /></FormItem>
+              )}/>
+              <FormField control={control} name="remarksDivision" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter Here" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}/>
             </CardContent>
-        </Card>
+          </Card>
+          
+          <Card className="p-4">
+              <CardHeader className="p-2 pt-0">
+                  <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 space-y-4">
+                  <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                  <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                  <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+              </CardContent>
+          </Card>
+        </div>
 
         <Separator />
         
